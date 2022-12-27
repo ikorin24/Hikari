@@ -48,10 +48,10 @@ const VERTICES: &[Vertex] = &[
     },
 ];
 
-fn main() {
+pub fn start() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().build(&event_loop).unwrap();
+    let window = WindowBuilder::new().build(&event_loop)?;
 
     let size = window.inner_size();
 
@@ -64,7 +64,7 @@ fn main() {
             force_fallback_adapter: false,
         })
         .block_on()
-        .unwrap();
+        .ok_or("failed to unwrap".to_owned())?;
     let (device, queue) = adapter
         .request_device(
             &wgpu::DeviceDescriptor {
@@ -74,8 +74,7 @@ fn main() {
             },
             None,
         )
-        .block_on()
-        .unwrap();
+        .block_on()?;
 
     let mut config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
