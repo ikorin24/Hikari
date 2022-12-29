@@ -1,9 +1,15 @@
 use pollster::FutureExt;
+use std::{fmt::Display, str::FromStr};
 use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    window::{Window, WindowBuilder},
+};
+
+use crate::{
+    renderer::{HostScreen, LayoutedVertex},
+    HostScreenInitFn,
 };
 
 #[repr(C)]
@@ -12,8 +18,9 @@ struct Vertex {
     position: [f32; 3],
     color: [f32; 3],
 }
-impl Vertex {
-    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+
+impl LayoutedVertex for Vertex {
+    fn get_layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
@@ -33,6 +40,7 @@ impl Vertex {
     }
 }
 
+#[allow(dead_code)]
 const VERTICES: &[Vertex] = &[
     Vertex {
         position: [0.0, 0.5, 0.0],
@@ -48,10 +56,173 @@ const VERTICES: &[Vertex] = &[
     },
 ];
 
+enum WindowStyle {
+    Default,
+    Fixed,
+    Fullscreen,
+}
+
+impl FromStr for WindowStyle {
+    type Err = ParseEnumError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Default" => Ok(WindowStyle::Default),
+            "Fixed" => Ok(WindowStyle::Fixed),
+            "Fullscreen" => Ok(WindowStyle::Fullscreen),
+            _ => Err(ParseEnumError {
+                string: s.to_owned(),
+            }),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ParseEnumError {
+    pub string: String,
+}
+
+impl Display for ParseEnumError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "cannot parse str: {}", self.string)
+    }
+}
+
+impl std::error::Error for ParseEnumError {}
+
+#[cfg(target_os = "windows")]
+fn set_window_style(window: &Window, style: &WindowStyle) {
+    match style {
+        WindowStyle::Default => {
+            window.set_resizable(true);
+        }
+        WindowStyle::Fixed => {
+            window.set_resizable(false);
+        }
+        WindowStyle::Fullscreen => {
+            window.set_fullscreen(None);
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn set_window_style(window: &Window, style: &WindowStyle) {
+    match style {
+        WindowStyle::Default => {
+            window.set_resizable(true);
+        }
+        WindowStyle::Fixed => {
+            window.set_resizable(false);
+        }
+        WindowStyle::Fullscreen => {
+            window.set_simple_fullscreen(true);
+        }
+    }
+}
+
+// assert_eq_size!(winit::window::WindowId, usize);
+
+// type EndEngineFn = extern "cdecl" fn();
+
+// pub fn start_engine() -> ! {
+//     start_engine_loop(|event_loop, event, control_flow| {})
+// }
+
+pub fn start_engine_start(init: HostScreenInitFn) -> ! {
+    env_logger::init();
+    let event_loop = EventLoop::new();
+
+    let window = WindowBuilder::new().build(&event_loop).unwrap();
+    set_window_style(&window, &WindowStyle::Default);
+    window.focus_window();
+    let first_screen = Box::new(HostScreen::new(window).unwrap_or_else(|err| panic!("{:?}", err)));
+    let mut screens: Vec<Box<HostScreen>> = vec![first_screen];
+    let first_screen_handle = screens.last_mut().unwrap().as_mut();
+    init(first_screen_handle);
+
+    // let vertex_buffer =
+    //     first_screen
+    //         .get_device()
+    //         .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    //             label: Some("Vertex Buffer"),
+    //             contents: bytemuck::cast_slice(VERTICES),
+    //             usage: wgpu::BufferUsages::VERTEX,
+    //         });
+    event_loop.run(move |event, event_loop, control_flow| {
+        screens.iter_mut().for_each(|screen| {
+            screen.handle_event(&event, event_loop, control_flow);
+        });
+    });
+
+    // event_loop.run(move |event, event_loop, control_flow| match event {
+    //     Event::WindowEvent {
+    //         ref event,
+    //         window_id,
+    //     } if window_id == renderer.window_id() => match event {
+    //         WindowEvent::CloseRequested
+    //         | WindowEvent::KeyboardInput {
+    //             input:
+    //                 KeyboardInput {
+    //                     state: ElementState::Pressed,
+    //                     virtual_keycode: Some(VirtualKeyCode::Escape),
+    //                     ..
+    //                 },
+    //             ..
+    //         } => *control_flow = ControlFlow::Exit,
+    //         WindowEvent::KeyboardInput {
+    //             input:
+    //                 KeyboardInput {
+    //                     state: ElementState::Pressed,
+    //                     virtual_keycode: Some(VirtualKeyCode::Space),
+    //                     ..
+    //                 },
+    //             ..
+    //         } => {}
+    //         WindowEvent::Resized(physical_size) => {
+    //             renderer.resize(*physical_size);
+    //         }
+    //         WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+    //             renderer.resize(**new_inner_size);
+    //         }
+    //         _ => {}
+    //     },
+    //     Event::RedrawRequested(window_id) if window_id == renderer.window_id() => {
+    //         let vertices = RenderTargetVertices {
+    //             vertex_buffer: vertex_buffer.slice(..),
+    //             vertices_range: 0..3,
+    //             instances: 0..1,
+    //         };
+    //         match renderer.render(vertices) {
+    //             Ok(_) => {}
+    //             Err(wgpu::SurfaceError::Lost) => {
+    //                 renderer.resize(renderer.get_window().inner_size());
+    //             }
+    //             Err(e) => {
+    //                 eprintln!("{:?}", e);
+    //             }
+    //         }
+    //     }
+    //     Event::MainEventsCleared => {
+    //         renderer.get_window().request_redraw();
+    //     }
+    //     _ => {}
+    // });
+}
+
+#[allow(dead_code)]
 pub fn start() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop)?;
+
+    // window.set_decorations(false);
+    // window.set_visible(false);
+    // window.set_fullscreen(Some(Fullscreen::Borderless(None)));
+    // window.set_visible(true);
+    // window.set_cursor_visible(false);
+
+    set_window_style(&window, &WindowStyle::Default);
+    window.focus_window();
 
     let size = window.inner_size();
 
@@ -119,7 +290,7 @@ pub fn start() -> Result<(), Box<dyn std::error::Error>> {
         vertex: wgpu::VertexState {
             module: &shader,
             entry_point: "vs_main",
-            buffers: &[Vertex::desc()],
+            buffers: &[Vertex::get_layout()],
         },
         fragment: Some(wgpu::FragmentState {
             module: &shader,
@@ -229,3 +400,16 @@ pub fn start() -> Result<(), Box<dyn std::error::Error>> {
         _ => {}
     });
 }
+
+// type ResizedWindowEventFn = extern "cdecl" fn(screen_id: usize, width: u32, height: u32);
+// type ClosingEventFn = extern "cdecl" fn(screen_id: usize) -> bool;
+// type ClosedEventFn = extern "cdecl" fn(screen_id: usize);
+// type InitializedEventFn = extern "cdecl" fn(screen_id: usize);
+
+// #[repr(C)]
+// struct HostScreenConfig {
+//     pub on_resized: Option<ResizedWindowEventFn>,
+//     pub on_closing: Option<ClosingEventFn>,
+//     pub on_closed: Option<ClosedEventFn>,
+//     pub on_initialized: Option<InitializedEventFn>,
+// }
