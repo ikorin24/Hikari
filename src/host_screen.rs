@@ -137,8 +137,12 @@ pub fn start_engine_start(init: HostScreenInitFn) -> ! {
     window.focus_window();
     let first_screen = Box::new(HostScreen::new(window).unwrap_or_else(|err| panic!("{:?}", err)));
     let mut screens: Vec<Box<HostScreen>> = vec![first_screen];
-    let first_screen_handle = screens.last_mut().unwrap().as_mut();
-    init(first_screen_handle);
+    let first_screen = screens.last_mut().unwrap().as_mut();
+
+    // let mut callbacks = HostScreenCallbacks::default();
+    let callbacks = init(first_screen);
+    first_screen.set_callbacks(callbacks);
+    // callbacks.on_render.unwrap()(first_screen);
 
     // let vertex_buffer =
     //     first_screen
@@ -266,6 +270,13 @@ pub fn start() -> Result<(), Box<dyn std::error::Error>> {
             surface.configure(&device, &config);
         }
     };
+
+    // device.create_buffer(&wgpu::BufferDescriptor{
+    //     label: None,
+    //     size: 10,
+    //     usage: wgpu::BufferUsages::VERTEX,
+    //     mapped_at_creation: false,
+    // });
 
     let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Vertex Buffer"),

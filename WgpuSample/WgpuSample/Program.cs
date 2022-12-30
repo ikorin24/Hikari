@@ -7,14 +7,14 @@ namespace WgpuSample;
 internal class Program
 {
     [STAThread]
-    private static void Main(string[] args) => NativeApi.elffy_engine_start(Start);
+    private static void Main(string[] args) => NativeApi.elffy_engine_start(Start, OnRender);
 
     private static unsafe void Start(HostScreenHandle screen)
     {
         VertexAttribute* attrs = stackalloc VertexAttribute[2]
         {
             new() { format = VertexFormat.Float32x3, offset = 0, shader_location = 0 },
-            new() { format = VertexFormat.Float32x4, offset = 24, shader_location = 1 },
+            new() { format = VertexFormat.Float32x3, offset = 12, shader_location = 1 },
         };
 
         var pipelineInfo = new RenderPipelineInfo
@@ -26,7 +26,40 @@ internal class Program
             },
             shader_source = ShaderSource
         };
-        var renderPipeline = NativeApi.elffy_add_render_pipeline(screen, in pipelineInfo);
+        _renderPipeline = NativeApi.elffy_add_render_pipeline(screen, in pipelineInfo);
+
+        var vertices = stackalloc PosColorVertex[3]
+        {
+            new()
+            {
+                Position = new(0.0f, 0.5f, 0.0f),
+                Color = new(1.0f, 0.0f, 0.0f),
+            },
+            new()
+            {
+                Position = new(-0.5f, -0.5f, 0.0f),
+                Color = new(0.0f, 1.0f, 0.0f),
+            },
+            new()
+            {
+                Position = new(0.5f, -0.5f, 0.0f),
+                Color = new(0.0f, 0.0f, 1.0f),
+            },
+        };
+        var contents = new RustSlice<byte>((byte*)vertices, (nuint)(3 * sizeof(PosColorVertex)));
+        _buffer = NativeApi.elffy_create_buffer_init(screen, contents, BufferUsages.VERTEX);
+    }
+
+    private static RenderPipelineHandle _renderPipeline;
+    private static BufferHandle _buffer;
+
+    private static void OnRender(HostScreenHandle screen, RenderPassHandle renderPass)
+    {
+        NativeApi.elffy_set_pipeline(renderPass, _renderPipeline);
+        unsafe {
+            ulong size = (ulong)(3 * sizeof(PosColorVertex));
+            NativeApi.elffy_draw(renderPass, 0, _buffer, 0, size, 0, 3, 1);
+        }
     }
 
     private unsafe static RustSlice<byte> ShaderSource
@@ -54,7 +87,7 @@ fn vs_main(vin: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(fin: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4<f32>(fin.color, 1.0);
+    return vec4<f32>(fin.color.r, 0.0, 1.0, 1.0);
 }
 
 """u8;
@@ -67,8 +100,15 @@ fn fs_main(fin: VertexOutput) -> @location(0) vec4<f32> {
     }
 }
 
+[StructLayout(LayoutKind.Sequential, Pack = 0)]
 public struct PosColorVertex
 {
-    public (float X, float Y, float Z) Position;
-    public (float R, float G, float B, float A) Color;
+    public Vec3 Position;
+    public Color3 Color;
 }
+
+[StructLayout(LayoutKind.Sequential, Pack = 0)]
+public record struct Vec3(float X, float Y, float Z);
+
+[StructLayout(LayoutKind.Sequential, Pack = 0)]
+public record struct Color3(float R, float G, float B);

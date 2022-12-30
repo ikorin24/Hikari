@@ -15,26 +15,65 @@ namespace WgpuSample
         private const string Library = "wgpu_sample";
 
         private static Action<HostScreenHandle>? _init;
+        private static Action<HostScreenHandle, RenderPassHandle>? _onRender;
 
-        [DebuggerHidden]
         [DoesNotReturn]
-        public static Never elffy_engine_start(Action<HostScreenHandle> init)
+        public static Never elffy_engine_start(Action<HostScreenHandle> init, Action<HostScreenHandle, RenderPassHandle> onRender)
         {
             _init = init;
+            _onRender = onRender;
             elffy_engine_start(&OnInit);
             throw new UnreachableException();
 
-            [DebuggerHidden]
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void OnInit(void* screen) => _init?.Invoke(screen);
+            static HostScreenCallbacks OnInit(HostScreenHandle screen)
+            {
+                _init?.Invoke(screen);
+
+                return new HostScreenCallbacks
+                {
+                    on_render = &OnRender,
+                };
+            }
+
+            [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+            static void OnRender(HostScreenHandle screen, RenderPassHandle render_pass)
+            {
+                _onRender?.Invoke(screen, render_pass);
+            }
         }
 
+        [StructLayout(LayoutKind.Sequential, Pack = 0)]
+        private struct HostScreenCallbacks
+        {
+            public static HostScreenCallbacks None => default;
+
+            public delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassHandle, void> on_render;
+        }
 
         [LibraryImport(Library), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-        private static partial void elffy_engine_start(delegate* unmanaged[Cdecl]<void*, void> init);
+        private static partial void elffy_engine_start(delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenCallbacks> init);
 
         [LibraryImport(Library), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
         public static partial RenderPipelineHandle elffy_add_render_pipeline(HostScreenHandle screen, in RenderPipelineInfo render_pipeline);
+
+        [LibraryImport(Library), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+        public static partial BufferHandle elffy_create_buffer_init(HostScreenHandle screen, RustSlice<u8> contents, BufferUsages usage);
+
+        [LibraryImport(Library), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+        public static partial void elffy_set_pipeline(RenderPassHandle render_pass, RenderPipelineHandle render_pipeline);
+
+        [LibraryImport(Library), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+        public static partial void elffy_draw(
+            RenderPassHandle render_pass,
+            u32 slot,
+            BufferHandle buffer,
+            u64 buffer_slice_offset,
+            u64 buffer_slice_size,
+            u32 draw_offset,
+            u32 draw_size,
+            u32 instances_size
+            );
 
         //[DebuggerHidden]
         //[UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -79,6 +118,19 @@ namespace WgpuSample
         public VertexFormat format;
         public u64 offset;
         public u32 shader_location;
+    }
+
+    public enum BufferUsages : u32
+    {
+        MAP_READ = 1 << 0,
+        MAP_WRITE = 1 << 1,
+        COPY_SRC = 1 << 2,
+        COPY_DST = 1 << 3,
+        INDEX = 1 << 4,
+        VERTEX = 1 << 5,
+        UNIFORM = 1 << 6,
+        STORAGE = 1 << 7,
+        INDIRECT = 1 << 8,
     }
 
     public enum VertexFormat : u32
@@ -193,6 +245,48 @@ namespace WgpuSample
         public static bool operator !=(RenderPipelineHandle left, RenderPipelineHandle right) => !(left == right);
 
         public static implicit operator RenderPipelineHandle(void* handle) => new(handle);
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 0)]
+    public unsafe readonly struct RenderPassHandle : IEquatable<RenderPassHandle>
+    {
+        private readonly void* _handle;
+        public static RenderPassHandle None => default;
+
+        internal RenderPassHandle(void* handle) => _handle = handle;
+
+        public override bool Equals(object? obj) => obj is RenderPassHandle handle && Equals(handle);
+
+        public bool Equals(RenderPassHandle other) => _handle == other._handle;
+
+        public override int GetHashCode() => ((IntPtr)_handle).GetHashCode();
+
+        public static bool operator ==(RenderPassHandle left, RenderPassHandle right) => left.Equals(right);
+
+        public static bool operator !=(RenderPassHandle left, RenderPassHandle right) => !(left == right);
+
+        public static implicit operator RenderPassHandle(void* handle) => new(handle);
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 0)]
+    public unsafe readonly struct BufferHandle : IEquatable<BufferHandle>
+    {
+        private readonly void* _handle;
+        public static BufferHandle None => default;
+
+        internal BufferHandle(void* handle) => _handle = handle;
+
+        public override bool Equals(object? obj) => obj is BufferHandle handle && Equals(handle);
+
+        public bool Equals(BufferHandle other) => _handle == other._handle;
+
+        public override int GetHashCode() => ((IntPtr)_handle).GetHashCode();
+
+        public static bool operator ==(BufferHandle left, BufferHandle right) => left.Equals(right);
+
+        public static bool operator !=(BufferHandle left, BufferHandle right) => !(left == right);
+
+        public static implicit operator BufferHandle(void* handle) => new(handle);
     }
 
     public sealed class NativeApiException : Exception

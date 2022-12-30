@@ -17,7 +17,16 @@ mod renderer;
 //     }
 // }
 
-type HostScreenInitFn = extern "cdecl" fn(&mut HostScreen) -> ();
+type HostScreenInitFn = extern "cdecl" fn(screen: &mut HostScreen) -> HostScreenCallbacks;
+
+type HostScreenRenderFn =
+    extern "cdecl" fn(screen: &mut HostScreen, render_pass: &mut wgpu::RenderPass) -> ();
+
+#[repr(C)]
+#[derive(Default)]
+pub struct HostScreenCallbacks {
+    pub on_render: Option<HostScreenRenderFn>,
+}
 
 #[no_mangle]
 extern "cdecl" fn elffy_engine_start(init: HostScreenInitFn) {
@@ -48,6 +57,40 @@ extern "cdecl" fn elffy_add_render_pipeline(
     }
 }
 
+#[no_mangle]
+extern "cdecl" fn elffy_create_buffer_init(
+    screen: &mut HostScreen,
+    contents: Sliceffi<u8>,
+    usage: wgpu::BufferUsages,
+) -> &wgpu::Buffer {
+    screen.create_buffer_init(contents.as_slice(), usage)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_set_pipeline<'a>(
+    render_pass: &'a mut wgpu::RenderPass<'a>,
+    render_pipeline: &'a wgpu::RenderPipeline,
+) {
+    render_pass.set_pipeline(render_pipeline);
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_draw<'a>(
+    render_pass: &'a mut wgpu::RenderPass<'a>,
+    slot: u32,
+    buffer: &'a wgpu::Buffer,
+    buffer_slice_offset: u64,
+    buffer_slice_size: u64,
+    draw_offset: u32,
+    draw_size: u32,
+    instances_size: u32,
+) {
+    let buf_range = buffer_slice_offset..buffer_slice_offset + buffer_slice_size;
+    render_pass.set_vertex_buffer(slot, buffer.slice(buf_range));
+    let draw_range = draw_offset..draw_offset + draw_size;
+    render_pass.draw(draw_range, 0..instances_size);
+}
+
 // #[no_mangle]
 // pub extern "cdecl" fn start(on_err: Option<ErrorCallback>) {
 //     let on_err = on_err.unwrap();
@@ -61,6 +104,23 @@ extern "cdecl" fn elffy_add_render_pipeline(
 // }
 
 pub type HostScreenId = usize;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Sliceffi<T> {
+    data: *const T,
+    len: usize,
+}
+
+impl<T> Sliceffi<T> {
+    pub fn as_slice(&self) -> &[T] {
+        unsafe { std::slice::from_raw_parts(self.data, self.len) }
+    }
+
+    // pub fn as_mut_slice(&mut self) -> &mut [T] {
+    //     unsafe { std::slice::from_raw_parts_mut(self.data as *mut T, self.len) }
+    // }
+}
 
 // #[repr(C)]
 // #[derive(Clone, Copy, Debug)]
@@ -92,15 +152,15 @@ pub type HostScreenId = usize;
 // }
 
 #[repr(C)]
-pub struct RenderPipelineInfo<'a> {
-    pub vertex: VertexLayoutInfo<'a>,
-    pub shader_source: &'a [u8], // slice is fat pointer: { ptr: *const T, len: usize }
+pub struct RenderPipelineInfo {
+    pub vertex: VertexLayoutInfo,
+    pub shader_source: Sliceffi<u8>,
 }
 
 #[repr(C)]
-pub struct VertexLayoutInfo<'a> {
+pub struct VertexLayoutInfo {
     pub vertex_size: u64,
-    pub attributes: &'a [wgpu::VertexAttribute], // slice is fat pointer: { ptr: *const T, len: usize }
+    pub attributes: Sliceffi<wgpu::VertexAttribute>,
 }
 
 // #[repr(C)]
@@ -110,7 +170,7 @@ pub struct VertexLayoutInfo<'a> {
 //     pub shader_location: wgpu::ShaderLocation,
 // }
 
-impl VertexLayoutInfo<'_> {
+impl VertexLayoutInfo {
     // pub fn to_vertex_buffer_layout(&self) -> wgpu::VertexBufferLayout {
     //     let attrs: Vec<_> = self
     //         .attributes
@@ -133,7 +193,7 @@ impl VertexLayoutInfo<'_> {
         wgpu::VertexBufferLayout {
             array_stride: self.vertex_size,
             step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: self.attributes,
+            attributes: self.attributes.as_slice(),
         }
     }
 }

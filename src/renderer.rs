@@ -1,12 +1,13 @@
 use pollster::FutureExt;
 use std::error::Error;
 use std::str::Utf8Error;
-use wgpu::{Device, Queue, RenderPipeline, Surface, SurfaceConfiguration, SurfaceError};
+use wgpu::util::DeviceExt;
+use wgpu::{Buffer, Device, Queue, RenderPipeline, Surface, SurfaceConfiguration, SurfaceError};
 
 use winit::event;
 use winit::{event_loop::EventLoopWindowTarget, window::Window};
 
-use crate::RenderPipelineInfo;
+use crate::{HostScreenCallbacks, RenderPipelineInfo};
 
 // struct WindowRenderPipeline<'a> {
 //     pipeline: RenderPipeline,
@@ -25,6 +26,8 @@ pub struct HostScreen {
     queue: Queue,
     // command_encoder: CommandEncoder,
     pipelines: Vec<Box<RenderPipeline>>,
+    buffers: Vec<Box<Buffer>>,
+    callbacks: HostScreenCallbacks,
     // on_pipeline_render: Box<dyn Fn(usize)>,
 }
 
@@ -41,9 +44,9 @@ impl HostScreen {
     // pub fn get_surface_config(&self) -> &SurfaceConfiguration {
     //     &self.surface_config
     // }
-    // pub fn get_device(&self) -> &Device {
-    //     &self.device
-    // }
+    pub fn get_device(&self) -> &Device {
+        &self.device
+    }
     // pub fn get_queue(&self) -> &Queue {
     //     &self.queue
     // }
@@ -155,6 +158,8 @@ impl HostScreen {
             device,
             queue,
             pipelines: vec![],
+            buffers: vec![],
+            callbacks: HostScreenCallbacks::default(),
         })
     }
 
@@ -165,7 +170,7 @@ impl HostScreen {
         &mut self,
         rpi: &RenderPipelineInfo,
     ) -> Result<&RenderPipeline, Utf8Error> {
-        let shader_source = std::str::from_utf8(rpi.shader_source)?;
+        let shader_source = std::str::from_utf8(rpi.shader_source.as_slice())?;
         let shader = self
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -218,6 +223,26 @@ impl HostScreen {
             });
         self.pipelines.push(Box::new(render_pipeline));
         Ok(self.pipelines.last().unwrap().as_ref())
+    }
+
+    pub fn create_buffer_init(
+        &mut self,
+        contents: &[u8],
+        usage: wgpu::BufferUsages,
+    ) -> &mut Buffer {
+        let buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: contents,
+                usage: usage,
+            });
+        self.buffers.push(Box::new(buffer));
+        self.buffers.last_mut().unwrap().as_mut()
+    }
+
+    pub fn set_callbacks(&mut self, callbacks: HostScreenCallbacks) {
+        self.callbacks = callbacks;
     }
 
     pub fn handle_event(
@@ -296,7 +321,7 @@ impl HostScreen {
                     label: Some("Render Encoder"),
                 });
         {
-            let mut _render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
@@ -308,6 +333,15 @@ impl HostScreen {
                 })],
                 depth_stencil_attachment: None,
             });
+
+            // let a = self.pipelines[0].as_ref();
+            // render_pass.set_pipeline(a);
+
+            // let callbacks = &self.callbacks;
+
+            if let Some(on_render) = &self.callbacks.on_render {
+                on_render(self, &mut render_pass);
+            }
 
             // let mut i = 0;
             // for pipeline in self.pipelines.iter() {
