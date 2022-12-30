@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="cargo build --target x86_64-pc-windows-msvc --release --manifest-path ../../Cargo.toml" />
+    <Exec Command="@REM cargo build --target x86_64-pc-windows-msvc --release --manifest-path ../../Cargo.toml" />
   </Target>
 
 </Project>

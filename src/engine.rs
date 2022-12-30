@@ -1,114 +1,83 @@
+use crate::types::*;
 use pollster::FutureExt;
 use std::error::Error;
 use std::str::Utf8Error;
 use wgpu::util::DeviceExt;
 use wgpu::{Buffer, Device, Queue, RenderPipeline, Surface, SurfaceConfiguration, SurfaceError};
-
+use winit;
 use winit::event;
+use winit::event_loop::EventLoop;
+use winit::window;
 use winit::{event_loop::EventLoopWindowTarget, window::Window};
 
-use crate::{HostScreenCallbacks, RenderPipelineInfo};
+pub(crate) fn engine_start(init: HostScreenInitFn) -> ! {
+    env_logger::init();
+    let event_loop = EventLoop::new();
 
-// struct WindowRenderPipeline<'a> {
-//     pipeline: RenderPipeline,
-//     input_layout: VertexBufferLayout<'a>,
-// }
+    let window = window::WindowBuilder::new().build(&event_loop).unwrap();
+    set_window_style(&window, &WindowStyle::Default);
+    window.focus_window();
+    let first_screen = Box::new(HostScreen::new(window).unwrap_or_else(|err| panic!("{:?}", err)));
+    let mut screens: Vec<Box<HostScreen>> = vec![first_screen];
+    let first_screen = screens.last_mut().unwrap().as_mut();
 
-pub trait LayoutedVertex {
-    fn get_layout() -> wgpu::VertexBufferLayout<'static>;
+    let callbacks = init(first_screen);
+    first_screen.set_callbacks(callbacks);
+    event_loop.run(move |event, event_loop, control_flow| {
+        screens.iter_mut().for_each(|screen| {
+            screen.handle_event(&event, event_loop, control_flow);
+        });
+    });
 }
 
-pub struct HostScreen {
+#[cfg(target_os = "windows")]
+fn set_window_style(window: &window::Window, style: &WindowStyle) {
+    match style {
+        WindowStyle::Default => {
+            window.set_resizable(true);
+        }
+        WindowStyle::Fixed => {
+            window.set_resizable(false);
+        }
+        WindowStyle::Fullscreen => {
+            window.set_fullscreen(None);
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn set_window_style(window: &Window, style: &WindowStyle) {
+    match style {
+        WindowStyle::Default => {
+            window.set_resizable(true);
+        }
+        WindowStyle::Fixed => {
+            window.set_resizable(false);
+        }
+        WindowStyle::Fullscreen => {
+            window.set_simple_fullscreen(true);
+        }
+    }
+}
+
+pub(crate) struct HostScreen {
     window: Window,
     surface: Surface,
     surface_config: SurfaceConfiguration,
     device: Device,
     queue: Queue,
-    // command_encoder: CommandEncoder,
     pipelines: Vec<Box<RenderPipeline>>,
     buffers: Vec<Box<Buffer>>,
     callbacks: HostScreenCallbacks,
-    // on_pipeline_render: Box<dyn Fn(usize)>,
 }
 
 impl HostScreen {
-    // pub fn get_window(&self) -> &Window {
-    //     &self.window
-    // }
-    // pub fn get_instance(&self) -> &Instance {
-    //     &self._instance
-    // }
-    // pub fn get_surface(&self) -> &Surface {
-    //     &self.surface
-    // }
-    // pub fn get_surface_config(&self) -> &SurfaceConfiguration {
-    //     &self.surface_config
-    // }
-    pub fn get_device(&self) -> &Device {
-        &self.device
-    }
-    // pub fn get_queue(&self) -> &Queue {
-    //     &self.queue
-    // }
-
     const CLEAR_COLOR: wgpu::Color = wgpu::Color {
         r: 0.0,
         g: 0.0,
         b: 0.0,
         a: 0.0,
     };
-
-    // pub fn window_id(&self) -> WindowId {
-    //     self.window.id()
-    // }
-
-    // fn create_default_pipeline(
-    //     device: &Device,
-    //     shader: ShaderModule,
-    //     input_vertex_layout: VertexBufferLayout,
-    //     output_format: &TextureFormat,
-    // ) -> wgpu::RenderPipeline {
-    //     let render_pipeline_layout =
-    //         device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-    //             label: Some("Default Render Pipeline Layout"),
-    //             bind_group_layouts: &[],
-    //             push_constant_ranges: &[],
-    //         });
-    //     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-    //         label: Some("Default Render Pipeline"),
-    //         layout: Some(&render_pipeline_layout),
-    //         vertex: wgpu::VertexState {
-    //             module: &shader,
-    //             entry_point: "vs_main",
-    //             buffers: &[input_vertex_layout],
-    //         },
-    //         fragment: Some(wgpu::FragmentState {
-    //             module: &shader,
-    //             entry_point: "fs_main",
-    //             targets: &[Some(wgpu::ColorTargetState {
-    //                 format: *output_format,
-    //                 blend: Some(wgpu::BlendState::REPLACE),
-    //                 write_mask: wgpu::ColorWrites::ALL,
-    //             })],
-    //         }),
-    //         primitive: wgpu::PrimitiveState {
-    //             topology: wgpu::PrimitiveTopology::TriangleList,
-    //             strip_index_format: None,
-    //             front_face: wgpu::FrontFace::Ccw,
-    //             cull_mode: Some(wgpu::Face::Back),
-    //             polygon_mode: wgpu::PolygonMode::Fill,
-    //             unclipped_depth: false,
-    //             conservative: false,
-    //         },
-    //         depth_stencil: None,
-    //         multisample: wgpu::MultisampleState {
-    //             count: 1,
-    //             mask: !0,
-    //             alpha_to_coverage_enabled: false,
-    //         },
-    //         multiview: None,
-    //     })
-    // }
 
     pub fn new(window: Window) -> Result<HostScreen, Box<dyn Error>> {
         let size = window.inner_size();
@@ -140,17 +109,6 @@ impl HostScreen {
             present_mode: wgpu::PresentMode::Fifo,
         };
         surface.configure(&device, &surface_config);
-
-        // let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        //     label: Some("Shader"),
-        //     source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
-        // });
-
-        // let pipeline =
-        //     Self::create_default_pipeline(&device, shader, vertex_layout, &surface_config.format);
-        // let command_encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        //     label: Some("Render Encoder"),
-        // });
         Ok(HostScreen {
             window,
             surface_config,
@@ -163,14 +121,11 @@ impl HostScreen {
         })
     }
 
-    // pub fn add_render_pipeline(&mut self, pipeline: RenderPipeline) {
-    //     self.pipelines.push(Box::new(pipeline));
-    // }
     pub fn add_render_pipeline(
         &mut self,
         rpi: &RenderPipelineInfo,
     ) -> Result<&RenderPipeline, Utf8Error> {
-        let shader_source = std::str::from_utf8(rpi.shader_source.as_slice())?;
+        let shader_source = rpi.shader_source.as_str()?;
         let shader = self
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -334,24 +289,9 @@ impl HostScreen {
                 depth_stencil_attachment: None,
             });
 
-            // let a = self.pipelines[0].as_ref();
-            // render_pass.set_pipeline(a);
-
-            // let callbacks = &self.callbacks;
-
             if let Some(on_render) = &self.callbacks.on_render {
                 on_render(self, &mut render_pass);
             }
-
-            // let mut i = 0;
-            // for pipeline in self.pipelines.iter() {
-            //     render_pass.set_pipeline(pipeline);
-            //     let on_pipeline_render = self.on_pipeline_render.as_ref();
-            //     on_pipeline_render(i);
-            //     i += 1;
-            //     render_pass.set_vertex_buffer(0, vertices.vertex_buffer);
-            //     render_pass.draw(vertices.vertices_range.clone(), vertices.instances.clone());
-            // }
         } // `render_pass` drops here.
 
         self.queue.submit(std::iter::once(command_encoder.finish()));
@@ -368,9 +308,3 @@ impl HostScreen {
         }
     }
 }
-
-// pub struct RenderTargetVertices<'a> {
-//     pub vertex_buffer: BufferSlice<'a>,
-//     pub vertices_range: Range<u32>,
-//     pub instances: Range<u32>,
-// }

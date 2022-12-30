@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -7,7 +8,7 @@ namespace WgpuSample;
 internal class Program
 {
     [STAThread]
-    private static void Main(string[] args) => NativeApi.elffy_engine_start(Start, OnRender);
+    private static void Main(string[] args) => EngineCore.EngineStart(Start, OnRender);
 
     private static unsafe void Start(HostScreenHandle screen)
     {
@@ -26,7 +27,7 @@ internal class Program
             },
             shader_source = ShaderSource
         };
-        _renderPipeline = NativeApi.elffy_add_render_pipeline(screen, in pipelineInfo);
+        _renderPipeline = EngineCore.elffy_add_render_pipeline(screen, in pipelineInfo);
 
         var vertices = stackalloc PosColorVertex[3]
         {
@@ -46,8 +47,8 @@ internal class Program
                 Color = new(0.0f, 0.0f, 1.0f),
             },
         };
-        var contents = new RustSlice<byte>((byte*)vertices, (nuint)(3 * sizeof(PosColorVertex)));
-        _buffer = NativeApi.elffy_create_buffer_init(screen, contents, BufferUsages.VERTEX);
+        var contents = new Sliceffi<byte>((byte*)vertices, (nuint)(3 * sizeof(PosColorVertex)));
+        _buffer = EngineCore.elffy_create_buffer_init(screen, contents, BufferUsages.VERTEX);
     }
 
     private static RenderPipelineHandle _renderPipeline;
@@ -55,14 +56,20 @@ internal class Program
 
     private static void OnRender(HostScreenHandle screen, RenderPassHandle renderPass)
     {
-        NativeApi.elffy_set_pipeline(renderPass, _renderPipeline);
+        EngineCore.elffy_set_pipeline(renderPass, _renderPipeline);
         unsafe {
             ulong size = (ulong)(3 * sizeof(PosColorVertex));
-            NativeApi.elffy_draw(renderPass, 0, _buffer, 0, size, 0, 3, 1);
+            EngineCore.elffy_draw(
+                renderPass,
+                0,
+                new(_buffer, RangeBoundsU64ffi.All),
+                new(0, 3),
+                new(0, 1)
+            );
         }
     }
 
-    private unsafe static RustSlice<byte> ShaderSource
+    private unsafe static Sliceffi<byte> ShaderSource
     {
         get
         {
