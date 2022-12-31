@@ -5,17 +5,32 @@ use std::str::Utf8Error;
 use wgpu::util::DeviceExt;
 use wgpu::{Buffer, Device, Queue, RenderPipeline, Surface, SurfaceConfiguration, SurfaceError};
 use winit;
+use winit::dpi::{PhysicalPosition, Position};
 use winit::event;
 use winit::event_loop::EventLoop;
+use winit::platform::windows::{WindowBuilderExtWindows, WindowExtWindows};
 use winit::window;
 use winit::{event_loop::EventLoopWindowTarget, window::Window};
 
 pub(crate) fn engine_start(init: HostScreenInitFn) -> ! {
     env_logger::init();
     let event_loop = EventLoop::new();
-
-    let window = window::WindowBuilder::new().build(&event_loop).unwrap();
+    let window = window::WindowBuilder::new()
+        .with_title("Elffy")
+        .with_theme(Some(window::Theme::Light))
+        .build(&event_loop)
+        .unwrap();
     set_window_style(&window, &WindowStyle::Default);
+
+    if let Some(monitor) = window.current_monitor() {
+        let monitor_size = monitor.size();
+        let window_size = window.outer_size();
+        let pos = PhysicalPosition::new(
+            ((monitor_size.width - window_size.width) / 2u32) as i32,
+            ((monitor_size.height - window_size.height) / 2u32) as i32,
+        );
+        window.set_outer_position(Position::Physical(pos));
+    }
     window.focus_window();
     let first_screen = Box::new(HostScreen::new(window).unwrap_or_else(|err| panic!("{:?}", err)));
     let mut screens: Vec<Box<HostScreen>> = vec![first_screen];

@@ -8,9 +8,13 @@ namespace WgpuSample;
 internal class Program
 {
     [STAThread]
-    private static void Main(string[] args) => EngineCore.EngineStart(Start, OnRender);
+    private static void Main(string[] args) => EngineCore.EngineStart(new()
+    {
+        OnStart = OnStart,
+        OnRender = OnRender,
+    });
 
-    private static unsafe void Start(HostScreenHandle screen)
+    private static unsafe void OnStart(HostScreenHandle screen)
     {
         VertexAttribute* attrs = stackalloc VertexAttribute[2]
         {
