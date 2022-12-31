@@ -58,14 +58,16 @@ internal class Program
     {
         EngineCore.elffy_set_pipeline(renderPass, _renderPipeline);
         unsafe {
-            ulong size = (ulong)(3 * sizeof(PosColorVertex));
-            EngineCore.elffy_draw(
-                renderPass,
-                0,
-                new(_buffer, RangeBoundsU64ffi.All),
-                new(0, 3),
-                new(0, 1)
-            );
+            EngineCore.elffy_draw_buffer(
+                render_pass: renderPass,
+                vertex_buffer: new()
+                {
+                    buffer_slice = new() { buffer = _buffer, range = RangeBoundsU64ffi.All },
+                    slot = 0,
+                },
+                vertices_range: new RangeU32ffi(0, 3),
+                instances_range: new(0, 1)
+                );
         }
     }
 
@@ -107,15 +109,15 @@ fn fs_main(fin: VertexOutput) -> @location(0) vec4<f32> {
     }
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 public struct PosColorVertex
 {
     public Vec3 Position;
     public Color3 Color;
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 public record struct Vec3(float X, float Y, float Z);
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 public record struct Color3(float R, float G, float B);

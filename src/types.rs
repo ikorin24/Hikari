@@ -65,13 +65,14 @@ impl VertexLayoutInfo {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub(crate) struct BufferSliceffi<'a> {
     buffer: &'a wgpu::Buffer,
     range: RangeBoundsU64ffi,
 }
 
 impl<'a> BufferSliceffi<'a> {
-    pub fn to_buffer_slice(&self) -> wgpu::BufferSlice {
+    pub fn to_buffer_slice(&self) -> wgpu::BufferSlice<'a> {
         self.buffer.slice(self.range)
     }
 }
@@ -96,6 +97,20 @@ impl Sliceffi<u8> {
 }
 
 #[repr(C)]
+#[derive(Debug)]
+pub(crate) struct SlotBufferSliceffi<'a> {
+    pub buffer_slice: BufferSliceffi<'a>,
+    pub slot: u32,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct IndexBufferSliceffi<'a> {
+    pub buffer_slice: BufferSliceffi<'a>,
+    pub format: wgpu::IndexFormat,
+}
+
+#[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct RangeU64ffi {
     start: u64,
@@ -103,12 +118,12 @@ pub(crate) struct RangeU64ffi {
 }
 
 impl RangeU64ffi {
-    pub fn to_range(&self) -> ops::Range<u64> {
-        ops::Range {
-            start: self.start,
-            end: self.end_excluded,
-        }
-    }
+    // pub fn to_range(&self) -> ops::Range<u64> {
+    //     ops::Range {
+    //         start: self.start,
+    //         end: self.end_excluded,
+    //     }
+    // }
 }
 
 #[repr(C)]

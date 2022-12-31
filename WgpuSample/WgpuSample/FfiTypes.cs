@@ -8,19 +8,19 @@ using u64 = System.UInt64;
 
 namespace WgpuSample;
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal record struct HostScreenHandle(Handle Handle);
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal record struct RenderPipelineHandle(Handle Handle);
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal record struct RenderPassHandle(Handle Handle);
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal record struct BufferHandle(Handle Handle);
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct HostScreenCallbacks
 {
     public static HostScreenCallbacks None => default;
@@ -28,14 +28,14 @@ internal unsafe struct HostScreenCallbacks
     public delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassHandle, void> on_render;
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal struct RenderPipelineInfo
 {
     public VertexLayoutInfo vertex;
     public Sliceffi<u8> shader_source;
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal struct BufferSliceffi
 {
     public BufferHandle buffer;
@@ -43,7 +43,21 @@ internal struct BufferSliceffi
     public BufferSliceffi(BufferHandle buffer, RangeBoundsU64ffi range) => (this.buffer, this.range) = (buffer, range);
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
+internal struct SlotBufferSliceffi
+{
+    public BufferSliceffi buffer_slice;
+    public u32 slot;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct IndexBufferSliceffi
+{
+    public BufferSliceffi buffer_slice;
+    public IndexFormat format;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct Sliceffi<T> where T : unmanaged
 {
     public T* ptr;
@@ -56,14 +70,14 @@ internal unsafe struct Sliceffi<T> where T : unmanaged
     }
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal struct RangeU64ffi
 {
     public u64 start;
     public u64 end_excluded;
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal struct RangeU32ffi
 {
     public u32 start;
@@ -71,7 +85,7 @@ internal struct RangeU32ffi
     public RangeU32ffi(u32 start, u32 end_excluded) => (this.start, this.end_excluded) = (start, end_excluded);
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal struct RangeBoundsU64ffi
 {
     u64 start;
@@ -94,14 +108,14 @@ internal struct RangeBoundsU64ffi
     }
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal struct VertexLayoutInfo
 {
     public u64 vertex_size;
     public Sliceffi<VertexAttribute> attributes;
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+[StructLayout(LayoutKind.Sequential)]
 internal struct VertexAttribute
 {
     public VertexFormat format;
@@ -194,7 +208,15 @@ internal enum VertexFormat : u32
     Float64x4 = 33,
 }
 
-[StructLayout(LayoutKind.Sequential, Pack = 0)]
+internal enum IndexFormat : u32
+{
+    /// <summary>Indices are 16 bit unsigned integers.</summary>
+    Uint16 = 0,
+    /// <summary>Indices are 32 bit unsigned integers.</summary>
+    Uint32 = 1,
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe readonly struct Handle : IEquatable<Handle>
 {
     private readonly void* _handle;

@@ -63,13 +63,31 @@ namespace WgpuSample
         public static partial void elffy_set_pipeline(RenderPassHandle render_pass, RenderPipelineHandle render_pipeline);
 
         [LibraryImport(EngineCoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-        public static partial void elffy_draw(
+        public static partial void elffy_draw_buffer(
             RenderPassHandle render_pass,
-            u32 slot,
-            in BufferSliceffi buffer_slice,
+            in SlotBufferSliceffi vertex_buffer,
             in RangeU32ffi vertices_range,
             in RangeU32ffi instances_range
             );
+
+        [LibraryImport(EngineCoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+        public static partial void elffy_draw_buffer_indexed(
+            RenderPassHandle render_pass,
+            in SlotBufferSliceffi vertex_buffer,
+            in IndexBufferSliceffi index_buffer,
+            in RangeU32ffi indices_range,
+            in RangeU32ffi instances_range
+            );
+
+        [LibraryImport(EngineCoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+        public static partial void elffy_draw_buffers_indexed(
+            RenderPassHandle render_pass,
+            Sliceffi<SlotBufferSliceffi> vertex_buffers,
+            in IndexBufferSliceffi index_buffer,
+            in RangeU32ffi indices_range,
+            in RangeU32ffi instances_range
+            );
+
     }
 
 
