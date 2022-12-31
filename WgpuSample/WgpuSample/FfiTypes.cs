@@ -5,20 +5,35 @@ using u8 = System.Byte;
 using u16 = System.UInt16;
 using u32 = System.UInt32;
 using u64 = System.UInt64;
+using System.Runtime.CompilerServices;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace WgpuSample;
 
 [StructLayout(LayoutKind.Sequential)]
-internal record struct HostScreenHandle(Handle Handle);
+internal record struct HostScreenHandle(Handle Handle) : IHandle<HostScreenHandle>
+{
+    public static HostScreenHandle InvalidHandle => default;
+}
 
 [StructLayout(LayoutKind.Sequential)]
-internal record struct RenderPipelineHandle(Handle Handle);
+internal record struct RenderPipelineHandle(Handle Handle) : IHandle<RenderPipelineHandle>
+{
+    public static RenderPipelineHandle InvalidHandle => default;
+}
 
 [StructLayout(LayoutKind.Sequential)]
-internal record struct RenderPassHandle(Handle Handle);
+internal record struct RenderPassHandle(Handle Handle) : IHandle<RenderPassHandle>
+{
+    public static RenderPassHandle InvalidHandle => default;
+}
 
 [StructLayout(LayoutKind.Sequential)]
-internal record struct BufferHandle(Handle Handle);
+internal record struct BufferHandle(Handle Handle) : IHandle<BufferHandle>
+{
+    public static BufferHandle InvalidHandle => default;
+}
 
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct HostScreenCallbacks
@@ -227,6 +242,8 @@ internal unsafe readonly struct Handle : IEquatable<Handle>
 {
     private readonly void* _handle;
 
+    internal static Handle InvalidHandle => default;
+
     public override bool Equals(object? obj) => obj is Handle handle && Equals(handle);
 
     public bool Equals(Handle other) => _handle == other._handle;
@@ -238,4 +255,38 @@ internal unsafe readonly struct Handle : IEquatable<Handle>
     public static bool operator !=(Handle left, Handle right) => !(left == right);
 
     public override string ToString() => ((IntPtr)_handle).ToString();
+}
+
+internal interface IHandle
+{
+    Handle Handle { get; }
+}
+
+internal interface IHandle<TSelf> :
+    IHandle
+    where TSelf : unmanaged, IHandle<TSelf>
+{
+    static abstract TSelf InvalidHandle { get; }
+}
+
+internal static class HandleExtensions
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsInvalid<THandle>(this THandle source) where THandle : unmanaged, IHandle
+    {
+        return source.Handle == Handle.InvalidHandle;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
+    public static void Validate<THandle>(this THandle source) where THandle : unmanaged, IHandle
+    {
+        if(source.Handle == Handle.InvalidHandle) {
+            ThrowInvalid();
+
+            [DoesNotReturn]
+            [DebuggerHidden]
+            static void ThrowInvalid() => throw new InvalidOperationException("The handle is invalid.");
+        }
+    }
 }
