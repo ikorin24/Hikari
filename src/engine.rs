@@ -8,7 +8,7 @@ use winit;
 use winit::dpi::{PhysicalPosition, Position};
 use winit::event;
 use winit::event_loop::EventLoop;
-use winit::platform::windows::{WindowBuilderExtWindows, WindowExtWindows};
+use winit::platform::windows::WindowBuilderExtWindows;
 use winit::window;
 use winit::{event_loop::EventLoopWindowTarget, window::Window};
 

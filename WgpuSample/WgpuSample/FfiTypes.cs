@@ -123,6 +123,8 @@ internal struct VertexAttribute
     public u32 shader_location;
 }
 
+/// <summary>buffer usages</summary>
+/// <remarks>values are same as wgpu</remarks>
 internal enum BufferUsages : u32
 {
     MAP_READ = 1 << 0,
@@ -136,6 +138,8 @@ internal enum BufferUsages : u32
     INDIRECT = 1 << 8,
 }
 
+/// <summary>vertex format</summary>
+/// <remarks>values are same as wgpu</remarks>
 internal enum VertexFormat : u32
 {
     /// <summary>/// Two unsigned bytes (u8). `uvec2` in shaders.</summary>
@@ -208,6 +212,8 @@ internal enum VertexFormat : u32
     Float64x4 = 33,
 }
 
+/// <summary>index format</summary>
+/// <remarks>values are same as wgpu</remarks>
 internal enum IndexFormat : u32
 {
     /// <summary>Indices are 16 bit unsigned integers.</summary>

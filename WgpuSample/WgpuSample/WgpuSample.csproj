@@ -11,6 +11,7 @@
     <None Include="..\..\target\x86_64-pc-windows-msvc\release\wgpu_sample.dll" Link="wgpu_sample.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="EngineCore.Native.cs" />
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
