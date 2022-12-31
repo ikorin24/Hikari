@@ -88,10 +88,10 @@ internal struct RangeU32ffi
 [StructLayout(LayoutKind.Sequential)]
 internal struct RangeBoundsU64ffi
 {
-    u64 start;
-    u64 end_excluded;
-    bool has_start;
-    bool has_end_excluded;
+    public u64 start;
+    public u64 end_excluded;
+    public bool has_start;
+    public bool has_end_excluded;
     public static RangeBoundsU64ffi All => default;
     public RangeBoundsU64ffi(u64? start, u64? end_excluded)
     {
