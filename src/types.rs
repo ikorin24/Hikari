@@ -43,18 +43,18 @@ pub(crate) struct HostScreenCallbacks {
 }
 
 #[repr(C)]
-pub(crate) struct RenderPipelineInfo {
-    pub vertex: VertexLayoutInfo,
-    pub shader_source: Sliceffi<u8>,
+pub(crate) struct RenderPipelineInfo<'a> {
+    pub vertex: VertexLayoutInfo<'a>,
+    pub shader_source: Sliceffi<'a, u8>,
 }
 
 #[repr(C)]
-pub(crate) struct VertexLayoutInfo {
+pub(crate) struct VertexLayoutInfo<'a> {
     pub vertex_size: u64,
-    pub attributes: Sliceffi<wgpu::VertexAttribute>,
+    pub attributes: Sliceffi<'a, wgpu::VertexAttribute>,
 }
 
-impl VertexLayoutInfo {
+impl VertexLayoutInfo<'_> {
     pub fn to_vertex_buffer_layout(&self) -> wgpu::VertexBufferLayout {
         wgpu::VertexBufferLayout {
             array_stride: self.vertex_size,
@@ -79,18 +79,21 @@ impl<'a> BufferSliceffi<'a> {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct Sliceffi<T> {
-    data: *const T,
+pub(crate) struct Sliceffi<'a, T> {
+    data: Option<&'a T>,
     len: usize,
 }
 
-impl<T> Sliceffi<T> {
+impl<T> Sliceffi<'_, T> {
     pub fn as_slice(&self) -> &[T] {
-        unsafe { std::slice::from_raw_parts(self.data, self.len) }
+        match self.data {
+            Some(data) => unsafe { std::slice::from_raw_parts(data as *const T, self.len) },
+            None => &[],
+        }
     }
 }
 
-impl Sliceffi<u8> {
+impl Sliceffi<'_, u8> {
     pub fn as_str(&self) -> Result<&str, str::Utf8Error> {
         std::str::from_utf8(self.as_slice())
     }

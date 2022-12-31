@@ -20,11 +20,11 @@ extern "cdecl" fn elffy_add_render_pipeline(
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_create_buffer_init(
-    screen: &mut HostScreen,
-    contents: Sliceffi<u8>,
+extern "cdecl" fn elffy_create_buffer_init<'a>(
+    screen: &'a mut HostScreen,
+    contents: Sliceffi<'a, u8>,
     usage: wgpu::BufferUsages,
-) -> &wgpu::Buffer {
+) -> &'a wgpu::Buffer {
     screen.create_buffer_init(contents.as_slice(), usage)
 }
 

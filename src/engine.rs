@@ -5,7 +5,7 @@ use std::str::Utf8Error;
 use wgpu::util::DeviceExt;
 use wgpu::{Buffer, Device, Queue, RenderPipeline, Surface, SurfaceConfiguration, SurfaceError};
 use winit;
-use winit::dpi::{PhysicalPosition, Position};
+use winit::dpi::{PhysicalPosition, PhysicalSize, Position, Size};
 use winit::event;
 use winit::event_loop::EventLoop;
 use winit::platform::windows::WindowBuilderExtWindows;
@@ -17,6 +17,7 @@ pub(crate) fn engine_start(init: HostScreenInitFn) -> ! {
     let event_loop = EventLoop::new();
     let window = window::WindowBuilder::new()
         .with_title("Elffy")
+        .with_inner_size(Size::Physical(PhysicalSize::new(1280, 720)))
         .with_theme(Some(window::Theme::Light))
         .build(&event_loop)
         .unwrap();
@@ -256,11 +257,6 @@ impl HostScreen {
                 _ => {}
             },
             Event::RedrawRequested(window_id) if *window_id == self.window.id() => {
-                // let vertices = RenderTargetVertices {
-                //     vertex_buffer: vertex_buffer.slice(..),
-                //     vertices_range: 0..3,
-                //     instances: 0..1,
-                // };
                 match self.render() {
                     Ok(_) => {}
                     Err(wgpu::SurfaceError::Lost) => {
