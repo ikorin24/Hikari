@@ -1,40 +1,17 @@
 use crate::engine::HostScreen;
+use bytemuck::Contiguous;
 use std;
-use std::{error, fmt, ops, str};
+use std::ffi;
+use std::{marker, num, ops, str};
 
+#[repr(u32)]
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)] // because values are from FFI
 pub(crate) enum WindowStyle {
-    Default,
-    Fixed,
-    Fullscreen,
+    Default = 0,
+    Fixed = 1,
+    Fullscreen = 2,
 }
-
-impl str::FromStr for WindowStyle {
-    type Err = ParseEnumError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Default" => Ok(WindowStyle::Default),
-            "Fixed" => Ok(WindowStyle::Fixed),
-            "Fullscreen" => Ok(WindowStyle::Fullscreen),
-            _ => Err(ParseEnumError {
-                string: s.to_owned(),
-            }),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct ParseEnumError {
-    pub string: String,
-}
-
-impl fmt::Display for ParseEnumError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "cannot parse str: {}", self.string)
-    }
-}
-
-impl error::Error for ParseEnumError {}
 
 #[repr(C)]
 #[derive(Default)]
@@ -43,15 +20,736 @@ pub(crate) struct HostScreenCallbacks {
 }
 
 #[repr(C)]
-pub(crate) struct RenderPipelineInfo<'a> {
-    pub vertex: VertexLayoutInfo<'a>,
-    pub shader_source: Sliceffi<'a, u8>,
+pub(crate) struct BindGroupDescriptor<'a> {
+    pub layout: &'a wgpu::BindGroupLayout,
+    pub entries: Slice<'a, BindGroupEntry<'a>>,
+}
+
+#[repr(C)]
+pub(crate) struct BindGroupEntry<'a> {
+    pub binding: u32,
+    pub resource: BindingResource<'a>,
+}
+
+#[repr(C)]
+pub(crate) struct BindingResource<'a> {
+    pub tag: BindingResourceTag,
+    /// `&BufferBinding` or `&Slice<BufferBinding>`
+    /// or `&wgpu::Sampler` or `&Slice<&wgpu::Sampler>`
+    /// or `&wgpu::TextureView` or `&Slice<&wgpu::TextureView>`
+    pub payload: PointerWrap<'a>,
+}
+
+#[repr(transparent)]
+pub(crate) struct PointerWrap<'a> {
+    ptr: *const ffi::c_void,
+    phantom: marker::PhantomData<&'a ffi::c_void>,
+}
+
+impl<'a> PointerWrap<'a> {
+    pub fn as_ref_unwrap<T>(&self) -> &'a T {
+        unsafe { (self.ptr as *const T).as_ref() }.unwrap()
+    }
+}
+
+#[repr(u32)]
+#[derive(PartialEq, Eq)]
+#[allow(dead_code)] // because values are from FFI
+pub(crate) enum BindingResourceTag {
+    Buffer = 0,
+    BufferArray = 1,
+    Sampler = 2,
+    SamplerArray = 3,
+    TextureView = 4,
+    TextureViewArray = 5,
+}
+
+#[repr(C)]
+pub(crate) struct BufferBinding<'a> {
+    pub buffer: &'a wgpu::Buffer,
+    pub offset: u64,
+    pub size: u64,
+}
+
+#[repr(C)]
+pub(crate) struct PipelineLayoutDesc<'a> {
+    pub bind_group_layouts: Slice<'a, &'a wgpu::BindGroupLayout>,
+}
+
+impl<'a> PipelineLayoutDesc<'a> {
+    pub fn to_pipeline_descriptor(&self) -> wgpu::PipelineLayoutDescriptor {
+        wgpu::PipelineLayoutDescriptor {
+            label: None,
+            bind_group_layouts: &self.bind_group_layouts,
+            push_constant_ranges: &[],
+        }
+    }
+}
+
+#[repr(C)]
+pub(crate) struct RenderPipelineDesc<'a> {
+    pub layout: &'a wgpu::PipelineLayout,
+    pub vs_info: VertexShaderInfo<'a>,
+    pub fs_info: FragmentShaderInfo<'a>,
+    pub primitive: PrimitiveInfo,
+}
+
+#[repr(C)]
+pub(crate) struct VertexShaderInfo<'a> {
+    pub shader: &'a wgpu::ShaderModule,
+    pub entry_point: Slice<'a, u8>,
+    pub inputs: Slice<'a, VertexLayoutInfo<'a>>,
+}
+
+#[repr(C)]
+pub(crate) struct ColorTargetInfo {
+    pub format: wgpu::TextureFormat,
+    pub blend: wgpu::BlendState,
+    pub write_mask: wgpu::ColorWrites,
+}
+impl ColorTargetInfo {
+    pub fn to_color_target_state(&self) -> wgpu::ColorTargetState {
+        wgpu::ColorTargetState {
+            format: self.format,
+            blend: Some(self.blend),
+            write_mask: self.write_mask,
+        }
+    }
+}
+
+#[repr(C)]
+pub(crate) struct FragmentShaderInfo<'a> {
+    pub shader: &'a wgpu::ShaderModule,
+    pub entry_point: Slice<'a, u8>,
+    pub outputs: Slice<'a, ColorTargetInfo>,
+}
+
+#[repr(C)]
+pub(crate) struct PrimitiveInfo {
+    pub topology: wgpu::PrimitiveTopology,
+    pub strip_index_format: Opt<wgpu::IndexFormat>,
+    pub front_face: wgpu::FrontFace,
+    pub cull_mode: Opt<wgpu::Face>,
+    pub polygon_mode: wgpu::PolygonMode,
+}
+
+impl PrimitiveInfo {
+    pub fn to_primitive_state(&self) -> wgpu::PrimitiveState {
+        wgpu::PrimitiveState {
+            topology: self.topology,
+            strip_index_format: self.strip_index_format.to_option(),
+            front_face: self.front_face,
+            cull_mode: self.cull_mode.to_option(),
+            unclipped_depth: false,
+            polygon_mode: self.polygon_mode,
+            conservative: false,
+        }
+    }
+}
+
+// #[repr(C)]
+// pub(crate) enum CullMode {
+//     Front = 0,
+//     Back = 1,
+//     NoCulling = 2,
+// }
+
+// impl CullMode {
+//     pub fn to_face(&self) -> Option<wgpu::Face> {
+//         match self {
+//             Front => Some(wgpu::Face::Front),
+//             Back => Some(wgpu::Face::Back),
+//             NoCulling => None,
+//         }
+//     }
+// }
+
+#[repr(C)]
+pub(crate) struct BindGroupLayoutEntry {
+    pub binding: u32,
+    /// Which shader stages can see this binding.
+    pub visibility: wgpu::ShaderStages,
+    /// The type of the binding
+    pub ty: BindingType,
+    pub data: *const std::ffi::c_void,
+    pub count: u32,
+}
+
+impl BindGroupLayoutEntry {
+    pub fn to_wgpu_type(&self) -> wgpu::BindGroupLayoutEntry {
+        wgpu::BindGroupLayoutEntry {
+            binding: self.binding,
+            visibility: self.visibility,
+            ty: match self.ty {
+                BindingType::Buffer => unsafe {
+                    (*(self.data as *const BufferBindingData)).to_wgpu_type()
+                },
+                BindingType::Sampler => unsafe {
+                    (*(self.data as *const SamplerBindingType)).to_wgpu_type()
+                },
+                BindingType::Texture => unsafe {
+                    (*(self.data as *const TextureBindingData)).to_wgpu_type()
+                },
+                BindingType::StorageTexture => unsafe {
+                    (*(self.data as *const StorageTextureBindingData)).to_wgpu_type()
+                },
+            },
+            count: num::NonZeroU32::from_integer(self.count),
+        }
+    }
+}
+
+#[repr(u32)]
+pub(crate) enum BindingType {
+    Buffer = 0,
+    Sampler = 1,
+    Texture = 2,
+    StorageTexture = 3,
+}
+
+#[repr(C)]
+pub(crate) struct BufferBindingData {
+    ty: BufferBindingType,
+    has_dynamic_offset: bool,
+    min_binding_size: u64,
+}
+
+impl BufferBindingData {
+    pub fn to_wgpu_type(&self) -> wgpu::BindingType {
+        wgpu::BindingType::Buffer {
+            ty: self.ty.to_wgpu_type(),
+            has_dynamic_offset: self.has_dynamic_offset,
+            min_binding_size: num::NonZeroU64::from_integer(self.min_binding_size),
+        }
+    }
+}
+
+#[repr(C)]
+pub(crate) enum BufferBindingType {
+    Uniform = 0,
+    Storate = 1,
+    StorateReadOnly = 2,
+}
+
+impl BufferBindingType {
+    pub fn to_wgpu_type(&self) -> wgpu::BufferBindingType {
+        match self {
+            Self::Uniform => wgpu::BufferBindingType::Uniform,
+            Self::Storate => wgpu::BufferBindingType::Storage { read_only: false },
+            Self::StorateReadOnly => wgpu::BufferBindingType::Storage { read_only: true },
+        }
+    }
+}
+
+#[repr(C)]
+pub(crate) enum SamplerBindingType {
+    Filtering = 0,
+    NonFiltering = 1,
+    Comparison = 2,
+}
+
+impl SamplerBindingType {
+    pub fn to_wgpu_type(&self) -> wgpu::BindingType {
+        match self {
+            Self::Filtering => wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+            Self::NonFiltering => {
+                wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering)
+            }
+            Self::Comparison => wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison),
+        }
+    }
+}
+
+#[repr(C)]
+pub(crate) struct TextureBindingData {
+    sample_type: TextureSampleType,
+    view_dimension: TextureViewDimension,
+    multisampled: bool,
+}
+
+impl TextureBindingData {
+    pub fn to_wgpu_type(&self) -> wgpu::BindingType {
+        wgpu::BindingType::Texture {
+            sample_type: self.sample_type.to_wgpu_type(),
+            view_dimension: self.view_dimension.to_wgpu_type(),
+            multisampled: self.multisampled,
+        }
+    }
+}
+
+#[repr(C)]
+pub(crate) enum TextureSampleType {
+    FloatFilterable = 0,
+    FloatNotFilterable = 1,
+    Depth = 2,
+    Sint = 3,
+    Uint = 4,
+}
+
+impl TextureSampleType {
+    pub fn to_wgpu_type(&self) -> wgpu::TextureSampleType {
+        match self {
+            Self::FloatFilterable => wgpu::TextureSampleType::Float { filterable: true },
+            Self::FloatNotFilterable => wgpu::TextureSampleType::Float { filterable: false },
+            Self::Depth => wgpu::TextureSampleType::Depth,
+            Self::Sint => wgpu::TextureSampleType::Sint,
+            Self::Uint => wgpu::TextureSampleType::Uint,
+        }
+    }
+}
+
+#[repr(C)]
+pub(crate) enum TextureViewDimension {
+    D1 = 0,
+    D2 = 1,
+    D2Array = 2,
+    Cube = 3,
+    CubeArray = 4,
+    D3 = 5,
+}
+
+impl TextureViewDimension {
+    pub fn to_wgpu_type(&self) -> wgpu::TextureViewDimension {
+        match self {
+            Self::D1 => wgpu::TextureViewDimension::D1,
+            Self::D2 => wgpu::TextureViewDimension::D2,
+            Self::D2Array => wgpu::TextureViewDimension::D2Array,
+            Self::Cube => wgpu::TextureViewDimension::Cube,
+            Self::CubeArray => wgpu::TextureViewDimension::CubeArray,
+            Self::D3 => wgpu::TextureViewDimension::D3,
+        }
+    }
+}
+
+#[repr(C)]
+pub(crate) struct StorageTextureBindingData {
+    /// Allowed access to this texture.
+    access: StorageTextureAccess,
+    /// Format of the texture.
+    format: TextureFormat,
+    /// Dimension of the texture view that is going to be sampled.
+    view_dimension: TextureViewDimension,
+}
+
+impl StorageTextureBindingData {
+    pub fn to_wgpu_type(&self) -> wgpu::BindingType {
+        wgpu::BindingType::StorageTexture {
+            access: self.access.to_wgpu_type(),
+            format: self.format.to_wgpu_type(),
+            view_dimension: self.view_dimension.to_wgpu_type(),
+        }
+    }
+}
+
+#[repr(u32)]
+pub(crate) enum StorageTextureAccess {
+    WriteOnly = 0,
+    ReadOnly = 1,
+    ReadWrite = 2,
+}
+
+impl StorageTextureAccess {
+    pub fn to_wgpu_type(&self) -> wgpu::StorageTextureAccess {
+        match self {
+            Self::WriteOnly => wgpu::StorageTextureAccess::WriteOnly,
+            Self::ReadOnly => wgpu::StorageTextureAccess::ReadOnly,
+            Self::ReadWrite => wgpu::StorageTextureAccess::ReadWrite,
+        }
+    }
+}
+
+#[repr(u32)]
+pub enum TextureFormat {
+    // Normal 8 bit formats
+    /// Red channel only. 8 bit integer per channel. [0, 255] converted to/from float [0, 1] in shader.
+    R8Unorm = 0,
+    /// Red channel only. 8 bit integer per channel. [-127, 127] converted to/from float [-1, 1] in shader.
+    R8Snorm = 1,
+    /// Red channel only. 8 bit integer per channel. Unsigned in shader.
+    R8Uint = 2,
+    /// Red channel only. 8 bit integer per channel. Signed in shader.
+    R8Sint = 3,
+
+    // Normal 16 bit formats
+    /// Red channel only. 16 bit integer per channel. Unsigned in shader.
+    R16Uint = 4,
+    /// Red channel only. 16 bit integer per channel. Signed in shader.
+    R16Sint = 5,
+    /// Red channel only. 16 bit integer per channel. [0, 65535] converted to/from float [0, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_FORMAT_16BIT_NORM`] must be enabled to use this texture format.
+    R16Unorm = 6,
+    /// Red channel only. 16 bit integer per channel. [0, 65535] converted to/from float [-1, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_FORMAT_16BIT_NORM`] must be enabled to use this texture format.
+    R16Snorm = 7,
+    /// Red channel only. 16 bit float per channel. Float in shader.
+    R16Float = 8,
+    /// Red and green channels. 8 bit integer per channel. [0, 255] converted to/from float [0, 1] in shader.
+    Rg8Unorm = 9,
+    /// Red and green channels. 8 bit integer per channel. [-127, 127] converted to/from float [-1, 1] in shader.
+    Rg8Snorm = 10,
+    /// Red and green channels. 8 bit integer per channel. Unsigned in shader.
+    Rg8Uint = 11,
+    /// Red and green channels. 8 bit integer per channel. Signed in shader.
+    Rg8Sint = 12,
+
+    // Normal 32 bit formats
+    /// Red channel only. 32 bit integer per channel. Unsigned in shader.
+    R32Uint = 13,
+    /// Red channel only. 32 bit integer per channel. Signed in shader.
+    R32Sint = 14,
+    /// Red channel only. 32 bit float per channel. Float in shader.
+    R32Float = 15,
+    /// Red and green channels. 16 bit integer per channel. Unsigned in shader.
+    Rg16Uint = 16,
+    /// Red and green channels. 16 bit integer per channel. Signed in shader.
+    Rg16Sint = 17,
+    /// Red and green channels. 16 bit integer per channel. [0, 65535] converted to/from float [0, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_FORMAT_16BIT_NORM`] must be enabled to use this texture format.
+    Rg16Unorm = 18,
+    /// Red and green channels. 16 bit integer per channel. [0, 65535] converted to/from float [-1, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_FORMAT_16BIT_NORM`] must be enabled to use this texture format.
+    Rg16Snorm = 19,
+    /// Red and green channels. 16 bit float per channel. Float in shader.
+    Rg16Float = 20,
+    /// Red, green, blue, and alpha channels. 8 bit integer per channel. [0, 255] converted to/from float [0, 1] in shader.
+    Rgba8Unorm = 21,
+    /// Red, green, blue, and alpha channels. 8 bit integer per channel. Srgb-color [0, 255] converted to/from linear-color float [0, 1] in shader.
+    Rgba8UnormSrgb = 22,
+    /// Red, green, blue, and alpha channels. 8 bit integer per channel. [-127, 127] converted to/from float [-1, 1] in shader.
+    Rgba8Snorm = 23,
+    /// Red, green, blue, and alpha channels. 8 bit integer per channel. Unsigned in shader.
+    Rgba8Uint = 24,
+    /// Red, green, blue, and alpha channels. 8 bit integer per channel. Signed in shader.
+    Rgba8Sint = 25,
+    /// Blue, green, red, and alpha channels. 8 bit integer per channel. [0, 255] converted to/from float [0, 1] in shader.
+    Bgra8Unorm = 26,
+    /// Blue, green, red, and alpha channels. 8 bit integer per channel. Srgb-color [0, 255] converted to/from linear-color float [0, 1] in shader.
+    Bgra8UnormSrgb = 27,
+
+    // Packed 32 bit formats
+    /// Red, green, blue, and alpha channels. 10 bit integer for RGB channels, 2 bit integer for alpha channel. [0, 1023] ([0, 3] for alpha) converted to/from float [0, 1] in shader.
+    Rgb10a2Unorm = 28,
+    /// Red, green, and blue channels. 11 bit float with no sign bit for RG channels. 10 bit float with no sign bit for blue channel. Float in shader.
+    Rg11b10Float = 29,
+
+    // Normal 64 bit formats
+    /// Red and green channels. 32 bit integer per channel. Unsigned in shader.
+    Rg32Uint = 30,
+    /// Red and green channels. 32 bit integer per channel. Signed in shader.
+    Rg32Sint = 31,
+    /// Red and green channels. 32 bit float per channel. Float in shader.
+    Rg32Float = 32,
+    /// Red, green, blue, and alpha channels. 16 bit integer per channel. Unsigned in shader.
+    Rgba16Uint = 33,
+    /// Red, green, blue, and alpha channels. 16 bit integer per channel. Signed in shader.
+    Rgba16Sint = 34,
+    /// Red, green, blue, and alpha channels. 16 bit integer per channel. [0, 65535] converted to/from float [0, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_FORMAT_16BIT_NORM`] must be enabled to use this texture format.
+    Rgba16Unorm = 35,
+    /// Red, green, blue, and alpha. 16 bit integer per channel. [0, 65535] converted to/from float [-1, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_FORMAT_16BIT_NORM`] must be enabled to use this texture format.
+    Rgba16Snorm = 36,
+    /// Red, green, blue, and alpha channels. 16 bit float per channel. Float in shader.
+    Rgba16Float = 37,
+
+    // Normal 128 bit formats
+    /// Red, green, blue, and alpha channels. 32 bit integer per channel. Unsigned in shader.
+    Rgba32Uint = 38,
+    /// Red, green, blue, and alpha channels. 32 bit integer per channel. Signed in shader.
+    Rgba32Sint = 39,
+    /// Red, green, blue, and alpha channels. 32 bit float per channel. Float in shader.
+    Rgba32Float = 40,
+
+    // Depth and stencil formats
+    /// Special depth format with 32 bit floating point depth.
+    Depth32Float = 41,
+    /// Special depth/stencil format with 32 bit floating point depth and 8 bits integer stencil.
+    Depth32FloatStencil8 = 42,
+    /// Special depth format with at least 24 bit integer depth.
+    Depth24Plus = 43,
+    /// Special depth/stencil format with at least 24 bit integer depth and 8 bits integer stencil.
+    Depth24PlusStencil8 = 44,
+    /// Special depth/stencil format with 24 bit integer depth and 8 bits integer stencil.
+    Depth24UnormStencil8 = 45,
+
+    // Packed uncompressed texture formats
+    /// Packed unsigned float with 9 bits mantisa for each RGB component, then a common 5 bits exponent
+    Rgb9e5Ufloat = 46,
+
+    // Compressed textures usable with `TEXTURE_COMPRESSION_BC` feature.
+    /// 4x4 block compressed texture. 8 bytes per block (4 bit/px). 4 color + alpha pallet. 5 bit R + 6 bit G + 5 bit B + 1 bit alpha.
+    /// [0, 63] ([0, 1] for alpha) converted to/from float [0, 1] in shader.
+    ///
+    /// Also known as DXT1.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc1RgbaUnorm = 47,
+    /// 4x4 block compressed texture. 8 bytes per block (4 bit/px). 4 color + alpha pallet. 5 bit R + 6 bit G + 5 bit B + 1 bit alpha.
+    /// Srgb-color [0, 63] ([0, 1] for alpha) converted to/from linear-color float [0, 1] in shader.
+    ///
+    /// Also known as DXT1.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc1RgbaUnormSrgb = 48,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). 4 color pallet. 5 bit R + 6 bit G + 5 bit B + 4 bit alpha.
+    /// [0, 63] ([0, 15] for alpha) converted to/from float [0, 1] in shader.
+    ///
+    /// Also known as DXT3.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc2RgbaUnorm = 49,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). 4 color pallet. 5 bit R + 6 bit G + 5 bit B + 4 bit alpha.
+    /// Srgb-color [0, 63] ([0, 255] for alpha) converted to/from linear-color float [0, 1] in shader.
+    ///
+    /// Also known as DXT3.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc2RgbaUnormSrgb = 50,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). 4 color pallet + 8 alpha pallet. 5 bit R + 6 bit G + 5 bit B + 8 bit alpha.
+    /// [0, 63] ([0, 255] for alpha) converted to/from float [0, 1] in shader.
+    ///
+    /// Also known as DXT5.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc3RgbaUnorm = 51,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). 4 color pallet + 8 alpha pallet. 5 bit R + 6 bit G + 5 bit B + 8 bit alpha.
+    /// Srgb-color [0, 63] ([0, 255] for alpha) converted to/from linear-color float [0, 1] in shader.
+    ///
+    /// Also known as DXT5.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc3RgbaUnormSrgb = 52,
+    /// 4x4 block compressed texture. 8 bytes per block (4 bit/px). 8 color pallet. 8 bit R.
+    /// [0, 255] converted to/from float [0, 1] in shader.
+    ///
+    /// Also known as RGTC1.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc4RUnorm = 53,
+    /// 4x4 block compressed texture. 8 bytes per block (4 bit/px). 8 color pallet. 8 bit R.
+    /// [-127, 127] converted to/from float [-1, 1] in shader.
+    ///
+    /// Also known as RGTC1.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc4RSnorm = 54,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). 8 color red pallet + 8 color green pallet. 8 bit RG.
+    /// [0, 255] converted to/from float [0, 1] in shader.
+    ///
+    /// Also known as RGTC2.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc5RgUnorm = 55,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). 8 color red pallet + 8 color green pallet. 8 bit RG.
+    /// [-127, 127] converted to/from float [-1, 1] in shader.
+    ///
+    /// Also known as RGTC2.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc5RgSnorm = 56,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). Variable sized pallet. 16 bit unsigned float RGB. Float in shader.
+    ///
+    /// Also known as BPTC (float).
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc6hRgbUfloat = 57,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). Variable sized pallet. 16 bit signed float RGB. Float in shader.
+    ///
+    /// Also known as BPTC (float).
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc6hRgbSfloat = 58,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). Variable sized pallet. 8 bit integer RGBA.
+    /// [0, 255] converted to/from float [0, 1] in shader.
+    ///
+    /// Also known as BPTC (unorm).
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc7RgbaUnorm = 59,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). Variable sized pallet. 8 bit integer RGBA.
+    /// Srgb-color [0, 255] converted to/from linear-color float [0, 1] in shader.
+    ///
+    /// Also known as BPTC (unorm).
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
+    Bc7RgbaUnormSrgb = 60,
+    /// 4x4 block compressed texture. 8 bytes per block (4 bit/px). Complex pallet. 8 bit integer RGB.
+    /// [0, 255] converted to/from float [0, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_ETC2`] must be enabled to use this texture format.
+    Etc2Rgb8Unorm = 61,
+    /// 4x4 block compressed texture. 8 bytes per block (4 bit/px). Complex pallet. 8 bit integer RGB.
+    /// Srgb-color [0, 255] converted to/from linear-color float [0, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_ETC2`] must be enabled to use this texture format.
+    Etc2Rgb8UnormSrgb = 62,
+    /// 4x4 block compressed texture. 8 bytes per block (4 bit/px). Complex pallet. 8 bit integer RGB + 1 bit alpha.
+    /// [0, 255] ([0, 1] for alpha) converted to/from float [0, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_ETC2`] must be enabled to use this texture format.
+    Etc2Rgb8A1Unorm = 63,
+    /// 4x4 block compressed texture. 8 bytes per block (4 bit/px). Complex pallet. 8 bit integer RGB + 1 bit alpha.
+    /// Srgb-color [0, 255] ([0, 1] for alpha) converted to/from linear-color float [0, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_ETC2`] must be enabled to use this texture format.
+    Etc2Rgb8A1UnormSrgb = 64,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). Complex pallet. 8 bit integer RGB + 8 bit alpha.
+    /// [0, 255] converted to/from float [0, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_ETC2`] must be enabled to use this texture format.
+    Etc2Rgba8Unorm = 65,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). Complex pallet. 8 bit integer RGB + 8 bit alpha.
+    /// Srgb-color [0, 255] converted to/from linear-color float [0, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_ETC2`] must be enabled to use this texture format.
+    Etc2Rgba8UnormSrgb = 66,
+    /// 4x4 block compressed texture. 8 bytes per block (4 bit/px). Complex pallet. 11 bit integer R.
+    /// [0, 255] converted to/from float [0, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_ETC2`] must be enabled to use this texture format.
+    EacR11Unorm = 67,
+    /// 4x4 block compressed texture. 8 bytes per block (4 bit/px). Complex pallet. 11 bit integer R.
+    /// [-127, 127] converted to/from float [-1, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_ETC2`] must be enabled to use this texture format.
+    EacR11Snorm = 68,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). Complex pallet. 11 bit integer R + 11 bit integer G.
+    /// [0, 255] converted to/from float [0, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_ETC2`] must be enabled to use this texture format.
+    EacRg11Unorm = 69,
+    /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). Complex pallet. 11 bit integer R + 11 bit integer G.
+    /// [-127, 127] converted to/from float [-1, 1] in shader.
+    ///
+    /// [`Features::TEXTURE_COMPRESSION_ETC2`] must be enabled to use this texture format.
+    EacRg11Snorm = 70,
+}
+
+impl TextureFormat {
+    pub fn to_wgpu_type(&self) -> wgpu::TextureFormat {
+        match self {
+            Self::R8Unorm => wgpu::TextureFormat::R8Unorm,
+            Self::R8Snorm => wgpu::TextureFormat::R8Snorm,
+            Self::R8Uint => wgpu::TextureFormat::R8Uint,
+            Self::R8Sint => wgpu::TextureFormat::R8Sint,
+            Self::R16Uint => wgpu::TextureFormat::R16Uint,
+            Self::R16Sint => wgpu::TextureFormat::R16Sint,
+            Self::R16Unorm => wgpu::TextureFormat::R16Unorm,
+            Self::R16Snorm => wgpu::TextureFormat::R16Snorm,
+            Self::R16Float => wgpu::TextureFormat::R16Float,
+            Self::Rg8Unorm => wgpu::TextureFormat::Rg8Unorm,
+            Self::Rg8Snorm => wgpu::TextureFormat::Rg8Snorm,
+            Self::Rg8Uint => wgpu::TextureFormat::Rg8Uint,
+            Self::Rg8Sint => wgpu::TextureFormat::Rg8Sint,
+            Self::R32Uint => wgpu::TextureFormat::R32Uint,
+            Self::R32Sint => wgpu::TextureFormat::R32Sint,
+            Self::R32Float => wgpu::TextureFormat::R32Float,
+            Self::Rg16Uint => wgpu::TextureFormat::Rg16Uint,
+            Self::Rg16Sint => wgpu::TextureFormat::Rg16Sint,
+            Self::Rg16Unorm => wgpu::TextureFormat::Rg16Unorm,
+            Self::Rg16Snorm => wgpu::TextureFormat::Rg16Snorm,
+            Self::Rg16Float => wgpu::TextureFormat::Rg16Float,
+            Self::Rgba8Unorm => wgpu::TextureFormat::Rgba8Unorm,
+            Self::Rgba8UnormSrgb => wgpu::TextureFormat::Rgba8UnormSrgb,
+            Self::Rgba8Snorm => wgpu::TextureFormat::Rgba8Snorm,
+            Self::Rgba8Uint => wgpu::TextureFormat::Rgba8Uint,
+            Self::Rgba8Sint => wgpu::TextureFormat::Rgba8Sint,
+            Self::Bgra8Unorm => wgpu::TextureFormat::Bgra8Unorm,
+            Self::Bgra8UnormSrgb => wgpu::TextureFormat::Bgra8UnormSrgb,
+            Self::Rgb10a2Unorm => wgpu::TextureFormat::Rgb10a2Unorm,
+            Self::Rg11b10Float => wgpu::TextureFormat::Rg11b10Float,
+            Self::Rg32Uint => wgpu::TextureFormat::Rg32Uint,
+            Self::Rg32Sint => wgpu::TextureFormat::Rg32Sint,
+            Self::Rg32Float => wgpu::TextureFormat::Rg32Float,
+            Self::Rgba16Uint => wgpu::TextureFormat::Rgba16Uint,
+            Self::Rgba16Sint => wgpu::TextureFormat::Rgba16Sint,
+            Self::Rgba16Unorm => wgpu::TextureFormat::Rgba16Unorm,
+            Self::Rgba16Snorm => wgpu::TextureFormat::Rgba16Snorm,
+            Self::Rgba16Float => wgpu::TextureFormat::Rgba16Float,
+            Self::Rgba32Uint => wgpu::TextureFormat::Rgba32Uint,
+            Self::Rgba32Sint => wgpu::TextureFormat::Rgba32Sint,
+            Self::Rgba32Float => wgpu::TextureFormat::Rgba32Float,
+            Self::Depth32Float => wgpu::TextureFormat::Depth32Float,
+            Self::Depth32FloatStencil8 => wgpu::TextureFormat::Depth32FloatStencil8,
+            Self::Depth24Plus => wgpu::TextureFormat::Depth24Plus,
+            Self::Depth24PlusStencil8 => wgpu::TextureFormat::Depth24PlusStencil8,
+            Self::Depth24UnormStencil8 => wgpu::TextureFormat::Depth24UnormStencil8,
+            Self::Rgb9e5Ufloat => wgpu::TextureFormat::Rgb9e5Ufloat,
+            Self::Bc1RgbaUnorm => wgpu::TextureFormat::Bc1RgbaUnorm,
+            Self::Bc1RgbaUnormSrgb => wgpu::TextureFormat::Bc1RgbaUnormSrgb,
+            Self::Bc2RgbaUnorm => wgpu::TextureFormat::Bc2RgbaUnorm,
+            Self::Bc2RgbaUnormSrgb => wgpu::TextureFormat::Bc2RgbaUnormSrgb,
+            Self::Bc3RgbaUnorm => wgpu::TextureFormat::Bc3RgbaUnorm,
+            Self::Bc3RgbaUnormSrgb => wgpu::TextureFormat::Bc3RgbaUnormSrgb,
+            Self::Bc4RUnorm => wgpu::TextureFormat::Bc4RUnorm,
+            Self::Bc4RSnorm => wgpu::TextureFormat::Bc4RSnorm,
+            Self::Bc5RgUnorm => wgpu::TextureFormat::Bc5RgUnorm,
+            Self::Bc5RgSnorm => wgpu::TextureFormat::Bc5RgSnorm,
+            Self::Bc6hRgbUfloat => wgpu::TextureFormat::Bc6hRgbUfloat,
+            Self::Bc6hRgbSfloat => wgpu::TextureFormat::Bc6hRgbSfloat,
+            Self::Bc7RgbaUnorm => wgpu::TextureFormat::Bc7RgbaUnorm,
+            Self::Bc7RgbaUnormSrgb => wgpu::TextureFormat::Bc7RgbaUnormSrgb,
+            Self::Etc2Rgb8Unorm => wgpu::TextureFormat::Etc2Rgb8Unorm,
+            Self::Etc2Rgb8UnormSrgb => wgpu::TextureFormat::Etc2Rgb8UnormSrgb,
+            Self::Etc2Rgb8A1Unorm => wgpu::TextureFormat::Etc2Rgb8A1Unorm,
+            Self::Etc2Rgb8A1UnormSrgb => wgpu::TextureFormat::Etc2Rgb8A1UnormSrgb,
+            Self::Etc2Rgba8Unorm => wgpu::TextureFormat::Etc2Rgba8Unorm,
+            Self::Etc2Rgba8UnormSrgb => wgpu::TextureFormat::Etc2Rgba8UnormSrgb,
+            Self::EacR11Unorm => wgpu::TextureFormat::EacR11Unorm,
+            Self::EacR11Snorm => wgpu::TextureFormat::EacR11Snorm,
+            Self::EacRg11Unorm => wgpu::TextureFormat::EacRg11Unorm,
+            Self::EacRg11Snorm => wgpu::TextureFormat::EacRg11Snorm,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct TextureDesc {
+    /// Size of the texture. All components must be greater than zero. For a
+    /// regular 1D/2D texture, the unused sizes will be 1. For 2DArray textures,
+    /// Z is the number of 2D textures in that array.
+    pub size: wgpu::Extent3d,
+    /// Mip count of texture. For a texture with no extra mips, this must be 1.
+    pub mip_level_count: u32,
+    /// Sample count of texture. If this is not 1, texture must have [`BindingType::Texture::multisampled`] set to true.
+    pub sample_count: u32,
+    /// Dimensions of the texture.
+    pub dimension: wgpu::TextureDimension,
+    /// Format of the texture.
+    pub format: wgpu::TextureFormat,
+    /// Allowed usages of the texture. If used in other ways, the operation will panic.
+    pub usage: wgpu::TextureUsages,
+}
+
+impl Into<wgpu::TextureDescriptor<'static>> for &TextureDesc {
+    fn into(self) -> wgpu::TextureDescriptor<'static> {
+        assert!(self.size.width > 0);
+        assert!(self.size.height > 0);
+        assert!(self.size.depth_or_array_layers > 0);
+        assert!(self.sample_count > 0);
+        wgpu::TextureDescriptor {
+            label: None,
+            size: self.size,
+            mip_level_count: self.mip_level_count,
+            sample_count: self.sample_count,
+            dimension: self.dimension,
+            format: self.format,
+            usage: self.usage,
+        }
+    }
 }
 
 #[repr(C)]
 pub(crate) struct VertexLayoutInfo<'a> {
     pub vertex_size: u64,
-    pub attributes: Sliceffi<'a, wgpu::VertexAttribute>,
+    pub attributes: Slice<'a, wgpu::VertexAttribute>,
 }
 
 impl VertexLayoutInfo<'_> {
@@ -59,19 +757,36 @@ impl VertexLayoutInfo<'_> {
         wgpu::VertexBufferLayout {
             array_stride: self.vertex_size,
             step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: self.attributes.as_slice(),
+            attributes: &self.attributes,
+        }
+    }
+}
+
+/// ffi-safe `Option<T>`
+/// (use `Option<T>` if T is reference)
+#[repr(C)]
+pub(crate) struct Opt<T: Copy> {
+    exists: bool,
+    value: T,
+}
+
+impl<T: Copy> Opt<T> {
+    pub fn to_option(&self) -> Option<T> {
+        match self.exists {
+            true => Some(self.value),
+            false => None,
         }
     }
 }
 
 #[repr(C)]
 #[derive(Debug)]
-pub(crate) struct BufferSliceffi<'a> {
+pub(crate) struct BufSlice<'a> {
     buffer: &'a wgpu::Buffer,
-    range: RangeBoundsU64ffi,
+    range: RangeBoundsU64,
 }
 
-impl<'a> BufferSliceffi<'a> {
+impl<'a> BufSlice<'a> {
     pub fn to_buffer_slice(&self) -> wgpu::BufferSlice<'a> {
         self.buffer.slice(self.range)
     }
@@ -79,48 +794,63 @@ impl<'a> BufferSliceffi<'a> {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct Sliceffi<'a, T> {
+pub(crate) struct Slice<'a, T> {
     data: Option<&'a T>,
     len: usize,
 }
 
-impl<T> Sliceffi<'_, T> {
-    pub fn as_slice(&self) -> &[T] {
+impl<'a, T> ops::Deref for Slice<'a, T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
+    }
+}
+
+impl<'a, T> Slice<'a, T> {
+    #[inline]
+    pub fn as_slice(&self) -> &'a [T] {
         match self.data {
             Some(data) => unsafe { std::slice::from_raw_parts(data as *const T, self.len) },
             None => &[],
         }
     }
+
+    #[inline]
+    pub fn iter(&self) -> std::slice::Iter<T> {
+        self.as_slice().iter()
+    }
 }
 
-impl Sliceffi<'_, u8> {
+impl Slice<'_, u8> {
+    #[inline]
     pub fn as_str(&self) -> Result<&str, str::Utf8Error> {
-        std::str::from_utf8(self.as_slice())
+        std::str::from_utf8(self)
     }
 }
 
 #[repr(C)]
 #[derive(Debug)]
-pub(crate) struct SlotBufferSliceffi<'a> {
-    pub buffer_slice: BufferSliceffi<'a>,
+pub(crate) struct SlotBufSlice<'a> {
+    pub buffer_slice: BufSlice<'a>,
     pub slot: u32,
 }
 
 #[repr(C)]
 #[derive(Debug)]
-pub(crate) struct IndexBufferSliceffi<'a> {
-    pub buffer_slice: BufferSliceffi<'a>,
+pub(crate) struct IndexBufSlice<'a> {
+    pub buffer_slice: BufSlice<'a>,
     pub format: wgpu::IndexFormat,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct RangeU64ffi {
+pub(crate) struct RangeU64 {
     start: u64,
     end_excluded: u64,
 }
 
-impl RangeU64ffi {
+impl RangeU64 {
     // pub fn to_range(&self) -> ops::Range<u64> {
     //     ops::Range {
     //         start: self.start,
@@ -131,12 +861,12 @@ impl RangeU64ffi {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct RangeU32ffi {
+pub(crate) struct RangeU32 {
     start: u32,
     end_excluded: u32,
 }
 
-impl RangeU32ffi {
+impl RangeU32 {
     pub fn to_range(&self) -> ops::Range<u32> {
         ops::Range {
             start: self.start,
@@ -147,14 +877,14 @@ impl RangeU32ffi {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct RangeBoundsU64ffi {
+pub(crate) struct RangeBoundsU64 {
     start: u64,
     end_excluded: u64,
     has_start: bool,
     has_end_excluded: bool,
 }
 
-impl ops::RangeBounds<u64> for RangeBoundsU64ffi {
+impl ops::RangeBounds<u64> for RangeBoundsU64 {
     fn start_bound(&self) -> ops::Bound<&u64> {
         if self.has_start {
             ops::Bound::Included(&self.start)
@@ -174,14 +904,14 @@ impl ops::RangeBounds<u64> for RangeBoundsU64ffi {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct RangeBoundsU32ffi {
+pub(crate) struct RangeBoundsU32 {
     start: u32,
     end_excluded: u32,
     has_start: bool,
     has_end_excluded: bool,
 }
 
-impl ops::RangeBounds<u32> for RangeBoundsU32ffi {
+impl ops::RangeBounds<u32> for RangeBoundsU32 {
     fn start_bound(&self) -> ops::Bound<&u32> {
         if self.has_start {
             ops::Bound::Included(&self.start)

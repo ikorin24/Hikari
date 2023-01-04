@@ -1,36 +1,23 @@
 use crate::types::*;
 use pollster::FutureExt;
 use std::error::Error;
-use std::str::Utf8Error;
+use std::ptr;
 use wgpu::util::DeviceExt;
-use wgpu::{Buffer, Device, Queue, RenderPipeline, Surface, SurfaceConfiguration, SurfaceError};
 use winit;
-use winit::dpi::{PhysicalPosition, PhysicalSize, Position, Size};
-use winit::event;
-use winit::event_loop::EventLoop;
-use winit::platform::windows::WindowBuilderExtWindows;
-use winit::window;
-use winit::{event_loop::EventLoopWindowTarget, window::Window};
+use winit::event_loop::EventLoopWindowTarget;
+use winit::{dpi, event, event_loop, window};
 
 pub(crate) fn engine_start(init: HostScreenInitFn) -> ! {
     env_logger::init();
-    let event_loop = EventLoop::new();
-    let window = window::WindowBuilder::new()
-        .with_title("Elffy")
-        .with_inner_size(Size::Physical(PhysicalSize::new(1280, 720)))
-        .with_theme(Some(window::Theme::Light))
-        .build(&event_loop)
-        .unwrap();
-    set_window_style(&window, &WindowStyle::Default);
-
+    let (window, event_loop) = create_window(&WindowStyle::Default);
     if let Some(monitor) = window.current_monitor() {
         let monitor_size = monitor.size();
         let window_size = window.outer_size();
-        let pos = PhysicalPosition::new(
+        let pos = dpi::PhysicalPosition::new(
             ((monitor_size.width - window_size.width) / 2u32) as i32,
             ((monitor_size.height - window_size.height) / 2u32) as i32,
         );
-        window.set_outer_position(Position::Physical(pos));
+        window.set_outer_position(dpi::Position::Physical(pos));
     }
     window.focus_window();
     let first_screen = Box::new(HostScreen::new(window).unwrap_or_else(|err| panic!("{:?}", err)));
@@ -47,7 +34,16 @@ pub(crate) fn engine_start(init: HostScreenInitFn) -> ! {
 }
 
 #[cfg(target_os = "windows")]
-fn set_window_style(window: &window::Window, style: &WindowStyle) {
+fn create_window(style: &WindowStyle) -> (window::Window, event_loop::EventLoop<()>) {
+    use winit::platform::windows::WindowBuilderExtWindows;
+
+    let event_loop = event_loop::EventLoop::new();
+    let window = window::WindowBuilder::new()
+        .with_title("Elffy")
+        .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(1280, 720)))
+        .with_theme(Some(window::Theme::Light))
+        .build(&event_loop)
+        .unwrap();
     match style {
         WindowStyle::Default => {
             window.set_resizable(true);
@@ -59,10 +55,17 @@ fn set_window_style(window: &window::Window, style: &WindowStyle) {
             window.set_fullscreen(None);
         }
     }
+    (window, event_loop)
 }
 
 #[cfg(target_os = "macos")]
-fn set_window_style(window: &Window, style: &WindowStyle) {
+fn create_window(style: &WindowStyle) -> (window::Window, event_loop::EventLoop<()>) {
+    let event_loop = event_loop::EventLoop::new();
+    let window = window::WindowBuilder::new()
+        .with_title("Elffy")
+        .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(1280, 720)))
+        .build(&event_loop)
+        .unwrap();
     match style {
         WindowStyle::Default => {
             window.set_resizable(true);
@@ -74,16 +77,22 @@ fn set_window_style(window: &Window, style: &WindowStyle) {
             window.set_simple_fullscreen(true);
         }
     }
+    (window, event_loop)
 }
 
 pub(crate) struct HostScreen {
-    window: Window,
-    surface: Surface,
-    surface_config: SurfaceConfiguration,
-    device: Device,
-    queue: Queue,
-    pipelines: Vec<Box<RenderPipeline>>,
-    buffers: Vec<Box<Buffer>>,
+    window: window::Window,
+    surface: wgpu::Surface,
+    surface_config: wgpu::SurfaceConfiguration,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    pipeline_layouts: Vec<Box<wgpu::PipelineLayout>>,
+    pipelines: Vec<Box<wgpu::RenderPipeline>>,
+    buffers: Vec<Box<wgpu::Buffer>>,
+    textures: Vec<Box<wgpu::Texture>>,
+    shaders: Vec<Box<wgpu::ShaderModule>>,
+    bind_group_layouts: Vec<Box<wgpu::BindGroupLayout>>,
+    bind_groups: Vec<Box<wgpu::BindGroup>>,
     callbacks: HostScreenCallbacks,
 }
 
@@ -95,7 +104,7 @@ impl HostScreen {
         a: 0.0,
     };
 
-    pub fn new(window: Window) -> Result<HostScreen, Box<dyn Error>> {
+    pub fn new(window: window::Window) -> Result<HostScreen, Box<dyn Error>> {
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::Backends::all());
         let surface = unsafe { instance.create_surface(&window) };
@@ -131,85 +140,125 @@ impl HostScreen {
             surface,
             device,
             queue,
+            pipeline_layouts: vec![],
             pipelines: vec![],
             buffers: vec![],
+            textures: vec![],
+            shaders: vec![],
+            bind_group_layouts: vec![],
+            bind_groups: vec![],
             callbacks: HostScreenCallbacks::default(),
         })
     }
 
-    pub fn add_render_pipeline(
+    pub fn create_bind_group_layout(
         &mut self,
-        rpi: &RenderPipelineInfo,
-    ) -> Result<&RenderPipeline, Utf8Error> {
-        let shader_source = rpi.shader_source.as_str()?;
+        desc: &wgpu::BindGroupLayoutDescriptor,
+    ) -> &wgpu::BindGroupLayout {
+        let layout = self.device.create_bind_group_layout(desc);
+        self.bind_group_layouts.push_get_ref(layout)
+    }
+
+    pub fn destroy_bind_group_layout(&mut self, layout: &wgpu::BindGroupLayout) -> bool {
+        self.bind_group_layouts.swap_remove_by_ref(layout).is_some()
+    }
+
+    pub fn create_bind_group(
+        &mut self,
+        bind_group_desc: &wgpu::BindGroupDescriptor,
+    ) -> &wgpu::BindGroup {
+        let bind_group = self.device.create_bind_group(bind_group_desc);
+        self.bind_groups.push_get_ref(bind_group)
+    }
+
+    pub fn destroy_bind_group(&mut self, bind_group: &wgpu::BindGroup) -> bool {
+        self.bind_groups.swap_remove_by_ref(bind_group).is_some()
+    }
+
+    pub fn create_pipeline_layout(
+        &mut self,
+        layout_desc: &wgpu::PipelineLayoutDescriptor,
+    ) -> &wgpu::PipelineLayout {
+        let layout = self.device.create_pipeline_layout(layout_desc);
+        self.pipeline_layouts.push_get_ref(layout)
+    }
+
+    pub fn destroy_pipeline_layout(&mut self, layout: &wgpu::PipelineLayout) -> bool {
+        self.pipeline_layouts.swap_remove_by_ref(layout).is_some()
+    }
+
+    pub fn create_render_pipeline(
+        &mut self,
+        desc: &wgpu::RenderPipelineDescriptor,
+    ) -> &wgpu::RenderPipeline {
+        let pipeline = self.device.create_render_pipeline(desc);
+        self.pipelines.push_get_ref(pipeline)
+    }
+
+    pub fn destroy_render_pipeline(&mut self, render_pipeline: &wgpu::RenderPipeline) -> bool {
+        self.pipelines.swap_remove_by_ref(render_pipeline).is_some()
+    }
+
+    pub fn create_shader_module(&mut self, shader_source: &str) -> &wgpu::ShaderModule {
         let shader = self
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Shader"),
+                label: None,
                 source: wgpu::ShaderSource::Wgsl(shader_source.into()),
             });
+        self.shaders.push_get_ref(shader)
+    }
 
-        let render_pipeline_layout =
-            self.device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("Render Pipeline Layout"),
-                    bind_group_layouts: &[],
-                    push_constant_ranges: &[],
-                });
-        let render_pipeline = self
-            .device
-            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Render Pipeline"),
-                layout: Some(&render_pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: "vs_main",
-                    buffers: &[rpi.vertex.to_vertex_buffer_layout()],
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: "fs_main",
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: self.surface_config.format,
-                        blend: Some(wgpu::BlendState::REPLACE),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: Some(wgpu::Face::Back),
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    unclipped_depth: false,
-                    conservative: false,
-                },
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState {
-                    count: 1,
-                    mask: !0,
-                    alpha_to_coverage_enabled: false,
-                },
-                multiview: None,
-            });
-        self.pipelines.push(Box::new(render_pipeline));
-        Ok(self.pipelines.last().unwrap().as_ref())
+    pub fn destroy_shader_module(&mut self, shader: &wgpu::ShaderModule) -> bool {
+        self.shaders.swap_remove_by_ref(shader).is_some()
     }
 
     pub fn create_buffer_init(
         &mut self,
         contents: &[u8],
         usage: wgpu::BufferUsages,
-    ) -> &mut Buffer {
+    ) -> &wgpu::Buffer {
         let buffer = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: None,
-                contents: contents,
-                usage: usage,
+                contents,
+                usage,
             });
-        self.buffers.push(Box::new(buffer));
-        self.buffers.last_mut().unwrap().as_mut()
+        self.buffers.push_get_ref(buffer)
+    }
+
+    pub fn destroy_buffer(&mut self, buffer: &wgpu::Buffer) -> bool {
+        self.buffers
+            .swap_remove_by_ref(buffer)
+            .map(|buf| buf.destroy())
+            .is_some()
+    }
+
+    pub fn create_texture<'screen>(
+        &'screen mut self,
+        desc: &wgpu::TextureDescriptor,
+    ) -> &'screen wgpu::Texture {
+        let texture = self.device.create_texture(desc);
+        self.textures.push_get_ref(texture)
+    }
+
+    pub fn create_texture_with_data<'screen>(
+        &'screen mut self,
+        desc: &wgpu::TextureDescriptor,
+        data: &[u8],
+    ) -> &'screen wgpu::Texture {
+        let texture = self
+            .device
+            .create_texture_with_data(&self.queue, desc, data);
+        self.textures.push_get_ref(texture)
+    }
+
+    pub fn destroy_texture(&mut self, texture: &wgpu::Texture) -> bool {
+        self.textures
+            .swap_remove_by_ref(texture)
+            .map(|tex| tex.destroy())
+            .is_some()
     }
 
     pub fn set_callbacks(&mut self, callbacks: HostScreenCallbacks) {
@@ -274,7 +323,7 @@ impl HostScreen {
         }
     }
 
-    fn render(&mut self) -> Result<(), SurfaceError> {
+    fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         // `get_current_texture` function will wait for the surface
         // to provide a new SurfaceTexture that we will render to.
         let output = self.surface.get_current_texture()?;
@@ -316,6 +365,27 @@ impl HostScreen {
             self.surface_config.width = new_size.width;
             self.surface_config.height = new_size.height;
             self.surface.configure(&self.device, &self.surface_config);
+        }
+    }
+}
+
+trait VecBox<T> {
+    fn push_get_ref(&mut self, value: T) -> &T;
+
+    fn swap_remove_by_ref(&mut self, value_ref: &T) -> Option<T>;
+}
+
+impl<T> VecBox<T> for Vec<Box<T>> {
+    fn push_get_ref(&mut self, value: T) -> &T {
+        self.push(Box::new(value));
+        self.last().unwrap().as_ref()
+    }
+
+    fn swap_remove_by_ref(&mut self, value_ref: &T) -> Option<T> {
+        let index = self.iter().position(|x| ptr::eq(value_ref, x.as_ref()));
+        match index {
+            Some(index) => Some(*self.swap_remove(index)),
+            None => None,
         }
     }
 }

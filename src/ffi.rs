@@ -1,5 +1,8 @@
 use crate::engine::*;
 use crate::types::*;
+use bytemuck::Contiguous;
+use smallvec::SmallVec;
+use std::num;
 
 #[no_mangle]
 extern "cdecl" fn elffy_engine_start(init: HostScreenInitFn) {
@@ -7,30 +10,224 @@ extern "cdecl" fn elffy_engine_start(init: HostScreenInitFn) {
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_add_render_pipeline(
-    screen: &mut HostScreen,
-    render_pipeline: &RenderPipelineInfo,
-) -> *const wgpu::RenderPipeline {
-    match screen.add_render_pipeline(render_pipeline) {
-        Ok(render_pipeline) => render_pipeline,
-        Err(err) => {
-            panic!("{:?}", err)
-        }
-    }
+extern "cdecl" fn elffy_create_bind_group_layout<'screen>(
+    screen: &'screen mut HostScreen,
+    entries: Slice<BindGroupLayoutEntry>,
+) -> &'screen wgpu::BindGroupLayout {
+    let desc = wgpu::BindGroupLayoutDescriptor {
+        label: None,
+        entries: &entries
+            .iter()
+            .map(|x| x.to_wgpu_type())
+            .collect::<SmallVec<[_; 16]>>(),
+    };
+    screen.create_bind_group_layout(&desc)
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_create_buffer_init<'a>(
-    screen: &'a mut HostScreen,
-    contents: Sliceffi<'a, u8>,
+extern "cdecl" fn elffy_create_bind_group<'screen>(
+    screen: &'screen mut HostScreen,
+    desc: &BindGroupDescriptor,
+) -> &'screen wgpu::BindGroup {
+    let mut wgpu_group_entries = vec![];
+    let wgpu_buffer_bindings_vec = desc
+        .entries
+        .iter()
+        .map(|entry| match entry.resource.tag {
+            BindingResourceTag::BufferArray => entry
+                .resource
+                .payload
+                .as_ref_unwrap::<Slice<BufferBinding>>()
+                .iter()
+                .map(|bb| wgpu::BufferBinding {
+                    buffer: bb.buffer,
+                    offset: bb.offset,
+                    size: num::NonZeroU64::from_integer(bb.size),
+                })
+                .collect::<Vec<_>>(),
+            _ => vec![],
+        })
+        .collect::<Vec<_>>();
+
+    for (entry_index, entry) in desc.entries.iter().enumerate() {
+        let wgpu_binding_resource = match entry.resource.tag {
+            BindingResourceTag::Buffer => {
+                let buffer_binding = entry.resource.payload.as_ref_unwrap::<BufferBinding>();
+                wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: buffer_binding.buffer,
+                    offset: buffer_binding.offset,
+                    size: num::NonZeroU64::from_integer(buffer_binding.size),
+                })
+            }
+            BindingResourceTag::BufferArray => {
+                wgpu::BindingResource::BufferArray(wgpu_buffer_bindings_vec[entry_index].as_slice())
+            }
+            BindingResourceTag::Sampler => wgpu::BindingResource::Sampler(
+                entry.resource.payload.as_ref_unwrap::<wgpu::Sampler>(),
+            ),
+            BindingResourceTag::SamplerArray => wgpu::BindingResource::SamplerArray(
+                entry
+                    .resource
+                    .payload
+                    .as_ref_unwrap::<Slice<&wgpu::Sampler>>()
+                    .as_slice(),
+            ),
+            BindingResourceTag::TextureView => wgpu::BindingResource::TextureView(
+                entry.resource.payload.as_ref_unwrap::<wgpu::TextureView>(),
+            ),
+            BindingResourceTag::TextureViewArray => wgpu::BindingResource::TextureViewArray(
+                entry
+                    .resource
+                    .payload
+                    .as_ref_unwrap::<Slice<&wgpu::TextureView>>()
+                    .as_slice(),
+            ),
+        };
+        wgpu_group_entries.push(wgpu::BindGroupEntry {
+            binding: entry.binding,
+            resource: wgpu_binding_resource,
+        });
+    }
+    let wgpu_bind_group_desc = wgpu::BindGroupDescriptor {
+        label: None,
+        layout: desc.layout,
+        entries: &wgpu_group_entries,
+    };
+    screen.create_bind_group(&wgpu_bind_group_desc)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_bind_group_layout<'screen>(
+    screen: &'screen mut HostScreen,
+    layout: &wgpu::BindGroupLayout,
+) -> bool {
+    screen.destroy_bind_group_layout(layout)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_create_pipeline_layout<'screen>(
+    screen: &'screen mut HostScreen,
+    desc: &PipelineLayoutDesc,
+) -> &'screen wgpu::PipelineLayout {
+    screen.create_pipeline_layout(&desc.to_pipeline_descriptor())
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_pipeline_layout(
+    screen: &mut HostScreen,
+    layout: &wgpu::PipelineLayout,
+) -> bool {
+    screen.destroy_pipeline_layout(layout)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_create_render_pipeline<'screen>(
+    screen: &'screen mut HostScreen,
+    desc: &RenderPipelineDesc,
+) -> &'screen wgpu::RenderPipeline {
+    let vertex = wgpu::VertexState {
+        module: desc.vs_info.shader,
+        entry_point: desc.vs_info.entry_point.as_str().unwrap(),
+        buffers: &desc
+            .vs_info
+            .inputs
+            .iter()
+            .map(|x| x.to_vertex_buffer_layout())
+            .collect::<SmallVec<[_; 8]>>(),
+    };
+    let fragment = wgpu::FragmentState {
+        module: desc.fs_info.shader,
+        entry_point: desc.fs_info.entry_point.as_str().unwrap(),
+        targets: &desc
+            .fs_info
+            .outputs
+            .iter()
+            .map(|x| Some(x.to_color_target_state()))
+            .collect::<SmallVec<[_; 8]>>(),
+    };
+    let pipeline_desc = wgpu::RenderPipelineDescriptor {
+        label: None,
+        layout: Some(desc.layout),
+        vertex,
+        fragment: Some(fragment),
+        primitive: desc.primitive.to_primitive_state(),
+        depth_stencil: None,
+        multisample: wgpu::MultisampleState {
+            count: 1,
+            mask: !0,
+            alpha_to_coverage_enabled: false,
+        },
+        multiview: None,
+    };
+    screen.create_render_pipeline(&pipeline_desc)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_render_pipeline(
+    screen: &mut HostScreen,
+    pipeline: &wgpu::RenderPipeline,
+) -> bool {
+    screen.destroy_render_pipeline(pipeline)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_create_buffer_init<'screen>(
+    screen: &'screen mut HostScreen,
+    contents: Slice<'screen, u8>,
     usage: wgpu::BufferUsages,
-) -> &'a wgpu::Buffer {
-    screen.create_buffer_init(contents.as_slice(), usage)
+) -> &'screen wgpu::Buffer {
+    screen.create_buffer_init(&contents, usage)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_buffer(screen: &mut HostScreen, buffer: &wgpu::Buffer) -> bool {
+    screen.destroy_buffer(buffer)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_create_shader_module<'screen>(
+    screen: &'screen mut HostScreen,
+    shader_source: Slice<u8>,
+) -> &'screen wgpu::ShaderModule {
+    let shader_source = shader_source
+        .as_str()
+        .unwrap_or_else(|err| panic!("{:?}", err));
+    screen.create_shader_module(shader_source)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_shader_module(
+    screen: &mut HostScreen,
+    shader: &wgpu::ShaderModule,
+) -> bool {
+    screen.destroy_shader_module(shader)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_create_texture<'screen>(
+    screen: &'screen mut HostScreen,
+    desc: &TextureDesc,
+) -> &'screen wgpu::Texture {
+    screen.create_texture(&desc.into())
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_create_texture_with_data<'screen>(
+    screen: &'screen mut HostScreen,
+    desc: &TextureDesc,
+    data: Slice<u8>,
+) -> &'screen wgpu::Texture {
+    screen.create_texture_with_data(&desc.into(), &data)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_texture(screen: &mut HostScreen, texture: &wgpu::Texture) -> bool {
+    screen.destroy_texture(texture)
 }
 
 #[no_mangle]
 extern "cdecl" fn elffy_set_pipeline<'a>(
-    render_pass: &'a mut wgpu::RenderPass<'a>,
+    render_pass: &mut wgpu::RenderPass<'a>,
     render_pipeline: &'a wgpu::RenderPipeline,
 ) {
     render_pass.set_pipeline(render_pipeline);
@@ -38,10 +235,10 @@ extern "cdecl" fn elffy_set_pipeline<'a>(
 
 #[no_mangle]
 extern "cdecl" fn elffy_draw_buffer<'a>(
-    render_pass: &'a mut wgpu::RenderPass<'a>,
-    vertex_buffer: &'a SlotBufferSliceffi,
-    vertices_range: &'a RangeU32ffi,
-    instances_range: &'a RangeU32ffi,
+    render_pass: &mut wgpu::RenderPass<'a>,
+    vertex_buffer: &SlotBufSlice<'a>,
+    vertices_range: &RangeU32,
+    instances_range: &RangeU32,
 ) {
     render_pass.set_vertex_buffer(
         vertex_buffer.slot,
@@ -53,10 +250,10 @@ extern "cdecl" fn elffy_draw_buffer<'a>(
 #[no_mangle]
 extern "cdecl" fn elffy_draw_buffer_indexed<'a>(
     render_pass: &'a mut wgpu::RenderPass<'a>,
-    vertex_buffer: &'a SlotBufferSliceffi,
-    index_buffer: &'a IndexBufferSliceffi,
-    indices_range: &'a RangeU32ffi,
-    instances_range: &'a RangeU32ffi,
+    vertex_buffer: &'a SlotBufSlice,
+    index_buffer: &'a IndexBufSlice,
+    indices_range: &'a RangeU32,
+    instances_range: &'a RangeU32,
 ) {
     render_pass.set_vertex_buffer(
         vertex_buffer.slot,
@@ -72,12 +269,12 @@ extern "cdecl" fn elffy_draw_buffer_indexed<'a>(
 #[no_mangle]
 extern "cdecl" fn elffy_draw_buffers_indexed<'a>(
     render_pass: &'a mut wgpu::RenderPass<'a>,
-    vertex_buffers: Sliceffi<SlotBufferSliceffi<'a>>,
-    index_buffer: &'a IndexBufferSliceffi,
-    indices_range: &'a RangeU32ffi,
-    instances_range: &'a RangeU32ffi,
+    vertex_buffers: Slice<SlotBufSlice<'a>>,
+    index_buffer: &'a IndexBufSlice,
+    indices_range: &'a RangeU32,
+    instances_range: &'a RangeU32,
 ) {
-    for vb in vertex_buffers.as_slice() {
+    for vb in vertex_buffers.iter() {
         render_pass.set_vertex_buffer(vb.slot, vb.buffer_slice.to_buffer_slice());
     }
     render_pass.set_index_buffer(
