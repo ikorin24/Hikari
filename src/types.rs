@@ -20,6 +20,71 @@ pub(crate) struct HostScreenCallbacks {
 }
 
 #[repr(C)]
+pub(crate) struct SamplerDescriptor {
+    pub address_mode_u: wgpu::AddressMode,
+    /// How to deal with out of bounds accesses in the v (i.e. y) direction
+    pub address_mode_v: wgpu::AddressMode,
+    /// How to deal with out of bounds accesses in the w (i.e. z) direction
+    pub address_mode_w: wgpu::AddressMode,
+    /// How to filter the texture when it needs to be magnified (made larger)
+    pub mag_filter: wgpu::FilterMode,
+    /// How to filter the texture when it needs to be minified (made smaller)
+    pub min_filter: wgpu::FilterMode,
+    /// How to filter between mip map levels
+    pub mipmap_filter: wgpu::FilterMode,
+    /// Minimum level of detail (i.e. mip level) to use
+    pub lod_min_clamp: f32,
+    /// Maximum level of detail (i.e. mip level) to use
+    pub lod_max_clamp: f32,
+    /// If this is enabled, this is a comparison sampler using the given comparison function.
+    pub compare: Opt<wgpu::CompareFunction>,
+    /// Valid values: 1, 2, 4, 8, and 16.
+    pub anisotropy_clamp: u8,
+    /// Border color to use when address_mode is [`AddressMode::ClampToBorder`]
+    pub border_color: Opt<SamplerBorderColor>,
+}
+
+impl SamplerDescriptor {
+    pub fn to_wgpu_type(&self) -> wgpu::SamplerDescriptor {
+        wgpu::SamplerDescriptor {
+            label: None,
+            address_mode_u: self.address_mode_u,
+            address_mode_v: self.address_mode_v,
+            address_mode_w: self.address_mode_w,
+            mag_filter: self.mag_filter,
+            min_filter: self.min_filter,
+            mipmap_filter: self.mipmap_filter,
+            lod_min_clamp: self.lod_min_clamp,
+            lod_max_clamp: self.lod_max_clamp,
+            compare: self.compare.to_option(),
+            anisotropy_clamp: num::NonZeroU8::from_integer(self.anisotropy_clamp),
+            border_color: self.border_color.to_option().map(|x| x.to_wgpu_type()),
+        }
+    }
+}
+
+#[repr(u32)]
+#[derive(PartialEq, Eq, Clone, Copy)]
+#[allow(dead_code)] // because values are from FFI
+pub(crate) enum SamplerBorderColor {
+    TransparentBlack = 0,
+    OpaqueBlack = 1,
+    OpaqueWhite = 2,
+    Zero = 3,
+}
+
+impl SamplerBorderColor {
+    pub fn to_wgpu_type(&self) -> wgpu::SamplerBorderColor {
+        match self {
+            Self::TransparentBlack => wgpu::SamplerBorderColor::TransparentBlack,
+            Self::OpaqueBlack => wgpu::SamplerBorderColor::OpaqueBlack,
+            Self::OpaqueWhite => wgpu::SamplerBorderColor::OpaqueWhite,
+            Self::Zero => wgpu::SamplerBorderColor::Zero,
+        }
+    }
+}
+
+#[repr(C)]
 pub(crate) struct BindGroupDescriptor<'a> {
     pub layout: &'a wgpu::BindGroupLayout,
     pub entries: Slice<'a, BindGroupEntry<'a>>,

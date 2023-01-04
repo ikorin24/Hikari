@@ -23,6 +23,14 @@ extern "cdecl" fn elffy_create_bind_group_layout<'screen>(
 }
 
 #[no_mangle]
+extern "cdecl" fn elffy_destroy_bind_group_layout<'screen>(
+    screen: &'screen mut HostScreen,
+    layout: &wgpu::BindGroupLayout,
+) -> bool {
+    screen.destroy_bind_group_layout(layout)
+}
+
+#[no_mangle]
 extern "cdecl" fn elffy_create_bind_group<'screen>(
     screen: &'screen mut HostScreen,
     desc: &BindGroupDescriptor,
@@ -92,14 +100,6 @@ extern "cdecl" fn elffy_destroy_bind_group(
     bind_group: &wgpu::BindGroup,
 ) -> bool {
     screen.destroy_bind_group(bind_group)
-}
-
-#[no_mangle]
-extern "cdecl" fn elffy_destroy_bind_group_layout<'screen>(
-    screen: &'screen mut HostScreen,
-    layout: &wgpu::BindGroupLayout,
-) -> bool {
-    screen.destroy_bind_group_layout(layout)
 }
 
 #[no_mangle]
@@ -180,6 +180,19 @@ extern "cdecl" fn elffy_create_buffer_init<'screen>(
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_buffer(screen: &mut HostScreen, buffer: &wgpu::Buffer) -> bool {
     screen.destroy_buffer(buffer)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_create_sampler<'screen>(
+    screen: &'screen mut HostScreen,
+    desc: &SamplerDescriptor,
+) -> &'screen wgpu::Sampler {
+    screen.create_sampler(&desc.to_wgpu_type())
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_sampler(screen: &mut HostScreen, sampler: &wgpu::Sampler) -> bool {
+    screen.destroy_sampler(sampler)
 }
 
 #[no_mangle]

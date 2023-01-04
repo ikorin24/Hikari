@@ -93,6 +93,7 @@ pub(crate) struct HostScreen {
     shaders: Vec<Box<wgpu::ShaderModule>>,
     bind_group_layouts: Vec<Box<wgpu::BindGroupLayout>>,
     bind_groups: Vec<Box<wgpu::BindGroup>>,
+    samplers: Vec<Box<wgpu::Sampler>>,
     callbacks: HostScreenCallbacks,
 }
 
@@ -147,6 +148,7 @@ impl HostScreen {
             shaders: vec![],
             bind_group_layouts: vec![],
             bind_groups: vec![],
+            samplers: vec![],
             callbacks: HostScreenCallbacks::default(),
         })
     }
@@ -173,6 +175,14 @@ impl HostScreen {
 
     pub fn destroy_bind_group(&mut self, bind_group: &wgpu::BindGroup) -> bool {
         self.bind_groups.swap_remove_by_ref(bind_group).is_some()
+    }
+
+    pub fn create_sampler(&mut self, desc: &wgpu::SamplerDescriptor) -> &wgpu::Sampler {
+        let sampler = self.device.create_sampler(desc);
+        self.samplers.push_get_ref(sampler)
+    }
+    pub fn destroy_sampler(&mut self, sampler: &wgpu::Sampler) -> bool {
+        self.samplers.swap_remove_by_ref(sampler).is_some()
     }
 
     pub fn create_pipeline_layout(
