@@ -71,6 +71,16 @@ pub(crate) struct BufferBinding<'a> {
     pub size: u64,
 }
 
+impl<'a> BufferBinding<'a> {
+    pub fn to_wgpu_type(&self) -> wgpu::BufferBinding {
+        wgpu::BufferBinding {
+            buffer: self.buffer,
+            offset: self.offset,
+            size: num::NonZeroU64::from_integer(self.size),
+        }
+    }
+}
+
 #[repr(C)]
 pub(crate) struct PipelineLayoutDesc<'a> {
     pub bind_group_layouts: Slice<'a, &'a wgpu::BindGroupLayout>,
@@ -98,7 +108,7 @@ pub(crate) struct RenderPipelineDesc<'a> {
 pub(crate) struct VertexShaderInfo<'a> {
     pub shader: &'a wgpu::ShaderModule,
     pub entry_point: Slice<'a, u8>,
-    pub inputs: Slice<'a, VertexLayoutInfo<'a>>,
+    pub inputs: Slice<'a, VertexBufferLayout<'a>>,
 }
 
 #[repr(C)]
@@ -165,42 +175,72 @@ impl PrimitiveInfo {
 // }
 
 #[repr(C)]
-pub(crate) struct BindGroupLayoutEntry {
+pub(crate) struct BindGroupLayoutEntry<'a> {
     pub binding: u32,
-    /// Which shader stages can see this binding.
     pub visibility: wgpu::ShaderStages,
-    /// The type of the binding
-    pub ty: BindingType,
-    pub data: *const std::ffi::c_void,
+    pub ty: BindingType<'a>,
     pub count: u32,
 }
 
-impl BindGroupLayoutEntry {
+impl<'a> BindGroupLayoutEntry<'a> {
     pub fn to_wgpu_type(&self) -> wgpu::BindGroupLayoutEntry {
         wgpu::BindGroupLayoutEntry {
             binding: self.binding,
             visibility: self.visibility,
-            ty: match self.ty {
-                BindingType::Buffer => unsafe {
-                    (*(self.data as *const BufferBindingData)).to_wgpu_type()
-                },
-                BindingType::Sampler => unsafe {
-                    (*(self.data as *const SamplerBindingType)).to_wgpu_type()
-                },
-                BindingType::Texture => unsafe {
-                    (*(self.data as *const TextureBindingData)).to_wgpu_type()
-                },
-                BindingType::StorageTexture => unsafe {
-                    (*(self.data as *const StorageTextureBindingData)).to_wgpu_type()
-                },
-            },
+            ty: self.ty.to_wgpu_type(),
             count: num::NonZeroU32::from_integer(self.count),
         }
     }
 }
 
+#[repr(C)]
+pub(crate) struct BindingType<'a> {
+    pub tag: BindingTypeTag,
+    /// `BufferBindingData` or `SamplerBindingType`
+    /// or `TextureBindingData` or `StorageTextureBindingData`
+    pub payload: PointerWrap<'a>,
+}
+
+impl<'a> BindingType<'a> {
+    pub fn to_wgpu_type(&self) -> wgpu::BindingType {
+        match self.tag {
+            BindingTypeTag::Buffer => {
+                let payload = self.payload.as_ref_unwrap::<BufferBindingData>();
+                wgpu::BindingType::Buffer {
+                    ty: payload.ty.to_wgpu_type(),
+                    has_dynamic_offset: payload.has_dynamic_offset,
+                    min_binding_size: num::NonZeroU64::from_integer(payload.min_binding_size),
+                }
+            }
+            BindingTypeTag::Sampler => wgpu::BindingType::Sampler(
+                self.payload
+                    .as_ref_unwrap::<SamplerBindingType>()
+                    .to_wgpu_type(),
+            ),
+            BindingTypeTag::Texture => {
+                let payload = self.payload.as_ref_unwrap::<TextureBindingData>();
+                wgpu::BindingType::Texture {
+                    sample_type: payload.sample_type.to_wgpu_type(),
+                    view_dimension: payload.view_dimension.to_wgpu_type(),
+                    multisampled: payload.multisampled,
+                }
+            }
+            BindingTypeTag::StorageTexture => {
+                let payload = self.payload.as_ref_unwrap::<StorageTextureBindingData>();
+                wgpu::BindingType::StorageTexture {
+                    access: payload.access.to_wgpu_type(),
+                    format: payload.format.to_wgpu_type(),
+                    view_dimension: payload.view_dimension.to_wgpu_type(),
+                }
+            }
+        }
+    }
+}
+
 #[repr(u32)]
-pub(crate) enum BindingType {
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)] // because values are from FFI
+pub(crate) enum BindingTypeTag {
     Buffer = 0,
     Sampler = 1,
     Texture = 2,
@@ -214,17 +254,9 @@ pub(crate) struct BufferBindingData {
     min_binding_size: u64,
 }
 
-impl BufferBindingData {
-    pub fn to_wgpu_type(&self) -> wgpu::BindingType {
-        wgpu::BindingType::Buffer {
-            ty: self.ty.to_wgpu_type(),
-            has_dynamic_offset: self.has_dynamic_offset,
-            min_binding_size: num::NonZeroU64::from_integer(self.min_binding_size),
-        }
-    }
-}
-
-#[repr(C)]
+#[repr(u32)]
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)] // because values are from FFI
 pub(crate) enum BufferBindingType {
     Uniform = 0,
     Storate = 1,
@@ -241,7 +273,9 @@ impl BufferBindingType {
     }
 }
 
-#[repr(C)]
+#[repr(u32)]
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)] // because values are from FFI
 pub(crate) enum SamplerBindingType {
     Filtering = 0,
     NonFiltering = 1,
@@ -249,13 +283,11 @@ pub(crate) enum SamplerBindingType {
 }
 
 impl SamplerBindingType {
-    pub fn to_wgpu_type(&self) -> wgpu::BindingType {
+    pub fn to_wgpu_type(&self) -> wgpu::SamplerBindingType {
         match self {
-            Self::Filtering => wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-            Self::NonFiltering => {
-                wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering)
-            }
-            Self::Comparison => wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison),
+            Self::Filtering => wgpu::SamplerBindingType::Filtering,
+            Self::NonFiltering => wgpu::SamplerBindingType::NonFiltering,
+            Self::Comparison => wgpu::SamplerBindingType::Comparison,
         }
     }
 }
@@ -267,17 +299,9 @@ pub(crate) struct TextureBindingData {
     multisampled: bool,
 }
 
-impl TextureBindingData {
-    pub fn to_wgpu_type(&self) -> wgpu::BindingType {
-        wgpu::BindingType::Texture {
-            sample_type: self.sample_type.to_wgpu_type(),
-            view_dimension: self.view_dimension.to_wgpu_type(),
-            multisampled: self.multisampled,
-        }
-    }
-}
-
 #[repr(C)]
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)] // because values are from FFI
 pub(crate) enum TextureSampleType {
     FloatFilterable = 0,
     FloatNotFilterable = 1,
@@ -298,7 +322,9 @@ impl TextureSampleType {
     }
 }
 
-#[repr(C)]
+#[repr(u32)]
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)] // because values are from FFI
 pub(crate) enum TextureViewDimension {
     D1 = 0,
     D2 = 1,
@@ -331,17 +357,9 @@ pub(crate) struct StorageTextureBindingData {
     view_dimension: TextureViewDimension,
 }
 
-impl StorageTextureBindingData {
-    pub fn to_wgpu_type(&self) -> wgpu::BindingType {
-        wgpu::BindingType::StorageTexture {
-            access: self.access.to_wgpu_type(),
-            format: self.format.to_wgpu_type(),
-            view_dimension: self.view_dimension.to_wgpu_type(),
-        }
-    }
-}
-
 #[repr(u32)]
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)] // because values are from FFI
 pub(crate) enum StorageTextureAccess {
     WriteOnly = 0,
     ReadOnly = 1,
@@ -359,6 +377,8 @@ impl StorageTextureAccess {
 }
 
 #[repr(u32)]
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)] // because values are from FFI
 pub enum TextureFormat {
     // Normal 8 bit formats
     /// Red channel only. 8 bit integer per channel. [0, 255] converted to/from float [0, 1] in shader.
@@ -711,25 +731,17 @@ impl TextureFormat {
 
 #[repr(C)]
 #[derive(Debug)]
-pub(crate) struct TextureDesc {
-    /// Size of the texture. All components must be greater than zero. For a
-    /// regular 1D/2D texture, the unused sizes will be 1. For 2DArray textures,
-    /// Z is the number of 2D textures in that array.
+pub(crate) struct TextureDescriptor {
     pub size: wgpu::Extent3d,
-    /// Mip count of texture. For a texture with no extra mips, this must be 1.
     pub mip_level_count: u32,
-    /// Sample count of texture. If this is not 1, texture must have [`BindingType::Texture::multisampled`] set to true.
     pub sample_count: u32,
-    /// Dimensions of the texture.
-    pub dimension: wgpu::TextureDimension,
-    /// Format of the texture.
-    pub format: wgpu::TextureFormat,
-    /// Allowed usages of the texture. If used in other ways, the operation will panic.
+    pub dimension: TextureDimension,
+    pub format: TextureFormat,
     pub usage: wgpu::TextureUsages,
 }
 
-impl Into<wgpu::TextureDescriptor<'static>> for &TextureDesc {
-    fn into(self) -> wgpu::TextureDescriptor<'static> {
+impl TextureDescriptor {
+    pub fn to_wgpu_type(&self) -> wgpu::TextureDescriptor<'static> {
         assert!(self.size.width > 0);
         assert!(self.size.height > 0);
         assert!(self.size.depth_or_array_layers > 0);
@@ -739,20 +751,39 @@ impl Into<wgpu::TextureDescriptor<'static>> for &TextureDesc {
             size: self.size,
             mip_level_count: self.mip_level_count,
             sample_count: self.sample_count,
-            dimension: self.dimension,
-            format: self.format,
+            dimension: self.dimension.to_wgpu_type(),
+            format: self.format.to_wgpu_type(),
             usage: self.usage,
         }
     }
 }
 
+#[repr(u32)]
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)] // because values are from FFI
+pub(crate) enum TextureDimension {
+    D1 = 0,
+    D2 = 1,
+    D3 = 2,
+}
+
+impl TextureDimension {
+    pub fn to_wgpu_type(&self) -> wgpu::TextureDimension {
+        match self {
+            Self::D1 => wgpu::TextureDimension::D1,
+            Self::D2 => wgpu::TextureDimension::D1,
+            Self::D3 => wgpu::TextureDimension::D1,
+        }
+    }
+}
+
 #[repr(C)]
-pub(crate) struct VertexLayoutInfo<'a> {
+pub(crate) struct VertexBufferLayout<'a> {
     pub vertex_size: u64,
     pub attributes: Slice<'a, wgpu::VertexAttribute>,
 }
 
-impl VertexLayoutInfo<'_> {
+impl<'a> VertexBufferLayout<'a> {
     pub fn to_vertex_buffer_layout(&self) -> wgpu::VertexBufferLayout {
         wgpu::VertexBufferLayout {
             array_stride: self.vertex_size,
@@ -933,3 +964,16 @@ pub(crate) type HostScreenInitFn =
     extern "cdecl" fn(screen: &mut HostScreen) -> HostScreenCallbacks;
 pub(crate) type HostScreenRenderFn =
     extern "cdecl" fn(screen: &mut HostScreen, render_pass: &mut wgpu::RenderPass) -> ();
+
+// -------------------------
+
+mod compile_time_test {
+
+    /// assert that `repr(C)` enum has 32bits size in current platform target.
+    #[repr(C)]
+    #[allow(dead_code)]
+    enum OnlyForCompileTimeSizeCheck {
+        A = 0,
+    }
+    static_assertions::assert_eq_size!(OnlyForCompileTimeSizeCheck, u32);
+}

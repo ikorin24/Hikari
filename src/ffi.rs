@@ -1,8 +1,6 @@
 use crate::engine::*;
 use crate::types::*;
-use bytemuck::Contiguous;
 use smallvec::SmallVec;
-use std::num;
 
 #[no_mangle]
 extern "cdecl" fn elffy_engine_start(init: HostScreenInitFn) {
@@ -39,11 +37,7 @@ extern "cdecl" fn elffy_create_bind_group<'screen>(
                 .payload
                 .as_ref_unwrap::<Slice<BufferBinding>>()
                 .iter()
-                .map(|bb| wgpu::BufferBinding {
-                    buffer: bb.buffer,
-                    offset: bb.offset,
-                    size: num::NonZeroU64::from_integer(bb.size),
-                })
+                .map(|bb| bb.to_wgpu_type())
                 .collect::<Vec<_>>(),
             _ => vec![],
         })
@@ -53,11 +47,7 @@ extern "cdecl" fn elffy_create_bind_group<'screen>(
         let wgpu_binding_resource = match entry.resource.tag {
             BindingResourceTag::Buffer => {
                 let buffer_binding = entry.resource.payload.as_ref_unwrap::<BufferBinding>();
-                wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                    buffer: buffer_binding.buffer,
-                    offset: buffer_binding.offset,
-                    size: num::NonZeroU64::from_integer(buffer_binding.size),
-                })
+                wgpu::BindingResource::Buffer(buffer_binding.to_wgpu_type())
             }
             BindingResourceTag::BufferArray => {
                 wgpu::BindingResource::BufferArray(wgpu_buffer_bindings_vec[entry_index].as_slice())
@@ -94,6 +84,14 @@ extern "cdecl" fn elffy_create_bind_group<'screen>(
         entries: &wgpu_group_entries,
     };
     screen.create_bind_group(&wgpu_bind_group_desc)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_bind_group(
+    screen: &mut HostScreen,
+    bind_group: &wgpu::BindGroup,
+) -> bool {
+    screen.destroy_bind_group(bind_group)
 }
 
 #[no_mangle]
@@ -206,18 +204,18 @@ extern "cdecl" fn elffy_destroy_shader_module(
 #[no_mangle]
 extern "cdecl" fn elffy_create_texture<'screen>(
     screen: &'screen mut HostScreen,
-    desc: &TextureDesc,
+    desc: &TextureDescriptor,
 ) -> &'screen wgpu::Texture {
-    screen.create_texture(&desc.into())
+    screen.create_texture(&desc.to_wgpu_type())
 }
 
 #[no_mangle]
 extern "cdecl" fn elffy_create_texture_with_data<'screen>(
     screen: &'screen mut HostScreen,
-    desc: &TextureDesc,
+    desc: &TextureDescriptor,
     data: Slice<u8>,
 ) -> &'screen wgpu::Texture {
-    screen.create_texture_with_data(&desc.into(), &data)
+    screen.create_texture_with_data(&desc.to_wgpu_type(), &data)
 }
 
 #[no_mangle]
