@@ -35,63 +35,7 @@ extern "cdecl" fn elffy_create_bind_group<'screen>(
     screen: &'screen mut HostScreen,
     desc: &BindGroupDescriptor,
 ) -> &'screen wgpu::BindGroup {
-    let mut wgpu_group_entries = vec![];
-    let wgpu_buffer_bindings_vec = desc
-        .entries
-        .iter()
-        .map(|entry| match entry.resource.tag {
-            BindingResourceTag::BufferArray => entry
-                .resource
-                .payload
-                .as_ref_unwrap::<Slice<BufferBinding>>()
-                .iter()
-                .map(|bb| bb.to_wgpu_type())
-                .collect::<Vec<_>>(),
-            _ => vec![],
-        })
-        .collect::<Vec<_>>();
-
-    for (entry_index, entry) in desc.entries.iter().enumerate() {
-        let wgpu_binding_resource = match entry.resource.tag {
-            BindingResourceTag::Buffer => {
-                let buffer_binding = entry.resource.payload.as_ref_unwrap::<BufferBinding>();
-                wgpu::BindingResource::Buffer(buffer_binding.to_wgpu_type())
-            }
-            BindingResourceTag::BufferArray => {
-                wgpu::BindingResource::BufferArray(wgpu_buffer_bindings_vec[entry_index].as_slice())
-            }
-            BindingResourceTag::Sampler => wgpu::BindingResource::Sampler(
-                entry.resource.payload.as_ref_unwrap::<wgpu::Sampler>(),
-            ),
-            BindingResourceTag::SamplerArray => wgpu::BindingResource::SamplerArray(
-                entry
-                    .resource
-                    .payload
-                    .as_ref_unwrap::<Slice<&wgpu::Sampler>>()
-                    .as_slice(),
-            ),
-            BindingResourceTag::TextureView => wgpu::BindingResource::TextureView(
-                entry.resource.payload.as_ref_unwrap::<wgpu::TextureView>(),
-            ),
-            BindingResourceTag::TextureViewArray => wgpu::BindingResource::TextureViewArray(
-                entry
-                    .resource
-                    .payload
-                    .as_ref_unwrap::<Slice<&wgpu::TextureView>>()
-                    .as_slice(),
-            ),
-        };
-        wgpu_group_entries.push(wgpu::BindGroupEntry {
-            binding: entry.binding,
-            resource: wgpu_binding_resource,
-        });
-    }
-    let wgpu_bind_group_desc = wgpu::BindGroupDescriptor {
-        label: None,
-        layout: desc.layout,
-        entries: &wgpu_group_entries,
-    };
-    screen.create_bind_group(&wgpu_bind_group_desc)
+    desc.use_wgpu_type(|x| screen.create_bind_group(x))
 }
 
 #[no_mangle]
