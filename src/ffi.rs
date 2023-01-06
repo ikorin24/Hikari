@@ -65,43 +65,9 @@ extern "cdecl" fn elffy_destroy_pipeline_layout(
 #[no_mangle]
 extern "cdecl" fn elffy_create_render_pipeline<'screen>(
     screen: &'screen mut HostScreen,
-    desc: &RenderPipelineDesc,
+    desc: &RenderPipelineDescription,
 ) -> &'screen wgpu::RenderPipeline {
-    let vertex = wgpu::VertexState {
-        module: desc.vs_info.shader,
-        entry_point: desc.vs_info.entry_point.as_str().unwrap(),
-        buffers: &desc
-            .vs_info
-            .inputs
-            .iter()
-            .map(|x| x.to_vertex_buffer_layout())
-            .collect::<SmallVec<[_; 8]>>(),
-    };
-    let fragment = wgpu::FragmentState {
-        module: desc.fs_info.shader,
-        entry_point: desc.fs_info.entry_point.as_str().unwrap(),
-        targets: &desc
-            .fs_info
-            .outputs
-            .iter()
-            .map(|x| Some(x.to_color_target_state()))
-            .collect::<SmallVec<[_; 8]>>(),
-    };
-    let pipeline_desc = wgpu::RenderPipelineDescriptor {
-        label: None,
-        layout: Some(desc.layout),
-        vertex,
-        fragment: Some(fragment),
-        primitive: desc.primitive.to_primitive_state(),
-        depth_stencil: None,
-        multisample: wgpu::MultisampleState {
-            count: 1,
-            mask: !0,
-            alpha_to_coverage_enabled: false,
-        },
-        multiview: None,
-    };
-    screen.create_render_pipeline(&pipeline_desc)
+    desc.use_wgpu_type(|x| screen.create_render_pipeline(x))
 }
 
 #[no_mangle]

@@ -1,5 +1,7 @@
 use crate::engine::HostScreen;
 use bytemuck::Contiguous;
+use smallvec::SmallVec;
+use static_assertions::assert_eq_size;
 use std;
 use std::ffi;
 use std::{marker, num, ops, str};
@@ -265,45 +267,109 @@ impl<'a> PipelineLayoutDesc<'a> {
 }
 
 #[repr(C)]
-pub(crate) struct RenderPipelineDesc<'a> {
+pub(crate) struct RenderPipelineDescription<'a> {
     pub layout: &'a wgpu::PipelineLayout,
-    pub vs_info: VertexShaderInfo<'a>,
-    pub fs_info: FragmentShaderInfo<'a>,
-    pub primitive: PrimitiveInfo,
+    pub vertex: VertexState<'a>,
+    pub fragment: Opt<FragmentState<'a>>,
+    pub primitive: PrimitiveState,
+}
+
+impl<'a> RenderPipelineDescription<'a> {
+    pub fn use_wgpu_type<T>(
+        &self,
+        consume: impl FnOnce(&wgpu::RenderPipelineDescriptor) -> T,
+    ) -> T {
+        let vertex = wgpu::VertexState {
+            module: self.vertex.module,
+            entry_point: self.vertex.entry_point.as_str().unwrap(),
+            buffers: &self
+                .vertex
+                .inputs
+                .iter()
+                .map(|x| x.to_wgpu_type())
+                .collect::<SmallVec<[_; 4]>>(),
+        };
+
+        let mut fragment_targets = vec![];
+        let fragment = match self.fragment {
+            Opt {
+                exists: true,
+                ref value,
+            } => {
+                fragment_targets.extend(
+                    value
+                        .targets
+                        .iter()
+                        .map(|x| x.to_option().map(|y| y.to_wgpu_type())),
+                );
+                Some(wgpu::FragmentState {
+                    module: value.module,
+                    entry_point: value.entry_point.as_str().unwrap(),
+                    targets: &fragment_targets,
+                })
+            }
+            Opt { exists: false, .. } => None,
+        };
+
+        let pipeline_desc = wgpu::RenderPipelineDescriptor {
+            label: None,
+            layout: Some(self.layout),
+            vertex,
+            fragment,
+            primitive: self.primitive.to_wgpu_type(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview: None,
+        };
+        consume(&pipeline_desc)
+    }
 }
 
 #[repr(C)]
-pub(crate) struct VertexShaderInfo<'a> {
-    pub shader: &'a wgpu::ShaderModule,
+pub(crate) struct VertexState<'a> {
+    pub module: &'a wgpu::ShaderModule,
     pub entry_point: Slice<'a, u8>,
     pub inputs: Slice<'a, VertexBufferLayout<'a>>,
 }
 
 #[repr(C)]
-pub(crate) struct ColorTargetInfo {
+#[derive(Clone, Copy)]
+pub(crate) struct FragmentState<'a> {
+    pub module: &'a wgpu::ShaderModule,
+    pub entry_point: Slice<'a, u8>,
+    pub targets: Slice<'a, Opt<ColorTargetState>>,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct ColorTargetState {
     pub format: wgpu::TextureFormat,
-    pub blend: wgpu::BlendState,
+    pub blend: Opt<wgpu::BlendState>,
     pub write_mask: wgpu::ColorWrites,
 }
-impl ColorTargetInfo {
-    pub fn to_color_target_state(&self) -> wgpu::ColorTargetState {
+impl ColorTargetState {
+    pub fn to_wgpu_type(&self) -> wgpu::ColorTargetState {
         wgpu::ColorTargetState {
             format: self.format,
-            blend: Some(self.blend),
+            blend: self.blend.to_option(),
             write_mask: self.write_mask,
         }
     }
 }
 
-#[repr(C)]
-pub(crate) struct FragmentShaderInfo<'a> {
-    pub shader: &'a wgpu::ShaderModule,
-    pub entry_point: Slice<'a, u8>,
-    pub outputs: Slice<'a, ColorTargetInfo>,
-}
+assert_eq_size!(wgpu::BlendFactor, u32);
+assert_eq_size!(wgpu::BlendOperation, u32);
+assert_eq_size!(wgpu::PrimitiveTopology, u32);
+assert_eq_size!(wgpu::IndexFormat, u32);
+assert_eq_size!(wgpu::FrontFace, u32);
+assert_eq_size!(wgpu::PolygonMode, u32);
 
 #[repr(C)]
-pub(crate) struct PrimitiveInfo {
+pub(crate) struct PrimitiveState {
     pub topology: wgpu::PrimitiveTopology,
     pub strip_index_format: Opt<wgpu::IndexFormat>,
     pub front_face: wgpu::FrontFace,
@@ -311,8 +377,8 @@ pub(crate) struct PrimitiveInfo {
     pub polygon_mode: wgpu::PolygonMode,
 }
 
-impl PrimitiveInfo {
-    pub fn to_primitive_state(&self) -> wgpu::PrimitiveState {
+impl PrimitiveState {
+    pub fn to_wgpu_type(&self) -> wgpu::PrimitiveState {
         wgpu::PrimitiveState {
             topology: self.topology,
             strip_index_format: self.strip_index_format.to_option(),
@@ -935,7 +1001,7 @@ pub(crate) struct VertexBufferLayout<'a> {
 }
 
 impl<'a> VertexBufferLayout<'a> {
-    pub fn to_vertex_buffer_layout(&self) -> wgpu::VertexBufferLayout {
+    pub fn to_wgpu_type(&self) -> wgpu::VertexBufferLayout {
         wgpu::VertexBufferLayout {
             array_stride: self.vertex_size,
             step_mode: wgpu::VertexStepMode::Vertex,
@@ -947,6 +1013,7 @@ impl<'a> VertexBufferLayout<'a> {
 /// ffi-safe `Option<T>`
 /// (use `Option<T>` if T is reference)
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub(crate) struct Opt<T: Copy> {
     exists: bool,
     value: T,
