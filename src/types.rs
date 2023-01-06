@@ -36,8 +36,20 @@ impl TextureViewDescriptor {
     pub fn to_wgpu_type(&self) -> wgpu::TextureViewDescriptor {
         wgpu::TextureViewDescriptor {
             label: None,
-            format: self.format.to_option().map(|x| x.to_wgpu_type()),
-            dimension: self.dimension.to_option().map(|x| x.to_wgpu_type()),
+            format: match self.format {
+                Opt {
+                    exists: true,
+                    ref value,
+                } => Some(value.to_wgpu_type()),
+                _ => None,
+            },
+            dimension: match self.dimension {
+                Opt {
+                    exists: true,
+                    ref value,
+                } => Some(value.to_wgpu_type()),
+                _ => None,
+            },
             aspect: self.aspect.to_wgpu_type(),
             base_mip_level: self.base_mip_level,
             mip_level_count: num::NonZeroU32::from_integer(self.mip_level_count),
@@ -95,7 +107,13 @@ impl SamplerDescriptor {
             lod_max_clamp: self.lod_max_clamp,
             compare: self.compare.to_option(),
             anisotropy_clamp: num::NonZeroU8::from_integer(self.anisotropy_clamp),
-            border_color: self.border_color.to_option().map(|x| x.to_wgpu_type()),
+            border_color: match self.border_color {
+                Opt {
+                    exists: true,
+                    ref value,
+                } => Some(value.to_wgpu_type()),
+                _ => None,
+            },
         }
     }
 }
@@ -296,12 +314,13 @@ impl<'a> RenderPipelineDescription<'a> {
                 exists: true,
                 ref value,
             } => {
-                fragment_targets.extend(
-                    value
-                        .targets
-                        .iter()
-                        .map(|x| x.to_option().map(|y| y.to_wgpu_type())),
-                );
+                fragment_targets.extend(value.targets.iter().map(|x| match x {
+                    Opt {
+                        exists: true,
+                        ref value,
+                    } => Some(value.to_wgpu_type()),
+                    _ => None,
+                }));
                 Some(wgpu::FragmentState {
                     module: value.module,
                     entry_point: value.entry_point.as_str().unwrap(),
@@ -337,7 +356,6 @@ pub(crate) struct VertexState<'a> {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
 pub(crate) struct FragmentState<'a> {
     pub module: &'a wgpu::ShaderModule,
     pub entry_point: Slice<'a, u8>,
@@ -345,7 +363,6 @@ pub(crate) struct FragmentState<'a> {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
 pub(crate) struct ColorTargetState {
     pub format: wgpu::TextureFormat,
     pub blend: Opt<wgpu::BlendState>,
@@ -1013,8 +1030,7 @@ impl<'a> VertexBufferLayout<'a> {
 /// ffi-safe `Option<T>`
 /// (use `Option<T>` if T is reference)
 #[repr(C)]
-#[derive(Clone, Copy)]
-pub(crate) struct Opt<T: Copy> {
+pub(crate) struct Opt<T> {
     exists: bool,
     value: T,
 }
