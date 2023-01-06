@@ -5,7 +5,7 @@ use std::ffi;
 use std::{marker, num, ops, str};
 
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
 pub(crate) enum WindowStyle {
     Default = 0,
@@ -20,27 +20,62 @@ pub(crate) struct HostScreenCallbacks {
 }
 
 #[repr(C)]
+pub(crate) struct TextureViewDescriptor {
+    format: Opt<TextureFormat>,
+    dimension: Opt<TextureViewDimension>,
+    pub aspect: TextureAspect,
+    pub base_mip_level: u32,
+    pub mip_level_count: u32,
+    pub base_array_layer: u32,
+    pub array_layer_count: u32,
+}
+
+impl TextureViewDescriptor {
+    pub fn to_wgpu_type(&self) -> wgpu::TextureViewDescriptor {
+        wgpu::TextureViewDescriptor {
+            label: None,
+            format: self.format.to_option().map(|x| x.to_wgpu_type()),
+            dimension: self.dimension.to_option().map(|x| x.to_wgpu_type()),
+            aspect: self.aspect.to_wgpu_type(),
+            base_mip_level: self.base_mip_level,
+            mip_level_count: num::NonZeroU32::from_integer(self.mip_level_count),
+            base_array_layer: self.base_array_layer,
+            array_layer_count: num::NonZeroU32::from_integer(self.array_layer_count),
+        }
+    }
+}
+
+#[repr(u32)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[allow(dead_code)] // because values are from FFI
+pub(crate) enum TextureAspect {
+    All = 0,
+    StencilOnly = 1,
+    DepthOnly = 2,
+}
+
+impl TextureAspect {
+    pub fn to_wgpu_type(&self) -> wgpu::TextureAspect {
+        match self {
+            Self::All => wgpu::TextureAspect::All,
+            Self::StencilOnly => wgpu::TextureAspect::StencilOnly,
+            Self::DepthOnly => wgpu::TextureAspect::DepthOnly,
+        }
+    }
+}
+
+#[repr(C)]
 pub(crate) struct SamplerDescriptor {
     pub address_mode_u: wgpu::AddressMode,
-    /// How to deal with out of bounds accesses in the v (i.e. y) direction
     pub address_mode_v: wgpu::AddressMode,
-    /// How to deal with out of bounds accesses in the w (i.e. z) direction
     pub address_mode_w: wgpu::AddressMode,
-    /// How to filter the texture when it needs to be magnified (made larger)
     pub mag_filter: wgpu::FilterMode,
-    /// How to filter the texture when it needs to be minified (made smaller)
     pub min_filter: wgpu::FilterMode,
-    /// How to filter between mip map levels
     pub mipmap_filter: wgpu::FilterMode,
-    /// Minimum level of detail (i.e. mip level) to use
     pub lod_min_clamp: f32,
-    /// Maximum level of detail (i.e. mip level) to use
     pub lod_max_clamp: f32,
-    /// If this is enabled, this is a comparison sampler using the given comparison function.
     pub compare: Opt<wgpu::CompareFunction>,
-    /// Valid values: 1, 2, 4, 8, and 16.
     pub anisotropy_clamp: u8,
-    /// Border color to use when address_mode is [`AddressMode::ClampToBorder`]
     pub border_color: Opt<SamplerBorderColor>,
 }
 
@@ -64,7 +99,7 @@ impl SamplerDescriptor {
 }
 
 #[repr(u32)]
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
 pub(crate) enum SamplerBorderColor {
     TransparentBlack = 0,
@@ -118,7 +153,7 @@ impl<'a> PointerWrap<'a> {
 }
 
 #[repr(u32)]
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
 pub(crate) enum BindingResourceTag {
     Buffer = 0,
@@ -222,23 +257,6 @@ impl PrimitiveInfo {
     }
 }
 
-// #[repr(C)]
-// pub(crate) enum CullMode {
-//     Front = 0,
-//     Back = 1,
-//     NoCulling = 2,
-// }
-
-// impl CullMode {
-//     pub fn to_face(&self) -> Option<wgpu::Face> {
-//         match self {
-//             Front => Some(wgpu::Face::Front),
-//             Back => Some(wgpu::Face::Back),
-//             NoCulling => None,
-//         }
-//     }
-// }
-
 #[repr(C)]
 pub(crate) struct BindGroupLayoutEntry<'a> {
     pub binding: u32,
@@ -303,7 +321,7 @@ impl<'a> BindingType<'a> {
 }
 
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
 pub(crate) enum BindingTypeTag {
     Buffer = 0,
@@ -320,7 +338,7 @@ pub(crate) struct BufferBindingData {
 }
 
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
 pub(crate) enum BufferBindingType {
     Uniform = 0,
@@ -339,7 +357,7 @@ impl BufferBindingType {
 }
 
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
 pub(crate) enum SamplerBindingType {
     Filtering = 0,
@@ -364,8 +382,8 @@ pub(crate) struct TextureBindingData {
     multisampled: bool,
 }
 
-#[repr(C)]
-#[derive(Debug, PartialEq, Eq)]
+#[repr(u32)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
 pub(crate) enum TextureSampleType {
     FloatFilterable = 0,
@@ -388,7 +406,7 @@ impl TextureSampleType {
 }
 
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
 pub(crate) enum TextureViewDimension {
     D1 = 0,
@@ -423,7 +441,7 @@ pub(crate) struct StorageTextureBindingData {
 }
 
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
 pub(crate) enum StorageTextureAccess {
     WriteOnly = 0,
@@ -442,9 +460,9 @@ impl StorageTextureAccess {
 }
 
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
-pub enum TextureFormat {
+pub(crate) enum TextureFormat {
     // Normal 8 bit formats
     /// Red channel only. 8 bit integer per channel. [0, 255] converted to/from float [0, 1] in shader.
     R8Unorm = 0,
@@ -824,7 +842,7 @@ impl TextureDescriptor {
 }
 
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
 pub(crate) enum TextureDimension {
     D1 = 0,
@@ -1035,8 +1053,8 @@ pub(crate) type HostScreenRenderFn =
 mod compile_time_test {
 
     /// assert that `repr(C)` enum has 32bits size in current platform target.
-    #[repr(C)]
-    #[allow(dead_code)]
+    #[repr(u32)]
+    #[allow(dead_code)] // because the enum is only for compile time
     enum OnlyForCompileTimeSizeCheck {
         A = 0,
     }

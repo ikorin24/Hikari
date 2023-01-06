@@ -237,6 +237,23 @@ extern "cdecl" fn elffy_destroy_texture(screen: &mut HostScreen, texture: &wgpu:
 }
 
 #[no_mangle]
+extern "cdecl" fn elffy_create_texture_view<'screen>(
+    screen: &'screen mut HostScreen,
+    texture: &wgpu::Texture,
+    desc: &TextureViewDescriptor,
+) -> &'screen wgpu::TextureView {
+    screen.create_texture_view(texture, &desc.to_wgpu_type())
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_texture_view(
+    screen: &mut HostScreen,
+    texture_view: &wgpu::TextureView,
+) -> bool {
+    screen.destroy_texture_view(texture_view)
+}
+
+#[no_mangle]
 extern "cdecl" fn elffy_set_pipeline<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
     render_pipeline: &'a wgpu::RenderPipeline,

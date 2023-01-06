@@ -94,6 +94,7 @@ pub(crate) struct HostScreen {
     bind_group_layouts: Vec<Box<wgpu::BindGroupLayout>>,
     bind_groups: Vec<Box<wgpu::BindGroup>>,
     samplers: Vec<Box<wgpu::Sampler>>,
+    texture_views: Vec<Box<wgpu::TextureView>>,
     callbacks: HostScreenCallbacks,
 }
 
@@ -149,6 +150,7 @@ impl HostScreen {
             bind_group_layouts: vec![],
             bind_groups: vec![],
             samplers: vec![],
+            texture_views: vec![],
             callbacks: HostScreenCallbacks::default(),
         })
     }
@@ -175,6 +177,21 @@ impl HostScreen {
 
     pub fn destroy_bind_group(&mut self, bind_group: &wgpu::BindGroup) -> bool {
         self.bind_groups.swap_remove_by_ref(bind_group).is_some()
+    }
+
+    pub fn create_texture_view(
+        &mut self,
+        texture: &wgpu::Texture,
+        desc: &wgpu::TextureViewDescriptor,
+    ) -> &wgpu::TextureView {
+        let texture_view = texture.create_view(desc);
+        self.texture_views.push_get_ref(texture_view)
+    }
+
+    pub fn destroy_texture_view(&mut self, texture_view: &wgpu::TextureView) -> bool {
+        self.texture_views
+            .swap_remove_by_ref(texture_view)
+            .is_some()
     }
 
     pub fn create_sampler(&mut self, desc: &wgpu::SamplerDescriptor) -> &wgpu::Sampler {
