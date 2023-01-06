@@ -1,6 +1,5 @@
 use crate::engine::*;
 use crate::types::*;
-use smallvec::SmallVec;
 
 #[no_mangle]
 extern "cdecl" fn elffy_engine_start(init: HostScreenInitFn) {
@@ -10,16 +9,9 @@ extern "cdecl" fn elffy_engine_start(init: HostScreenInitFn) {
 #[no_mangle]
 extern "cdecl" fn elffy_create_bind_group_layout<'screen>(
     screen: &'screen mut HostScreen,
-    entries: Slice<BindGroupLayoutEntry>,
+    desc: &BindGroupLayoutDescriptor,
 ) -> &'screen wgpu::BindGroupLayout {
-    let desc = wgpu::BindGroupLayoutDescriptor {
-        label: None,
-        entries: &entries
-            .iter()
-            .map(|x| x.to_wgpu_type())
-            .collect::<SmallVec<[_; 16]>>(),
-    };
-    screen.create_bind_group_layout(&desc)
+    desc.use_wgpu_type(|x| screen.create_bind_group_layout(x))
 }
 
 #[no_mangle]

@@ -22,6 +22,28 @@ pub(crate) struct HostScreenCallbacks {
 }
 
 #[repr(C)]
+pub(crate) struct BindGroupLayoutDescriptor<'a> {
+    pub entries: Slice<'a, BindGroupLayoutEntry<'a>>,
+}
+
+impl<'a> BindGroupLayoutDescriptor<'a> {
+    pub fn use_wgpu_type<T>(
+        &self,
+        consume: impl FnOnce(&wgpu::BindGroupLayoutDescriptor) -> T,
+    ) -> T {
+        let desc = wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            entries: &self
+                .entries
+                .iter()
+                .map(|x| x.to_wgpu_type())
+                .collect::<SmallVec<[_; 16]>>(),
+        };
+        consume(&desc)
+    }
+}
+
+#[repr(C)]
 pub(crate) struct TextureViewDescriptor {
     format: Opt<TextureFormat>,
     dimension: Opt<TextureViewDimension>,
@@ -36,20 +58,8 @@ impl TextureViewDescriptor {
     pub fn to_wgpu_type(&self) -> wgpu::TextureViewDescriptor {
         wgpu::TextureViewDescriptor {
             label: None,
-            format: match self.format {
-                Opt {
-                    exists: true,
-                    ref value,
-                } => Some(value.to_wgpu_type()),
-                _ => None,
-            },
-            dimension: match self.dimension {
-                Opt {
-                    exists: true,
-                    ref value,
-                } => Some(value.to_wgpu_type()),
-                _ => None,
-            },
+            format: self.format.map_to_option(|x| x.to_wgpu_type()),
+            dimension: self.dimension.map_to_option(|x| x.to_wgpu_type()),
             aspect: self.aspect.to_wgpu_type(),
             base_mip_level: self.base_mip_level,
             mip_level_count: num::NonZeroU32::from_integer(self.mip_level_count),
@@ -107,13 +117,7 @@ impl SamplerDescriptor {
             lod_max_clamp: self.lod_max_clamp,
             compare: self.compare.to_option(),
             anisotropy_clamp: num::NonZeroU8::from_integer(self.anisotropy_clamp),
-            border_color: match self.border_color {
-                Opt {
-                    exists: true,
-                    ref value,
-                } => Some(value.to_wgpu_type()),
-                _ => None,
-            },
+            border_color: self.border_color.map_to_option(|x| x.to_wgpu_type()),
         }
     }
 }
@@ -314,20 +318,19 @@ impl<'a> RenderPipelineDescription<'a> {
                 exists: true,
                 ref value,
             } => {
-                fragment_targets.extend(value.targets.iter().map(|x| match x {
-                    Opt {
-                        exists: true,
-                        ref value,
-                    } => Some(value.to_wgpu_type()),
-                    _ => None,
-                }));
+                fragment_targets.extend(
+                    value
+                        .targets
+                        .iter()
+                        .map(|x| x.map_to_option(|y| y.to_wgpu_type())),
+                );
                 Some(wgpu::FragmentState {
                     module: value.module,
                     entry_point: value.entry_point.as_str().unwrap(),
                     targets: &fragment_targets,
                 })
             }
-            Opt { exists: false, .. } => None,
+            _ => None,
         };
 
         let pipeline_desc = wgpu::RenderPipelineDescriptor {
@@ -1033,6 +1036,18 @@ impl<'a> VertexBufferLayout<'a> {
 pub(crate) struct Opt<T> {
     exists: bool,
     value: T,
+}
+
+impl<T> Opt<T> {
+    pub fn map_to_option<U, F>(&self, f: F) -> Option<U>
+    where
+        F: FnOnce(&T) -> U,
+    {
+        match self.exists {
+            true => Some(f(&self.value)),
+            false => None,
+        }
+    }
 }
 
 impl<T: Copy> Opt<T> {
