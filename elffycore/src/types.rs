@@ -1007,8 +1007,8 @@ impl TextureDimension {
     pub fn to_wgpu_type(&self) -> wgpu::TextureDimension {
         match self {
             Self::D1 => wgpu::TextureDimension::D1,
-            Self::D2 => wgpu::TextureDimension::D1,
-            Self::D3 => wgpu::TextureDimension::D1,
+            Self::D2 => wgpu::TextureDimension::D2,
+            Self::D3 => wgpu::TextureDimension::D3,
         }
     }
 }
