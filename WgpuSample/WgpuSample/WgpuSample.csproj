@@ -4,14 +4,13 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
-	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\..\target\x86_64-pc-windows-msvc\release\wgpu_sample.dll" Link="wgpu_sample.dll">
+    <!--<None Include="..\..\target\x86_64-pc-windows-msvc\release\wgpu_sample.dll" Link="wgpu_sample.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="EngineCore.Native.cs" />
+    </None>-->
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">

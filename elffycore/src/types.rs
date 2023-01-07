@@ -45,8 +45,8 @@ impl<'a> BindGroupLayoutDescriptor<'a> {
 
 #[repr(C)]
 pub(crate) struct TextureViewDescriptor {
-    format: Opt<TextureFormat>,
-    dimension: Opt<TextureViewDimension>,
+    pub format: Opt<TextureFormat>,
+    pub dimension: Opt<TextureViewDimension>,
     pub aspect: TextureAspect,
     pub base_mip_level: u32,
     pub mip_level_count: u32,
@@ -367,20 +367,22 @@ pub(crate) struct FragmentState<'a> {
 
 #[repr(C)]
 pub(crate) struct ColorTargetState {
-    pub format: wgpu::TextureFormat,
+    pub format: TextureFormat,
     pub blend: Opt<wgpu::BlendState>,
     pub write_mask: wgpu::ColorWrites,
 }
 impl ColorTargetState {
     pub fn to_wgpu_type(&self) -> wgpu::ColorTargetState {
         wgpu::ColorTargetState {
-            format: self.format,
+            format: self.format.to_wgpu_type(),
             blend: self.blend.to_option(),
             write_mask: self.write_mask,
         }
     }
 }
 
+assert_eq_size!(wgpu::VertexFormat, u32);
+assert_eq_size!(wgpu::Face, u32);
 assert_eq_size!(wgpu::BlendFactor, u32);
 assert_eq_size!(wgpu::BlendOperation, u32);
 assert_eq_size!(wgpu::PrimitiveTopology, u32);
@@ -486,9 +488,9 @@ pub(crate) enum BindingTypeTag {
 
 #[repr(C)]
 pub(crate) struct BufferBindingData {
-    ty: BufferBindingType,
-    has_dynamic_offset: bool,
-    min_binding_size: u64,
+    pub ty: BufferBindingType,
+    pub has_dynamic_offset: bool,
+    pub min_binding_size: u64,
 }
 
 #[repr(u32)]
@@ -531,9 +533,9 @@ impl SamplerBindingType {
 
 #[repr(C)]
 pub(crate) struct TextureBindingData {
-    sample_type: TextureSampleType,
-    view_dimension: TextureViewDimension,
-    multisampled: bool,
+    pub sample_type: TextureSampleType,
+    pub view_dimension: TextureViewDimension,
+    pub multisampled: bool,
 }
 
 #[repr(u32)]
@@ -586,12 +588,9 @@ impl TextureViewDimension {
 
 #[repr(C)]
 pub(crate) struct StorageTextureBindingData {
-    /// Allowed access to this texture.
-    access: StorageTextureAccess,
-    /// Format of the texture.
-    format: TextureFormat,
-    /// Dimension of the texture view that is going to be sampled.
-    view_dimension: TextureViewDimension,
+    pub access: StorageTextureAccess,
+    pub format: TextureFormat,
+    pub view_dimension: TextureViewDimension,
 }
 
 #[repr(u32)]
@@ -1034,8 +1033,8 @@ impl<'a> VertexBufferLayout<'a> {
 /// (use `Option<T>` if T is reference)
 #[repr(C)]
 pub(crate) struct Opt<T> {
-    exists: bool,
-    value: T,
+    pub exists: bool,
+    pub value: T,
 }
 
 impl<T> Opt<T> {
@@ -1062,8 +1061,8 @@ impl<T: Copy> Opt<T> {
 #[repr(C)]
 #[derive(Debug)]
 pub(crate) struct BufSlice<'a> {
-    buffer: &'a wgpu::Buffer,
-    range: RangeBoundsU64,
+    pub buffer: &'a wgpu::Buffer,
+    pub range: RangeBoundsU64,
 }
 
 impl<'a> BufSlice<'a> {
@@ -1075,8 +1074,8 @@ impl<'a> BufSlice<'a> {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Slice<'a, T> {
-    data: Option<&'a T>,
-    len: usize,
+    pub data: Option<&'a T>,
+    pub len: usize,
 }
 
 impl<'a, T> ops::Deref for Slice<'a, T> {
@@ -1126,8 +1125,8 @@ pub(crate) struct IndexBufSlice<'a> {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct RangeU64 {
-    start: u64,
-    end_excluded: u64,
+    pub start: u64,
+    pub end_excluded: u64,
 }
 
 impl RangeU64 {
@@ -1142,8 +1141,8 @@ impl RangeU64 {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct RangeU32 {
-    start: u32,
-    end_excluded: u32,
+    pub start: u32,
+    pub end_excluded: u32,
 }
 
 impl RangeU32 {
@@ -1158,10 +1157,10 @@ impl RangeU32 {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct RangeBoundsU64 {
-    start: u64,
-    end_excluded: u64,
-    has_start: bool,
-    has_end_excluded: bool,
+    pub start: u64,
+    pub end_excluded: u64,
+    pub has_start: bool,
+    pub has_end_excluded: bool,
 }
 
 impl ops::RangeBounds<u64> for RangeBoundsU64 {
@@ -1185,10 +1184,10 @@ impl ops::RangeBounds<u64> for RangeBoundsU64 {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct RangeBoundsU32 {
-    start: u32,
-    end_excluded: u32,
-    has_start: bool,
-    has_end_excluded: bool,
+    pub start: u32,
+    pub end_excluded: u32,
+    pub has_start: bool,
+    pub has_end_excluded: bool,
 }
 
 impl ops::RangeBounds<u32> for RangeBoundsU32 {
