@@ -6,6 +6,7 @@ using u64 = System.UInt64;
 using f32 = System.Single;
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace WgpuSample.Bind;
 
@@ -52,9 +53,14 @@ internal enum WindowStyle
 internal record struct HostScreenHandle(Handle Handle);
 internal record struct RenderPassHandle(Handle Handle);
 internal record struct BindGroupLayoutHandle(Handle Handle);
+internal record struct BindGroupHandle(Handle Handle);
 internal record struct BufferHandle(Handle Handle);
+internal record struct RenderPipelineHandle(Handle Handle);
+internal record struct SamplerHandle(Handle Handle);
 internal record struct PipelineLayoutHandle(Handle Handle);
 internal record struct ShaderModuleHandle(Handle Handle);
+internal record struct TextureHandle(Handle Handle);
+internal record struct TextureViewHandle(Handle Handle);
 
 internal unsafe struct HostScreenCallbacks
 {
@@ -148,7 +154,7 @@ internal struct BufferBinding
     public u64 size;
 }
 
-internal struct PipelineLayoutDesc
+internal struct PipelineLayoutDescriptor
 {
     public Slice<BindGroupLayoutHandle> bind_group_layouts;
 }
@@ -379,6 +385,19 @@ internal enum wgpu_VertexFormat : u32
 }
 
 
+internal enum wgpu_BufferUsages : u32
+{
+    MAP_READ = 1 << 0,
+    MAP_WRITE = 1 << 1,
+    COPY_SRC = 1 << 2,
+    COPY_DST = 1 << 3,
+    INDEX = 1 << 4,
+    VERTEX = 1 << 5,
+    UNIFORM = 1 << 6,
+    STORAGE = 1 << 7,
+    INDIRECT = 1 << 8,
+}
+
 internal struct BindingType
 {
     public BindingTypeTag tag;
@@ -568,12 +587,63 @@ internal unsafe struct NullableRef<T> where T : unmanaged
 {
     private T* _p;
     public static explicit operator NullableRef<T>(T* pointer) => new() { _p = pointer };
+
+    public NullableRef(T* pointer) => _p = pointer;
 }
 
 internal struct Slice<T> where T : unmanaged
 {
     public NullableRef<T> data;
     public nuint len;
+}
+
+internal static class Slice
+{
+    public static Slice<T> Empty<T>() where T : unmanaged => default;
+
+    public unsafe static Slice<T> FromFixedSpanUnsafe<T>(ReadOnlySpan<T> fixedSpan) where T : unmanaged
+    {
+        var pointer = (T*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(fixedSpan));
+        return new Slice<T> { data = new(pointer), len = (nuint)fixedSpan.Length };
+    }
+
+    public unsafe static Slice<T> FromFixedSingleUnsafe<T>(T* item) where T : unmanaged
+    {
+        return new Slice<T> { data = new(item), len = 1 };
+    }
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct DrawBufferArg
+{
+    SlotBufSlice vertex_buffer;
+    RangeU32 vertices_range;
+    RangeU32 instances_range;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct DrawBufferIndexedArg
+{
+    public BufSlice vertex_buffer_slice;
+    public u32 slot;
+    public BufSlice index_buffer_slice;
+    public wgpu_IndexFormat index_format;
+    public u32 index_start;
+    public u32 index_end_excluded;
+    public u32 instance_start;
+    public u32 instance_end_excluded;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct DrawBuffersIndexedArg
+{
+    public Slice<SlotBufSlice> vertex_buffers;
+    public BufSlice index_buffer_slice;
+    public wgpu_IndexFormat index_format;
+    public u32 index_start;
+    public u32 index_end_excluded;
+    public u32 instance_start;
+    public u32 instance_end_excluded;
 }
 
 internal struct SlotBufSlice
@@ -606,6 +676,8 @@ internal struct RangeBoundsU64
     public u64 end_excluded;
     public bool has_start;
     public bool has_end_excluded;
+
+    public static RangeBoundsU64 All => default;
 }
 
 internal struct RangeBoundsU32

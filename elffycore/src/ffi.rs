@@ -1,5 +1,6 @@
 use crate::engine::*;
 use crate::types::*;
+use std::ops;
 
 #[no_mangle]
 extern "cdecl" fn elffy_engine_start(init: HostScreenInitFn) {
@@ -41,7 +42,7 @@ extern "cdecl" fn elffy_destroy_bind_group(
 #[no_mangle]
 extern "cdecl" fn elffy_create_pipeline_layout<'screen>(
     screen: &'screen mut HostScreen,
-    desc: &PipelineLayoutDesc,
+    desc: &PipelineLayoutDescriptor,
 ) -> &'screen wgpu::PipelineLayout {
     screen.create_pipeline_layout(&desc.to_pipeline_descriptor())
 }
@@ -166,50 +167,56 @@ extern "cdecl" fn elffy_set_pipeline<'a>(
 #[no_mangle]
 extern "cdecl" fn elffy_draw_buffer<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
-    vertex_buffer: &SlotBufSlice<'a>,
-    vertices_range: &RangeU32,
-    instances_range: &RangeU32,
+    arg: &DrawBufferArg<'a>,
 ) {
     render_pass.set_vertex_buffer(
-        vertex_buffer.slot,
-        vertex_buffer.buffer_slice.to_buffer_slice(),
+        arg.vertex_buffer.slot,
+        arg.vertex_buffer.buffer_slice.to_buffer_slice(),
     );
-    render_pass.draw(vertices_range.to_range(), instances_range.to_range());
+    render_pass.draw(
+        arg.vertices_range.to_range(),
+        arg.instances_range.to_range(),
+    );
 }
 
 #[no_mangle]
 extern "cdecl" fn elffy_draw_buffer_indexed<'a>(
     render_pass: &'a mut wgpu::RenderPass<'a>,
-    vertex_buffer: &'a SlotBufSlice,
-    index_buffer: &'a IndexBufSlice,
-    indices_range: &'a RangeU32,
-    instances_range: &'a RangeU32,
+    arg: &DrawBufferIndexedArg<'a>,
 ) {
-    render_pass.set_vertex_buffer(
-        vertex_buffer.slot,
-        vertex_buffer.buffer_slice.to_buffer_slice(),
-    );
-    render_pass.set_index_buffer(
-        index_buffer.buffer_slice.to_buffer_slice(),
-        index_buffer.format,
-    );
-    render_pass.draw_indexed(indices_range.to_range(), 0, instances_range.to_range());
+    render_pass.set_vertex_buffer(arg.slot, arg.vertex_buffer_slice.to_buffer_slice());
+    render_pass.set_index_buffer(arg.index_buffer_slice.to_buffer_slice(), arg.index_format);
+    render_pass.draw_indexed(
+        ops::Range {
+            start: arg.index_start,
+            end: arg.index_end_excluded,
+        },
+        0,
+        ops::Range {
+            start: arg.instance_start,
+            end: arg.instance_end_excluded,
+        },
+    )
 }
 
 #[no_mangle]
 extern "cdecl" fn elffy_draw_buffers_indexed<'a>(
     render_pass: &'a mut wgpu::RenderPass<'a>,
-    vertex_buffers: Slice<SlotBufSlice<'a>>,
-    index_buffer: &'a IndexBufSlice,
-    indices_range: &'a RangeU32,
-    instances_range: &'a RangeU32,
+    arg: &DrawBuffersIndexedArg<'a>,
 ) {
-    for vb in vertex_buffers.iter() {
+    for vb in arg.vertex_buffers.iter() {
         render_pass.set_vertex_buffer(vb.slot, vb.buffer_slice.to_buffer_slice());
     }
-    render_pass.set_index_buffer(
-        index_buffer.buffer_slice.to_buffer_slice(),
-        index_buffer.format,
+    render_pass.set_index_buffer(arg.index_buffer_slice.to_buffer_slice(), arg.index_format);
+    render_pass.draw_indexed(
+        ops::Range {
+            start: arg.index_start,
+            end: arg.index_end_excluded,
+        },
+        0,
+        ops::Range {
+            start: arg.instance_start,
+            end: arg.instance_end_excluded,
+        },
     );
-    render_pass.draw_indexed(indices_range.to_range(), 0, instances_range.to_range());
 }

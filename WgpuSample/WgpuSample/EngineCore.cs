@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
+using WgpuSample.Bind;
 
 [assembly: DisableRuntimeMarshalling]
 

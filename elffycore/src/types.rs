@@ -274,11 +274,11 @@ impl<'a> BufferBinding<'a> {
 }
 
 #[repr(C)]
-pub(crate) struct PipelineLayoutDesc<'a> {
+pub(crate) struct PipelineLayoutDescriptor<'a> {
     pub bind_group_layouts: Slice<'a, &'a wgpu::BindGroupLayout>,
 }
 
-impl<'a> PipelineLayoutDesc<'a> {
+impl<'a> PipelineLayoutDescriptor<'a> {
     pub fn to_pipeline_descriptor(&self) -> wgpu::PipelineLayoutDescriptor {
         wgpu::PipelineLayoutDescriptor {
             label: None,
@@ -1106,6 +1106,39 @@ impl Slice<'_, u8> {
     pub fn as_str(&self) -> Result<&str, str::Utf8Error> {
         std::str::from_utf8(self)
     }
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct DrawBufferArg<'a> {
+    pub vertex_buffer: SlotBufSlice<'a>,
+    pub vertices_range: RangeU32,
+    pub instances_range: RangeU32,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct DrawBufferIndexedArg<'a> {
+    pub vertex_buffer_slice: BufSlice<'a>,
+    pub slot: u32,
+    pub index_buffer_slice: BufSlice<'a>,
+    pub index_format: wgpu::IndexFormat,
+    pub index_start: u32,
+    pub index_end_excluded: u32,
+    pub instance_start: u32,
+    pub instance_end_excluded: u32,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct DrawBuffersIndexedArg<'a> {
+    pub vertex_buffers: Slice<'a, SlotBufSlice<'a>>,
+    pub index_buffer_slice: BufSlice<'a>,
+    pub index_format: wgpu::IndexFormat,
+    pub index_start: u32,
+    pub index_end_excluded: u32,
+    pub instance_start: u32,
+    pub instance_end_excluded: u32,
 }
 
 #[repr(C)]
