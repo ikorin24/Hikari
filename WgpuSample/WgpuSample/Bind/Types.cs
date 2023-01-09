@@ -19,6 +19,8 @@ internal unsafe readonly struct Handle : IEquatable<Handle>
 
     internal static Handle InvalidHandle => default;
 
+    public void* AsPointer() => _handle;
+
     public override bool Equals(object? obj) => obj is Handle handle && Equals(handle);
 
     public bool Equals(Handle other) => _handle == other._handle;
@@ -119,6 +121,8 @@ internal struct TextureViewDescriptor
     public required u32 mip_level_count;
     public required u32 base_array_layer;
     public required u32 array_layer_count;
+
+    public static TextureViewDescriptor Default => default;
 }
 
 
@@ -168,11 +172,25 @@ internal struct BindingResource
 {
     public required BindingResourceTag tag;
     public required PointerWrap payload;
+
+    public unsafe static BindingResource TextureView(TextureViewHandle textureView) => new()
+    {
+        tag = BindingResourceTag.TextureView,
+        payload = new(textureView.Handle.AsPointer()),
+    };
+
+    public unsafe static BindingResource Sampler(SamplerHandle sampler) => new()
+    {
+        tag = BindingResourceTag.Sampler,
+        payload = new(sampler.Handle.AsPointer()),
+    };
 }
 
-internal struct PointerWrap
+internal readonly struct PointerWrap
 {
-    private IntPtr _ptr;
+    private readonly IntPtr _ptr;
+
+    public unsafe PointerWrap(void* p) => _ptr = (IntPtr)p;
 }
 
 internal enum BindingResourceTag
@@ -487,6 +505,18 @@ internal struct BindingType
 {
     public required BindingTypeTag tag;
     public required PointerWrap payload;
+
+    public unsafe static BindingType Texture(TextureBindingData* payload) => new()
+    {
+        tag = BindingTypeTag.Texture,
+        payload = new(payload),
+    };
+
+    public unsafe static BindingType Sampler(SamplerBindingType* payload) => new()
+    {
+        tag = BindingTypeTag.Sampler,
+        payload = new(payload),
+    };
 }
 
 internal enum BindingTypeTag
@@ -719,6 +749,9 @@ internal struct Slice<T> where T : unmanaged
 internal static class Slice
 {
     public static Slice<T> Empty<T>() where T : unmanaged => default;
+
+    public unsafe static Slice<T> FromFixedSpanUnsafe<T>(Span<T> fixedSpan) where T : unmanaged
+        => FromFixedSpanUnsafe((ReadOnlySpan<T>)fixedSpan);
 
     public unsafe static Slice<T> FromFixedSpanUnsafe<T>(ReadOnlySpan<T> fixedSpan) where T : unmanaged
     {

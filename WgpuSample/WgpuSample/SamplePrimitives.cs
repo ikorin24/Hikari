@@ -12,10 +12,10 @@ public static class SamplePrimitives
     {
         var vertices = new PosColorVertex[4]
         {
-            new(new(-0.5f, 0.5f, 0.0f), new(1.0f, 0.0f, 0.0f)),
-            new(new(-0.5f, -0.5f, 0.0f), new(0.0f, 1.0f, 0.0f)),
-            new(new(0.5f, -0.5f, 0.0f), new(0.0f, 0.0f, 1.0f)),
-            new(new(0.5f, 0.5f, 0.0f), new(0.0f, 0.0f, 1.0f)),
+            new(new(-0.5f, 0.5f, 0.0f),  new(0, 1), new(1.0f, 0.0f, 0.0f)),
+            new(new(-0.5f, -0.5f, 0.0f), new(0, 0), new(0.0f, 1.0f, 0.0f)),
+            new(new(0.5f, -0.5f, 0.0f),  new(1, 0), new(0.0f, 0.0f, 1.0f)),
+            new(new(0.5f, 0.5f, 0.0f),   new(1, 1), new(0.0f, 0.0f, 1.0f)),
         };
         var indices = new uint[6] { 0, 1, 2, 2, 3, 0 };
         return (Vertices: vertices, Indices: indices);
@@ -44,14 +44,19 @@ public static class SamplePrimitives
 public struct PosColorVertex
 {
     public Vec3 Position;
+    public Vec2 UV;
     public Color3 Color;
 
-    public PosColorVertex(Vec3 pos, Color3 color)
+    public PosColorVertex(Vec3 pos, Vec2 uv, Color3 color)
     {
         Position = pos;
+        UV = uv;
         Color = color;
     }
 }
+
+[StructLayout(LayoutKind.Sequential)]
+public record struct Vec2(float X, float Y);
 
 [StructLayout(LayoutKind.Sequential)]
 public record struct Vec3(float X, float Y, float Z);

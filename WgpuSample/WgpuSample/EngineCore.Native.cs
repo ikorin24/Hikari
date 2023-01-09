@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using u8 = System.Byte;
+using u32 = System.UInt32;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -127,6 +128,12 @@ static unsafe partial class EngineCore
     internal static partial void elffy_set_pipeline(
         RenderPassHandle render_pass,
         RenderPipelineHandle render_pipeline);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial void elffy_set_bind_group(
+        RenderPassHandle render_pass,
+        u32 index,
+        BindGroupHandle bind_group);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial void elffy_draw_buffer(

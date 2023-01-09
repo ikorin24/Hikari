@@ -179,6 +179,15 @@ extern "cdecl" fn elffy_set_pipeline<'a>(
 }
 
 #[no_mangle]
+extern "cdecl" fn elffy_set_bind_group<'a>(
+    render_pass: &mut wgpu::RenderPass<'a>,
+    index: u32,
+    bind_group: &'a wgpu::BindGroup,
+) {
+    render_pass.set_bind_group(index, bind_group, &[]);
+}
+
+#[no_mangle]
 extern "cdecl" fn elffy_draw_buffer<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
     arg: &DrawBufferArg<'a>,
