@@ -26,8 +26,10 @@ namespace WgpuSample
             if(Interlocked.CompareExchange(ref _isStarted, 1, 0) == 1) {
                 throw new InvalidOperationException("The engine is already running.");
             }
-            if(Thread.CurrentThread.GetApartmentState() != ApartmentState.STA) {
-                throw new InvalidOperationException("The thread should be STA. (for C#, mark main method as [STAThread] attribute.)");
+            if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                if(Thread.CurrentThread.GetApartmentState() != ApartmentState.STA) {
+                    throw new InvalidOperationException("The thread should be STA. (for C#, mark main method as [STAThread] attribute.)");
+                }
             }
 
             _config = config;
