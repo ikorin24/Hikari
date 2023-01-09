@@ -7,24 +7,15 @@ use winit;
 use winit::event_loop::EventLoopWindowTarget;
 use winit::{dpi, event, event_loop, window};
 
-pub(crate) fn engine_start(init: HostScreenInitFn) -> ! {
+pub(crate) fn engine_start(
+    engine_config: &EngineCoreConfig,
+    screen_config: &HostScreenConfig,
+) -> ! {
     env_logger::init();
-    let (window, event_loop) = create_window(&WindowStyle::Default);
-    if let Some(monitor) = window.current_monitor() {
-        let monitor_size = monitor.size();
-        let window_size = window.outer_size();
-        let pos = dpi::PhysicalPosition::new(
-            ((monitor_size.width - window_size.width) / 2u32) as i32,
-            ((monitor_size.height - window_size.height) / 2u32) as i32,
-        );
-        window.set_outer_position(dpi::Position::Physical(pos));
-    }
-    window.focus_window();
-    let first_screen = Box::new(HostScreen::new(window).unwrap_or_else(|err| panic!("{:?}", err)));
-    let mut screens: Vec<Box<HostScreen>> = vec![first_screen];
-    let first_screen = screens.last_mut().unwrap().as_mut();
-
-    let callbacks = init(first_screen, &first_screen.get_info());
+    let event_loop = event_loop::EventLoop::new();
+    let mut screens: Vec<Box<HostScreen>> = vec![];
+    let first_screen = screens.push_get_mut(HostScreen::new(&screen_config, &event_loop));
+    let callbacks = (engine_config.on_screen_init)(first_screen, &first_screen.get_info());
     first_screen.set_callbacks(callbacks);
     event_loop.run(move |event, event_loop, control_flow| {
         screens.iter_mut().for_each(|screen| {
@@ -34,17 +25,22 @@ pub(crate) fn engine_start(init: HostScreenInitFn) -> ! {
 }
 
 #[cfg(target_os = "windows")]
-fn create_window(style: &WindowStyle) -> (window::Window, event_loop::EventLoop<()>) {
+fn create_window(
+    config: &HostScreenConfig,
+    event_loop: &event_loop::EventLoop<()>,
+) -> window::Window {
     use winit::platform::windows::WindowBuilderExtWindows;
 
-    let event_loop = event_loop::EventLoop::new();
     let window = window::WindowBuilder::new()
-        .with_title("Elffy")
-        .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(1280, 720)))
+        .with_title(config.title.as_str().unwrap())
+        .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(
+            config.width,
+            config.height,
+        )))
         .with_theme(Some(window::Theme::Light))
         .build(&event_loop)
         .unwrap();
-    match style {
+    match config.style {
         WindowStyle::Default => {
             window.set_resizable(true);
         }
@@ -55,7 +51,7 @@ fn create_window(style: &WindowStyle) -> (window::Window, event_loop::EventLoop<
             window.set_fullscreen(None);
         }
     }
-    (window, event_loop)
+    window
 }
 
 #[cfg(target_os = "macos")]
@@ -109,9 +105,27 @@ impl HostScreen {
         a: 0.0,
     };
 
-    pub fn new(window: window::Window) -> Result<HostScreen, Box<dyn Error>> {
+    pub fn new(config: &HostScreenConfig, event_loop: &event_loop::EventLoop<()>) -> HostScreen {
+        let window = create_window(&config, &event_loop);
+        if let Some(monitor) = window.current_monitor() {
+            let monitor_size = monitor.size();
+            let window_size = window.outer_size();
+            let pos = dpi::PhysicalPosition::new(
+                ((monitor_size.width - window_size.width) / 2u32) as i32,
+                ((monitor_size.height - window_size.height) / 2u32) as i32,
+            );
+            window.set_outer_position(dpi::Position::Physical(pos));
+        }
+        window.focus_window();
+        Self::initialize(window, &config.backend).unwrap()
+    }
+
+    fn initialize(
+        window: window::Window,
+        backends: &wgpu::Backends,
+    ) -> Result<HostScreen, Box<dyn Error>> {
         let size = window.inner_size();
-        let instance = wgpu::Instance::new(wgpu::Backends::all());
+        let instance = wgpu::Instance::new(*backends);
         let surface = unsafe { instance.create_surface(&window) };
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
@@ -410,6 +424,7 @@ impl HostScreen {
 
 trait VecBox<T> {
     fn push_get_ref(&mut self, value: T) -> &T;
+    fn push_get_mut(&mut self, value: T) -> &mut T;
 
     fn swap_remove_by_ref(&mut self, value_ref: &T) -> Option<T>;
 }
@@ -418,6 +433,11 @@ impl<T> VecBox<T> for Vec<Box<T>> {
     fn push_get_ref(&mut self, value: T) -> &T {
         self.push(Box::new(value));
         self.last().unwrap().as_ref()
+    }
+
+    fn push_get_mut(&mut self, value: T) -> &mut T {
+        self.push(Box::new(value));
+        self.last_mut().unwrap()
     }
 
     fn swap_remove_by_ref(&mut self, value_ref: &T) -> Option<T> {

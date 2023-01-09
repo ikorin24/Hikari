@@ -63,10 +63,31 @@ internal record struct ShaderModuleHandle(Handle Handle);
 internal record struct TextureHandle(Handle Handle);
 internal record struct TextureViewHandle(Handle Handle);
 
+internal unsafe readonly struct HostScreenInitFn
+{
+    private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> _func;
+    public HostScreenInitFn(delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> f) => _func = f;
+    public static implicit operator HostScreenInitFn(delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> f) => new(f);
+}
+
+internal struct EngineCoreConfig
+{
+    public required HostScreenInitFn on_screen_init;
+}
+
+internal struct HostScreenConfig
+{
+    public required Slice<u8> title;
+    public required WindowStyle style;
+    public required u32 width;
+    public required u32 height;
+    public required wgpu_Backends backend;
+}
+
 internal struct HostScreenInfo
 {
-    public wgpu_Backend backend;
-    public Opt<TextureFormat> surface_format;
+    public required wgpu_Backend backend;
+    public required Opt<TextureFormat> surface_format;
 }
 
 internal unsafe struct HostScreenCallbacks
@@ -427,6 +448,21 @@ internal enum wgpu_Backend : u8
     Dx11 = 4,
     Gl = 5,
     BrowserWebGpu = 6,
+}
+
+[Flags]
+internal enum wgpu_Backends : u32
+{
+    VULKAN = 1 << wgpu_Backend.Vulkan,
+    GL = 1 << wgpu_Backend.Gl,
+    METAL = 1 << wgpu_Backend.Metal,
+    DX12 = 1 << wgpu_Backend.Dx12,
+    DX11 = 1 << wgpu_Backend.Dx11,
+    BROWSER_WEBGPU = 1 << wgpu_Backend.BrowserWebGpu,
+
+    PRIMARY = VULKAN | METAL | DX12 | BROWSER_WEBGPU,
+    SECONDARY = GL | DX11,
+    ALL = VULKAN | GL | METAL | DX12 | DX11 | BROWSER_WEBGPU,
 }
 
 internal struct BindingType

@@ -1,8 +1,4 @@
 ﻿#nullable enable
-using u8 = System.Byte;
-using u16 = System.UInt16;
-using u32 = System.UInt32;
-using u64 = System.UInt64;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -17,11 +13,11 @@ namespace WgpuSample
 {
     internal unsafe static partial class EngineCore
     {
-        private static EngineCoreConfig _config;
+        private static EngineConfig _config;
         private static int _isStarted = 0;
 
         [DoesNotReturn]
-        public static Never EngineStart(in EngineCoreConfig config)
+        public static Never EngineStart(in EngineConfig config)
         {
             if(Interlocked.CompareExchange(ref _isStarted, 1, 0) == 1) {
                 throw new InvalidOperationException("The engine is already running.");
@@ -33,7 +29,19 @@ namespace WgpuSample
             }
 
             _config = config;
-            elffy_engine_start(&OnInit);
+            var engineConfig = new EngineCoreConfig
+            {
+                on_screen_init = new(&OnInit),
+            };
+            var screenConfig = new HostScreenConfig
+            {
+                backend = wgpu_Backends.ALL,
+                width = 1280,
+                height = 720,
+                style = WindowStyle.Default,
+                title = Slice.FromFixedSpanUnsafe("Elffy"u8),
+            };
+            elffy_engine_start(&engineConfig, &screenConfig);
             throw new UnreachableException();
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -52,7 +60,7 @@ namespace WgpuSample
         }
     }
 
-    internal readonly struct EngineCoreConfig
+    internal readonly struct EngineConfig
     {
         public required EngineCoreStartAction OnStart { get; init; }
         public required Action<HostScreenHandle, RenderPassHandle> OnRender { get; init; }

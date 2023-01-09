@@ -3,8 +3,11 @@ use crate::types::*;
 use std::ops;
 
 #[no_mangle]
-extern "cdecl" fn elffy_engine_start(init: HostScreenInitFn) {
-    engine_start(init);
+extern "cdecl" fn elffy_engine_start(
+    engine_config: &EngineCoreConfig,
+    screen_config: &HostScreenConfig,
+) {
+    engine_start(engine_config, screen_config);
 }
 
 #[no_mangle]

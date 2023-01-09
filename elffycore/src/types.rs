@@ -6,6 +6,21 @@ use std;
 use std::ffi;
 use std::{marker, num, ops, str};
 
+#[repr(C)]
+pub(crate) struct EngineCoreConfig {
+    pub on_screen_init: HostScreenInitFn,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct HostScreenConfig<'a> {
+    pub title: Slice<'a, u8>,
+    pub style: WindowStyle,
+    pub width: u32,
+    pub height: u32,
+    pub backend: wgpu::Backends,
+}
+
 #[repr(u32)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(dead_code)] // because values are from FFI
