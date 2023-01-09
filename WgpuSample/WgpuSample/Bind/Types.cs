@@ -63,6 +63,12 @@ internal record struct ShaderModuleHandle(Handle Handle);
 internal record struct TextureHandle(Handle Handle);
 internal record struct TextureViewHandle(Handle Handle);
 
+internal struct HostScreenInfo
+{
+    public wgpu_Backend backend;
+    public Opt<TextureFormat> surface_format;
+}
+
 internal unsafe struct HostScreenCallbacks
 {
     public required delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassHandle, void> on_render;
@@ -410,6 +416,17 @@ internal enum wgpu_BufferUsages : u32
     UNIFORM = 1 << 6,
     STORAGE = 1 << 7,
     INDIRECT = 1 << 8,
+}
+
+internal enum wgpu_Backend : u8
+{
+    Empty = 0,
+    Vulkan = 1,
+    Metal = 2,
+    Dx12 = 3,
+    Dx11 = 4,
+    Gl = 5,
+    BrowserWebGpu = 6,
 }
 
 internal struct BindingType

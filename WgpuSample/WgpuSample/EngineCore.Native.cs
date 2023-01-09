@@ -14,11 +14,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial void elffy_engine_start(
-        delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenCallbacks> init);
-
-    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    internal static partial Opt<TextureFormat> elffy_get_surface_format(
-        HostScreenHandle screen);
+        delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> init);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial BindGroupLayoutHandle elffy_create_bind_group_layout(

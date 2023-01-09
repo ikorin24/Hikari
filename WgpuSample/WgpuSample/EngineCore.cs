@@ -37,9 +37,9 @@ namespace WgpuSample
             throw new UnreachableException();
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static HostScreenCallbacks OnInit(HostScreenHandle screen)
+            static HostScreenCallbacks OnInit(HostScreenHandle screen, HostScreenInfo* info)
             {
-                _config.OnStart(screen);
+                _config.OnStart(screen, in *info);
 
                 return new HostScreenCallbacks
                 {
@@ -54,9 +54,11 @@ namespace WgpuSample
 
     internal readonly struct EngineCoreConfig
     {
-        public required Action<HostScreenHandle> OnStart { get; init; }
+        public required EngineCoreStartAction OnStart { get; init; }
         public required Action<HostScreenHandle, RenderPassHandle> OnRender { get; init; }
     }
+
+    internal delegate void EngineCoreStartAction(HostScreenHandle screen, in HostScreenInfo info);
 
 
 

@@ -24,7 +24,7 @@ pub(crate) fn engine_start(init: HostScreenInitFn) -> ! {
     let mut screens: Vec<Box<HostScreen>> = vec![first_screen];
     let first_screen = screens.last_mut().unwrap().as_mut();
 
-    let callbacks = init(first_screen);
+    let callbacks = init(first_screen, &first_screen.get_info());
     first_screen.set_callbacks(callbacks);
     event_loop.run(move |event, event_loop, control_flow| {
         screens.iter_mut().for_each(|screen| {
@@ -87,6 +87,7 @@ pub(crate) struct HostScreen {
     surface: wgpu::Surface,
     surface_config: wgpu::SurfaceConfiguration,
     device: wgpu::Device,
+    backend: wgpu::Backend,
     queue: wgpu::Queue,
     pipeline_layouts: Vec<Box<wgpu::PipelineLayout>>,
     pipelines: Vec<Box<wgpu::RenderPipeline>>,
@@ -137,12 +138,14 @@ impl HostScreen {
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
         };
+
         surface.configure(&device, &surface_config);
         Ok(HostScreen {
             window,
             surface_config,
             surface,
             device,
+            backend: adapter.get_info().backend,
             queue,
             pipeline_layouts: vec![],
             pipelines: vec![],
@@ -157,8 +160,11 @@ impl HostScreen {
         })
     }
 
-    pub fn surface_format(&self) -> wgpu::TextureFormat {
-        self.surface_config.format
+    pub fn get_info(&self) -> HostScreenInfo {
+        HostScreenInfo {
+            backend: self.backend,
+            surface_format: self.surface_config.format.try_into().ok().into(),
+        }
     }
 
     pub fn create_bind_group_layout(

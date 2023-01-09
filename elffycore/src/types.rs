@@ -1343,8 +1343,14 @@ impl ops::RangeBounds<u32> for RangeBoundsU32 {
     }
 }
 
+#[repr(C)]
+pub(crate) struct HostScreenInfo {
+    pub backend: wgpu::Backend,
+    pub surface_format: Opt<TextureFormat>,
+}
+
 pub(crate) type HostScreenInitFn =
-    extern "cdecl" fn(screen: &mut HostScreen) -> HostScreenCallbacks;
+    extern "cdecl" fn(screen: &mut HostScreen, screen_info: &HostScreenInfo) -> HostScreenCallbacks;
 pub(crate) type HostScreenRenderFn =
     extern "cdecl" fn(screen: &mut HostScreen, render_pass: &mut wgpu::RenderPass) -> ();
 

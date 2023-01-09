@@ -15,9 +15,10 @@ internal class Program
         OnRender = OnRender,
     });
 
-    private static unsafe void OnStart(HostScreenHandle screen)
+    private static unsafe void OnStart(HostScreenHandle screen, in HostScreenInfo info)
     {
-        var surfaceFormat = EngineCore.elffy_get_surface_format(screen).Unwrap();
+        var surfaceFormat = info.surface_format.Unwrap();
+        System.Diagnostics.Debug.WriteLine(info.backend);
 
         {
             var desc = new PipelineLayoutDescriptor
