@@ -11,6 +11,17 @@ extern "cdecl" fn elffy_engine_start(
 }
 
 #[no_mangle]
+extern "cdecl" fn elffy_write_texture<'screen>(
+    screen: &'screen HostScreen,
+    texture: &ImageCopyTexture,
+    data: Slice<u8>,
+    data_layout: &wgpu::ImageDataLayout,
+    size: &wgpu::Extent3d,
+) {
+    screen.write_texture(texture, &data, data_layout, size)
+}
+
+#[no_mangle]
 extern "cdecl" fn elffy_create_bind_group_layout<'screen>(
     screen: &'screen mut HostScreen,
     desc: &BindGroupLayoutDescriptor,

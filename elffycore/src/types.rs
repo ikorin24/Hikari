@@ -59,6 +59,31 @@ impl<'a> BindGroupLayoutDescriptor<'a> {
 }
 
 #[repr(C)]
+pub(crate) struct ImageCopyTexture<'a> {
+    pub texture: &'a wgpu::Texture,
+    pub mip_level: u32,
+    pub origin_x: u32,
+    pub origin_y: u32,
+    pub origin_z: u32,
+    pub aspect: TextureAspect,
+}
+
+impl<'a> ImageCopyTexture<'a> {
+    pub const fn to_wgpu_type(&self) -> wgpu::ImageCopyTexture {
+        wgpu::ImageCopyTexture {
+            texture: self.texture,
+            mip_level: self.mip_level,
+            origin: wgpu::Origin3d {
+                x: self.origin_x,
+                y: self.origin_y,
+                z: self.origin_z,
+            },
+            aspect: self.aspect.to_wgpu_type(),
+        }
+    }
+}
+
+#[repr(C)]
 pub(crate) struct TextureViewDescriptor {
     pub format: Opt<TextureFormat>,
     pub dimension: Opt<TextureViewDimension>,
@@ -94,7 +119,7 @@ pub(crate) enum TextureAspect {
 }
 
 impl TextureAspect {
-    pub fn to_wgpu_type(&self) -> wgpu::TextureAspect {
+    pub const fn to_wgpu_type(&self) -> wgpu::TextureAspect {
         match self {
             Self::All => wgpu::TextureAspect::All,
             Self::StencilOnly => wgpu::TextureAspect::StencilOnly,

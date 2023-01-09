@@ -90,6 +90,45 @@ internal class Program
             _indexCount = (uint)indices.Length;
             _indexFormat = wgpu_IndexFormat.Uint32;
         }
+
+        {
+            var pixels = SamplePrimitives.LoadImagePixels("pic.png", out var width, out var height);
+            var desc = new TextureDescriptor
+            {
+                dimension = TextureDimension.D2,
+                format = TextureFormat.Rgba8UnormSrgb,
+                mip_level_count = 1,
+                sample_count = 1,
+                size = new() { width = width, height = height, depth_or_array_layers = 1, },
+                usage = wgpu_TextureUsages.TEXTURE_BINDING | wgpu_TextureUsages.COPY_DST,
+            };
+            _texture = EngineCore.elffy_create_texture(screen, &desc);
+            var writeTex = new ImageCopyTexture
+            {
+                texture = _texture,
+                mip_level = 0,
+                aspect = TextureAspect.All,
+                origin_x = 0,
+                origin_y = 0,
+                origin_z = 0,
+            };
+            var dataLayout = new wgpu_ImageDataLayout
+            {
+                offset = 0,
+                bytes_per_row = 4 * width,
+                rows_per_image = height,
+            };
+            var textureSize = new wgpu_Extent3d
+            {
+                width = width,
+                height = height,
+                depth_or_array_layers = 1,
+            };
+            fixed(byte* p = pixels) {
+                var data = new Slice<byte> { data = new(p), len = (nuint)pixels.Length };
+                EngineCore.elffy_write_texture(screen, &writeTex, data, &dataLayout, &textureSize);
+            }
+        }
     }
 
     private static PipelineLayoutHandle _pipelineLayout;
@@ -100,6 +139,8 @@ internal class Program
     private static BufferHandle _indexBuffer;
     private static uint _indexCount;
     private static wgpu_IndexFormat _indexFormat;
+
+    private static TextureHandle _texture;
 
     private static unsafe void OnRender(HostScreenHandle screen, RenderPassHandle renderPass)
     {
@@ -126,11 +167,7 @@ internal class Program
         EngineCore.elffy_draw_buffer_indexed(renderPass, &arg);
     }
 
-    private unsafe static Slice<byte> ShaderSource
-    {
-        get
-        {
-            return Slice.FromFixedSpanUnsafe("""
+    private unsafe static Slice<byte> ShaderSource => Slice.FromFixedSpanUnsafe("""
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) color: vec3<f32>,
@@ -155,8 +192,6 @@ fn fs_main(fin: VertexOutput) -> @location(0) vec4<f32> {
 }
 
 """u8);
-        }
-    }
 }
 
 

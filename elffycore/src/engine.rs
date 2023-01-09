@@ -181,6 +181,17 @@ impl HostScreen {
         }
     }
 
+    pub fn write_texture(
+        &self,
+        texture: &ImageCopyTexture,
+        data: &[u8],
+        data_layout: &wgpu::ImageDataLayout,
+        size: &wgpu::Extent3d,
+    ) {
+        self.queue
+            .write_texture(texture.to_wgpu_type(), data, *data_layout, *size)
+    }
+
     pub fn create_bind_group_layout(
         &mut self,
         desc: &wgpu::BindGroupLayoutDescriptor,

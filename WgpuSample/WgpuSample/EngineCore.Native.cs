@@ -18,6 +18,14 @@ static unsafe partial class EngineCore
         HostScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial void elffy_write_texture(
+        HostScreenHandle screen,
+        ImageCopyTexture* texture,
+        Slice<u8> data,
+        wgpu_ImageDataLayout* data_layout,
+        wgpu_Extent3d* size);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial BindGroupLayoutHandle elffy_create_bind_group_layout(
         HostScreenHandle screen,
         BindGroupLayoutDescriptor* desc);

@@ -100,6 +100,16 @@ internal struct BindGroupLayoutDescriptor
     public required Slice<BindGroupLayoutEntry> entries;
 }
 
+internal struct ImageCopyTexture
+{
+    public required TextureHandle texture;
+    public required u32 mip_level;
+    public required u32 origin_x;
+    public required u32 origin_y;
+    public required u32 origin_z;
+    public required TextureAspect aspect;
+}
+
 internal struct TextureViewDescriptor
 {
     public required Opt<TextureFormat> format;
@@ -371,6 +381,7 @@ internal struct wgpu_Extent3d
     public required u32 depth_or_array_layers;
 }
 
+[Flags]
 internal enum wgpu_TextureUsages : u32
 {
     COPY_SRC = 1 << 0,
@@ -463,6 +474,13 @@ internal enum wgpu_Backends : u32
     PRIMARY = VULKAN | METAL | DX12 | BROWSER_WEBGPU,
     SECONDARY = GL | DX11,
     ALL = VULKAN | GL | METAL | DX12 | DX11 | BROWSER_WEBGPU,
+}
+
+internal struct wgpu_ImageDataLayout
+{
+    public required u64 offset;
+    public required u32 bytes_per_row;
+    public required u32 rows_per_image;
 }
 
 internal struct BindingType
