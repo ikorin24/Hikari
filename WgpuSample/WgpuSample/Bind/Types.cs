@@ -636,6 +636,13 @@ internal struct Slice<T> where T : unmanaged
 {
     public required NullableRef<T> data;
     public required nuint len;
+
+    [SetsRequiredMembers]
+    public unsafe Slice(void* data, nuint len)
+    {
+        this.data = new((T*)data);
+        this.len = len;
+    }
 }
 
 internal static class Slice

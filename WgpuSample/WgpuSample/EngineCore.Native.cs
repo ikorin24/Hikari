@@ -9,7 +9,7 @@ namespace WgpuSample;
 
 static unsafe partial class EngineCore
 {
-    private const string DllDir = "platform/x86_64-windows/";
+    private const string DllDir = "native/x86_64-windows/";
     private const string CoreDll = $"{DllDir}elffycore";
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]

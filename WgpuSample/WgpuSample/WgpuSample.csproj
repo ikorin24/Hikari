@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-     <None Include="..\..\elffycore\output\x86_64-pc-windows-msvc\elffycore.dll" Link="platform\x86_64-windows\elffycore.dll">
+     <None Include="..\..\elffycore\output\x86_64-pc-windows-msvc\elffycore.dll" Link="native\x86_64-windows\elffycore.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None> 
   </ItemGroup>

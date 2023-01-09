@@ -72,43 +72,21 @@ internal class Program
         }
 
         {
-            const int VertexCount = 4;
-            var vertices = (stackalloc PosColorVertex[VertexCount]
-            {
-                new()
-                {
-                    Position = new(-0.5f, 0.5f, 0.0f),
-                    Color = new(1.0f, 0.0f, 0.0f),
-                },
-                new()
-                {
-                    Position = new(-0.5f, -0.5f, 0.0f),
-                    Color = new(0.0f, 1.0f, 0.0f),
-                },
-                new()
-                {
-                    Position = new(0.5f, -0.5f, 0.0f),
-                    Color = new(0.0f, 0.0f, 1.0f),
-                },
-                new()
-                {
-                    Position = new(0.5f, 0.5f, 0.0f),
-                    Color = new(0.0f, 0.0f, 1.0f),
-                },
-            }).AsReadOnly().AsBytes();
-            _vertexBuffer = EngineCore.elffy_create_buffer_init(
+            var (vertices, indices) = SamplePrimitives.Rectangle();
+            fixed(PosColorVertex* v = vertices) {
+                _vertexBuffer = EngineCore.elffy_create_buffer_init(
                 screen,
-                Slice.FromFixedSpanUnsafe(vertices),
+                new Slice<byte>(v, (nuint)sizeof(PosColorVertex) * (nuint)vertices.Length),
                 wgpu_BufferUsages.VERTEX);
-            _vertexCount = VertexCount;
-
-            const int IndexCount = 6;
-            var indices = (stackalloc uint[IndexCount] { 0, 1, 2, 2, 3, 0 }).AsReadOnly().AsBytes();
-            _indexBuffer = EngineCore.elffy_create_buffer_init(
+                _vertexCount = (uint)vertices.Length;
+            }
+            fixed(uint* i = indices) {
+                _indexBuffer = EngineCore.elffy_create_buffer_init(
                 screen,
-                Slice.FromFixedSpanUnsafe(indices),
+                new Slice<byte>(i, (nuint)sizeof(uint) * (nuint)indices.Length),
                 wgpu_BufferUsages.INDEX);
-            _indexCount = IndexCount;
+            }
+            _indexCount = (uint)indices.Length;
             _indexFormat = wgpu_IndexFormat.Uint32;
         }
     }
@@ -179,19 +157,6 @@ fn fs_main(fin: VertexOutput) -> @location(0) vec4<f32> {
         }
     }
 }
-
-[StructLayout(LayoutKind.Sequential)]
-public struct PosColorVertex
-{
-    public Vec3 Position;
-    public Color3 Color;
-}
-
-[StructLayout(LayoutKind.Sequential)]
-public record struct Vec3(float X, float Y, float Z);
-
-[StructLayout(LayoutKind.Sequential)]
-public record struct Color3(float R, float G, float B);
 
 
 internal unsafe static class UnsafeEx
