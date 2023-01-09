@@ -7,6 +7,7 @@ using f32 = System.Single;
 using System;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using System.Diagnostics.CodeAnalysis;
 
 namespace WgpuSample.Bind;
 
@@ -64,23 +65,23 @@ internal record struct TextureViewHandle(Handle Handle);
 
 internal unsafe struct HostScreenCallbacks
 {
-    public delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassHandle, void> on_render;
+    public required delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassHandle, void> on_render;
 }
 
 internal struct BindGroupLayoutDescriptor
 {
-    public Slice<BindGroupLayoutEntry> entries;
+    public required Slice<BindGroupLayoutEntry> entries;
 }
 
 internal struct TextureViewDescriptor
 {
-    public Opt<TextureFormat> format;
-    public Opt<TextureViewDimension> dimension;
-    public TextureAspect aspect;
-    public u32 base_mip_level;
-    public u32 mip_level_count;
-    public u32 base_array_layer;
-    public u32 array_layer_count;
+    public required Opt<TextureFormat> format;
+    public required Opt<TextureViewDimension> dimension;
+    public required TextureAspect aspect;
+    public required u32 base_mip_level;
+    public required u32 mip_level_count;
+    public required u32 base_array_layer;
+    public required u32 array_layer_count;
 }
 
 
@@ -93,17 +94,17 @@ internal enum TextureAspect
 
 internal struct SamplerDescriptor
 {
-    public wgpu_AddressMode address_mode_u;
-    public wgpu_AddressMode address_mode_v;
-    public wgpu_AddressMode address_mode_w;
-    public wgpu_FilterMode mag_filter;
-    public wgpu_FilterMode min_filter;
-    public wgpu_FilterMode mipmap_filter;
-    public f32 lod_min_clamp;
-    public f32 lod_max_clamp;
-    public Opt<wgpu_CompareFunction> compare;
-    public u8 anisotropy_clamp;
-    public Opt<SamplerBorderColor> border_color;
+    public required wgpu_AddressMode address_mode_u;
+    public required wgpu_AddressMode address_mode_v;
+    public required wgpu_AddressMode address_mode_w;
+    public required wgpu_FilterMode mag_filter;
+    public required wgpu_FilterMode min_filter;
+    public required wgpu_FilterMode mipmap_filter;
+    public required f32 lod_min_clamp;
+    public required f32 lod_max_clamp;
+    public required Opt<wgpu_CompareFunction> compare;
+    public required u8 anisotropy_clamp;
+    public required Opt<SamplerBorderColor> border_color;
 }
 
 internal enum SamplerBorderColor
@@ -116,20 +117,20 @@ internal enum SamplerBorderColor
 
 internal unsafe struct BindGroupDescriptor
 {
-    public BindGroupLayoutHandle layout;
-    public Slice<BindGroupEntry> entries;
+    public required BindGroupLayoutHandle layout;
+    public required Slice<BindGroupEntry> entries;
 }
 
 internal struct BindGroupEntry
 {
-    public u32 binding;
-    public BindingResource resource;
+    public required u32 binding;
+    public required BindingResource resource;
 }
 
 internal struct BindingResource
 {
-    public BindingResourceTag tag;
-    public PointerWrap payload;
+    public required BindingResourceTag tag;
+    public required PointerWrap payload;
 }
 
 internal struct PointerWrap
@@ -149,60 +150,60 @@ internal enum BindingResourceTag
 
 internal struct BufferBinding
 {
-    public BufferHandle buffer;
-    public u64 offset;
-    public u64 size;
+    public required BufferHandle buffer;
+    public required u64 offset;
+    public required u64 size;
 }
 
 internal struct PipelineLayoutDescriptor
 {
-    public Slice<BindGroupLayoutHandle> bind_group_layouts;
+    public required Slice<BindGroupLayoutHandle> bind_group_layouts;
 }
 
 internal struct RenderPipelineDescription
 {
-    public PipelineLayoutHandle layout;
-    public VertexState vertex;
-    public Opt<FragmentState> fragment;
-    public PrimitiveState primitive;
+    public required PipelineLayoutHandle layout;
+    public required VertexState vertex;
+    public required Opt<FragmentState> fragment;
+    public required PrimitiveState primitive;
 }
 
 internal struct VertexState
 {
-    public ShaderModuleHandle module;
-    public Slice<u8> entry_point;
-    public Slice<VertexBufferLayout> inputs;
+    public required ShaderModuleHandle module;
+    public required Slice<u8> entry_point;
+    public required Slice<VertexBufferLayout> inputs;
 }
 
 internal struct FragmentState
 {
-    public ShaderModuleHandle module;
-    public Slice<u8> entry_point;
-    public Slice<Opt<ColorTargetState>> targets;
+    public required ShaderModuleHandle module;
+    public required Slice<u8> entry_point;
+    public required Slice<Opt<ColorTargetState>> targets;
 }
 
 internal struct ColorTargetState
 {
-    public TextureFormat format;
-    public Opt<wgpu_BlendState> blend;
-    public wgpu_ColorWrites write_mask;
+    public required TextureFormat format;
+    public required Opt<wgpu_BlendState> blend;
+    public required wgpu_ColorWrites write_mask;
 }
 
 internal struct PrimitiveState
 {
-    public wgpu_PrimitiveTopology topology;
-    public Opt<wgpu_IndexFormat> strip_index_format;
-    public wgpu_FrontFace front_face;
-    public Opt<wgpu_Face> cull_mode;
-    public wgpu_PolygonMode polygon_mode;
+    public required wgpu_PrimitiveTopology topology;
+    public required Opt<wgpu_IndexFormat> strip_index_format;
+    public required wgpu_FrontFace front_face;
+    public required Opt<wgpu_Face> cull_mode;
+    public required wgpu_PolygonMode polygon_mode;
 }
 
 internal struct BindGroupLayoutEntry
 {
-    public u32 binding;
-    public wgpu_ShaderStages visibility;
-    public BindingType ty;
-    public u32 count;
+    public required u32 binding;
+    public required wgpu_ShaderStages visibility;
+    public required BindingType ty;
+    public required u32 count;
 }
 
 internal enum wgpu_Face
@@ -312,22 +313,35 @@ internal enum wgpu_ColorWrites : u32
 
 internal struct wgpu_BlendState
 {
-    public wgpu_BlendComponent color;
-    public wgpu_BlendComponent alpha;
+    public required wgpu_BlendComponent color;
+    public required wgpu_BlendComponent alpha;
+
+    public static wgpu_BlendState REPLACE => new()
+    {
+        color = wgpu_BlendComponent.REPLACE,
+        alpha = wgpu_BlendComponent.REPLACE,
+    };
 }
 
 internal struct wgpu_BlendComponent
 {
-    public wgpu_BlendFactor src_factor;
-    public wgpu_BlendFactor dst_factor;
-    public wgpu_BlendOperation operation;
+    public required wgpu_BlendFactor src_factor;
+    public required wgpu_BlendFactor dst_factor;
+    public required wgpu_BlendOperation operation;
+
+    public static wgpu_BlendComponent REPLACE => new()
+    {
+        src_factor = wgpu_BlendFactor.One,
+        dst_factor = wgpu_BlendFactor.Zero,
+        operation = wgpu_BlendOperation.Add,
+    };
 }
 
 internal struct wgpu_Extent3d
 {
-    public u32 width;
-    public u32 height;
-    public u32 depth_or_array_layers;
+    public required u32 width;
+    public required u32 height;
+    public required u32 depth_or_array_layers;
 }
 
 internal enum wgpu_TextureUsages : u32
@@ -341,9 +355,9 @@ internal enum wgpu_TextureUsages : u32
 
 internal struct wgpu_VertexAttribute
 {
-    public wgpu_VertexFormat format;
-    public u64 offset;
-    public u32 shader_location;
+    public required wgpu_VertexFormat format;
+    public required u64 offset;
+    public required u32 shader_location;
 }
 
 internal enum wgpu_VertexFormat : u32
@@ -400,8 +414,8 @@ internal enum wgpu_BufferUsages : u32
 
 internal struct BindingType
 {
-    public BindingTypeTag tag;
-    public PointerWrap payload;
+    public required BindingTypeTag tag;
+    public required PointerWrap payload;
 }
 
 internal enum BindingTypeTag
@@ -414,9 +428,9 @@ internal enum BindingTypeTag
 
 internal struct BufferBindingData
 {
-    public BufferBindingType ty;
-    public bool has_dynamic_offset;
-    public u64 min_binding_size;
+    public required BufferBindingType ty;
+    public required bool has_dynamic_offset;
+    public required u64 min_binding_size;
 }
 
 internal enum BufferBindingType
@@ -435,9 +449,9 @@ internal enum SamplerBindingType
 
 internal struct TextureBindingData
 {
-    public TextureSampleType sample_type;
-    public TextureViewDimension view_dimension;
-    public bool multisampled;
+    public required TextureSampleType sample_type;
+    public required TextureViewDimension view_dimension;
+    public required bool multisampled;
 }
 
 internal enum TextureSampleType
@@ -461,9 +475,9 @@ internal enum TextureViewDimension
 
 internal struct StorageTextureBindingData
 {
-    public StorageTextureAccess access;
-    public TextureFormat format;
-    public TextureViewDimension view_dimension;
+    public required StorageTextureAccess access;
+    public required TextureFormat format;
+    public required TextureViewDimension view_dimension;
 }
 
 internal enum StorageTextureAccess
@@ -550,12 +564,12 @@ internal enum TextureFormat
 
 internal struct TextureDescriptor
 {
-    public wgpu_Extent3d size;
-    public u32 mip_level_count;
-    public u32 sample_count;
-    public TextureDimension dimension;
-    public TextureFormat format;
-    public wgpu_TextureUsages usage;
+    public required wgpu_Extent3d size;
+    public required u32 mip_level_count;
+    public required u32 sample_count;
+    public required TextureDimension dimension;
+    public required TextureFormat format;
+    public required wgpu_TextureUsages usage;
 }
 
 internal enum TextureDimension
@@ -567,34 +581,61 @@ internal enum TextureDimension
 
 internal struct VertexBufferLayout
 {
-    public u64 vertex_size;
-    public Slice<wgpu_VertexAttribute> attributes;
+    public required u64 vertex_size;
+    public required Slice<wgpu_VertexAttribute> attributes;
 }
 
-internal struct Opt<T>
+internal struct Opt<T> where T : unmanaged
 {
-    public bool exists;
-    public T value;
+    public required bool exists;
+    public required T value;
+
+    public bool TryGetValue(out T value)
+    {
+        value = this.value;
+        return this.exists;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public T Unwrap()
+    {
+        if(exists == false) {
+            Throw();
+            [DoesNotReturn] static void Throw() => throw new InvalidOperationException("cannot get value");
+        }
+        return value;
+    }
+}
+
+internal static class Opt
+{
+    public static Opt<T> None<T>() where T : unmanaged => default;
+
+    public static Opt<T> Some<T>(T value) where T : unmanaged => new()
+    {
+        exists = true,
+        value = value,
+    };
 }
 
 internal struct BufSlice
 {
-    public BufferHandle buffer;
-    public RangeBoundsU64 range;
+    public required BufferHandle buffer;
+    public required RangeBoundsU64 range;
 }
 
-internal unsafe struct NullableRef<T> where T : unmanaged
+internal unsafe readonly struct NullableRef<T> where T : unmanaged
 {
-    private T* _p;
-    public static explicit operator NullableRef<T>(T* pointer) => new() { _p = pointer };
+    private readonly T* _p;
+    public static explicit operator NullableRef<T>(T* pointer) => new(pointer);
 
     public NullableRef(T* pointer) => _p = pointer;
 }
 
 internal struct Slice<T> where T : unmanaged
 {
-    public NullableRef<T> data;
-    public nuint len;
+    public required NullableRef<T> data;
+    public required nuint len;
 }
 
 internal static class Slice
@@ -616,76 +657,76 @@ internal static class Slice
 [StructLayout(LayoutKind.Sequential)]
 internal struct DrawBufferArg
 {
-    SlotBufSlice vertex_buffer;
-    RangeU32 vertices_range;
-    RangeU32 instances_range;
+    public required SlotBufSlice vertex_buffer;
+    public required RangeU32 vertices_range;
+    public required RangeU32 instances_range;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal struct DrawBufferIndexedArg
 {
-    public BufSlice vertex_buffer_slice;
-    public u32 slot;
-    public BufSlice index_buffer_slice;
-    public wgpu_IndexFormat index_format;
-    public u32 index_start;
-    public u32 index_end_excluded;
-    public u32 instance_start;
-    public u32 instance_end_excluded;
+    public required BufSlice vertex_buffer_slice;
+    public required u32 slot;
+    public required BufSlice index_buffer_slice;
+    public required wgpu_IndexFormat index_format;
+    public required u32 index_start;
+    public required u32 index_end_excluded;
+    public required u32 instance_start;
+    public required u32 instance_end_excluded;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal struct DrawBuffersIndexedArg
 {
-    public Slice<SlotBufSlice> vertex_buffers;
-    public BufSlice index_buffer_slice;
-    public wgpu_IndexFormat index_format;
-    public u32 index_start;
-    public u32 index_end_excluded;
-    public u32 instance_start;
-    public u32 instance_end_excluded;
+    public required Slice<SlotBufSlice> vertex_buffers;
+    public required BufSlice index_buffer_slice;
+    public required wgpu_IndexFormat index_format;
+    public required u32 index_start;
+    public required u32 index_end_excluded;
+    public required u32 instance_start;
+    public required u32 instance_end_excluded;
 }
 
 internal struct SlotBufSlice
 {
-    public BufSlice buffer_slice;
-    public u32 slot;
+    public required BufSlice buffer_slice;
+    public required u32 slot;
 }
 
-internal struct IndexBufSlice
-{
-    public BufSlice buffer_slice;
-    public wgpu_IndexFormat format;
-}
+//internal struct IndexBufSlice
+//{
+//    public BufSlice buffer_slice;
+//    public wgpu_IndexFormat format;
+//}
 
-internal struct RangeU64
-{
-    public u64 start;
-    public u64 end_excluded;
-}
+//internal struct RangeU64
+//{
+//    public u64 start;
+//    public u64 end_excluded;
+//}
 
 internal struct RangeU32
 {
-    public u32 start;
-    public u32 end_excluded;
+    public required u32 start;
+    public required u32 end_excluded;
 }
 
 internal struct RangeBoundsU64
 {
-    public u64 start;
-    public u64 end_excluded;
-    public bool has_start;
-    public bool has_end_excluded;
+    public required u64 start;
+    public required u64 end_excluded;
+    public required bool has_start;
+    public required bool has_end_excluded;
 
     public static RangeBoundsU64 All => default;
 }
 
 internal struct RangeBoundsU32
 {
-    public u32 start;
-    public u32 end_excluded;
-    public bool has_start;
-    public bool has_end_excluded;
+    public required u32 start;
+    public required u32 end_excluded;
+    public required bool has_start;
+    public required bool has_end_excluded;
 }
 
 //internal type HostScreenInitFn =

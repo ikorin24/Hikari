@@ -965,6 +965,93 @@ impl TextureFormat {
     }
 }
 
+impl Default for TextureFormat {
+    fn default() -> Self {
+        Self::Rgba8UnormSrgb
+    }
+}
+
+impl TryFrom<wgpu::TextureFormat> for TextureFormat {
+    type Error = &'static str;
+
+    fn try_from(value: wgpu::TextureFormat) -> Result<Self, Self::Error> {
+        match value {
+            wgpu::TextureFormat::R8Unorm => Ok(Self::R8Unorm),
+            wgpu::TextureFormat::R8Snorm => Ok(Self::R8Snorm),
+            wgpu::TextureFormat::R8Uint => Ok(Self::R8Uint),
+            wgpu::TextureFormat::R8Sint => Ok(Self::R8Sint),
+            wgpu::TextureFormat::R16Uint => Ok(Self::R16Uint),
+            wgpu::TextureFormat::R16Sint => Ok(Self::R16Sint),
+            wgpu::TextureFormat::R16Unorm => Ok(Self::R16Unorm),
+            wgpu::TextureFormat::R16Snorm => Ok(Self::R16Snorm),
+            wgpu::TextureFormat::R16Float => Ok(Self::R16Float),
+            wgpu::TextureFormat::Rg8Unorm => Ok(Self::Rg8Unorm),
+            wgpu::TextureFormat::Rg8Snorm => Ok(Self::Rg8Snorm),
+            wgpu::TextureFormat::Rg8Uint => Ok(Self::Rg8Uint),
+            wgpu::TextureFormat::Rg8Sint => Ok(Self::Rg8Sint),
+            wgpu::TextureFormat::R32Uint => Ok(Self::R32Uint),
+            wgpu::TextureFormat::R32Sint => Ok(Self::R32Sint),
+            wgpu::TextureFormat::R32Float => Ok(Self::R32Float),
+            wgpu::TextureFormat::Rg16Uint => Ok(Self::Rg16Uint),
+            wgpu::TextureFormat::Rg16Sint => Ok(Self::Rg16Sint),
+            wgpu::TextureFormat::Rg16Unorm => Ok(Self::Rg16Unorm),
+            wgpu::TextureFormat::Rg16Snorm => Ok(Self::Rg16Snorm),
+            wgpu::TextureFormat::Rg16Float => Ok(Self::Rg16Float),
+            wgpu::TextureFormat::Rgba8Unorm => Ok(Self::Rgba8Unorm),
+            wgpu::TextureFormat::Rgba8UnormSrgb => Ok(Self::Rgba8UnormSrgb),
+            wgpu::TextureFormat::Rgba8Snorm => Ok(Self::Rgba8Snorm),
+            wgpu::TextureFormat::Rgba8Uint => Ok(Self::Rgba8Uint),
+            wgpu::TextureFormat::Rgba8Sint => Ok(Self::Rgba8Sint),
+            wgpu::TextureFormat::Bgra8Unorm => Ok(Self::Bgra8Unorm),
+            wgpu::TextureFormat::Bgra8UnormSrgb => Ok(Self::Bgra8UnormSrgb),
+            wgpu::TextureFormat::Rgb10a2Unorm => Ok(Self::Rgb10a2Unorm),
+            wgpu::TextureFormat::Rg11b10Float => Ok(Self::Rg11b10Float),
+            wgpu::TextureFormat::Rg32Uint => Ok(Self::Rg32Uint),
+            wgpu::TextureFormat::Rg32Sint => Ok(Self::Rg32Sint),
+            wgpu::TextureFormat::Rg32Float => Ok(Self::Rg32Float),
+            wgpu::TextureFormat::Rgba16Uint => Ok(Self::Rgba16Uint),
+            wgpu::TextureFormat::Rgba16Sint => Ok(Self::Rgba16Sint),
+            wgpu::TextureFormat::Rgba16Unorm => Ok(Self::Rgba16Unorm),
+            wgpu::TextureFormat::Rgba16Snorm => Ok(Self::Rgba16Snorm),
+            wgpu::TextureFormat::Rgba16Float => Ok(Self::Rgba16Float),
+            wgpu::TextureFormat::Rgba32Uint => Ok(Self::Rgba32Uint),
+            wgpu::TextureFormat::Rgba32Sint => Ok(Self::Rgba32Sint),
+            wgpu::TextureFormat::Rgba32Float => Ok(Self::Rgba32Float),
+            wgpu::TextureFormat::Depth32Float => Ok(Self::Depth32Float),
+            wgpu::TextureFormat::Depth32FloatStencil8 => Ok(Self::Depth32FloatStencil8),
+            wgpu::TextureFormat::Depth24Plus => Ok(Self::Depth24Plus),
+            wgpu::TextureFormat::Depth24PlusStencil8 => Ok(Self::Depth24PlusStencil8),
+            wgpu::TextureFormat::Depth24UnormStencil8 => Ok(Self::Depth24UnormStencil8),
+            wgpu::TextureFormat::Rgb9e5Ufloat => Ok(Self::Rgb9e5Ufloat),
+            wgpu::TextureFormat::Bc1RgbaUnorm => Ok(Self::Bc1RgbaUnorm),
+            wgpu::TextureFormat::Bc1RgbaUnormSrgb => Ok(Self::Bc1RgbaUnormSrgb),
+            wgpu::TextureFormat::Bc2RgbaUnorm => Ok(Self::Bc2RgbaUnorm),
+            wgpu::TextureFormat::Bc2RgbaUnormSrgb => Ok(Self::Bc2RgbaUnormSrgb),
+            wgpu::TextureFormat::Bc3RgbaUnorm => Ok(Self::Bc3RgbaUnorm),
+            wgpu::TextureFormat::Bc3RgbaUnormSrgb => Ok(Self::Bc3RgbaUnormSrgb),
+            wgpu::TextureFormat::Bc4RUnorm => Ok(Self::Bc4RUnorm),
+            wgpu::TextureFormat::Bc4RSnorm => Ok(Self::Bc4RSnorm),
+            wgpu::TextureFormat::Bc5RgUnorm => Ok(Self::Bc5RgUnorm),
+            wgpu::TextureFormat::Bc5RgSnorm => Ok(Self::Bc5RgSnorm),
+            wgpu::TextureFormat::Bc6hRgbUfloat => Ok(Self::Bc6hRgbUfloat),
+            wgpu::TextureFormat::Bc6hRgbSfloat => Ok(Self::Bc6hRgbSfloat),
+            wgpu::TextureFormat::Bc7RgbaUnorm => Ok(Self::Bc7RgbaUnorm),
+            wgpu::TextureFormat::Bc7RgbaUnormSrgb => Ok(Self::Bc7RgbaUnormSrgb),
+            wgpu::TextureFormat::Etc2Rgb8Unorm => Ok(Self::Etc2Rgb8Unorm),
+            wgpu::TextureFormat::Etc2Rgb8UnormSrgb => Ok(Self::Etc2Rgb8UnormSrgb),
+            wgpu::TextureFormat::Etc2Rgb8A1Unorm => Ok(Self::Etc2Rgb8A1Unorm),
+            wgpu::TextureFormat::Etc2Rgb8A1UnormSrgb => Ok(Self::Etc2Rgb8A1UnormSrgb),
+            wgpu::TextureFormat::Etc2Rgba8Unorm => Ok(Self::Etc2Rgba8Unorm),
+            wgpu::TextureFormat::Etc2Rgba8UnormSrgb => Ok(Self::Etc2Rgba8UnormSrgb),
+            wgpu::TextureFormat::EacR11Unorm => Ok(Self::EacR11Unorm),
+            wgpu::TextureFormat::EacR11Snorm => Ok(Self::EacR11Snorm),
+            wgpu::TextureFormat::EacRg11Unorm => Ok(Self::EacRg11Unorm),
+            wgpu::TextureFormat::EacRg11Snorm => Ok(Self::EacRg11Snorm),
+            _ => Err("not supported texture format"),
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Debug)]
 pub(crate) struct TextureDescriptor {
@@ -1045,6 +1132,21 @@ impl<T> Opt<T> {
         match self.exists {
             true => Some(f(&self.value)),
             false => None,
+        }
+    }
+}
+
+impl<T: Default> From<Option<T>> for Opt<T> {
+    fn from(o: Option<T>) -> Self {
+        match o {
+            Some(x) => Opt {
+                exists: true,
+                value: x,
+            },
+            None => Opt {
+                exists: false,
+                value: T::default(),
+            },
         }
     }
 }

@@ -8,6 +8,11 @@ extern "cdecl" fn elffy_engine_start(init: HostScreenInitFn) {
 }
 
 #[no_mangle]
+extern "cdecl" fn elffy_get_surface_format(screen: &HostScreen) -> Opt<TextureFormat> {
+    screen.surface_format().try_into().ok().into()
+}
+
+#[no_mangle]
 extern "cdecl" fn elffy_create_bind_group_layout<'screen>(
     screen: &'screen mut HostScreen,
     desc: &BindGroupLayoutDescriptor,

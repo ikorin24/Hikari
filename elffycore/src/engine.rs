@@ -155,6 +155,10 @@ impl HostScreen {
         })
     }
 
+    pub fn surface_format(&self) -> wgpu::TextureFormat {
+        self.surface_config.format
+    }
+
     pub fn create_bind_group_layout(
         &mut self,
         desc: &wgpu::BindGroupLayoutDescriptor,
