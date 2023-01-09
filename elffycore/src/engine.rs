@@ -60,6 +60,8 @@ fn create_window(style: &WindowStyle) -> (window::Window, event_loop::EventLoop<
 
 #[cfg(target_os = "macos")]
 fn create_window(style: &WindowStyle) -> (window::Window, event_loop::EventLoop<()>) {
+    use winit::platform::macos::WindowExtMacOS;
+
     let event_loop = event_loop::EventLoop::new();
     let window = window::WindowBuilder::new()
         .with_title("Elffy")
