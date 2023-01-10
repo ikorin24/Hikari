@@ -57,7 +57,15 @@ internal record struct HostScreenHandle(Handle Handle);
 internal record struct RenderPassHandle(Handle Handle);
 internal record struct BindGroupLayoutHandle(Handle Handle);
 internal record struct BindGroupHandle(Handle Handle);
-internal record struct BufferHandle(Handle Handle);
+internal record struct BufferHandle(Handle Handle)
+{
+    public BufferBinding AsEntriesBinding() => new BufferBinding
+    {
+        buffer = this,
+        offset = 0,
+        size = 0,
+    };
+}
 internal record struct RenderPipelineHandle(Handle Handle);
 internal record struct SamplerHandle(Handle Handle);
 internal record struct PipelineLayoutHandle(Handle Handle);
@@ -172,6 +180,12 @@ internal struct BindingResource
 {
     public required BindingResourceTag tag;
     public required PointerWrap payload;
+
+    public unsafe static BindingResource Buffer(BufferBinding* payload) => new()
+    {
+        tag = BindingResourceTag.Buffer,
+        payload = new(payload),
+    };
 
     public unsafe static BindingResource TextureView(TextureViewHandle textureView) => new()
     {
@@ -455,6 +469,7 @@ internal enum wgpu_VertexFormat : u32
 }
 
 
+[Flags]
 internal enum wgpu_BufferUsages : u32
 {
     MAP_READ = 1 << 0,
@@ -505,6 +520,12 @@ internal struct BindingType
 {
     public required BindingTypeTag tag;
     public required PointerWrap payload;
+
+    public unsafe static BindingType Buffer(BufferBindingData* payload) => new()
+    {
+        tag = BindingTypeTag.Buffer,
+        payload = new(payload),
+    };
 
     public unsafe static BindingType Texture(TextureBindingData* payload) => new()
     {
@@ -731,6 +752,8 @@ internal unsafe readonly struct NullableRef<T> where T : unmanaged
     public static explicit operator NullableRef<T>(T* pointer) => new(pointer);
 
     public NullableRef(T* pointer) => _p = pointer;
+
+    public NullableRef<U> Cast<U>() where U : unmanaged => new((U*)_p);
 }
 
 internal struct Slice<T> where T : unmanaged
@@ -744,6 +767,12 @@ internal struct Slice<T> where T : unmanaged
         this.data = new((T*)data);
         this.len = len;
     }
+
+    public unsafe readonly Slice<u8> AsBytes() => new()
+    {
+        data = data.Cast<u8>(),
+        len = len * (nuint)sizeof(T)
+    };
 }
 
 internal static class Slice

@@ -45,9 +45,9 @@ public struct PosColorVertex
 {
     public Vec3 Position;
     public Vec2 UV;
-    public Color3 Color;
+    public Vec3 Color;
 
-    public PosColorVertex(Vec3 pos, Vec2 uv, Color3 color)
+    public PosColorVertex(Vec3 pos, Vec2 uv, Vec3 color)
     {
         Position = pos;
         UV = uv;
@@ -62,4 +62,7 @@ public record struct Vec2(float X, float Y);
 public record struct Vec3(float X, float Y, float Z);
 
 [StructLayout(LayoutKind.Sequential)]
-public record struct Color3(float R, float G, float B);
+public record struct Vec4(float X, float Y, float Z, float W);
+
+//[StructLayout(LayoutKind.Sequential)]
+//public record struct Color3(float R, float G, float B);

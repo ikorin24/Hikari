@@ -475,8 +475,8 @@ impl<'a> BindGroupLayoutEntry<'a> {
 #[repr(C)]
 pub(crate) struct BindingType<'a> {
     pub tag: BindingTypeTag,
-    /// `BufferBindingData` or `SamplerBindingType`
-    /// or `TextureBindingData` or `StorageTextureBindingData`
+    /// `&BufferBindingData` or `&SamplerBindingType`
+    /// or `&TextureBindingData` or `&StorageTextureBindingData`
     pub payload: PointerWrap<'a>,
 }
 
