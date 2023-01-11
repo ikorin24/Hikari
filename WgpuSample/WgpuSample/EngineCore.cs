@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using WgpuSample.Bind;
+using System.Text;
+using System.Collections.Concurrent;
 
 [assembly: DisableRuntimeMarshalling]
 
@@ -13,6 +15,7 @@ namespace WgpuSample
 {
     internal unsafe static partial class EngineCore
     {
+        private static readonly ConcurrentDictionary<uint, string> _errorMessageStore = new();
         private static EngineConfig _config;
         private static int _isStarted = 0;
 
@@ -32,6 +35,7 @@ namespace WgpuSample
             var engineConfig = new EngineCoreConfig
             {
                 on_screen_init = new(&OnInit),
+                err_dispatcher = &DispatchError,
             };
             var screenConfig = new HostScreenConfig
             {
@@ -56,7 +60,37 @@ namespace WgpuSample
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+            static void DispatchError(uint messageId, byte* messagePtr, nuint messageByteLen)
+            {
+                const int MaxByteLen = 1024 * 1024;
+                var len = (int)nuint.Min(messageByteLen, MaxByteLen);
+                var message = Encoding.UTF8.GetString(messagePtr, len);
+                _errorMessageStore[messageId] = message;
+            }
+
+            [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
             static void OnRender(HostScreenHandle screen, RenderPassHandle render_pass) => _config.OnRender(screen, render_pass);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void CheckResult(uint result)
+        {
+            if(result != 0) {
+                ThrowNativeError(result);
+
+                [DoesNotReturn]
+                static void ThrowNativeError(uint messageId)
+                {
+                    Debug.Assert(messageId != 0);
+                    if(_errorMessageStore.TryRemove(messageId, out var message) == false) {
+                        message = "Some error occurred in the native code, but the error message could not be retrieved.";
+                    }
+
+                    throw new Exception(message);
+                }
+            }
+
+
         }
     }
 

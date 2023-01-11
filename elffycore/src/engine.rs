@@ -12,6 +12,9 @@ pub(crate) fn engine_start(
     screen_config: &HostScreenConfig,
 ) -> ! {
     env_logger::init();
+    if let Some(err_dispatcher) = engine_config.err_dispatcher {
+        crate::set_err_dispatcher(err_dispatcher);
+    }
     let event_loop = event_loop::EventLoop::new();
     let mut screens: Vec<Box<HostScreen>> = vec![];
     let first_screen = screens.push_get_mut(HostScreen::new(&screen_config, &event_loop));
@@ -145,6 +148,16 @@ impl HostScreen {
                 None,
             )
             .block_on()?;
+        device.on_uncaptured_error(|err: wgpu::Error| {
+            let message = format!("{:?}", err);
+            if let Some(err_dispatcher) = crate::get_err_dispatcher() {
+                let id = crate::generate_message_id();
+                let message_bytes = message.as_bytes();
+                err_dispatcher(id, message_bytes.as_ptr(), message_bytes.len());
+            } else {
+                eprintln!("{}", message);
+            }
+        });
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface.get_supported_formats(&adapter)[0],

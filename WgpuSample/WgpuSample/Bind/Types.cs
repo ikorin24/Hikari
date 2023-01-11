@@ -80,9 +80,10 @@ internal unsafe readonly struct HostScreenInitFn
     public static implicit operator HostScreenInitFn(delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> f) => new(f);
 }
 
-internal struct EngineCoreConfig
+internal unsafe struct EngineCoreConfig
 {
     public required HostScreenInitFn on_screen_init;
+    public required delegate* unmanaged[Cdecl]<u32, u8*, nuint, void> err_dispatcher;
 }
 
 internal struct HostScreenConfig

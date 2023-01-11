@@ -1,4 +1,5 @@
 use crate::engine::HostScreen;
+use crate::*;
 use bytemuck::Contiguous;
 use smallvec::SmallVec;
 use static_assertions::assert_eq_size;
@@ -9,6 +10,7 @@ use std::{marker, num, ops, str};
 #[repr(C)]
 pub(crate) struct EngineCoreConfig {
     pub on_screen_init: HostScreenInitFn,
+    pub err_dispatcher: Option<DispatchErrFn>,
 }
 
 #[repr(C)]
