@@ -1,5 +1,5 @@
 use crate::engine::HostScreen;
-use crate::*;
+use crate::error::*;
 use bytemuck::Contiguous;
 use smallvec::SmallVec;
 use static_assertions::assert_eq_size;
@@ -33,7 +33,7 @@ pub(crate) enum WindowStyle {
 }
 
 #[repr(C)]
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub(crate) struct HostScreenCallbacks {
     pub on_render: Option<HostScreenRenderFn>,
 }
@@ -1392,9 +1392,9 @@ pub(crate) struct HostScreenInfo {
 }
 
 pub(crate) type HostScreenInitFn =
-    extern "cdecl" fn(screen: &mut HostScreen, screen_info: &HostScreenInfo) -> HostScreenCallbacks;
+    extern "cdecl" fn(screen: &HostScreen, screen_info: &HostScreenInfo) -> HostScreenCallbacks;
 pub(crate) type HostScreenRenderFn =
-    extern "cdecl" fn(screen: &mut HostScreen, render_pass: &mut wgpu::RenderPass) -> ();
+    extern "cdecl" fn(screen: &HostScreen, render_pass: &mut wgpu::RenderPass) -> ();
 
 // -------------------------
 

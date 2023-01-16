@@ -1,5 +1,7 @@
+use crate::error::*;
 use crate::types::*;
 use pollster::FutureExt;
+use std::cell::Cell;
 use std::error::Error;
 use std::ptr;
 use wgpu::util::DeviceExt;
@@ -7,19 +9,27 @@ use winit;
 use winit::event_loop::EventLoopWindowTarget;
 use winit::{dpi, event, event_loop, window};
 
+/// Start the engine.
+/// The function never returns except error.
 pub(crate) fn engine_start(
     engine_config: &EngineCoreConfig,
     screen_config: &HostScreenConfig,
-) -> ! {
+) -> Box<dyn Error> {
     env_logger::init();
     if let Some(err_dispatcher) = engine_config.err_dispatcher {
-        crate::set_err_dispatcher(err_dispatcher);
+        set_err_dispatcher(err_dispatcher);
     }
     let event_loop = event_loop::EventLoop::new();
     let mut screens: Vec<Box<HostScreen>> = vec![];
-    let first_screen = screens.push_get_mut(HostScreen::new(&screen_config, &event_loop));
+    let first_screen = match HostScreen::new(&screen_config, &event_loop) {
+        Ok(screen) => screens.push_get_mut(screen),
+        Err(err) => {
+            return err;
+        }
+    };
     let callbacks = (engine_config.on_screen_init)(first_screen, &first_screen.get_info());
     first_screen.set_callbacks(callbacks);
+
     event_loop.run(move |event, event_loop, control_flow| {
         screens.iter_mut().for_each(|screen| {
             screen.handle_event(&event, event_loop, control_flow);
@@ -31,18 +41,17 @@ pub(crate) fn engine_start(
 fn create_window(
     config: &HostScreenConfig,
     event_loop: &event_loop::EventLoop<()>,
-) -> window::Window {
+) -> Result<window::Window, Box<dyn Error>> {
     use winit::platform::windows::WindowBuilderExtWindows;
 
     let window = window::WindowBuilder::new()
-        .with_title(config.title.as_str().unwrap())
+        .with_title(config.title.as_str()?)
         .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(
             config.width,
             config.height,
         )))
         .with_theme(Some(window::Theme::Light))
-        .build(&event_loop)
-        .unwrap();
+        .build(&event_loop)?;
     match config.style {
         WindowStyle::Default => {
             window.set_resizable(true);
@@ -54,7 +63,7 @@ fn create_window(
             window.set_fullscreen(None);
         }
     }
-    window
+    Ok(window)
 }
 
 #[cfg(target_os = "macos")]
@@ -81,23 +90,47 @@ fn create_window(style: &WindowStyle) -> (window::Window, event_loop::EventLoop<
     (window, event_loop)
 }
 
+#[derive(Clone, Copy)]
+struct SurfaceConfigData {
+    pub usage: wgpu::TextureUsages,
+    pub format: wgpu::TextureFormat,
+    pub width: u32,
+    pub height: u32,
+    pub present_mode: wgpu::PresentMode,
+}
+
+impl From<wgpu::SurfaceConfiguration> for SurfaceConfigData {
+    fn from(x: wgpu::SurfaceConfiguration) -> Self {
+        Self {
+            usage: x.usage,
+            format: x.format,
+            width: x.width,
+            height: x.height,
+            present_mode: x.present_mode,
+        }
+    }
+}
+
+impl SurfaceConfigData {
+    pub fn to_surface_config(&self) -> wgpu::SurfaceConfiguration {
+        wgpu::SurfaceConfiguration {
+            usage: self.usage,
+            format: self.format,
+            width: self.width,
+            height: self.height,
+            present_mode: self.present_mode,
+        }
+    }
+}
+
 pub(crate) struct HostScreen {
     window: window::Window,
     surface: wgpu::Surface,
-    surface_config: wgpu::SurfaceConfiguration,
+    surface_config: Cell<SurfaceConfigData>,
     device: wgpu::Device,
     backend: wgpu::Backend,
     queue: wgpu::Queue,
-    pipeline_layouts: Vec<Box<wgpu::PipelineLayout>>,
-    pipelines: Vec<Box<wgpu::RenderPipeline>>,
-    buffers: Vec<Box<wgpu::Buffer>>,
-    textures: Vec<Box<wgpu::Texture>>,
-    shaders: Vec<Box<wgpu::ShaderModule>>,
-    bind_group_layouts: Vec<Box<wgpu::BindGroupLayout>>,
-    bind_groups: Vec<Box<wgpu::BindGroup>>,
-    samplers: Vec<Box<wgpu::Sampler>>,
-    texture_views: Vec<Box<wgpu::TextureView>>,
-    callbacks: HostScreenCallbacks,
+    callbacks: Cell<HostScreenCallbacks>,
 }
 
 impl HostScreen {
@@ -108,8 +141,11 @@ impl HostScreen {
         a: 0.0,
     };
 
-    pub fn new(config: &HostScreenConfig, event_loop: &event_loop::EventLoop<()>) -> HostScreen {
-        let window = create_window(&config, &event_loop);
+    pub fn new(
+        config: &HostScreenConfig,
+        event_loop: &event_loop::EventLoop<()>,
+    ) -> Result<HostScreen, Box<dyn Error>> {
+        let window = create_window(&config, &event_loop)?;
         if let Some(monitor) = window.current_monitor() {
             let monitor_size = monitor.size();
             let window_size = window.outer_size();
@@ -120,7 +156,7 @@ impl HostScreen {
             window.set_outer_position(dpi::Position::Physical(pos));
         }
         window.focus_window();
-        Self::initialize(window, &config.backend).unwrap()
+        Self::initialize(window, &config.backend)
     }
 
     fn initialize(
@@ -148,16 +184,7 @@ impl HostScreen {
                 None,
             )
             .block_on()?;
-        device.on_uncaptured_error(|err: wgpu::Error| {
-            let message = format!("{:?}", err);
-            if let Some(err_dispatcher) = crate::get_err_dispatcher() {
-                let id = crate::generate_message_id();
-                let message_bytes = message.as_bytes();
-                err_dispatcher(id, message_bytes.as_ptr(), message_bytes.len());
-            } else {
-                eprintln!("{}", message);
-            }
-        });
+        device.on_uncaptured_error(|err: wgpu::Error| dispatch_err(err));
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface.get_supported_formats(&adapter)[0],
@@ -169,28 +196,22 @@ impl HostScreen {
         surface.configure(&device, &surface_config);
         Ok(HostScreen {
             window,
-            surface_config,
             surface,
+            surface_config: Cell::new(surface_config.into()),
+            // size: (surface_config.width, surface_config.height),
+            // surface_format: surface_config.format,
             device,
             backend: adapter.get_info().backend,
             queue,
-            pipeline_layouts: vec![],
-            pipelines: vec![],
-            buffers: vec![],
-            textures: vec![],
-            shaders: vec![],
-            bind_group_layouts: vec![],
-            bind_groups: vec![],
-            samplers: vec![],
-            texture_views: vec![],
-            callbacks: HostScreenCallbacks::default(),
+            callbacks: Cell::new(HostScreenCallbacks::default()),
         })
     }
 
     pub fn get_info(&self) -> HostScreenInfo {
+        let format = self.surface_config.get().format;
         HostScreenInfo {
             backend: self.backend,
-            surface_format: self.surface_config.format.try_into().ok().into(),
+            surface_format: format.try_into().ok().into(),
         }
     }
 
@@ -206,95 +227,64 @@ impl HostScreen {
     }
 
     pub fn create_bind_group_layout(
-        &mut self,
+        &self,
         desc: &wgpu::BindGroupLayoutDescriptor,
-    ) -> &wgpu::BindGroupLayout {
+    ) -> Box<wgpu::BindGroupLayout> {
         let layout = self.device.create_bind_group_layout(desc);
-        self.bind_group_layouts.push_get_ref(layout)
-    }
-
-    pub fn destroy_bind_group_layout(&mut self, layout: &wgpu::BindGroupLayout) -> bool {
-        self.bind_group_layouts.swap_remove_by_ref(layout).is_some()
+        Box::new(layout)
     }
 
     pub fn create_bind_group(
-        &mut self,
+        &self,
         bind_group_desc: &wgpu::BindGroupDescriptor,
-    ) -> &wgpu::BindGroup {
+    ) -> Box<wgpu::BindGroup> {
         let bind_group = self.device.create_bind_group(bind_group_desc);
-        self.bind_groups.push_get_ref(bind_group)
-    }
-
-    pub fn destroy_bind_group(&mut self, bind_group: &wgpu::BindGroup) -> bool {
-        self.bind_groups.swap_remove_by_ref(bind_group).is_some()
+        Box::new(bind_group)
     }
 
     pub fn create_texture_view(
-        &mut self,
+        &self,
         texture: &wgpu::Texture,
         desc: &wgpu::TextureViewDescriptor,
-    ) -> &wgpu::TextureView {
+    ) -> Box<wgpu::TextureView> {
         let texture_view = texture.create_view(desc);
-        self.texture_views.push_get_ref(texture_view)
+        Box::new(texture_view)
     }
 
-    pub fn destroy_texture_view(&mut self, texture_view: &wgpu::TextureView) -> bool {
-        self.texture_views
-            .swap_remove_by_ref(texture_view)
-            .is_some()
-    }
-
-    pub fn create_sampler(&mut self, desc: &wgpu::SamplerDescriptor) -> &wgpu::Sampler {
+    pub fn create_sampler(&self, desc: &wgpu::SamplerDescriptor) -> Box<wgpu::Sampler> {
         let sampler = self.device.create_sampler(desc);
-        self.samplers.push_get_ref(sampler)
-    }
-    pub fn destroy_sampler(&mut self, sampler: &wgpu::Sampler) -> bool {
-        self.samplers.swap_remove_by_ref(sampler).is_some()
+        Box::new(sampler)
     }
 
     pub fn create_pipeline_layout(
-        &mut self,
+        &self,
         layout_desc: &wgpu::PipelineLayoutDescriptor,
-    ) -> &wgpu::PipelineLayout {
-        let layout = self.device.create_pipeline_layout(layout_desc);
-        self.pipeline_layouts.push_get_ref(layout)
-    }
-
-    pub fn destroy_pipeline_layout(&mut self, layout: &wgpu::PipelineLayout) -> bool {
-        self.pipeline_layouts.swap_remove_by_ref(layout).is_some()
+    ) -> Box<wgpu::PipelineLayout> {
+        Box::new(self.device.create_pipeline_layout(layout_desc))
     }
 
     pub fn create_render_pipeline(
-        &mut self,
+        &self,
         desc: &wgpu::RenderPipelineDescriptor,
-    ) -> &wgpu::RenderPipeline {
-        let pipeline = self.device.create_render_pipeline(desc);
-        self.pipelines.push_get_ref(pipeline)
+    ) -> Box<wgpu::RenderPipeline> {
+        Box::new(self.device.create_render_pipeline(desc))
     }
 
-    pub fn destroy_render_pipeline(&mut self, render_pipeline: &wgpu::RenderPipeline) -> bool {
-        self.pipelines.swap_remove_by_ref(render_pipeline).is_some()
-    }
-
-    pub fn create_shader_module(&mut self, shader_source: &str) -> &wgpu::ShaderModule {
+    pub fn create_shader_module(&self, shader_source: &str) -> Box<wgpu::ShaderModule> {
         let shader = self
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: None,
                 source: wgpu::ShaderSource::Wgsl(shader_source.into()),
             });
-        self.shaders.push_get_ref(shader)
-    }
-
-    pub fn destroy_shader_module(&mut self, shader: &wgpu::ShaderModule) -> bool {
-        self.shaders.swap_remove_by_ref(shader).is_some()
+        Box::new(shader)
     }
 
     pub fn create_buffer_init(
-        &mut self,
+        &self,
         contents: &[u8],
         usage: wgpu::BufferUsages,
-    ) -> &wgpu::Buffer {
+    ) -> Box<wgpu::Buffer> {
         let buffer = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -302,48 +292,30 @@ impl HostScreen {
                 contents,
                 usage,
             });
-        self.buffers.push_get_ref(buffer)
+        Box::new(buffer)
     }
 
-    pub fn destroy_buffer(&mut self, buffer: &wgpu::Buffer) -> bool {
-        self.buffers
-            .swap_remove_by_ref(buffer)
-            .map(|buf| buf.destroy())
-            .is_some()
+    pub fn create_texture(&self, desc: &wgpu::TextureDescriptor) -> Box<wgpu::Texture> {
+        Box::new(self.device.create_texture(desc))
     }
 
-    pub fn create_texture<'screen>(
-        &'screen mut self,
-        desc: &wgpu::TextureDescriptor,
-    ) -> &'screen wgpu::Texture {
-        let texture = self.device.create_texture(desc);
-        self.textures.push_get_ref(texture)
-    }
-
-    pub fn create_texture_with_data<'screen>(
-        &'screen mut self,
+    pub fn create_texture_with_data(
+        &self,
         desc: &wgpu::TextureDescriptor,
         data: &[u8],
-    ) -> &'screen wgpu::Texture {
+    ) -> Box<wgpu::Texture> {
         let texture = self
             .device
             .create_texture_with_data(&self.queue, desc, data);
-        self.textures.push_get_ref(texture)
+        Box::new(texture)
     }
 
-    pub fn destroy_texture(&mut self, texture: &wgpu::Texture) -> bool {
-        self.textures
-            .swap_remove_by_ref(texture)
-            .map(|tex| tex.destroy())
-            .is_some()
-    }
-
-    pub fn set_callbacks(&mut self, callbacks: HostScreenCallbacks) {
-        self.callbacks = callbacks;
+    pub fn set_callbacks(&self, callbacks: HostScreenCallbacks) {
+        self.callbacks.set(callbacks)
     }
 
     pub fn handle_event(
-        &mut self,
+        &self,
         event: &winit::event::Event<()>,
         _event_loop: &EventLoopWindowTarget<()>,
         control_flow: &mut winit::event_loop::ControlFlow,
@@ -400,7 +372,7 @@ impl HostScreen {
         }
     }
 
-    fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    fn render(&self) -> Result<(), wgpu::SurfaceError> {
         // `get_current_texture` function will wait for the surface
         // to provide a new SurfaceTexture that we will render to.
         let output = self.surface.get_current_texture()?;
@@ -426,7 +398,7 @@ impl HostScreen {
                 depth_stencil_attachment: None,
             });
 
-            if let Some(on_render) = &self.callbacks.on_render {
+            if let Some(on_render) = &self.callbacks.get().on_render {
                 on_render(self, &mut render_pass);
             }
         } // `render_pass` drops here.
@@ -437,11 +409,14 @@ impl HostScreen {
         Ok(())
     }
 
-    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+    pub fn resize(&self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
-            self.surface_config.width = new_size.width;
-            self.surface_config.height = new_size.height;
-            self.surface.configure(&self.device, &self.surface_config);
+            let mut config = self.surface_config.get();
+            config.width = new_size.width;
+            config.height = new_size.height;
+            self.surface_config.set(config);
+            self.surface
+                .configure(&self.device, &config.to_surface_config());
         }
     }
 }
