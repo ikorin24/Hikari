@@ -1,7 +1,6 @@
 use crate::engine::*;
 use crate::error::*;
 use crate::types::*;
-use bytemuck::Contiguous;
 use std::num::NonZeroUsize;
 use std::ops;
 
@@ -75,7 +74,12 @@ extern "cdecl" fn elffy_create_render_pipeline(
     screen: &HostScreen,
     desc: &RenderPipelineDescription,
 ) -> ApiRefResult<wgpu::RenderPipeline> {
-    let value = desc.use_wgpu_type(|x| screen.create_render_pipeline(x));
+    let value = match desc.use_wgpu_type(|x| Ok(screen.create_render_pipeline(x))) {
+        Ok(value) => value,
+        Err(err) => {
+            return error_ref_result(err);
+        }
+    };
     make_ref_result(value, None)
 }
 
@@ -122,8 +126,7 @@ extern "cdecl" fn elffy_create_shader_module(
     let shader_source = match shader_source.as_str() {
         Ok(s) => s,
         Err(err) => {
-            dispatch_err(err);
-            return ApiRefResult::err(reset_tls_err_count().try_into().unwrap());
+            return error_ref_result(err);
         }
     };
     let value = screen.create_shader_module(shader_source);
@@ -257,7 +260,7 @@ extern "cdecl" fn elffy_draw_buffers_indexed<'a>(
 #[inline]
 fn make_ref_result<T>(value: Box<T>, on_value_drop: Option<fn(Box<T>)>) -> ApiRefResult<T> {
     let err_count = reset_tls_err_count();
-    match NonZeroUsize::from_integer(err_count) {
+    match NonZeroUsize::new(err_count) {
         Some(err_count) => {
             if let Some(on_value_drop) = on_value_drop {
                 on_value_drop(value);
@@ -266,6 +269,12 @@ fn make_ref_result<T>(value: Box<T>, on_value_drop: Option<fn(Box<T>)>) -> ApiRe
         }
         None => ApiRefResult::ok(value),
     }
+}
+
+#[inline]
+fn error_ref_result<T>(err: impl std::fmt::Debug) -> ApiRefResult<T> {
+    dispatch_err(err);
+    return ApiRefResult::err(reset_tls_err_count().try_into().unwrap());
 }
 
 #[inline]

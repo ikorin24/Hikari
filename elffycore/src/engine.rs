@@ -3,7 +3,7 @@ use crate::types::*;
 use pollster::FutureExt;
 use std::cell::Cell;
 use std::error::Error;
-use std::ptr;
+// use std::ptr;
 use wgpu::util::DeviceExt;
 use winit;
 use winit::event_loop::EventLoopWindowTarget;
@@ -20,20 +20,34 @@ pub(crate) fn engine_start(
         set_err_dispatcher(err_dispatcher);
     }
     let event_loop = event_loop::EventLoop::new();
-    let mut screens: Vec<Box<HostScreen>> = vec![];
-    let first_screen = match HostScreen::new(&screen_config, &event_loop) {
-        Ok(screen) => screens.push_get_mut(screen),
+    // let mut screens: Vec<Box<HostScreen>> = vec![];
+    // let first_screen = match HostScreen::new(&screen_config, &event_loop) {
+    //     Ok(screen) => screens.push_get_ref(screen),
+    //     Err(err) => {
+    //         return err;
+    //     }
+    // };
+
+    let screen = match HostScreen::new(&screen_config, &event_loop) {
+        Ok(screen) => Box::new(screen),
         Err(err) => {
             return err;
         }
     };
-    let callbacks = (engine_config.on_screen_init)(first_screen, &first_screen.get_info());
-    first_screen.set_callbacks(callbacks);
+    {
+        let on_screen_init = engine_config.on_screen_init;
+        let callbacks = on_screen_init(screen.as_ref(), &screen.get_info());
+        screen.set_callbacks(callbacks);
+    }
+
+    // let callbacks = (engine_config.on_screen_init)(first_screen, &first_screen.get_info());
+    // first_screen.set_callbacks(callbacks);
 
     event_loop.run(move |event, event_loop, control_flow| {
-        screens.iter_mut().for_each(|screen| {
-            screen.handle_event(&event, event_loop, control_flow);
-        });
+        // screens.iter().for_each(|screen| {
+        //     screen.handle_event(&event, event_loop, control_flow);
+        // });
+        screen.handle_event(&event, event_loop, control_flow);
     });
 }
 
@@ -94,8 +108,6 @@ fn create_window(style: &WindowStyle) -> (window::Window, event_loop::EventLoop<
 struct SurfaceConfigData {
     pub usage: wgpu::TextureUsages,
     pub format: wgpu::TextureFormat,
-    pub width: u32,
-    pub height: u32,
     pub present_mode: wgpu::PresentMode,
 }
 
@@ -104,20 +116,18 @@ impl From<wgpu::SurfaceConfiguration> for SurfaceConfigData {
         Self {
             usage: x.usage,
             format: x.format,
-            width: x.width,
-            height: x.height,
             present_mode: x.present_mode,
         }
     }
 }
 
 impl SurfaceConfigData {
-    pub fn to_surface_config(&self) -> wgpu::SurfaceConfiguration {
+    pub fn to_surface_config(&self, width: u32, height: u32) -> wgpu::SurfaceConfiguration {
         wgpu::SurfaceConfiguration {
             usage: self.usage,
             format: self.format,
-            width: self.width,
-            height: self.height,
+            width,
+            height,
             present_mode: self.present_mode,
         }
     }
@@ -126,11 +136,12 @@ impl SurfaceConfigData {
 pub(crate) struct HostScreen {
     window: window::Window,
     surface: wgpu::Surface,
-    surface_config: Cell<SurfaceConfigData>,
+    surface_config_data: SurfaceConfigData,
+    surface_size: Cell<(u32, u32)>,
     device: wgpu::Device,
     backend: wgpu::Backend,
     queue: wgpu::Queue,
-    callbacks: Cell<HostScreenCallbacks>,
+    on_render: Cell<Option<HostScreenRenderFn>>,
 }
 
 impl HostScreen {
@@ -192,23 +203,22 @@ impl HostScreen {
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
         };
-
         surface.configure(&device, &surface_config);
+        let size = (surface_config.width, surface_config.height);
         Ok(HostScreen {
             window,
             surface,
-            surface_config: Cell::new(surface_config.into()),
-            // size: (surface_config.width, surface_config.height),
-            // surface_format: surface_config.format,
+            surface_config_data: surface_config.into(),
+            surface_size: Cell::new(size),
             device,
             backend: adapter.get_info().backend,
             queue,
-            callbacks: Cell::new(HostScreenCallbacks::default()),
+            on_render: Cell::new(None),
         })
     }
 
     pub fn get_info(&self) -> HostScreenInfo {
-        let format = self.surface_config.get().format;
+        let format = self.surface_config_data.format;
         HostScreenInfo {
             backend: self.backend,
             surface_format: format.try_into().ok().into(),
@@ -311,7 +321,7 @@ impl HostScreen {
     }
 
     pub fn set_callbacks(&self, callbacks: HostScreenCallbacks) {
-        self.callbacks.set(callbacks)
+        self.on_render.set(callbacks.on_render);
     }
 
     pub fn handle_event(
@@ -398,7 +408,7 @@ impl HostScreen {
                 depth_stencil_attachment: None,
             });
 
-            if let Some(on_render) = &self.callbacks.get().on_render {
+            if let Some(on_render) = self.on_render.get() {
                 on_render(self, &mut render_pass);
             }
         } // `render_pass` drops here.
@@ -411,39 +421,38 @@ impl HostScreen {
 
     pub fn resize(&self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
-            let mut config = self.surface_config.get();
-            config.width = new_size.width;
-            config.height = new_size.height;
-            self.surface_config.set(config);
-            self.surface
-                .configure(&self.device, &config.to_surface_config());
+            self.surface_size.set((new_size.width, new_size.height));
+            let config = self
+                .surface_config_data
+                .to_surface_config(new_size.width, new_size.height);
+            self.surface.configure(&self.device, &config);
         }
     }
 }
 
-trait VecBox<T> {
-    fn push_get_ref(&mut self, value: T) -> &T;
-    fn push_get_mut(&mut self, value: T) -> &mut T;
+// trait VecBox<T> {
+//     fn push_get_ref(&mut self, value: T) -> &T;
+//     fn push_get_mut(&mut self, value: T) -> &mut T;
 
-    fn swap_remove_by_ref(&mut self, value_ref: &T) -> Option<T>;
-}
+//     fn swap_remove_by_ref(&mut self, value_ref: &T) -> Option<T>;
+// }
 
-impl<T> VecBox<T> for Vec<Box<T>> {
-    fn push_get_ref(&mut self, value: T) -> &T {
-        self.push(Box::new(value));
-        self.last().unwrap().as_ref()
-    }
+// impl<T> VecBox<T> for Vec<Box<T>> {
+//     fn push_get_ref(&mut self, value: T) -> &T {
+//         self.push(Box::new(value));
+//         self.last().unwrap().as_ref()
+//     }
 
-    fn push_get_mut(&mut self, value: T) -> &mut T {
-        self.push(Box::new(value));
-        self.last_mut().unwrap()
-    }
+//     fn push_get_mut(&mut self, value: T) -> &mut T {
+//         self.push(Box::new(value));
+//         self.last_mut().unwrap()
+//     }
 
-    fn swap_remove_by_ref(&mut self, value_ref: &T) -> Option<T> {
-        let index = self.iter().position(|x| ptr::eq(value_ref, x.as_ref()));
-        match index {
-            Some(index) => Some(*self.swap_remove(index)),
-            None => None,
-        }
-    }
-}
+//     fn swap_remove_by_ref(&mut self, value_ref: &T) -> Option<T> {
+//         let index = self.iter().position(|x| ptr::eq(value_ref, x.as_ref()));
+//         match index {
+//             Some(index) => Some(*self.swap_remove(index)),
+//             None => None,
+//         }
+//     }
+// }

@@ -1,9 +1,9 @@
 use crate::engine::HostScreen;
 use crate::error::*;
-use bytemuck::Contiguous;
 use smallvec::SmallVec;
 use static_assertions::assert_eq_size;
 use std;
+use std::error::Error;
 use std::ffi;
 use std::{marker, num, ops, str};
 
@@ -104,9 +104,9 @@ impl TextureViewDescriptor {
             dimension: self.dimension.map_to_option(|x| x.to_wgpu_type()),
             aspect: self.aspect.to_wgpu_type(),
             base_mip_level: self.base_mip_level,
-            mip_level_count: num::NonZeroU32::from_integer(self.mip_level_count),
+            mip_level_count: num::NonZeroU32::new(self.mip_level_count),
             base_array_layer: self.base_array_layer,
-            array_layer_count: num::NonZeroU32::from_integer(self.array_layer_count),
+            array_layer_count: num::NonZeroU32::new(self.array_layer_count),
         }
     }
 }
@@ -158,7 +158,7 @@ impl SamplerDescriptor {
             lod_min_clamp: self.lod_min_clamp,
             lod_max_clamp: self.lod_max_clamp,
             compare: self.compare.to_option(),
-            anisotropy_clamp: num::NonZeroU8::from_integer(self.anisotropy_clamp),
+            anisotropy_clamp: num::NonZeroU8::new(self.anisotropy_clamp),
             border_color: self.border_color.map_to_option(|x| x.to_wgpu_type()),
         }
     }
@@ -310,7 +310,7 @@ impl<'a> BufferBinding<'a> {
         wgpu::BufferBinding {
             buffer: self.buffer,
             offset: self.offset,
-            size: num::NonZeroU64::from_integer(self.size),
+            size: num::NonZeroU64::new(self.size),
         }
     }
 }
@@ -341,11 +341,11 @@ pub(crate) struct RenderPipelineDescription<'a> {
 impl<'a> RenderPipelineDescription<'a> {
     pub fn use_wgpu_type<T>(
         &self,
-        consume: impl FnOnce(&wgpu::RenderPipelineDescriptor) -> T,
-    ) -> T {
+        consume: impl FnOnce(&wgpu::RenderPipelineDescriptor) -> Result<T, Box<dyn Error>>,
+    ) -> Result<T, Box<dyn Error>> {
         let vertex = wgpu::VertexState {
             module: self.vertex.module,
-            entry_point: self.vertex.entry_point.as_str().unwrap(),
+            entry_point: self.vertex.entry_point.as_str()?,
             buffers: &self
                 .vertex
                 .inputs
@@ -368,7 +368,7 @@ impl<'a> RenderPipelineDescription<'a> {
                 );
                 Some(wgpu::FragmentState {
                     module: value.module,
-                    entry_point: value.entry_point.as_str().unwrap(),
+                    entry_point: value.entry_point.as_str()?,
                     targets: &fragment_targets,
                 })
             }
@@ -469,7 +469,7 @@ impl<'a> BindGroupLayoutEntry<'a> {
             binding: self.binding,
             visibility: self.visibility,
             ty: self.ty.to_wgpu_type(),
-            count: num::NonZeroU32::from_integer(self.count),
+            count: num::NonZeroU32::new(self.count),
         }
     }
 }
@@ -490,7 +490,7 @@ impl<'a> BindingType<'a> {
                 wgpu::BindingType::Buffer {
                     ty: payload.ty.to_wgpu_type(),
                     has_dynamic_offset: payload.has_dynamic_offset,
-                    min_binding_size: num::NonZeroU64::from_integer(payload.min_binding_size),
+                    min_binding_size: num::NonZeroU64::new(payload.min_binding_size),
                 }
             }
             BindingTypeTag::Sampler => wgpu::BindingType::Sampler(
