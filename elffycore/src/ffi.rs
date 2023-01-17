@@ -272,7 +272,7 @@ fn make_ref_result<T>(value: Box<T>, on_value_drop: Option<fn(Box<T>)>) -> ApiRe
 }
 
 #[inline]
-fn error_ref_result<T>(err: impl std::fmt::Debug) -> ApiRefResult<T> {
+fn error_ref_result<T>(err: impl std::fmt::Display) -> ApiRefResult<T> {
     dispatch_err(err);
     return ApiRefResult::err(reset_tls_err_count().try_into().unwrap());
 }

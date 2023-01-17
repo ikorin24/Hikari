@@ -71,11 +71,11 @@ internal class Program
                     _uniformBindGroupLayout,
                 }),
             };
-            _pipelineLayout = EngineCore.elffy_create_pipeline_layout(screen, &desc);
+            _pipelineLayout = EngineCore.CreatePipelineLayout(screen, &desc);
         }
 
         // ShaderModule
-        _shaderModule = EngineCore.elffy_create_shader_module(screen, ShaderSource);
+        _shaderModule = EngineCore.CreateShaderModule(screen, ShaderSource);
 
         // RenderPipeline
         {
@@ -118,7 +118,7 @@ internal class Program
                     polygon_mode = wgpu_PolygonMode.Fill,
                 },
             };
-            _renderPipeline = EngineCore.elffy_create_render_pipeline(screen, &desc);
+            _renderPipeline = EngineCore.CreateRenderPipeline(screen, &desc);
         }
 
         // Buffer (vertex, index)
@@ -132,11 +132,11 @@ internal class Program
         }
     }
 
-    private static unsafe void OnRender(HostScreenHandle screen, RenderPassHandle renderPass)
+    private static unsafe void OnRender(HostScreenHandle screen, RenderPassRef renderPass)
     {
-        EngineCore.elffy_set_pipeline(renderPass, _renderPipeline);
-        EngineCore.elffy_set_bind_group(renderPass, 0, _textureBindGroup);
-        EngineCore.elffy_set_bind_group(renderPass, 1, _uniformBindGroup);
+        EngineCore.SetPipeline(renderPass, _renderPipeline);
+        EngineCore.SetBindGroup(renderPass, 0, _textureBindGroup);
+        EngineCore.SetBindGroup(renderPass, 1, _uniformBindGroup);
 
         var arg = new DrawBufferIndexedArg
         {
@@ -157,7 +157,7 @@ internal class Program
             instance_start = 0,
             instance_end_excluded = 1,
         };
-        EngineCore.elffy_draw_buffer_indexed(renderPass, &arg);
+        EngineCore.DrawBufferIndexed(renderPass, &arg);
     }
 
     private unsafe static Slice<byte> ShaderSource
@@ -216,7 +216,7 @@ internal static class HostScreenInitializer
             size = new() { width = width, height = height, depth_or_array_layers = 1, },
             usage = wgpu_TextureUsages.TEXTURE_BINDING | wgpu_TextureUsages.COPY_DST,
         };
-        var texture = EngineCore.elffy_create_texture(screen, &desc);
+        var texture = EngineCore.CreateTexture(screen, &desc);
         var writeTex = new ImageCopyTexture
         {
             texture = texture,
@@ -240,7 +240,7 @@ internal static class HostScreenInitializer
         };
         fixed(byte* p = pixels) {
             var data = new Slice<byte> { data = new(p), len = (nuint)pixels.Length };
-            EngineCore.elffy_write_texture(screen, &writeTex, data, &dataLayout, &textureSize);
+            EngineCore.WriteTexture(screen, &writeTex, data, &dataLayout, &textureSize);
         }
         return texture;
     }
@@ -248,7 +248,7 @@ internal static class HostScreenInitializer
     public unsafe static (TextureViewHandle TextureView, SamplerHandle Sampler) CreateTextureViewSampler(HostScreenHandle screen, TextureHandle texture)
     {
         var texViewDesc = TextureViewDescriptor.Default;
-        var textureView = EngineCore.elffy_create_texture_view(screen, texture, &texViewDesc);
+        var textureView = EngineCore.CreateTextureView(screen, texture, &texViewDesc);
 
         var samplerDesc = new SamplerDescriptor
         {
@@ -264,7 +264,7 @@ internal static class HostScreenInitializer
             border_color = Opt.None<SamplerBorderColor>(),
             compare = Opt.None<wgpu_CompareFunction>(),
         };
-        var sampler = EngineCore.elffy_create_sampler(screen, &samplerDesc);
+        var sampler = EngineCore.CreateSampler(screen, &samplerDesc);
 
         return (TextureView: textureView, Sampler: sampler);
     }
@@ -296,7 +296,7 @@ internal static class HostScreenInitializer
                 },
             }),
         };
-        return EngineCore.elffy_create_bind_group_layout(screen, &desc);
+        return EngineCore.CreateBindGroupLayout(screen, &desc);
     }
 
     public unsafe static BindGroupHandle CreateTextureBindGroup(
@@ -322,7 +322,7 @@ internal static class HostScreenInitializer
                 },
             })),
         };
-        return EngineCore.elffy_create_bind_group(screen, &desc);
+        return EngineCore.CreateBindGroup(screen, &desc);
     }
 
     public unsafe static BufferHandle CreateUniformBuffer<T>(HostScreenHandle screen, Span<T> data) where T : unmanaged
@@ -334,7 +334,7 @@ internal static class HostScreenInitializer
         fixed(byte* p = bytes) {
             var contents = new Slice<byte>(p, (nuint)bytes.Length);
             var usage = wgpu_BufferUsages.UNIFORM | wgpu_BufferUsages.COPY_DST;
-            return EngineCore.elffy_create_buffer_init(screen, contents, usage);
+            return EngineCore.CreateBufferInit(screen, contents, usage);
         }
     }
 
@@ -358,7 +358,7 @@ internal static class HostScreenInitializer
                 },
             }),
         };
-        return EngineCore.elffy_create_bind_group_layout(screen, &desc);
+        return EngineCore.CreateBindGroupLayout(screen, &desc);
     }
 
     public unsafe static BindGroupHandle CreateUniformBindGroup(
@@ -380,7 +380,7 @@ internal static class HostScreenInitializer
                 },
             })),
         };
-        return EngineCore.elffy_create_bind_group(screen, &desc);
+        return EngineCore.CreateBindGroup(screen, &desc);
     }
 
     public unsafe static (
@@ -399,7 +399,7 @@ internal static class HostScreenInitializer
         fixed(TVertex* v = vertices) {
             nuint bytelen = (nuint)sizeof(TVertex) * (nuint)vertices.Length;
             var contents = new Slice<byte>(v, bytelen);
-            vertexBuffer = EngineCore.elffy_create_buffer_init(screen, contents, wgpu_BufferUsages.VERTEX);
+            vertexBuffer = EngineCore.CreateBufferInit(screen, contents, wgpu_BufferUsages.VERTEX);
             vertexCount = (uint)vertices.Length;
         }
 
@@ -409,7 +409,7 @@ internal static class HostScreenInitializer
         fixed(uint* i = indices) {
             nuint bytelen = (nuint)sizeof(uint) * (nuint)indices.Length;
             var contents = new Slice<byte>(i, bytelen);
-            indexBuffer = EngineCore.elffy_create_buffer_init(screen, contents, wgpu_BufferUsages.INDEX);
+            indexBuffer = EngineCore.CreateBufferInit(screen, contents, wgpu_BufferUsages.INDEX);
             indexCount = (uint)indices.Length;
         }
 

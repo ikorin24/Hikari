@@ -8,42 +8,72 @@ using System;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics;
 
 namespace WgpuSample.Bind;
 
-/// <summary>Opaque wrapper of a pointer</summary>
+/// <summary>Opaque wrapper of a native pointer</summary>
 [StructLayout(LayoutKind.Sequential)]
-internal unsafe readonly struct Handle : IEquatable<Handle>
+internal unsafe readonly struct NativePointer : IEquatable<NativePointer>
 {
     private readonly void* _handle;
 
-    internal static Handle InvalidHandle => default;
+    internal static NativePointer InvalidHandle => default;
+
+    private NativePointer(void* p) => _handle = p;
 
     public void* AsPointer() => _handle;
 
-    public override bool Equals(object? obj) => obj is Handle handle && Equals(handle);
+    public override bool Equals(object? obj) => obj is NativePointer handle && Equals(handle);
 
-    public bool Equals(Handle other) => _handle == other._handle;
+    public bool Equals(NativePointer other) => _handle == other._handle;
 
     public override int GetHashCode() => ((IntPtr)_handle).GetHashCode();
 
-    public static bool operator ==(Handle left, Handle right) => left.Equals(right);
+    public static bool operator ==(NativePointer left, NativePointer right) => left.Equals(right);
 
-    public static bool operator !=(Handle left, Handle right) => !(left == right);
+    public static bool operator !=(NativePointer left, NativePointer right) => !(left == right);
 
     public override string ToString() => ((IntPtr)_handle).ToString();
+
+    public unsafe static implicit operator NativePointer(void* nativePtr) => new(nativePtr);
 }
 
 internal interface IHandle
 {
-    Handle Handle { get; }
+    NativePointer Handle { get; }
 }
 
 internal interface IHandle<TSelf> :
     IHandle
     where TSelf : unmanaged, IHandle<TSelf>
 {
-    static abstract TSelf InvalidHandle { get; }
+    static abstract TSelf DestroyedHandle { get; }
+    unsafe static abstract implicit operator TSelf(void* nativePtr);
+}
+
+internal static class HandleExtensions
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsDestroyed<THandle>(this THandle handle)
+        where THandle : unmanaged, IHandle<THandle>, IEquatable<THandle>
+    {
+        return handle.Equals(THandle.DestroyedHandle);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
+    public static void ThrowIfDestroyed<THandle>(this THandle handle)
+        where THandle : unmanaged, IHandle<THandle>, IEquatable<THandle>
+    {
+        if(handle.Equals(THandle.DestroyedHandle)) {
+            Throw();
+
+            [DoesNotReturn]
+            [DebuggerHidden]
+            static void Throw() => throw new InvalidOperationException($"The handle is already destroyed (handle type '{typeof(THandle).Name}')");
+        }
+    }
 }
 
 internal enum WindowStyle
@@ -53,12 +83,33 @@ internal enum WindowStyle
     Fullscreen = 2,
 }
 
-internal record struct HostScreenHandle(Handle Handle);
-internal record struct RenderPassHandle(Handle Handle);
-internal record struct BindGroupLayoutHandle(Handle Handle);
-internal record struct BindGroupHandle(Handle Handle);
-internal record struct BufferHandle(Handle Handle)
+internal record struct HostScreenHandle(NativePointer Handle) : IHandle<HostScreenHandle>
 {
+    public static HostScreenHandle DestroyedHandle => default;
+    public unsafe static implicit operator HostScreenHandle(void* nativePtr) => new(nativePtr);
+}
+
+internal readonly ref struct RenderPassRef
+{
+    private readonly NativePointer _p;
+}
+internal record struct BindGroupLayoutHandle(NativePointer Handle) : IHandle<BindGroupLayoutHandle>
+{
+    public static BindGroupLayoutHandle DestroyedHandle => default;
+    public unsafe static implicit operator BindGroupLayoutHandle(void* nativePtr) => new(nativePtr);
+}
+
+internal record struct BindGroupHandle(NativePointer Handle) : IHandle<BindGroupHandle>
+{
+    public static BindGroupHandle DestroyedHandle => default;
+    public unsafe static implicit operator BindGroupHandle(void* nativePtr) => new(nativePtr);
+}
+
+internal record struct BufferHandle(NativePointer Handle) : IHandle<BufferHandle>
+{
+    public static BufferHandle DestroyedHandle => default;
+    public unsafe static implicit operator BufferHandle(void* nativePtr) => new(nativePtr);
+
     public BufferBinding AsEntriesBinding() => new BufferBinding
     {
         buffer = this,
@@ -66,25 +117,61 @@ internal record struct BufferHandle(Handle Handle)
         size = 0,
     };
 }
-internal record struct RenderPipelineHandle(Handle Handle);
-internal record struct SamplerHandle(Handle Handle);
-internal record struct PipelineLayoutHandle(Handle Handle);
-internal record struct ShaderModuleHandle(Handle Handle);
-internal record struct TextureHandle(Handle Handle);
-internal record struct TextureViewHandle(Handle Handle);
+internal record struct RenderPipelineHandle(NativePointer Handle) : IHandle<RenderPipelineHandle>
+{
+    public static RenderPipelineHandle DestroyedHandle => default;
+    public unsafe static implicit operator RenderPipelineHandle(void* nativePtr) => new(nativePtr);
+}
+
+internal record struct SamplerHandle(NativePointer Handle) : IHandle<SamplerHandle>
+{
+    public static SamplerHandle DestroyedHandle => default;
+    public unsafe static implicit operator SamplerHandle(void* nativePtr) => new(nativePtr);
+}
+
+internal record struct PipelineLayoutHandle(NativePointer Handle) : IHandle<PipelineLayoutHandle>
+{
+    public static PipelineLayoutHandle DestroyedHandle => default;
+    public unsafe static implicit operator PipelineLayoutHandle(void* nativePtr) => new(nativePtr);
+}
+
+internal record struct ShaderModuleHandle(NativePointer Handle) : IHandle<ShaderModuleHandle>
+{
+    public static ShaderModuleHandle DestroyedHandle => default;
+    public unsafe static implicit operator ShaderModuleHandle(void* nativePtr) => new(nativePtr);
+}
+
+internal record struct TextureHandle(NativePointer Handle) : IHandle<TextureHandle>
+{
+    public static TextureHandle DestroyedHandle => default;
+    public unsafe static implicit operator TextureHandle(void* nativePtr) => new(nativePtr);
+}
+
+internal record struct TextureViewHandle(NativePointer Handle) : IHandle<TextureViewHandle>
+{
+    public static TextureViewHandle DestroyedHandle => default;
+    public unsafe static implicit operator TextureViewHandle(void* nativePtr) => new(nativePtr);
+}
 
 internal unsafe readonly struct HostScreenInitFn
 {
     private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> _func;
     public HostScreenInitFn(delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> f) => _func = f;
-    public static implicit operator HostScreenInitFn(delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> f) => new(f);
+}
+
+internal unsafe readonly struct DispatchErrFn
+{
+    private readonly delegate* unmanaged[Cdecl]<ErrMessageId, u8*, nuint, void> _func;
+    public DispatchErrFn(delegate* unmanaged[Cdecl]<ErrMessageId, u8*, nuint, void> f) => _func = f;
 }
 
 internal unsafe struct EngineCoreConfig
 {
     public required HostScreenInitFn on_screen_init;
-    public required delegate* unmanaged[Cdecl]<u32, u8*, nuint, void> err_dispatcher;
+    public required DispatchErrFn err_dispatcher;
 }
+
+internal record struct ErrMessageId(nuint Value);
 
 internal struct HostScreenConfig
 {
@@ -103,7 +190,7 @@ internal struct HostScreenInfo
 
 internal unsafe struct HostScreenCallbacks
 {
-    public required delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassHandle, void> on_render;
+    public required delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassRef, void> on_render;
 }
 
 internal struct BindGroupLayoutDescriptor

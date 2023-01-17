@@ -37,8 +37,8 @@ pub(crate) fn set_err_dispatcher(dispatcher: DispatchErrFn) {
     }
 }
 
-pub(crate) fn dispatch_err(err: impl Debug) {
-    let message = format!("{:?}", err);
+pub(crate) fn dispatch_err(err: impl std::fmt::Display) {
+    let message = format!("{}", err);
     increment_tls_err_count();
     let id = generate_message_id();
     if let Some(err_dispatcher) = get_err_dispatcher() {

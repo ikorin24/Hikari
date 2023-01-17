@@ -1,4 +1,6 @@
 ﻿#nullable enable
+using u8 = System.Byte;
+using u32 = System.UInt32;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -7,15 +9,14 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using WgpuSample.Bind;
 using System.Text;
-using System.Collections.Concurrent;
-
-[assembly: DisableRuntimeMarshalling]
+using System.Collections.Generic;
 
 namespace WgpuSample
 {
     internal unsafe static partial class EngineCore
     {
-        private static readonly ConcurrentDictionary<uint, string> _errorMessageStore = new();
+        [ThreadStatic]
+        private static List<NativeError>? _nativeErrorStore;
         private static EngineConfig _config;
         private static int _isStarted = 0;
 
@@ -35,7 +36,7 @@ namespace WgpuSample
             var engineConfig = new EngineCoreConfig
             {
                 on_screen_init = new(&OnInit),
-                err_dispatcher = &DispatchError,
+                err_dispatcher = new(&DispatchError),
             };
             var screenConfig = new HostScreenConfig
             {
@@ -60,60 +61,322 @@ namespace WgpuSample
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void DispatchError(uint messageId, byte* messagePtr, nuint messageByteLen)
+            static void DispatchError(ErrMessageId id, byte* messagePtr, nuint messageByteLen)
             {
-                const int MaxByteLen = 1024 * 1024;
-                var len = (int)nuint.Min(messageByteLen, MaxByteLen);
+                var len = (int)nuint.Min(messageByteLen, (nuint)int.MaxValue);
                 var message = Encoding.UTF8.GetString(messagePtr, len);
-                _errorMessageStore[messageId] = message;
+                _nativeErrorStore ??= new();
+                _nativeErrorStore.Add(new(id, message));
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void OnRender(HostScreenHandle screen, RenderPassHandle render_pass) => _config.OnRender(screen, render_pass);
+            static void OnRender(HostScreenHandle screen, RenderPassRef render_pass) => _config.OnRender(screen, render_pass);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void CheckResult(uint result)
+        [DebuggerHidden]
+        public static void WriteTexture(
+            HostScreenHandle screen,
+            ImageCopyTexture* texture,
+            Slice<u8> data,
+            wgpu_ImageDataLayout* data_layout,
+            wgpu_Extent3d* size)
+            => elffy_write_texture(screen, texture, data, data_layout, size).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static BindGroupLayoutHandle CreateBindGroupLayout(
+            HostScreenHandle screen,
+            BindGroupLayoutDescriptor* desc)
+            => elffy_create_bind_group_layout(screen, desc).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DestroyBindGroupLayout(
+            BindGroupLayoutHandle handle)
         {
-            if(result != 0) {
-                ThrowNativeError(result);
+            handle.ThrowIfDestroyed();
+            elffy_destroy_bind_group_layout(handle);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static BindGroupHandle CreateBindGroup(
+            HostScreenHandle screen,
+            BindGroupDescriptor* desc)
+            => elffy_create_bind_group(screen, desc).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DestroyBindGroup(
+            BindGroupHandle handle)
+        {
+            handle.ThrowIfDestroyed();
+            elffy_destroy_bind_group(handle);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static PipelineLayoutHandle CreatePipelineLayout(
+            HostScreenHandle screen,
+            PipelineLayoutDescriptor* desc)
+            => elffy_create_pipeline_layout(screen, desc).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DestroyPipelineLayout(
+            PipelineLayoutHandle handle)
+        {
+            handle.ThrowIfDestroyed();
+            elffy_destroy_pipeline_layout(handle);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static RenderPipelineHandle CreateRenderPipeline(
+            HostScreenHandle screen,
+            RenderPipelineDescription* desc)
+            => elffy_create_render_pipeline(screen, desc).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DestroyRenderPipeline(
+            RenderPipelineHandle handle)
+        {
+            handle.ThrowIfDestroyed();
+            elffy_destroy_render_pipeline(handle);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static BufferHandle CreateBufferInit(
+            HostScreenHandle screen,
+            Slice<u8> contents,
+            wgpu_BufferUsages usage)
+            => elffy_create_buffer_init(screen, contents, usage).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DestroyBuffer(
+            BufferHandle handle)
+        {
+            handle.ThrowIfDestroyed();
+            elffy_destroy_buffer(handle);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static SamplerHandle CreateSampler(
+            HostScreenHandle screen,
+            SamplerDescriptor* desc)
+            => elffy_create_sampler(screen, desc).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DestroySampler(
+            SamplerHandle handle)
+        {
+            handle.ThrowIfDestroyed();
+            elffy_destroy_sampler(handle);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static ShaderModuleHandle CreateShaderModule(
+            HostScreenHandle screen,
+            Slice<u8> shader_source)
+            => elffy_create_shader_module(screen, shader_source).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DestroyShaderModule(
+            ShaderModuleHandle handle)
+        {
+            handle.ThrowIfDestroyed();
+            elffy_destroy_shader_module(handle);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static TextureHandle CreateTexture(
+            HostScreenHandle screen,
+            TextureDescriptor* desc)
+            => elffy_create_texture(screen, desc).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static TextureHandle CreateTextureWithData(
+            HostScreenHandle screen,
+            TextureDescriptor* desc,
+            Slice<u8> data)
+            => elffy_create_texture_with_data(screen, desc, data).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DestroyTexture(
+            TextureHandle handle)
+        {
+            handle.ThrowIfDestroyed();
+            elffy_destroy_texture(handle);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static TextureViewHandle CreateTextureView(
+            HostScreenHandle screen,
+            TextureHandle texture,
+            TextureViewDescriptor* desc)
+            => elffy_create_texture_view(screen, texture, desc).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DestroyTextureView(
+            TextureViewHandle handle)
+        {
+            handle.ThrowIfDestroyed();
+            elffy_destroy_texture_view(handle);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void SetPipeline(
+            RenderPassRef render_pass,
+            RenderPipelineHandle render_pipeline)
+        {
+            render_pipeline.ThrowIfDestroyed();
+            elffy_set_pipeline(render_pass, render_pipeline).Validate();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void SetBindGroup(
+            RenderPassRef render_pass,
+            u32 index,
+            BindGroupHandle bind_group)
+        {
+            bind_group.ThrowIfDestroyed();
+            elffy_set_bind_group(render_pass, index, bind_group).Validate();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DrawBuffer(
+            RenderPassRef render_pass,
+            DrawBufferArg* arg)
+            => elffy_draw_buffer(render_pass, arg).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DrawBufferIndexed(
+            RenderPassRef render_pass,
+            DrawBufferIndexedArg* arg)
+            => elffy_draw_buffer_indexed(render_pass, arg).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DrawBuffersIndexed(
+            RenderPassRef render_pass,
+            DrawBuffersIndexedArg* arg)
+            => elffy_draw_buffers_indexed(render_pass, arg).Validate();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        private static void ThrowNativeErrorIfNotZero(nuint errorCount)
+        {
+            if(errorCount != 0) {
+                ThrowNativeError(errorCount);
 
                 [DoesNotReturn]
-                static void ThrowNativeError(uint messageId)
+                [DebuggerHidden]
+                static void ThrowNativeError(nuint errorCount)
                 {
-                    Debug.Assert(messageId != 0);
-                    if(_errorMessageStore.TryRemove(messageId, out var message) == false) {
-                        message = "Some error occurred in the native code, but the error message could not be retrieved.";
+                    Debug.Assert(errorCount != 0);
+                    var store = _nativeErrorStore;
+                    string[] messages;
+                    if(store == null) {
+                        messages = new string[1] { "Some error occurred in the native code, but the error message could not be retrieved." };
                     }
-
-                    throw new Exception(message);
+                    else {
+                        Debug.Assert((nuint)store.Count == errorCount);
+                        messages = new string[store.Count];
+                        for(int i = 0; i < messages.Length; i++) {
+                            messages[i] = store[i].Message;
+                        }
+                        store.Clear();
+                    }
+                    throw new EngineCoreException(messages);
                 }
             }
+        }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private readonly struct ApiResult
+        {
+            private readonly nuint _errorCount;
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            [DebuggerHidden]
+            public void Validate() => EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private readonly struct ApiRefResult<THandle> where THandle : unmanaged, IHandle<THandle>
+        {
+            // (_errorCount, _nativePtr) is (0, not null) or (not 0, null)
+
+            private readonly uint _errorCount;
+            private readonly void* _nativePtr;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            [DebuggerHidden]
+            public THandle Validate()
+            {
+                Debug.Assert((_errorCount == 0 && _nativePtr != null) || (_errorCount > 0 && _nativePtr == null));
+                EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
+                Debug.Assert(_errorCount == 0);
+                Debug.Assert(_nativePtr != null);
+                return _nativePtr;
+            }
+        }
+
+        private record struct NativeError(ErrMessageId Id, string Message);
+    }
+
+    public sealed class EngineCoreException : Exception
+    {
+        private readonly string[] _messages;
+
+        public ReadOnlyMemory<string> Messages => _messages;
+
+        internal EngineCoreException(string[] messages) : base(BuildExceptionMessage(messages))
+        {
+            _messages = messages;
+        }
+
+        private static string BuildExceptionMessage(string[] messages)
+        {
+            if(messages.Length == 1) {
+                return messages[0];
+            }
+            else {
+                var sb = new StringBuilder($"Multiple errors occurred in the native code. (ErrorCount: {messages.Length}) \n");
+                foreach(var m in messages) {
+                    sb.AppendLine(m);
+                }
+                return sb.ToString();
+            }
         }
     }
 
     internal readonly struct EngineConfig
     {
         public required EngineCoreStartAction OnStart { get; init; }
-        public required Action<HostScreenHandle, RenderPassHandle> OnRender { get; init; }
+        public required EngineCoreRenderAction OnRender { get; init; }
     }
 
     internal delegate void EngineCoreStartAction(HostScreenHandle screen, in HostScreenInfo info);
+    internal delegate void EngineCoreRenderAction(HostScreenHandle screen, RenderPassRef renderPass);
 
-
-
-    public sealed class NativeApiException : Exception
-    {
-        public NativeApiException()
-        {
-        }
-
-        public NativeApiException(string message) : base(message)
-        {
-        }
-    }
 
     public sealed class Never
     {
