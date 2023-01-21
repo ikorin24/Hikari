@@ -3,7 +3,6 @@ use crate::types::*;
 use pollster::FutureExt;
 use std::cell::Cell;
 use std::error::Error;
-// use std::ptr;
 use wgpu::util::DeviceExt;
 use winit;
 use winit::event_loop::EventLoopWindowTarget;
@@ -234,6 +233,10 @@ impl HostScreen {
     ) {
         self.queue
             .write_texture(texture.to_wgpu_type(), data, *data_layout, *size)
+    }
+
+    pub fn write_buffer(&self, buffer: &wgpu::Buffer, offset: u64, data: &[u8]) {
+        self.queue.write_buffer(buffer, offset, data)
     }
 
     pub fn create_bind_group_layout(

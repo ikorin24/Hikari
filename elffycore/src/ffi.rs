@@ -179,6 +179,17 @@ extern "cdecl" fn elffy_destroy_texture_view(texture_view: Box<wgpu::TextureView
 }
 
 #[no_mangle]
+extern "cdecl" fn elffy_write_buffer(
+    screen: &HostScreen,
+    buffer: &wgpu::Buffer,
+    offset: u64,
+    data: Slice<u8>,
+) -> ApiResult {
+    screen.write_buffer(buffer, offset, &data);
+    make_result()
+}
+
+#[no_mangle]
 extern "cdecl" fn elffy_set_pipeline<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
     render_pipeline: &'a wgpu::RenderPipeline,

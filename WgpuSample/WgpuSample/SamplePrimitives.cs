@@ -1,10 +1,8 @@
 ﻿#nullable enable
-using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using SkiaSharp;
 
-namespace WgpuSample;
+namespace Elffy;
 
 public static class SamplePrimitives
 {
@@ -39,30 +37,3 @@ public static class SamplePrimitives
         }
     }
 }
-
-[StructLayout(LayoutKind.Sequential)]
-public struct PosColorVertex
-{
-    public Vec3 Position;
-    public Vec2 UV;
-    public Vec3 Color;
-
-    public PosColorVertex(Vec3 pos, Vec2 uv, Vec3 color)
-    {
-        Position = pos;
-        UV = uv;
-        Color = color;
-    }
-}
-
-[StructLayout(LayoutKind.Sequential)]
-public record struct Vec2(float X, float Y);
-
-[StructLayout(LayoutKind.Sequential)]
-public record struct Vec3(float X, float Y, float Z);
-
-[StructLayout(LayoutKind.Sequential)]
-public record struct Vec4(float X, float Y, float Z, float W);
-
-//[StructLayout(LayoutKind.Sequential)]
-//public record struct Color3(float R, float G, float B);

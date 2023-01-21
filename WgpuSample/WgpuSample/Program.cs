@@ -2,9 +2,9 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using WgpuSample.Bind;
+using Elffy.Bind;
 
-namespace WgpuSample;
+namespace Elffy;
 
 internal class Program
 {
@@ -53,7 +53,7 @@ internal class Program
         _textureBindGroup = HostScreenInitializer.CreateTextureBindGroup(screen, _textureBindGroupLayout, _textureView, _sampler);
 
         // Buffer (uniform)
-        _uniformBuffer = HostScreenInitializer.CreateUniformBuffer(screen, stackalloc Vec4[] { new Vec4(1, 0, 0, 1) });
+        _uniformBuffer = HostScreenInitializer.CreateUniformBuffer(screen, stackalloc Vector4[] { new Vector4(1, 0, 0, 1) });
 
         // BindGroupLayout (uniform)
         _uniformBindGroupLayout = HostScreenInitializer.CreateUniformBindGroupLayout(screen);
@@ -134,6 +134,18 @@ internal class Program
 
     private static unsafe void OnRender(HostScreenHandle screen, RenderPassRef renderPass)
     {
+        var color = new Vector4
+        {
+            X = Random.Shared.NextSingle(),
+            Y = 0,
+            Z = 0,
+            W = 0,
+        };
+        var data = new Slice<byte>(&color, (nuint)sizeof(Vector4));
+        //var x = Random.Shared.NextSingle();
+        //var data = new Slice<byte>(&x, sizeof(float));
+        EngineCore.WriteBuffer(screen, _uniformBuffer, 0, data);
+
         EngineCore.SetPipeline(renderPass, _renderPipeline);
         EngineCore.SetBindGroup(renderPass, 0, _textureBindGroup);
         EngineCore.SetBindGroup(renderPass, 1, _uniformBindGroup);

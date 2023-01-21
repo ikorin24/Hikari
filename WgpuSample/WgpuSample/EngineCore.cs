@@ -1,22 +1,27 @@
 ﻿#nullable enable
 using u8 = System.Byte;
 using u32 = System.UInt32;
+using u64 = System.UInt64;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
-using WgpuSample.Bind;
+using Elffy.Bind;
 using System.Text;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
+using System.Collections.Concurrent;
 
-namespace WgpuSample
+namespace Elffy
 {
     internal unsafe static partial class EngineCore
     {
         [ThreadStatic]
         private static List<NativeError>? _nativeErrorStore;
+        [ThreadStatic]
+        private static Action<IntPtr, nuint>? _writeBufferWriterTemp;
         private static EngineConfig _config;
         private static int _isStarted = 0;
 
@@ -235,6 +240,19 @@ namespace WgpuSample
         {
             handle.ThrowIfDestroyed();
             elffy_destroy_texture_view(handle);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void WriteBuffer(
+            HostScreenHandle screen,
+            BufferHandle buffer,
+            u64 offset,
+            Slice<u8> data)
+        {
+            screen.ThrowIfDestroyed();
+            buffer.ThrowIfDestroyed();
+            elffy_write_buffer(screen, buffer, offset, data).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

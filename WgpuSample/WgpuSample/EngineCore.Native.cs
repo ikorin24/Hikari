@@ -1,14 +1,15 @@
 ﻿#nullable enable
 using u8 = System.Byte;
 using u32 = System.UInt32;
+using u64 = System.UInt64;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using WgpuSample.Bind;
+using Elffy.Bind;
 
 [assembly: DisableRuntimeMarshalling]
 
-namespace WgpuSample;
+namespace Elffy;
 
 static unsafe partial class EngineCore
 {
@@ -116,6 +117,13 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_texture_view(
         TextureViewHandle handle);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_write_buffer(
+        HostScreenHandle screen,
+        BufferHandle buffer,
+        u64 offset,
+        Slice<u8> data);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_set_pipeline(
