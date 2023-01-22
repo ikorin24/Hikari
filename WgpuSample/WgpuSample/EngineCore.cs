@@ -320,27 +320,6 @@ namespace Elffy
             elffy_draw_indexed(render_pass, indices, base_vertex, instances).Validate();
         }
 
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //[DebuggerHidden]
-        //public static void DrawBuffer(
-        //    RenderPassRef render_pass,
-        //    DrawBufferArg* arg)
-        //    => elffy_draw_buffer(render_pass, arg).Validate();
-
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //[DebuggerHidden]
-        //public static void DrawBufferIndexed(
-        //    RenderPassRef render_pass,
-        //    DrawBufferIndexedArg* arg)
-        //    => elffy_draw_buffer_indexed(render_pass, arg).Validate();
-
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //[DebuggerHidden]
-        //public static void DrawBuffersIndexed(
-        //    RenderPassRef render_pass,
-        //    DrawBuffersIndexedArg* arg)
-        //    => elffy_draw_buffers_indexed(render_pass, arg).Validate();
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         private static void ThrowNativeErrorIfNotZero(nuint errorCount)

@@ -15,72 +15,53 @@ internal class Program
         OnRender = OnRender,
     });
 
-    private static PipelineLayoutHandle _pipelineLayout;
-    private static ShaderModuleHandle _shaderModule;
-    private static RenderPipelineHandle _renderPipeline;
-
-    private static BufferHandle _vertexBuffer;
-    private static uint _vertexCount;
-    private static BufferHandle _indexBuffer;
-    private static uint _indexCount;
-    private static wgpu_IndexFormat _indexFormat;
-
-    private static TextureHandle _texture;
-    private static TextureViewHandle _textureView;
-    private static SamplerHandle _sampler;
-    private static BindGroupLayoutHandle _textureBindGroupLayout;
-    private static BindGroupHandle _textureBindGroup;
-
-    private static BufferHandle _uniformBuffer;
-    private static BindGroupLayoutHandle _uniformBindGroupLayout;
-    private static BindGroupHandle _uniformBindGroup;
-
-    private static BufferHandle _instanceBuffer;
-    private static uint _instanceCount;
+    private static State _state;
 
     private static unsafe void OnStart(HostScreenHandle screen, in HostScreenInfo info)
     {
         var surfaceFormat = info.surface_format.Unwrap();
         System.Diagnostics.Debug.WriteLine(info.backend);
 
-        // Texture
-        _texture = HostScreenInitializer.CreateTexture(screen, "pic.png");
-
-        // TextureView, Sampler
-        (_textureView, _sampler) = HostScreenInitializer.CreateTextureViewSampler(screen, _texture);
-
         // BindGroupLayout
-        _textureBindGroupLayout = HostScreenInitializer.CreateTextureBindGroupLayout(screen);
-
-        // BindGroup
-        _textureBindGroup = HostScreenInitializer.CreateTextureBindGroup(screen, _textureBindGroupLayout, _textureView, _sampler);
-
-        // Buffer (uniform)
-        _uniformBuffer = HostScreenInitializer.CreateUniformBuffer(screen, stackalloc Vector4[] { new Vector4(1, 0, 0, 1) });
+        var textureBindGroupLayout = HostScreenInitializer.CreateTextureBindGroupLayout(screen);
 
         // BindGroupLayout (uniform)
-        _uniformBindGroupLayout = HostScreenInitializer.CreateUniformBindGroupLayout(screen);
-
-        // BindGroup (uniform)
-        _uniformBindGroup = HostScreenInitializer.CreateUniformBindGroup(screen, _uniformBindGroupLayout, _uniformBuffer);
+        var uniformBindGroupLayout = HostScreenInitializer.CreateUniformBindGroupLayout(screen);
 
         // PipelineLayout
+        PipelineLayoutHandle pipelineLayout;
         {
             var desc = new PipelineLayoutDescriptor
             {
                 bind_group_layouts = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutHandle[]
                 {
-                    _textureBindGroupLayout,
-                    _uniformBindGroupLayout,
+                    textureBindGroupLayout,
+                    uniformBindGroupLayout,
                 }),
             };
-            _pipelineLayout = EngineCore.CreatePipelineLayout(screen, &desc);
+            pipelineLayout = EngineCore.CreatePipelineLayout(screen, &desc);
         }
 
+        // Texture
+        var texture = HostScreenInitializer.CreateTexture(screen, "pic.png");
+
+        // TextureView, Sampler
+        var (textureView, sampler) = HostScreenInitializer.CreateTextureViewSampler(screen, texture);
+
+        // BindGroup
+        var textureBindGroup = HostScreenInitializer.CreateTextureBindGroup(screen, textureBindGroupLayout, textureView, sampler);
+
+        // Buffer (uniform)
+        var uniformBuffer = HostScreenInitializer.CreateUniformBuffer(screen, stackalloc Vector4[] { new Vector4(1, 0, 0, 1) });
+
+        // BindGroup (uniform)
+        var uniformBindGroup = HostScreenInitializer.CreateUniformBindGroup(screen, uniformBindGroupLayout, uniformBuffer);
+
         // ShaderModule
-        _shaderModule = EngineCore.CreateShaderModule(screen, ShaderSource);
+        var shaderModule = EngineCore.CreateShaderModule(screen, ShaderSource);
 
         // RenderPipeline
+        RenderPipelineHandle renderPipeline;
         {
             var vertexBufferLayout = new VertexBufferLayout
             {
@@ -99,16 +80,17 @@ internal class Program
                 step_mode = wgpu_VertexStepMode.Instance,
                 attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[1]
                 {
-                    new() { format = wgpu_VertexFormat.Uint32, offset = 0, shader_location = 3 },
+                    //new() { format = wgpu_VertexFormat.Uint32, offset = 0, shader_location = 3 },
+                    new() { format = wgpu_VertexFormat.Float32x3, offset = 0, shader_location = 3 },
                 }),
             };
 
             var desc = new RenderPipelineDescriptor
             {
-                layout = _pipelineLayout,
+                layout = pipelineLayout,
                 vertex = new()
                 {
-                    module = _shaderModule,
+                    module = shaderModule,
                     entry_point = Slice.FromFixedSpanUnsafe("vs_main"u8),
                     buffers = Slice.FromFixedSpanUnsafe(stackalloc VertexBufferLayout[]
                     {
@@ -118,7 +100,7 @@ internal class Program
                 },
                 fragment = Opt.Some(new FragmentState
                 {
-                    module = _shaderModule,
+                    module = shaderModule,
                     entry_point = Slice.FromFixedSpanUnsafe("fs_main"u8),
                     targets = Slice.FromFixedSingleUnsafe(UnsafeEx.StackPointer(
                         Opt.Some(new ColorTargetState()
@@ -137,13 +119,18 @@ internal class Program
                     polygon_mode = wgpu_PolygonMode.Fill,
                 },
             };
-            _renderPipeline = EngineCore.CreateRenderPipeline(screen, &desc);
+            renderPipeline = EngineCore.CreateRenderPipeline(screen, &desc);
         }
 
         // Buffer (vertex, index)
+        BufferHandle vertexBuffer;
+        uint vertexCount;
+        BufferHandle indexBuffer;
+        uint indexCount;
+        wgpu_IndexFormat indexFormat;
         {
             var (vertices, indices) = SamplePrimitives.Rectangle();
-            (_vertexBuffer, _vertexCount, _indexBuffer, _indexCount, _indexFormat) =
+            (vertexBuffer, vertexCount, indexBuffer, indexCount, indexFormat) =
                 HostScreenInitializer.CreateVertexIndexBuffer(
                     screen,
                     (ReadOnlySpan<PosColorVertex>)vertices,
@@ -151,23 +138,48 @@ internal class Program
         }
 
         // Buffer (instance)
+        BufferHandle instanceBuffer;
+        uint instanceCount;
         {
             const int InstanceCount = 2;
             var instances = stackalloc InstanceData[InstanceCount]
             {
                 //new() { Value = -0.5f },
                 //new() { Value = 0.5f },
-                new() { Value = 0 },
-                new() { Value = 1 },
+                new() { Value = new Vector3(0f, 0, 0) },
+                new() { Value = new Vector3(0f, 0, 0) },
             };
-            _instanceBuffer = EngineCore.CreateBufferInit(screen, new(&instances, (nuint)sizeof(InstanceData) * InstanceCount), wgpu_BufferUsages.VERTEX);
-            _instanceCount = InstanceCount;
+            instanceBuffer = EngineCore.CreateBufferInit(screen, new Slice<byte>(&instances, (nuint)sizeof(InstanceData) * InstanceCount), wgpu_BufferUsages.VERTEX);
+            instanceCount = InstanceCount;
         }
+
+        _state = new State
+        {
+            PipelineLayout = pipelineLayout,
+            ShaderModule = shaderModule,
+            RenderPipeline = renderPipeline,
+            VertexBuffer = vertexBuffer,
+            VertexCount = vertexCount,
+            IndexBuffer = indexBuffer,
+            IndexCount = indexCount,
+            IndexFormat = indexFormat,
+            InstanceBuffer = instanceBuffer,
+            InstanceCount = instanceCount,
+            Texture = texture,
+            TextureView = textureView,
+            Sampler = sampler,
+            TextureBindGroupLayout = textureBindGroupLayout,
+            TextureBindGroup = textureBindGroup,
+            UniformBuffer = uniformBuffer,
+            UniformBindGroupLayout = uniformBindGroupLayout,
+            UniformBindGroup = uniformBindGroup,
+        };
     }
 
+    //[StructLayout(LayoutKind.Sequential, Size = 4)]
     private struct InstanceData
     {
-        public uint Value;
+        public Vector3 Value;
     }
 
     private static unsafe void OnRender(HostScreenHandle screen, RenderPassRef renderPass)
@@ -180,16 +192,17 @@ internal class Program
             W = 0,
         };
         var data = new Slice<byte>(&color, (nuint)sizeof(Vector4));
-        EngineCore.WriteBuffer(screen, _uniformBuffer, 0, data);
+        EngineCore.WriteBuffer(screen, _state.UniformBuffer, 0, data);
 
-        renderPass.SetPipeline(_renderPipeline);
-        renderPass.SetBindGroup(0, _textureBindGroup);
-        renderPass.SetBindGroup(1, _uniformBindGroup);
+        renderPass.SetPipeline(_state.RenderPipeline);
+        renderPass.SetBindGroup(0, _state.TextureBindGroup);
+        renderPass.SetBindGroup(1, _state.UniformBindGroup);
 
-        renderPass.SetVertexBuffer(0, new(_vertexBuffer, RangeBoundsU64.All));
-        renderPass.SetVertexBuffer(1, new(_instanceBuffer, RangeBoundsU64.All));
-        renderPass.SetIndexBuffer(new(_indexBuffer, RangeBoundsU64.All), _indexFormat);
-        renderPass.DrawIndexed(0..(int)_indexCount, 0, 0..(int)_instanceCount);
+        renderPass.SetVertexBuffer(0, new(_state.VertexBuffer, RangeBoundsU64.All));
+        renderPass.SetVertexBuffer(1, new(_state.InstanceBuffer, RangeBoundsU64.All));
+        renderPass.SetIndexBuffer(new(_state.IndexBuffer, RangeBoundsU64.All), _state.IndexFormat);
+        renderPass.DrawIndexed(0..(int)_state.IndexCount, 0, 0..(int)_state.InstanceCount);
+        //renderPass.DrawIndexed(0..(int)_state.IndexCount, 0, 0..1);
     }
 
     private unsafe static Slice<byte> ShaderSource => Slice.FromFixedSpanUnsafe("""
@@ -199,13 +212,13 @@ internal class Program
             @location(2) color: vec3<f32>,
         };
         struct InstanceData {
-            @location(3) value: u32,
+            @location(3) value: vec3<f32>,
         };
             
         struct VertexOutput {
             @builtin(position) clip_position: vec4<f32>,
-            @location(0) color: vec3<f32>,
-            @location(1) uv: vec2<f32>,
+            //@location(4) color: vec3<f32>,
+            //@location(5) uv: vec2<f32>,
         };
 
         @group(0) @binding(0) var tex: texture_2d<f32>;
@@ -217,28 +230,31 @@ internal class Program
         fn vs_main(vin: VertexInput, instance: InstanceData) -> VertexOutput {
             var vout: VertexOutput;
             //vout.color = vin.color;
-            vout.uv = vin.uv;
+            //vout.uv = vin.uv;
 
             var p: vec3<f32> = vin.pos;
 
-            if instance.value == 0u {
-                //var q = p + vec3<f32>(0.5, 0.5, 0.0);
-                vout.clip_position = vec4<f32>(p, 1.0);
-                vout.color = vec3<f32>(1.0, 0.0, 0.0);
-            }
-            else {
-                var q = p - vec3<f32>(0.5, 0.5, 0.0);
-                vout.clip_position = vec4<f32>(q, 1.0);
-                vout.color = vec3<f32>(0.0, 1.0, 0.0);
-            }
+            vout.clip_position = vec4<f32>(p + instance.value, 1.0);
+            //vout.color = vec3<f32>(1.0, 0.0, 0.0);
+            //vout.color = instance.value;
+            //if instance.value == 0u {
+            //    vout.clip_position = vec4<f32>(p, 1.0);
+            //    vout.color = vec3<f32>(1.0, 0.0, 0.0);
+            //}
+            //else {
+            //    var q = p - vec3<f32>(0.5, 0.5, 0.0);
+            //    vout.clip_position = vec4<f32>(q, 1.0);
+            //    vout.color = vec3<f32>(0.0, 1.0, 0.0);
+            //}
             return vout;
         }
             
         @fragment
         fn fs_main(fin: VertexOutput) -> @location(0) vec4<f32> {
-            var tex_color: vec4<f32> = textureSample(tex, s, fin.uv);
-            //return (tex_color + data) * 0.5;
-            return vec4<f32>(fin.color, 1.0);
+            //var tex_color: vec4<f32> = textureSample(tex, s, fin.uv);
+            ////return (tex_color + data) * 0.5;
+            //return vec4<f32>(fin.color, 1.0);
+            return vec4<f32>(1.0, 1.0, 1.0, 1.0);
         }
             
         """u8);
@@ -463,6 +479,32 @@ internal static class HostScreenInitializer
             IndexFormat: indexFormat
         );
     }
+}
+
+internal struct State
+{
+    public required PipelineLayoutHandle PipelineLayout;
+    public required ShaderModuleHandle ShaderModule;
+    public required RenderPipelineHandle RenderPipeline;
+
+    public required BufferHandle VertexBuffer;
+    public required uint VertexCount;
+    public required BufferHandle IndexBuffer;
+    public required uint IndexCount;
+    public required wgpu_IndexFormat IndexFormat;
+
+    public required TextureHandle Texture;
+    public required TextureViewHandle TextureView;
+    public required SamplerHandle Sampler;
+    public required BindGroupLayoutHandle TextureBindGroupLayout;
+    public required BindGroupHandle TextureBindGroup;
+
+    public required BufferHandle UniformBuffer;
+    public required BindGroupLayoutHandle UniformBindGroupLayout;
+    public required BindGroupHandle UniformBindGroup;
+
+    public required BufferHandle InstanceBuffer;
+    public required uint InstanceCount;
 }
 
 

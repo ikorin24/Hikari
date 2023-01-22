@@ -949,6 +949,13 @@ internal struct RangeU32
     public required u32 start;
     public required u32 end_excluded;
 
+    [SetsRequiredMembers]
+    public RangeU32(u32 start, u32 end_excluded)
+    {
+        this.start = start;
+        this.end_excluded = end_excluded;
+    }
+
     public static implicit operator RangeU32(Range range)
     {
         return new()
