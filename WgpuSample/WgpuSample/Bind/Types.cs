@@ -90,13 +90,6 @@ internal readonly record struct HostScreenHandle(NativePointer Pointer) : IHandl
     public unsafe static implicit operator HostScreenHandle(void* nativePtr) => new(nativePtr);
 }
 
-internal readonly ref struct RenderPassRef
-{
-#pragma warning disable IDE0051
-    private readonly NativePointer _p;
-#pragma warning restore IDE0051
-}
-
 internal readonly record struct BindGroupLayoutHandle(NativePointer Pointer) : IHandle<BindGroupLayoutHandle>
 {
     public static BindGroupLayoutHandle DestroyedHandle => default;
@@ -333,7 +326,7 @@ internal struct PipelineLayoutDescriptor
     public required Slice<BindGroupLayoutHandle> bind_group_layouts;
 }
 
-internal struct RenderPipelineDescription
+internal struct RenderPipelineDescriptor
 {
     public required PipelineLayoutHandle layout;
     public required VertexState vertex;
@@ -345,7 +338,7 @@ internal struct VertexState
 {
     public required ShaderModuleHandle module;
     public required Slice<u8> entry_point;
-    public required Slice<VertexBufferLayout> inputs;
+    public required Slice<VertexBufferLayout> buffers;
 }
 
 internal struct FragmentState
@@ -620,6 +613,12 @@ internal struct wgpu_ImageDataLayout
     public required u32 rows_per_image;
 }
 
+internal enum wgpu_VertexStepMode : u32
+{
+    Vertex = 0,
+    Instance = 1,
+}
+
 internal struct BindingType
 {
     public required BindingTypeTag tag;
@@ -807,7 +806,8 @@ internal enum TextureDimension
 
 internal struct VertexBufferLayout
 {
-    public required u64 vertex_size;
+    public required u64 array_stride;
+    public required wgpu_VertexStepMode step_mode;
     public required Slice<wgpu_VertexAttribute> attributes;
 }
 
@@ -848,6 +848,13 @@ internal struct BufSlice
 {
     public required BufferHandle buffer;
     public required RangeBoundsU64 range;
+
+    [SetsRequiredMembers]
+    public BufSlice(BufferHandle buffer, RangeBoundsU64 range)
+    {
+        this.buffer = buffer;
+        this.range = range;
+    }
 }
 
 internal unsafe readonly struct NullableRef<T> where T : unmanaged
@@ -941,6 +948,15 @@ internal struct RangeU32
 {
     public required u32 start;
     public required u32 end_excluded;
+
+    public static implicit operator RangeU32(Range range)
+    {
+        return new()
+        {
+            start = (u32)range.Start.Value,
+            end_excluded = (u32)range.End.Value,
+        };
+    }
 }
 
 internal struct RangeBoundsU64

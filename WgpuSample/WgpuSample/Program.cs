@@ -35,6 +35,9 @@ internal class Program
     private static BindGroupLayoutHandle _uniformBindGroupLayout;
     private static BindGroupHandle _uniformBindGroup;
 
+    private static BufferHandle _instanceBuffer;
+    private static uint _instanceCount;
+
     private static unsafe void OnStart(HostScreenHandle screen, in HostScreenInfo info)
     {
         var surfaceFormat = info.surface_format.Unwrap();
@@ -79,23 +82,39 @@ internal class Program
 
         // RenderPipeline
         {
-            var desc = new RenderPipelineDescription
+            var vertexBufferLayout = new VertexBufferLayout
+            {
+                array_stride = (ulong)sizeof(PosColorVertex),
+                step_mode = wgpu_VertexStepMode.Vertex,
+                attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[3]
+                        {
+                    new() { format = wgpu_VertexFormat.Float32x3, offset = 0, shader_location = 0 },
+                    new() { format = wgpu_VertexFormat.Float32x2, offset = 12, shader_location = 1 },
+                    new() { format = wgpu_VertexFormat.Float32x3, offset = 20, shader_location = 2 },
+                }),
+            };
+            var instanceBufferLayout = new VertexBufferLayout
+            {
+                array_stride = (ulong)sizeof(InstanceData),
+                step_mode = wgpu_VertexStepMode.Instance,
+                attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[1]
+                {
+                    new() { format = wgpu_VertexFormat.Uint32, offset = 0, shader_location = 3 },
+                }),
+            };
+
+            var desc = new RenderPipelineDescriptor
             {
                 layout = _pipelineLayout,
                 vertex = new()
                 {
                     module = _shaderModule,
                     entry_point = Slice.FromFixedSpanUnsafe("vs_main"u8),
-                    inputs = Slice.FromFixedSingleUnsafe(UnsafeEx.StackPointer(new VertexBufferLayout()
+                    buffers = Slice.FromFixedSpanUnsafe(stackalloc VertexBufferLayout[]
                     {
-                        vertex_size = (ulong)sizeof(PosColorVertex),
-                        attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[3]
-                        {
-                            new() { format = wgpu_VertexFormat.Float32x3, offset = 0, shader_location = 0 },
-                            new() { format = wgpu_VertexFormat.Float32x2, offset = 12, shader_location = 1 },
-                            new() { format = wgpu_VertexFormat.Float32x3, offset = 20, shader_location = 2 },
-                        }),
-                    })),
+                        vertexBufferLayout,
+                        instanceBufferLayout,
+                    }),
                 },
                 fragment = Opt.Some(new FragmentState
                 {
@@ -130,6 +149,25 @@ internal class Program
                     (ReadOnlySpan<PosColorVertex>)vertices,
                     indices);
         }
+
+        // Buffer (instance)
+        {
+            const int InstanceCount = 2;
+            var instances = stackalloc InstanceData[InstanceCount]
+            {
+                //new() { Value = -0.5f },
+                //new() { Value = 0.5f },
+                new() { Value = 0 },
+                new() { Value = 1 },
+            };
+            _instanceBuffer = EngineCore.CreateBufferInit(screen, new(&instances, (nuint)sizeof(InstanceData) * InstanceCount), wgpu_BufferUsages.VERTEX);
+            _instanceCount = InstanceCount;
+        }
+    }
+
+    private struct InstanceData
+    {
+        public uint Value;
     }
 
     private static unsafe void OnRender(HostScreenHandle screen, RenderPassRef renderPass)
@@ -142,76 +180,68 @@ internal class Program
             W = 0,
         };
         var data = new Slice<byte>(&color, (nuint)sizeof(Vector4));
-        //var x = Random.Shared.NextSingle();
-        //var data = new Slice<byte>(&x, sizeof(float));
         EngineCore.WriteBuffer(screen, _uniformBuffer, 0, data);
 
-        EngineCore.SetPipeline(renderPass, _renderPipeline);
-        EngineCore.SetBindGroup(renderPass, 0, _textureBindGroup);
-        EngineCore.SetBindGroup(renderPass, 1, _uniformBindGroup);
+        renderPass.SetPipeline(_renderPipeline);
+        renderPass.SetBindGroup(0, _textureBindGroup);
+        renderPass.SetBindGroup(1, _uniformBindGroup);
 
-        var arg = new DrawBufferIndexedArg
-        {
-            vertex_buffer_slice = new()
-            {
-                buffer = _vertexBuffer,
-                range = RangeBoundsU64.All,
-            },
-            slot = 0,
-            index_buffer_slice = new()
-            {
-                buffer = _indexBuffer,
-                range = RangeBoundsU64.All,
-            },
-            index_format = _indexFormat,
-            index_start = 0,
-            index_end_excluded = _indexCount,
-            instance_start = 0,
-            instance_end_excluded = 1,
+        renderPass.SetVertexBuffer(0, new(_vertexBuffer, RangeBoundsU64.All));
+        renderPass.SetVertexBuffer(1, new(_instanceBuffer, RangeBoundsU64.All));
+        renderPass.SetIndexBuffer(new(_indexBuffer, RangeBoundsU64.All), _indexFormat);
+        renderPass.DrawIndexed(0..(int)_indexCount, 0, 0..(int)_instanceCount);
+    }
+
+    private unsafe static Slice<byte> ShaderSource => Slice.FromFixedSpanUnsafe("""
+        struct VertexInput {
+            @location(0) pos: vec3<f32>,
+            @location(1) uv: vec2<f32>,
+            @location(2) color: vec3<f32>,
         };
-        EngineCore.DrawBufferIndexed(renderPass, &arg);
-    }
-
-    private unsafe static Slice<byte> ShaderSource
-    {
-        get
-        {
-            return Slice.FromFixedSpanUnsafe("""
-            struct VertexInput {
-                @location(0) position: vec3<f32>,
-                @location(1) uv: vec2<f32>,
-                @location(2) color: vec3<f32>,
-            };
+        struct InstanceData {
+            @location(3) value: u32,
+        };
             
-            struct VertexOutput {
-                @builtin(position) clip_position: vec4<f32>,
-                @location(0) color: vec3<f32>,
-                @location(1) uv: vec2<f32>,
-            };
+        struct VertexOutput {
+            @builtin(position) clip_position: vec4<f32>,
+            @location(0) color: vec3<f32>,
+            @location(1) uv: vec2<f32>,
+        };
 
-            @group(0) @binding(0) var tex: texture_2d<f32>;
-            @group(0) @binding(1) var s: sampler;
-            @group(1) @binding(0) var<uniform> data: vec4<f32>;
+        @group(0) @binding(0) var tex: texture_2d<f32>;
+        @group(0) @binding(1) var s: sampler;
+        @group(1) @binding(0) var<uniform> data: vec4<f32>;
 
             
-            @vertex
-            fn vs_main(vin: VertexInput) -> VertexOutput {
-                var vout: VertexOutput;
-                vout.color = vin.color;
-                vout.uv = vin.uv;
-                vout.clip_position = vec4<f32>(vin.position, 1.0);
-                return vout;
+        @vertex
+        fn vs_main(vin: VertexInput, instance: InstanceData) -> VertexOutput {
+            var vout: VertexOutput;
+            //vout.color = vin.color;
+            vout.uv = vin.uv;
+
+            var p: vec3<f32> = vin.pos;
+
+            if instance.value == 0u {
+                //var q = p + vec3<f32>(0.5, 0.5, 0.0);
+                vout.clip_position = vec4<f32>(p, 1.0);
+                vout.color = vec3<f32>(1.0, 0.0, 0.0);
             }
-            
-            @fragment
-            fn fs_main(fin: VertexOutput) -> @location(0) vec4<f32> {
-                var tex_color: vec4<f32> = textureSample(tex, s, fin.uv);
-                return (tex_color + data) * 0.5;
+            else {
+                var q = p - vec3<f32>(0.5, 0.5, 0.0);
+                vout.clip_position = vec4<f32>(q, 1.0);
+                vout.color = vec3<f32>(0.0, 1.0, 0.0);
             }
-            
-            """u8);
+            return vout;
         }
-    }
+            
+        @fragment
+        fn fs_main(fin: VertexOutput) -> @location(0) vec4<f32> {
+            var tex_color: vec4<f32> = textureSample(tex, s, fin.uv);
+            //return (tex_color + data) * 0.5;
+            return vec4<f32>(fin.color, 1.0);
+        }
+            
+        """u8);
 }
 
 internal static class HostScreenInitializer

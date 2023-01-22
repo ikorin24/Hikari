@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using u8 = System.Byte;
 using u32 = System.UInt32;
+using i32 = System.Int32;
 using u64 = System.UInt64;
 using System;
 using System.Runtime.CompilerServices;
@@ -140,7 +141,7 @@ namespace Elffy
         [DebuggerHidden]
         public static RenderPipelineHandle CreateRenderPipeline(
             HostScreenHandle screen,
-            RenderPipelineDescription* desc)
+            RenderPipelineDescriptor* desc)
             => elffy_create_render_pipeline(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -278,24 +279,67 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static void DrawBuffer(
+        public static void SetVertexBuffer(
             RenderPassRef render_pass,
-            DrawBufferArg* arg)
-            => elffy_draw_buffer(render_pass, arg).Validate();
+            u32 slot,
+            BufSlice buffer_slice)
+        {
+            buffer_slice.buffer.ThrowIfDestroyed();
+            elffy_set_vertex_buffer(render_pass, slot, buffer_slice).Validate();
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static void DrawBufferIndexed(
+        public static void SetIndexBuffer(
             RenderPassRef render_pass,
-            DrawBufferIndexedArg* arg)
-            => elffy_draw_buffer_indexed(render_pass, arg).Validate();
+            BufSlice buffer_slice,
+            wgpu_IndexFormat index_format)
+        {
+            buffer_slice.buffer.ThrowIfDestroyed();
+            elffy_set_index_buffer(render_pass, buffer_slice, index_format).Validate();
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static void DrawBuffersIndexed(
+        public static void Draw(
             RenderPassRef render_pass,
-            DrawBuffersIndexedArg* arg)
-            => elffy_draw_buffers_indexed(render_pass, arg).Validate();
+            RangeU32 vertices,
+            RangeU32 instances)
+        {
+            elffy_draw(render_pass, vertices, instances).Validate();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void DrawIndexed(
+            RenderPassRef render_pass,
+            RangeU32 indices,
+            i32 base_vertex,
+            RangeU32 instances)
+        {
+            elffy_draw_indexed(render_pass, indices, base_vertex, instances).Validate();
+        }
+
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[DebuggerHidden]
+        //public static void DrawBuffer(
+        //    RenderPassRef render_pass,
+        //    DrawBufferArg* arg)
+        //    => elffy_draw_buffer(render_pass, arg).Validate();
+
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[DebuggerHidden]
+        //public static void DrawBufferIndexed(
+        //    RenderPassRef render_pass,
+        //    DrawBufferIndexedArg* arg)
+        //    => elffy_draw_buffer_indexed(render_pass, arg).Validate();
+
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[DebuggerHidden]
+        //public static void DrawBuffersIndexed(
+        //    RenderPassRef render_pass,
+        //    DrawBuffersIndexedArg* arg)
+        //    => elffy_draw_buffers_indexed(render_pass, arg).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]

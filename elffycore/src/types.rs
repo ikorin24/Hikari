@@ -348,7 +348,7 @@ impl<'a> RenderPipelineDescription<'a> {
             entry_point: self.vertex.entry_point.as_str()?,
             buffers: &self
                 .vertex
-                .inputs
+                .buffers
                 .iter()
                 .map(|x| x.to_wgpu_type())
                 .collect::<SmallVec<[_; 4]>>(),
@@ -397,7 +397,7 @@ impl<'a> RenderPipelineDescription<'a> {
 pub(crate) struct VertexState<'a> {
     pub module: &'a wgpu::ShaderModule,
     pub entry_point: Slice<'a, u8>,
-    pub inputs: Slice<'a, VertexBufferLayout<'a>>,
+    pub buffers: Slice<'a, VertexBufferLayout<'a>>,
 }
 
 #[repr(C)]
@@ -431,6 +431,7 @@ assert_eq_size!(wgpu::PrimitiveTopology, u32);
 assert_eq_size!(wgpu::IndexFormat, u32);
 assert_eq_size!(wgpu::FrontFace, u32);
 assert_eq_size!(wgpu::PolygonMode, u32);
+assert_eq_size!(wgpu::VertexStepMode, u32);
 
 #[repr(C)]
 pub(crate) struct PrimitiveState {
@@ -1144,14 +1145,15 @@ impl TextureDimension {
 
 #[repr(C)]
 pub(crate) struct VertexBufferLayout<'a> {
-    pub vertex_size: u64,
+    pub array_stride: u64,
+    pub step_mode: wgpu::VertexStepMode,
     pub attributes: Slice<'a, wgpu::VertexAttribute>,
 }
 
 impl<'a> VertexBufferLayout<'a> {
     pub fn to_wgpu_type(&self) -> wgpu::VertexBufferLayout {
         wgpu::VertexBufferLayout {
-            array_stride: self.vertex_size,
+            array_stride: self.array_stride,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &self.attributes,
         }

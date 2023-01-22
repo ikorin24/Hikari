@@ -10,10 +10,10 @@ public static class SamplePrimitives
     {
         var vertices = new PosColorVertex[4]
         {
-            new(new(-0.5f, 0.5f, 0.0f),  new(0, 1), new(1.0f, 0.0f, 0.0f)),
-            new(new(-0.5f, -0.5f, 0.0f), new(0, 0), new(0.0f, 1.0f, 0.0f)),
-            new(new(0.5f, -0.5f, 0.0f),  new(1, 0), new(0.0f, 0.0f, 1.0f)),
-            new(new(0.5f, 0.5f, 0.0f),   new(1, 1), new(0.0f, 0.0f, 1.0f)),
+            new(new(-0.5f, 0.5f, 0.1f),  new(0, 1), new(1.0f, 0.0f, 0.0f)),
+            new(new(-0.5f, -0.5f, 0.1f), new(0, 0), new(0.0f, 1.0f, 0.0f)),
+            new(new(0.5f, -0.5f, 0.1f),  new(1, 0), new(0.0f, 0.0f, 1.0f)),
+            new(new(0.5f, 0.5f, 0.1f),   new(1, 1), new(0.0f, 0.0f, 1.0f)),
         };
         var indices = new uint[6] { 0, 1, 2, 2, 3, 0 };
         return (Vertices: vertices, Indices: indices);
