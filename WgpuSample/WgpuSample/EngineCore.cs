@@ -376,7 +376,7 @@ namespace Elffy
                 EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
                 Debug.Assert(_errorCount == 0);
                 Debug.Assert(_nativePtr != null);
-                return _nativePtr;
+                return (THandle)_nativePtr;
             }
         }
 

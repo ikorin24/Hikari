@@ -145,10 +145,10 @@ pub(crate) struct HostScreen {
 
 impl HostScreen {
     const CLEAR_COLOR: wgpu::Color = wgpu::Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 0.0,
+        r: 0.1,
+        g: 0.2,
+        b: 0.3,
+        a: 1.0,
     };
 
     pub fn new(

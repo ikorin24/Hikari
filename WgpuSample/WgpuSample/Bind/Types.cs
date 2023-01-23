@@ -50,7 +50,7 @@ internal interface IHandle<TSelf> :
     where TSelf : unmanaged, IHandle<TSelf>
 {
     static abstract TSelf DestroyedHandle { get; }
-    unsafe static abstract implicit operator TSelf(void* nativePtr);
+    unsafe static abstract explicit operator TSelf(void* nativePtr);
 }
 
 internal static class HandleExtensions
@@ -87,67 +87,71 @@ internal enum WindowStyle
 internal readonly record struct HostScreenHandle(NativePointer Pointer) : IHandle<HostScreenHandle>
 {
     public static HostScreenHandle DestroyedHandle => default;
-    public unsafe static implicit operator HostScreenHandle(void* nativePtr) => new(nativePtr);
+    public unsafe static explicit operator HostScreenHandle(void* nativePtr) => new(nativePtr);
 }
 
 internal readonly record struct BindGroupLayoutHandle(NativePointer Pointer) : IHandle<BindGroupLayoutHandle>
 {
     public static BindGroupLayoutHandle DestroyedHandle => default;
-    public unsafe static implicit operator BindGroupLayoutHandle(void* nativePtr) => new(nativePtr);
+    public unsafe static explicit operator BindGroupLayoutHandle(void* nativePtr) => new(nativePtr);
 }
 
 internal readonly record struct BindGroupHandle(NativePointer Pointer) : IHandle<BindGroupHandle>
 {
     public static BindGroupHandle DestroyedHandle => default;
-    public unsafe static implicit operator BindGroupHandle(void* nativePtr) => new(nativePtr);
+    public unsafe static explicit operator BindGroupHandle(void* nativePtr) => new(nativePtr);
 }
 
 internal readonly record struct BufferHandle(NativePointer Pointer) : IHandle<BufferHandle>
 {
     public static BufferHandle DestroyedHandle => default;
-    public unsafe static implicit operator BufferHandle(void* nativePtr) => new(nativePtr);
+    public unsafe static explicit operator BufferHandle(void* nativePtr) => new(nativePtr);
 
-    public BufferBinding AsEntriesBinding() => new()
+    public BufferBinding AsEntireBufferBinding()
     {
-        buffer = this,
-        offset = 0,
-        size = 0,
-    };
+        return new BufferBinding
+        {
+            buffer = this,
+            offset = 0,
+            size = 0,
+        };
+    }
 }
+
 internal readonly record struct RenderPipelineHandle(NativePointer Pointer) : IHandle<RenderPipelineHandle>
 {
     public static RenderPipelineHandle DestroyedHandle => default;
-    public unsafe static implicit operator RenderPipelineHandle(void* nativePtr) => new(nativePtr);
+    public unsafe static explicit operator RenderPipelineHandle(void* nativePtr) => new(nativePtr);
 }
 
 internal readonly record struct SamplerHandle(NativePointer Pointer) : IHandle<SamplerHandle>
 {
     public static SamplerHandle DestroyedHandle => default;
-    public unsafe static implicit operator SamplerHandle(void* nativePtr) => new(nativePtr);
+    public unsafe static explicit operator SamplerHandle(void* nativePtr) => new(nativePtr);
 }
 
 internal readonly record struct PipelineLayoutHandle(NativePointer Pointer) : IHandle<PipelineLayoutHandle>
 {
     public static PipelineLayoutHandle DestroyedHandle => default;
-    public unsafe static implicit operator PipelineLayoutHandle(void* nativePtr) => new(nativePtr);
+    public unsafe static explicit operator PipelineLayoutHandle(void* nativePtr) => new(nativePtr);
 }
 
 internal readonly record struct ShaderModuleHandle(NativePointer Pointer) : IHandle<ShaderModuleHandle>
 {
     public static ShaderModuleHandle DestroyedHandle => default;
-    public unsafe static implicit operator ShaderModuleHandle(void* nativePtr) => new(nativePtr);
+    public unsafe static explicit operator ShaderModuleHandle(void* nativePtr) => new(nativePtr);
 }
 
 internal readonly record struct TextureHandle(NativePointer Pointer) : IHandle<TextureHandle>
 {
     public static TextureHandle DestroyedHandle => default;
-    public unsafe static implicit operator TextureHandle(void* nativePtr) => new(nativePtr);
+    public unsafe static explicit operator TextureHandle(void* nativePtr) => new(nativePtr);
 }
 
 internal readonly record struct TextureViewHandle(NativePointer Pointer) : IHandle<TextureViewHandle>
 {
     public static TextureViewHandle DestroyedHandle => default;
-    public unsafe static implicit operator TextureViewHandle(void* nativePtr) => new(nativePtr);
+    public unsafe static explicit operator TextureViewHandle(void* nativePtr) => new(nativePtr);
 }
 
 internal unsafe readonly struct HostScreenInitFn
@@ -877,6 +881,13 @@ internal struct Slice<T> where T : unmanaged
     {
         this.data = new((T*)data);
         this.len = len;
+    }
+
+    [SetsRequiredMembers]
+    public unsafe Slice(void* data, int len)
+    {
+        this.data = new((T*)data);
+        this.len = checked((nuint)len);
     }
 
     public unsafe readonly Slice<u8> AsBytes() => new()

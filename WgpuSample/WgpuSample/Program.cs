@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Elffy.Bind;
@@ -9,79 +10,163 @@ namespace Elffy;
 internal class Program
 {
     [STAThread]
-    private static void Main(string[] args) => EngineCore.EngineStart(new()
+    private static void Main(string[] args)
     {
-        OnStart = OnStart,
-        OnRender = OnRender,
-    });
+        Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1", EnvironmentVariableTarget.Process);
+        EngineCore.EngineStart(new()
+        {
+            OnStart = OnStart,
+            OnRender = OnRender,
+        });
+    }
 
     private static State _state;
+    const int NUM_INSTANCES_PER_ROW = 10;
+    private static readonly Vector3 INSTANCE_DISPLACEMENT = new(
+        NUM_INSTANCES_PER_ROW * 0.5f, 0, NUM_INSTANCES_PER_ROW * 0.5f
+        );
 
     private static unsafe void OnStart(HostScreenHandle screen, in HostScreenInfo info)
     {
         var surfaceFormat = info.surface_format.Unwrap();
         System.Diagnostics.Debug.WriteLine(info.backend);
 
+
+        // Texture
+        var diffuseTexture = HostScreenInitializer.CreateTexture(screen, "happy-tree.png");
+
+        // TextureView, Sampler
+        var (textureView, sampler) = HostScreenInitializer.CreateTextureViewSampler(screen, diffuseTexture);
+
         // BindGroupLayout
         var textureBindGroupLayout = HostScreenInitializer.CreateTextureBindGroupLayout(screen);
 
-        // BindGroupLayout (uniform)
-        var uniformBindGroupLayout = HostScreenInitializer.CreateUniformBindGroupLayout(screen);
+        // BindGroup
+        var diffuseBindGroup = HostScreenInitializer.CreateTextureBindGroup(screen, textureBindGroupLayout, textureView, sampler);
 
-        // PipelineLayout
-        PipelineLayoutHandle pipelineLayout;
+        var camera = new Camera
         {
-            var desc = new PipelineLayoutDescriptor
+            eye = new(0.0f, 5.0f, -10.0f),
+            target = new(0, 0, 0),
+            up = new(0, 1, 0),
+            aspect = 1280f / 720f,  // width / height
+            fovy = 45f / 180f * float.Pi,
+            znear = 0.1f,
+            zfar = 100f,
+        };
+        var cameraUniform = CameraUniform.Default;
+        cameraUniform.UpdateViewProj(camera);
+
+        var cameraBuffer = EngineCore.CreateBufferInit(
+            screen,
+            new Slice<byte>(&cameraUniform, sizeof(CameraUniform)),
+            wgpu_BufferUsages.UNIFORM | wgpu_BufferUsages.COPY_DST);
+
+        var instances = Enumerable
+            .Range(0, NUM_INSTANCES_PER_ROW)
+            .SelectMany(z => Enumerable.Range(0, NUM_INSTANCES_PER_ROW).Select(x =>
             {
-                bind_group_layouts = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutHandle[]
+                var position = new Vector3(x, 0, z) - INSTANCE_DISPLACEMENT;
+                var rotation = position.IsZero ?
+                    Quaternion.FromAxisAngle(Vector3.UnitZ, 0) :
+                    Quaternion.FromAxisAngle(position.Normalized(), 45f / 180f * float.Pi);
+                var model = rotation.ToMatrix4() * Matrix4.FromScaleAndTranslation(Vector3.One, position);
+                //var model = Matrix4.Identity;
+                return new InstanceRaw
                 {
-                    textureBindGroupLayout,
-                    uniformBindGroupLayout,
-                }),
-            };
-            pipelineLayout = EngineCore.CreatePipelineLayout(screen, &desc);
+                    Model = model,
+                };
+            }))
+            .ToArray();
+
+        // Buffer (instance)
+        BufferHandle instanceBuffer;
+        int instanceCount = instances.Length;
+        fixed(void* instanceData = instances) {
+            instanceBuffer = EngineCore.CreateBufferInit(
+                screen,
+                new Slice<byte>(instanceData, sizeof(InstanceRaw) * instances.Length),
+                wgpu_BufferUsages.VERTEX);
         }
 
-        // Texture
-        var texture = HostScreenInitializer.CreateTexture(screen, "pic.png");
+        var cameraBindGroupLayout = EngineCore.CreateBindGroupLayout(screen, UnsafeEx.StackPointer(new BindGroupLayoutDescriptor
+        {
+            entries = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutEntry[1]
+            {
+                new()
+                {
+                    binding = 0,
+                    visibility = wgpu_ShaderStages.VERTEX,
+                    ty = BindingType.Buffer(UnsafeEx.StackPointer(new BufferBindingData
+                    {
+                        ty = BufferBindingType.Uniform,
+                        has_dynamic_offset = false,
+                        min_binding_size = 0,
+                    })),
+                    count = 0,
+                },
+            }),
+        }));
 
-        // TextureView, Sampler
-        var (textureView, sampler) = HostScreenInitializer.CreateTextureViewSampler(screen, texture);
+        BindGroupHandle cameraBindGroup;
+        {
+            var bufferBinding = cameraBuffer.AsEntireBufferBinding();
+            Span<BindGroupEntry> entries = stackalloc BindGroupEntry[]
+            {
+                new() { binding = 0, resource = BindingResource.Buffer(&bufferBinding), }
+            };
+            var desc = new BindGroupDescriptor
+            {
+                layout = cameraBindGroupLayout,
+                entries = new Slice<BindGroupEntry>(Unsafe.AsPointer(ref entries[0]), entries.Length),
+            };
+            cameraBindGroup = EngineCore.CreateBindGroup(screen, &desc);
+        }
 
-        // BindGroup
-        var textureBindGroup = HostScreenInitializer.CreateTextureBindGroup(screen, textureBindGroupLayout, textureView, sampler);
+        var shader = EngineCore.CreateShaderModule(screen, ShaderSource);
 
-        // Buffer (uniform)
-        var uniformBuffer = HostScreenInitializer.CreateUniformBuffer(screen, stackalloc Vector4[] { new Vector4(1, 0, 0, 1) });
+        //// BindGroupLayout (uniform)
+        //var uniformBindGroupLayout = HostScreenInitializer.CreateUniformBindGroupLayout(screen);
 
-        // BindGroup (uniform)
-        var uniformBindGroup = HostScreenInitializer.CreateUniformBindGroup(screen, uniformBindGroupLayout, uniformBuffer);
+        // PipelineLayout
+        var pipelineLayout = EngineCore.CreatePipelineLayout(screen, UnsafeEx.StackPointer(new PipelineLayoutDescriptor
+        {
+            bind_group_layouts = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutHandle[]
+            {
+                textureBindGroupLayout,
+                cameraBindGroupLayout,
+            }),
+        }));
 
-        // ShaderModule
-        var shaderModule = EngineCore.CreateShaderModule(screen, ShaderSource);
+        //// Buffer (uniform)
+        //var uniformBuffer = HostScreenInitializer.CreateUniformBuffer(screen, stackalloc Vector4[] { new Vector4(1, 0, 0, 1) });
+
+        //// BindGroup (uniform)
+        //var uniformBindGroup = HostScreenInitializer.CreateUniformBindGroup(screen, uniformBindGroupLayout, uniformBuffer);
 
         // RenderPipeline
         RenderPipelineHandle renderPipeline;
         {
             var vertexBufferLayout = new VertexBufferLayout
             {
-                array_stride = (ulong)sizeof(PosColorVertex),
+                array_stride = (ulong)sizeof(Vertex),
                 step_mode = wgpu_VertexStepMode.Vertex,
-                attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[3]
-                        {
-                    new() { format = wgpu_VertexFormat.Float32x3, offset = 0, shader_location = 0 },
-                    new() { format = wgpu_VertexFormat.Float32x2, offset = 12, shader_location = 1 },
-                    new() { format = wgpu_VertexFormat.Float32x3, offset = 20, shader_location = 2 },
+                attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[2]
+                {
+                    new() { offset = 0, shader_location = 0, format = wgpu_VertexFormat.Float32x3 },
+                    new() { offset = 12, shader_location = 1, format = wgpu_VertexFormat.Float32x2 },
                 }),
             };
             var instanceBufferLayout = new VertexBufferLayout
             {
-                array_stride = (ulong)sizeof(InstanceData),
+                array_stride = (ulong)sizeof(InstanceRaw),
                 step_mode = wgpu_VertexStepMode.Instance,
-                attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[1]
+                attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[]
                 {
-                    //new() { format = wgpu_VertexFormat.Uint32, offset = 0, shader_location = 3 },
-                    new() { format = wgpu_VertexFormat.Float32x3, offset = 0, shader_location = 3 },
+                    new() { offset = 4 * 0, shader_location = 5, format = wgpu_VertexFormat.Float32x4 },
+                    new() { offset = 4 * 4, shader_location = 6, format = wgpu_VertexFormat.Float32x4 },
+                    new() { offset = 4 * 8, shader_location = 7, format = wgpu_VertexFormat.Float32x4 },
+                    new() { offset = 4 * 12, shader_location = 8, format = wgpu_VertexFormat.Float32x4 },
                 }),
             };
 
@@ -90,7 +175,7 @@ internal class Program
                 layout = pipelineLayout,
                 vertex = new()
                 {
-                    module = shaderModule,
+                    module = shader,
                     entry_point = Slice.FromFixedSpanUnsafe("vs_main"u8),
                     buffers = Slice.FromFixedSpanUnsafe(stackalloc VertexBufferLayout[]
                     {
@@ -100,15 +185,17 @@ internal class Program
                 },
                 fragment = Opt.Some(new FragmentState
                 {
-                    module = shaderModule,
+                    module = shader,
                     entry_point = Slice.FromFixedSpanUnsafe("fs_main"u8),
-                    targets = Slice.FromFixedSingleUnsafe(UnsafeEx.StackPointer(
-                        Opt.Some(new ColorTargetState()
+                    targets = Slice.FromFixedSpanUnsafe(stackalloc Opt<ColorTargetState>[]
+                    {
+                        Opt.Some(new ColorTargetState
                         {
                             format = surfaceFormat,
                             blend = Opt.Some(wgpu_BlendState.REPLACE),
                             write_mask = wgpu_ColorWrites.ALL,
-                        }))),
+                        })
+                    }),
                 }),
                 primitive = new()
                 {
@@ -124,137 +211,150 @@ internal class Program
 
         // Buffer (vertex, index)
         BufferHandle vertexBuffer;
-        uint vertexCount;
         BufferHandle indexBuffer;
-        uint indexCount;
+        int indexCount;
         wgpu_IndexFormat indexFormat;
         {
-            var (vertices, indices) = SamplePrimitives.Rectangle();
-            (vertexBuffer, vertexCount, indexBuffer, indexCount, indexFormat) =
-                HostScreenInitializer.CreateVertexIndexBuffer(
+            var (vertices, indices) = SamplePrimitives.SampleData();
+            indexCount = indices.Length;
+            fixed(void* vData = vertices) {
+                vertexBuffer = EngineCore.CreateBufferInit(
                     screen,
-                    (ReadOnlySpan<PosColorVertex>)vertices,
-                    indices);
+                    new Slice<byte>(vData, sizeof(Vertex) * vertices.Length),
+                    wgpu_BufferUsages.VERTEX);
+            }
+            fixed(void* iData = indices) {
+                indexBuffer = EngineCore.CreateBufferInit(
+                    screen,
+                    new Slice<byte>(iData, sizeof(ushort) * indices.Length),
+                    wgpu_BufferUsages.INDEX);
+            }
+            indexFormat = wgpu_IndexFormat.Uint16;
         }
 
-        // Buffer (instance)
-        BufferHandle instanceBuffer;
-        uint instanceCount;
-        {
-            const int InstanceCount = 2;
-            var instances = stackalloc InstanceData[InstanceCount]
-            {
-                //new() { Value = -0.5f },
-                //new() { Value = 0.5f },
-                new() { Value = new Vector3(0f, 0, 0) },
-                new() { Value = new Vector3(0f, 0, 0) },
-            };
-            instanceBuffer = EngineCore.CreateBufferInit(screen, new Slice<byte>(&instances, (nuint)sizeof(InstanceData) * InstanceCount), wgpu_BufferUsages.VERTEX);
-            instanceCount = InstanceCount;
-        }
+
 
         _state = new State
         {
             PipelineLayout = pipelineLayout,
-            ShaderModule = shaderModule,
+            Shader = shader,
             RenderPipeline = renderPipeline,
             VertexBuffer = vertexBuffer,
-            VertexCount = vertexCount,
+            //VertexCount = vertexCount,
             IndexBuffer = indexBuffer,
             IndexCount = indexCount,
             IndexFormat = indexFormat,
             InstanceBuffer = instanceBuffer,
             InstanceCount = instanceCount,
-            Texture = texture,
+            DiffuseTexture = diffuseTexture,
             TextureView = textureView,
             Sampler = sampler,
             TextureBindGroupLayout = textureBindGroupLayout,
-            TextureBindGroup = textureBindGroup,
-            UniformBuffer = uniformBuffer,
-            UniformBindGroupLayout = uniformBindGroupLayout,
-            UniformBindGroup = uniformBindGroup,
+            DiffuseBindGroup = diffuseBindGroup,
+
+            CameraBuffer = cameraBuffer,
+            CameraBindGroupLayout = cameraBindGroupLayout,
+            CameraBindGroup = cameraBindGroup,
+            //UniformBuffer = uniformBuffer,
+            //UniformBindGroupLayout = uniformBindGroupLayout,
+            //UniformBindGroup = uniformBindGroup,
         };
     }
 
-    //[StructLayout(LayoutKind.Sequential, Size = 4)]
-    private struct InstanceData
-    {
-        public Vector3 Value;
-    }
+    ////[StructLayout(LayoutKind.Sequential, Size = 4)]
+    //private struct InstanceData
+    //{
+    //    public Vector3 Value;
+    //}
 
     private static unsafe void OnRender(HostScreenHandle screen, RenderPassRef renderPass)
     {
-        var color = new Vector4
-        {
-            X = Random.Shared.NextSingle(),
-            Y = 0,
-            Z = 0,
-            W = 0,
-        };
-        var data = new Slice<byte>(&color, (nuint)sizeof(Vector4));
-        EngineCore.WriteBuffer(screen, _state.UniformBuffer, 0, data);
+        //var color = new Vector4
+        //{
+        //    X = Random.Shared.NextSingle(),
+        //    Y = 0,
+        //    Z = 0,
+        //    W = 0,
+        //};
+        //var data = new Slice<byte>(&color, (nuint)sizeof(Vector4));
+        //EngineCore.WriteBuffer(screen, _state.UniformBuffer, 0, data);
 
         renderPass.SetPipeline(_state.RenderPipeline);
-        renderPass.SetBindGroup(0, _state.TextureBindGroup);
-        renderPass.SetBindGroup(1, _state.UniformBindGroup);
+        renderPass.SetBindGroup(0, _state.DiffuseBindGroup);
+        renderPass.SetBindGroup(1, _state.CameraBindGroup);
 
-        renderPass.SetVertexBuffer(0, new(_state.VertexBuffer, RangeBoundsU64.All));
-        renderPass.SetVertexBuffer(1, new(_state.InstanceBuffer, RangeBoundsU64.All));
-        renderPass.SetIndexBuffer(new(_state.IndexBuffer, RangeBoundsU64.All), _state.IndexFormat);
-        renderPass.DrawIndexed(0..(int)_state.IndexCount, 0, 0..(int)_state.InstanceCount);
+        renderPass.SetVertexBuffer(0, new BufSlice(_state.VertexBuffer, RangeBoundsU64.All));
+        renderPass.SetVertexBuffer(1, new BufSlice(_state.InstanceBuffer, RangeBoundsU64.All));
+        renderPass.SetIndexBuffer(new BufSlice(_state.IndexBuffer, RangeBoundsU64.All), _state.IndexFormat);
+        renderPass.DrawIndexed(0.._state.IndexCount, 0, 0.._state.InstanceCount);
         //renderPass.DrawIndexed(0..(int)_state.IndexCount, 0, 0..1);
+
+        /*
+        renderPass.set_pipeline(&self.render_pipeline);
+        renderPass.set_bind_group(0, &self.diffuse_bind_group, &[]);
+        renderPass.set_bind_group(1, &self.camera_bind_group, &[]);
+        renderPass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        renderPass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+        renderPass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+        // UPDATED!
+        let instances = 0..self.instances.len() as _;
+        println!("{:?}", instances);
+        render_pass.draw_indexed(0..self.num_indices, 0, instances);
+         */
+
     }
 
     private unsafe static Slice<byte> ShaderSource => Slice.FromFixedSpanUnsafe("""
+        // Vertex shader
+        struct Camera {
+            view_proj: mat4x4<f32>,
+        }
+        @group(1) @binding(0)
+        var<uniform> camera: Camera;
+
         struct VertexInput {
-            @location(0) pos: vec3<f32>,
-            @location(1) uv: vec2<f32>,
-            @location(2) color: vec3<f32>,
-        };
-        struct InstanceData {
-            @location(3) value: vec3<f32>,
-        };
-            
+            @location(0) position: vec3<f32>,
+            @location(1) tex_coords: vec2<f32>,
+        }
+        struct InstanceInput {
+            @location(5) model_matrix_0: vec4<f32>,
+            @location(6) model_matrix_1: vec4<f32>,
+            @location(7) model_matrix_2: vec4<f32>,
+            @location(8) model_matrix_3: vec4<f32>,
+        }
+
         struct VertexOutput {
             @builtin(position) clip_position: vec4<f32>,
-            //@location(4) color: vec3<f32>,
-            //@location(5) uv: vec2<f32>,
-        };
-
-        @group(0) @binding(0) var tex: texture_2d<f32>;
-        @group(0) @binding(1) var s: sampler;
-        @group(1) @binding(0) var<uniform> data: vec4<f32>;
-
-            
-        @vertex
-        fn vs_main(vin: VertexInput, instance: InstanceData) -> VertexOutput {
-            var vout: VertexOutput;
-            //vout.color = vin.color;
-            //vout.uv = vin.uv;
-
-            var p: vec3<f32> = vin.pos;
-
-            vout.clip_position = vec4<f32>(p + instance.value, 1.0);
-            //vout.color = vec3<f32>(1.0, 0.0, 0.0);
-            //vout.color = instance.value;
-            //if instance.value == 0u {
-            //    vout.clip_position = vec4<f32>(p, 1.0);
-            //    vout.color = vec3<f32>(1.0, 0.0, 0.0);
-            //}
-            //else {
-            //    var q = p - vec3<f32>(0.5, 0.5, 0.0);
-            //    vout.clip_position = vec4<f32>(q, 1.0);
-            //    vout.color = vec3<f32>(0.0, 1.0, 0.0);
-            //}
-            return vout;
+            @location(0) tex_coords: vec2<f32>,
         }
-            
+
+        @vertex
+        fn vs_main(
+            model: VertexInput,
+            instance: InstanceInput,
+        ) -> VertexOutput {
+            let model_matrix = mat4x4<f32>(
+                instance.model_matrix_0,
+                instance.model_matrix_1,
+                instance.model_matrix_2,
+                instance.model_matrix_3,
+            );
+            var out: VertexOutput;
+            out.tex_coords = model.tex_coords;
+            out.clip_position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
+            return out;
+        }
+
+        // Fragment shader
+
+        @group(0) @binding(0)
+        var t_diffuse: texture_2d<f32>;
+        @group(0)@binding(1)
+        var s_diffuse: sampler;
+
         @fragment
-        fn fs_main(fin: VertexOutput) -> @location(0) vec4<f32> {
-            //var tex_color: vec4<f32> = textureSample(tex, s, fin.uv);
-            ////return (tex_color + data) * 0.5;
-            //return vec4<f32>(fin.color, 1.0);
-            return vec4<f32>(1.0, 1.0, 1.0, 1.0);
+        fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+            return textureSample(t_diffuse, s_diffuse, in.tex_coords);
         }
             
         """u8);
@@ -264,14 +364,20 @@ internal static class HostScreenInitializer
 {
     public unsafe static TextureHandle CreateTexture(HostScreenHandle screen, string filepath)
     {
-        var pixels = SamplePrimitives.LoadImagePixels(filepath, out var width, out var height);
+        var pixelBytes = SamplePrimitives.LoadImagePixels(filepath, out var width, out var height);
+        var size = new wgpu_Extent3d
+        {
+            width = width,
+            height = height,
+            depth_or_array_layers = 1,
+        };
         var desc = new TextureDescriptor
         {
             dimension = TextureDimension.D2,
             format = TextureFormat.Rgba8UnormSrgb,
             mip_level_count = 1,
             sample_count = 1,
-            size = new() { width = width, height = height, depth_or_array_layers = 1, },
+            size = size,
             usage = wgpu_TextureUsages.TEXTURE_BINDING | wgpu_TextureUsages.COPY_DST,
         };
         var texture = EngineCore.CreateTexture(screen, &desc);
@@ -290,15 +396,9 @@ internal static class HostScreenInitializer
             bytes_per_row = 4 * width,
             rows_per_image = height,
         };
-        var textureSize = new wgpu_Extent3d
-        {
-            width = width,
-            height = height,
-            depth_or_array_layers = 1,
-        };
-        fixed(byte* p = pixels) {
-            var data = new Slice<byte> { data = new(p), len = (nuint)pixels.Length };
-            EngineCore.WriteTexture(screen, &writeTex, data, &dataLayout, &textureSize);
+        fixed(byte* p = pixelBytes) {
+            var data = new Slice<byte>(p, pixelBytes.Length);
+            EngineCore.WriteTexture(screen, &writeTex, data, &dataLayout, &size);
         }
         return texture;
     }
@@ -332,7 +432,7 @@ internal static class HostScreenInitializer
         var desc = new BindGroupLayoutDescriptor
         {
             entries = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutEntry[2]
-                        {
+            {
                 new()
                 {
                     binding = 0,
@@ -419,27 +519,27 @@ internal static class HostScreenInitializer
         return EngineCore.CreateBindGroupLayout(screen, &desc);
     }
 
-    public unsafe static BindGroupHandle CreateUniformBindGroup(
-        HostScreenHandle screen,
-        BindGroupLayoutHandle layout,
-        BufferHandle buffer)
-    {
-        var desc = new BindGroupDescriptor
-        {
-            layout = layout,
-            entries = Slice.FromFixedSpanUnsafe((stackalloc BindGroupEntry[1]
-            {
-                new()
-                {
-                    binding = 0,
-                    resource = BindingResource.Buffer(UnsafeEx.StackPointer(
-                        buffer.AsEntriesBinding()
-                    )),
-                },
-            })),
-        };
-        return EngineCore.CreateBindGroup(screen, &desc);
-    }
+    //public unsafe static BindGroupHandle CreateUniformBindGroup(
+    //    HostScreenHandle screen,
+    //    BindGroupLayoutHandle layout,
+    //    BufferHandle buffer)
+    //{
+    //    var desc = new BindGroupDescriptor
+    //    {
+    //        layout = layout,
+    //        entries = Slice.FromFixedSpanUnsafe((stackalloc BindGroupEntry[1]
+    //        {
+    //            new()
+    //            {
+    //                binding = 0,
+    //                resource = BindingResource.Buffer(UnsafeEx.StackPointer(
+    //                    buffer.AsEntriesBinding()
+    //                )),
+    //            },
+    //        })),
+    //    };
+    //    return EngineCore.CreateBindGroup(screen, &desc);
+    //}
 
     public unsafe static (
         BufferHandle VertexBuffer,
@@ -481,30 +581,76 @@ internal static class HostScreenInitializer
     }
 }
 
+internal class Camera
+{
+    public required Vector3 eye;
+    public required Vector3 target;
+    public required Vector3 up;
+    public required float aspect;
+    public required float fovy;
+    public required float znear;
+    public required float zfar;
+
+    public Matrix4 BuildViewProjMatrix()
+    {
+        var view = Matrix4.LookAt(eye, target, up);
+        Matrix4.PerspectiveProjection(
+            fovy: fovy,
+            aspect: aspect,
+            depthNear: znear,
+            depthFar: zfar,
+            out var proj);
+        return proj * view;
+    }
+}
+
+internal struct CameraUniform
+{
+    public Matrix4 ViewProj;
+
+    public static readonly Matrix4 OPENGL_TO_WGPU_MATRIX = new Matrix4(
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.5f, 0.5f,
+        0.0f, 0.0f, 0.0f, 1.0f);
+
+    public static CameraUniform Default => new() { ViewProj = Matrix4.Identity };
+
+    public void UpdateViewProj(Camera camera)
+    {
+        ViewProj = OPENGL_TO_WGPU_MATRIX * camera.BuildViewProjMatrix();
+    }
+}
+
+internal struct InstanceRaw
+{
+    public required Matrix4 Model;
+}
+
 internal struct State
 {
     public required PipelineLayoutHandle PipelineLayout;
-    public required ShaderModuleHandle ShaderModule;
+    public required ShaderModuleHandle Shader;
     public required RenderPipelineHandle RenderPipeline;
 
     public required BufferHandle VertexBuffer;
-    public required uint VertexCount;
+    //public required uint VertexCount;
     public required BufferHandle IndexBuffer;
-    public required uint IndexCount;
+    public required int IndexCount;
     public required wgpu_IndexFormat IndexFormat;
 
-    public required TextureHandle Texture;
+    public required TextureHandle DiffuseTexture;
     public required TextureViewHandle TextureView;
     public required SamplerHandle Sampler;
     public required BindGroupLayoutHandle TextureBindGroupLayout;
-    public required BindGroupHandle TextureBindGroup;
+    public required BindGroupHandle DiffuseBindGroup;
 
-    public required BufferHandle UniformBuffer;
-    public required BindGroupLayoutHandle UniformBindGroupLayout;
-    public required BindGroupHandle UniformBindGroup;
+    public required BufferHandle CameraBuffer;
+    public required BindGroupLayoutHandle CameraBindGroupLayout;
+    public required BindGroupHandle CameraBindGroup;
 
     public required BufferHandle InstanceBuffer;
-    public required uint InstanceCount;
+    public required int InstanceCount;
 }
 
 
