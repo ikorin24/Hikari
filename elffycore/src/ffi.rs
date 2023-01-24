@@ -1,5 +1,6 @@
 use crate::engine::*;
 use crate::error::*;
+use crate::traceln;
 use crate::types::*;
 use std::num::NonZeroUsize;
 
@@ -168,12 +169,13 @@ extern "cdecl" fn elffy_create_texture_view(
     desc: &TextureViewDescriptor,
 ) -> ApiRefResult<wgpu::TextureView> {
     let desc = &desc.to_wgpu_type();
-    println!(
+    traceln!(
         r"create_texture_view(
 texture: {:#?},
 desc: {:#?},
 );",
-        texture, desc,
+        texture,
+        desc,
     );
     let value = Box::new(texture.create_view(desc));
     make_ref_result(value, None)

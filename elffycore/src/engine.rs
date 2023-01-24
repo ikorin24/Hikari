@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::traceln;
 use crate::types::*;
 use pollster::FutureExt;
 use std::cell::Cell;
@@ -231,7 +232,7 @@ impl HostScreen {
         data_layout: &wgpu::ImageDataLayout,
         size: &wgpu::Extent3d,
     ) {
-        println!(
+        traceln!(
             r"write_texture(
     texture: {:#?},
     data: &[u8; {:?}],
@@ -248,7 +249,7 @@ impl HostScreen {
     }
 
     pub fn write_buffer(&self, buffer: &wgpu::Buffer, offset: u64, data: &[u8]) {
-        println!(
+        traceln!(
             r"write_buffer(
     buffer: {:#?},
     offset: {:#?},
@@ -265,7 +266,7 @@ impl HostScreen {
         &self,
         desc: &wgpu::BindGroupLayoutDescriptor,
     ) -> Box<wgpu::BindGroupLayout> {
-        println!(
+        traceln!(
             r"create_bind_group_layout(
     desc: {:#?},
 );",
@@ -276,7 +277,7 @@ impl HostScreen {
     }
 
     pub fn create_bind_group(&self, desc: &wgpu::BindGroupDescriptor) -> Box<wgpu::BindGroup> {
-        println!(
+        traceln!(
             r"create_bind_group(
     desc: {:#?},
 );",
@@ -287,7 +288,7 @@ impl HostScreen {
     }
 
     pub fn create_sampler(&self, desc: &wgpu::SamplerDescriptor) -> Box<wgpu::Sampler> {
-        println!(
+        traceln!(
             r"create_sampler(
     desc: {:#?},
 );",
@@ -301,7 +302,7 @@ impl HostScreen {
         &self,
         desc: &wgpu::PipelineLayoutDescriptor,
     ) -> Box<wgpu::PipelineLayout> {
-        println!(
+        traceln!(
             r"create_pipeline_layout(
     desc: {:#?},
 );",
@@ -314,7 +315,7 @@ impl HostScreen {
         &self,
         desc: &wgpu::RenderPipelineDescriptor,
     ) -> Box<wgpu::RenderPipeline> {
-        println!(
+        traceln!(
             r"create_render_pipeline(
     desc: {:#?},
 );",
@@ -324,7 +325,7 @@ impl HostScreen {
     }
 
     pub fn create_shader_module(&self, shader_source: &str) -> Box<wgpu::ShaderModule> {
-        println!(
+        traceln!(
             r"create_shader_module(
     shader_source: &str (len={:?}),
 );",
@@ -344,7 +345,7 @@ impl HostScreen {
         contents: &[u8],
         usage: wgpu::BufferUsages,
     ) -> Box<wgpu::Buffer> {
-        println!(
+        traceln!(
             r"create_buffer_init(
     contents: &[u8; {:?}],
     usage: {:#?},
@@ -363,7 +364,7 @@ impl HostScreen {
     }
 
     pub fn create_texture(&self, desc: &wgpu::TextureDescriptor) -> Box<wgpu::Texture> {
-        println!(
+        traceln!(
             r"create_texture(
     desc: {:#?},
 );",
@@ -377,7 +378,7 @@ impl HostScreen {
         desc: &wgpu::TextureDescriptor,
         data: &[u8],
     ) -> Box<wgpu::Texture> {
-        println!(
+        traceln!(
             r"create_texture_with_data(
     desc: {:#?},
     data: &[u8; {:?}]
