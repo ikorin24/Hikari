@@ -217,6 +217,9 @@ internal class Program
                     cull_mode = Opt.Some(wgpu_Face.Back),
                     polygon_mode = wgpu_PolygonMode.Fill,
                 },
+                depth_stencil = Opt.None<DepthStencilState>(),
+                multisample = wgpu_MultisampleState.Default,
+                multiview = NonZeroU32OrNone.None,
             });
         }
 
@@ -275,6 +278,38 @@ internal class Program
     //{
     //    public Vector3 Value;
     //}
+
+    private static TextureData CreateDepthTexture(HostScreenHandle screen, uint width, uint height)
+    {
+        var texture = screen.CreateTexture(new TextureDescriptor
+        {
+            size = new wgpu_Extent3d
+            {
+                width = width,
+                height = height,
+                depth_or_array_layers = 1,
+            },
+            mip_level_count = 1,
+            sample_count = 1,
+            dimension = TextureDimension.D2,
+            format = TextureFormat.Depth32Float,
+            usage = wgpu_TextureUsages.RENDER_ATTACHMENT | wgpu_TextureUsages.TEXTURE_BINDING,
+        });
+        var view = texture.CreateTextureView();
+        var sampler = screen.CreateSampler(new SamplerDescriptor
+        {
+            address_mode_u = wgpu_AddressMode.ClampToEdge,
+            address_mode_v = wgpu_AddressMode.ClampToEdge,
+            address_mode_w = wgpu_AddressMode.ClampToEdge,
+            mag_filter = wgpu_FilterMode.Linear,
+            min_filter = wgpu_FilterMode.Linear,
+            mipmap_filter = wgpu_FilterMode.Nearest,
+            compare = Opt.Some(wgpu_CompareFunction.LessEqual),
+            lod_min_clamp = 0f,
+            lod_max_clamp = 100f,
+        });
+        return new TextureData(texture, view, sampler);
+    }
 
     private static unsafe void OnRender(HostScreenHandle screen, RenderPassRef renderPass)
     {
@@ -627,6 +662,11 @@ internal struct State
     public required BufferHandle InstanceBuffer;
     public required int InstanceCount;
 }
+
+internal record struct TextureData(
+    TextureHandle Texture,
+    TextureViewHandle View,
+    SamplerHandle Sampler);
 
 
 internal unsafe static class UnsafeEx

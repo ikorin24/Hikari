@@ -336,6 +336,9 @@ pub(crate) struct RenderPipelineDescription<'a> {
     pub vertex: VertexState<'a>,
     pub fragment: Opt<FragmentState<'a>>,
     pub primitive: PrimitiveState,
+    pub depth_stencil: Opt<DepthStencilState>,
+    pub multisample: wgpu::MultisampleState,
+    pub multiview: Option<num::NonZeroU32>,
 }
 
 impl<'a> RenderPipelineDescription<'a> {
@@ -381,15 +384,32 @@ impl<'a> RenderPipelineDescription<'a> {
             vertex,
             fragment,
             primitive: self.primitive.to_wgpu_type(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            },
-            multiview: None,
+            depth_stencil: self.depth_stencil.map_to_option(|x| x.to_wgpu_type()),
+            multisample: self.multisample,
+            multiview: self.multiview,
         };
         consume(&pipeline_desc)
+    }
+}
+
+#[repr(C)]
+pub(crate) struct DepthStencilState {
+    pub format: TextureFormat,
+    pub depth_write_enabled: bool,
+    pub depth_compare: wgpu::CompareFunction,
+    pub stencil: wgpu::StencilState,
+    pub bias: wgpu::DepthBiasState,
+}
+
+impl DepthStencilState {
+    pub fn to_wgpu_type(&self) -> wgpu::DepthStencilState {
+        wgpu::DepthStencilState {
+            format: self.format.to_wgpu_type(),
+            depth_write_enabled: self.depth_write_enabled,
+            depth_compare: self.depth_compare,
+            stencil: self.stencil.clone(),
+            bias: self.bias,
+        }
     }
 }
 

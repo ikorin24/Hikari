@@ -2,6 +2,7 @@
 using u8 = System.Byte;
 using u16 = System.UInt16;
 using u32 = System.UInt32;
+using i32 = System.Int32;
 using u64 = System.UInt64;
 using f32 = System.Single;
 using System;
@@ -141,6 +142,8 @@ internal unsafe readonly record struct TextureHandle(NativePointer Pointer) : IH
     public static TextureHandle DestroyedHandle => default;
     public static explicit operator TextureHandle(void* nativePtr) => new(nativePtr);
 
+    public TextureViewHandle CreateTextureView() => CreateTextureView(TextureViewDescriptor.Default);
+
     public TextureViewHandle CreateTextureView(in TextureViewDescriptor desc)
     {
         fixed(TextureViewDescriptor* descPtr = &desc) {
@@ -246,8 +249,8 @@ internal struct SamplerDescriptor
     public required f32 lod_min_clamp;
     public required f32 lod_max_clamp;
     public required Opt<wgpu_CompareFunction> compare;
-    public required u8 anisotropy_clamp;
-    public required Opt<SamplerBorderColor> border_color;
+    public u8 anisotropy_clamp;
+    public Opt<SamplerBorderColor> border_color;
 }
 
 internal enum SamplerBorderColor
@@ -337,6 +340,67 @@ internal struct RenderPipelineDescriptor
     public required VertexState vertex;
     public required Opt<FragmentState> fragment;
     public required PrimitiveState primitive;
+    public required Opt<DepthStencilState> depth_stencil;
+    public required wgpu_MultisampleState multisample;
+    public required NonZeroU32OrNone multiview;
+}
+
+internal struct DepthStencilState
+{
+    public required TextureFormat format;
+    public required bool depth_write_enabled;
+    public required wgpu_CompareFunction depth_compare;
+    public required wgpu_StencilState stencil;
+    public required wgpu_DepthBiasState bias;
+}
+
+internal struct wgpu_StencilState
+{
+    public required wgpu_StencilFaceState front;
+    public required wgpu_StencilFaceState back;
+    public required u32 read_mask;
+    public required u32 write_mask;
+}
+
+internal struct wgpu_StencilFaceState
+{
+    public required wgpu_CompareFunction compare;
+    public required wgpu_StencilOperation fail_op;
+    public required wgpu_StencilOperation depth_fail_op;
+    public required wgpu_StencilOperation pass_op;
+}
+
+internal enum wgpu_StencilOperation : u32
+{
+    Keep = 0,
+    Zero = 1,
+    Replace = 2,
+    Invert = 3,
+    IncrementClamp = 4,
+    DecrementClamp = 5,
+    IncrementWrap = 6,
+    DecrementWrap = 7,
+}
+
+internal struct wgpu_DepthBiasState
+{
+    public required i32 constant;
+    public required f32 slope_scale;
+    public required f32 clamp;
+}
+
+internal struct wgpu_MultisampleState
+{
+    public required u32 count;
+    public required u64 mask;
+    public required bool alpha_to_coverage_enabled;
+
+    public static wgpu_MultisampleState Default => new()
+    {
+        count = 1,
+        mask = 0xffff_ffff_ffff_ffff,
+        alpha_to_coverage_enabled = false,
+    };
 }
 
 internal struct VertexState
@@ -994,4 +1058,24 @@ internal struct RangeBoundsU32
     public required u32 end_excluded;
     public required bool has_start;
     public required bool has_end_excluded;
+}
+
+internal readonly struct NonZeroU32OrNone : IEquatable<NonZeroU32OrNone>
+{
+    private readonly u32 _value;
+    public static NonZeroU32OrNone None => default;
+
+    private NonZeroU32OrNone(u32 value) => _value = value;
+
+    public static implicit operator NonZeroU32OrNone(u32 value) => new(value);
+
+    public static bool operator ==(NonZeroU32OrNone left, NonZeroU32OrNone right) => left.Equals(right);
+
+    public static bool operator !=(NonZeroU32OrNone left, NonZeroU32OrNone right) => !(left == right);
+
+    public override bool Equals(object? obj) => obj is NonZeroU32OrNone none && Equals(none);
+
+    public bool Equals(NonZeroU32OrNone other) => _value == other._value;
+
+    public override int GetHashCode() => _value.GetHashCode();
 }
