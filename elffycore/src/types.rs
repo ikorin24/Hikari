@@ -1154,7 +1154,7 @@ impl<'a> VertexBufferLayout<'a> {
     pub fn to_wgpu_type(&self) -> wgpu::VertexBufferLayout {
         wgpu::VertexBufferLayout {
             array_stride: self.array_stride,
-            step_mode: wgpu::VertexStepMode::Vertex,
+            step_mode: self.step_mode,
             attributes: &self.attributes,
         }
     }

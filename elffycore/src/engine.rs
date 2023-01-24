@@ -231,11 +231,33 @@ impl HostScreen {
         data_layout: &wgpu::ImageDataLayout,
         size: &wgpu::Extent3d,
     ) {
+        println!(
+            r"write_texture(
+    texture: {:#?},
+    data: &[u8; {:?}],
+    data_layout: {:#?},
+    size: {:#?},
+);",
+            texture.to_wgpu_type(),
+            data.len(),
+            data_layout,
+            size,
+        );
         self.queue
             .write_texture(texture.to_wgpu_type(), data, *data_layout, *size)
     }
 
     pub fn write_buffer(&self, buffer: &wgpu::Buffer, offset: u64, data: &[u8]) {
+        println!(
+            r"write_buffer(
+    buffer: {:#?},
+    offset: {:#?},
+    data: &[u8; {:?}],
+);",
+            buffer,
+            offset,
+            data.len(),
+        );
         self.queue.write_buffer(buffer, offset, data)
     }
 
@@ -243,15 +265,24 @@ impl HostScreen {
         &self,
         desc: &wgpu::BindGroupLayoutDescriptor,
     ) -> Box<wgpu::BindGroupLayout> {
+        println!(
+            r"create_bind_group_layout(
+    desc: {:#?},
+);",
+            desc
+        );
         let layout = self.device.create_bind_group_layout(desc);
         Box::new(layout)
     }
 
-    pub fn create_bind_group(
-        &self,
-        bind_group_desc: &wgpu::BindGroupDescriptor,
-    ) -> Box<wgpu::BindGroup> {
-        let bind_group = self.device.create_bind_group(bind_group_desc);
+    pub fn create_bind_group(&self, desc: &wgpu::BindGroupDescriptor) -> Box<wgpu::BindGroup> {
+        println!(
+            r"create_bind_group(
+    desc: {:#?},
+);",
+            desc
+        );
+        let bind_group = self.device.create_bind_group(desc);
         Box::new(bind_group)
     }
 
@@ -260,30 +291,61 @@ impl HostScreen {
         texture: &wgpu::Texture,
         desc: &wgpu::TextureViewDescriptor,
     ) -> Box<wgpu::TextureView> {
+        println!(
+            r"create_texture_view(
+    texture: {:#?},
+    desc: {:#?},
+);",
+            texture, desc,
+        );
         let texture_view = texture.create_view(desc);
         Box::new(texture_view)
     }
 
     pub fn create_sampler(&self, desc: &wgpu::SamplerDescriptor) -> Box<wgpu::Sampler> {
+        println!(
+            r"create_sampler(
+    desc: {:#?},
+);",
+            desc
+        );
         let sampler = self.device.create_sampler(desc);
         Box::new(sampler)
     }
 
     pub fn create_pipeline_layout(
         &self,
-        layout_desc: &wgpu::PipelineLayoutDescriptor,
+        desc: &wgpu::PipelineLayoutDescriptor,
     ) -> Box<wgpu::PipelineLayout> {
-        Box::new(self.device.create_pipeline_layout(layout_desc))
+        println!(
+            r"create_pipeline_layout(
+    desc: {:#?},
+);",
+            desc
+        );
+        Box::new(self.device.create_pipeline_layout(desc))
     }
 
     pub fn create_render_pipeline(
         &self,
         desc: &wgpu::RenderPipelineDescriptor,
     ) -> Box<wgpu::RenderPipeline> {
+        println!(
+            r"create_render_pipeline(
+    desc: {:#?},
+);",
+            desc
+        );
         Box::new(self.device.create_render_pipeline(desc))
     }
 
     pub fn create_shader_module(&self, shader_source: &str) -> Box<wgpu::ShaderModule> {
+        println!(
+            r"create_shader_module(
+    shader_source: &str (len={:?}),
+);",
+            shader_source.len()
+        );
         let shader = self
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -298,6 +360,14 @@ impl HostScreen {
         contents: &[u8],
         usage: wgpu::BufferUsages,
     ) -> Box<wgpu::Buffer> {
+        println!(
+            r"create_buffer_init(
+    contents: &[u8; {:?}],
+    usage: {:#?},
+);",
+            contents.len(),
+            usage,
+        );
         let buffer = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -309,6 +379,12 @@ impl HostScreen {
     }
 
     pub fn create_texture(&self, desc: &wgpu::TextureDescriptor) -> Box<wgpu::Texture> {
+        println!(
+            r"create_texture(
+    desc: {:#?},
+);",
+            desc,
+        );
         Box::new(self.device.create_texture(desc))
     }
 
@@ -317,6 +393,14 @@ impl HostScreen {
         desc: &wgpu::TextureDescriptor,
         data: &[u8],
     ) -> Box<wgpu::Texture> {
+        println!(
+            r"create_texture_with_data(
+    desc: {:#?},
+    data: &[u8; {:?}]
+);",
+            desc,
+            data.len()
+        );
         let texture = self
             .device
             .create_texture_with_data(&self.queue, desc, data);

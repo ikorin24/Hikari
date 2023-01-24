@@ -86,7 +86,7 @@ internal class Program
             instanceBuffer = EngineCore.CreateBufferInit(
                 screen,
                 new Slice<byte>(instanceData, sizeof(InstanceRaw) * instances.Length),
-                wgpu_BufferUsages.VERTEX);
+                wgpu_BufferUsages.VERTEX | wgpu_BufferUsages.COPY_DST);
         }
 
         var cameraBindGroupLayout = EngineCore.CreateBindGroupLayout(screen, UnsafeEx.StackPointer(new BindGroupLayoutDescriptor
@@ -286,22 +286,8 @@ internal class Program
         renderPass.SetVertexBuffer(0, new BufSlice(_state.VertexBuffer, RangeBoundsU64.All));
         renderPass.SetVertexBuffer(1, new BufSlice(_state.InstanceBuffer, RangeBoundsU64.All));
         renderPass.SetIndexBuffer(new BufSlice(_state.IndexBuffer, RangeBoundsU64.All), _state.IndexFormat);
+
         renderPass.DrawIndexed(0.._state.IndexCount, 0, 0.._state.InstanceCount);
-        //renderPass.DrawIndexed(0..(int)_state.IndexCount, 0, 0..1);
-
-        /*
-        renderPass.set_pipeline(&self.render_pipeline);
-        renderPass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-        renderPass.set_bind_group(1, &self.camera_bind_group, &[]);
-        renderPass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        renderPass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-        renderPass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        // UPDATED!
-        let instances = 0..self.instances.len() as _;
-        println!("{:?}", instances);
-        render_pass.draw_indexed(0..self.num_indices, 0, instances);
-         */
-
     }
 
     private unsafe static Slice<byte> ShaderSource => Slice.FromFixedSpanUnsafe("""
