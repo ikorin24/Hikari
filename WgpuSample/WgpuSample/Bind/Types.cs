@@ -360,6 +360,14 @@ internal struct wgpu_StencilState
     public required wgpu_StencilFaceState back;
     public required u32 read_mask;
     public required u32 write_mask;
+
+    public static wgpu_StencilState Default => new()
+    {
+        front = wgpu_StencilFaceState.Default,
+        back = wgpu_StencilFaceState.Default,
+        read_mask = 0,
+        write_mask = 0,
+    };
 }
 
 internal struct wgpu_StencilFaceState
@@ -368,6 +376,16 @@ internal struct wgpu_StencilFaceState
     public required wgpu_StencilOperation fail_op;
     public required wgpu_StencilOperation depth_fail_op;
     public required wgpu_StencilOperation pass_op;
+
+    public static wgpu_StencilFaceState Default => Ignore;
+
+    public static wgpu_StencilFaceState Ignore => new()
+    {
+        compare = wgpu_CompareFunction.Always,
+        fail_op = wgpu_StencilOperation.Keep,
+        depth_fail_op = wgpu_StencilOperation.Keep,
+        pass_op = wgpu_StencilOperation.Keep,
+    };
 }
 
 internal enum wgpu_StencilOperation : u32
@@ -387,6 +405,8 @@ internal struct wgpu_DepthBiasState
     public required i32 constant;
     public required f32 slope_scale;
     public required f32 clamp;
+
+    public static wgpu_DepthBiasState Default => default;
 }
 
 internal struct wgpu_MultisampleState

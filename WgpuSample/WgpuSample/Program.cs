@@ -147,6 +147,8 @@ internal class Program
         //// BindGroup (uniform)
         //var uniformBindGroup = HostScreenInitializer.CreateUniformBindGroup(screen, uniformBindGroupLayout, uniformBuffer);
 
+        var depthTexture = CreateDepthTexture(screen, screenSize.Width, screenSize.Height);
+
         // RenderPipeline
         RenderPipelineHandle renderPipeline;
         {
@@ -219,6 +221,14 @@ internal class Program
                     polygon_mode = wgpu_PolygonMode.Fill,
                 },
                 depth_stencil = Opt.None<DepthStencilState>(),
+                //depth_stencil = Opt.Some(new DepthStencilState
+                //{
+                //    format = depthTexture.Format,
+                //    depth_write_enabled = true,
+                //    depth_compare = wgpu_CompareFunction.Less,
+                //    stencil = wgpu_StencilState.Default,
+                //    bias = wgpu_DepthBiasState.Default,
+                //}),
                 multisample = wgpu_MultisampleState.Default,
                 multiview = NonZeroU32OrNone.None,
             });
@@ -280,8 +290,9 @@ internal class Program
     //    public Vector3 Value;
     //}
 
-    private static TextureData CreateDepthTexture(HostScreenHandle screen, uint width, uint height)
+    private static DepthTextureData CreateDepthTexture(HostScreenHandle screen, uint width, uint height)
     {
+        const TextureFormat DepthTextureFormat = TextureFormat.Depth32Float;
         var texture = screen.CreateTexture(new TextureDescriptor
         {
             size = new wgpu_Extent3d
@@ -293,7 +304,7 @@ internal class Program
             mip_level_count = 1,
             sample_count = 1,
             dimension = TextureDimension.D2,
-            format = TextureFormat.Depth32Float,
+            format = DepthTextureFormat,
             usage = wgpu_TextureUsages.RENDER_ATTACHMENT | wgpu_TextureUsages.TEXTURE_BINDING,
         });
         var view = texture.CreateTextureView();
@@ -309,7 +320,7 @@ internal class Program
             lod_min_clamp = 0f,
             lod_max_clamp = 100f,
         });
-        return new TextureData(texture, view, sampler);
+        return new DepthTextureData(texture, view, sampler, DepthTextureFormat);
     }
 
     private static unsafe void OnRender(HostScreenHandle screen, RenderPassRef renderPass)
@@ -668,6 +679,12 @@ internal record struct TextureData(
     TextureHandle Texture,
     TextureViewHandle View,
     SamplerHandle Sampler);
+
+internal record struct DepthTextureData(
+    TextureHandle Texture,
+    TextureViewHandle View,
+    SamplerHandle Sampler,
+    TextureFormat Format);
 
 
 internal unsafe static class UnsafeEx
