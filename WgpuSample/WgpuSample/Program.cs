@@ -61,29 +61,34 @@ internal class Program
             new Slice<byte>(&cameraUniform, sizeof(CameraUniform)),
             wgpu_BufferUsages.UNIFORM | wgpu_BufferUsages.COPY_DST);
 
-        var instances = Enumerable
-            .Range(0, NUM_INSTANCES_PER_ROW)
-            .SelectMany(z => Enumerable.Range(0, NUM_INSTANCES_PER_ROW).Select(x =>
-            {
-                var position = new Vector3(x, 0, z) - INSTANCE_DISPLACEMENT;
-                var rotation = position.IsZero ?
-                    Quaternion.FromAxisAngle(Vector3.UnitZ, 0) :
-                    Quaternion.FromAxisAngle(position.Normalized(), 45f / 180f * float.Pi);
-                var model = rotation.ToMatrix4() * Matrix4.FromScaleAndTranslation(Vector3.One, position);
-                //var model = Matrix4.Identity;
-                return new InstanceRaw
-                {
-                    Model = model,
-                };
-            }))
-            .ToArray();
+        //var instances = Enumerable
+        //    .Range(0, NUM_INSTANCES_PER_ROW)
+        //    .SelectMany(z => Enumerable.Range(0, NUM_INSTANCES_PER_ROW).Select(x =>
+        //    {
+        //        var position = new Vector3(x, 0, z) - INSTANCE_DISPLACEMENT;
+        //        var rotation = position.IsZero ?
+        //            Quaternion.FromAxisAngle(Vector3.UnitZ, 0) :
+        //            Quaternion.FromAxisAngle(position.Normalized(), 45f / 180f * float.Pi);
+        //        var scale = Vector3.One;
+        //        var model = position.ToTranslationMatrix4() * rotation.ToMatrix4() * scale.ToScaleMatrix4();
+        //        return new InstanceRaw
+        //        {
+        //            Model = model,
+        //        };
+        //    }))
+        //    .ToArray();
+        var instances = new InstanceData[2]
+        {
+            new InstanceData(new Vector3(0.5f, 0, 0)),
+            new InstanceData(new Vector3(-0.5f, 0, 0)),
+        };
 
         // Buffer (instance)
         BufferHandle instanceBuffer;
         int instanceCount = instances.Length;
         fixed(void* instanceData = instances) {
             instanceBuffer = screen.CreateBufferInit(
-                new Slice<byte>(instanceData, sizeof(InstanceRaw) * instances.Length),
+                new Slice<byte>(instanceData, sizeof(InstanceData) * instances.Length),
                 wgpu_BufferUsages.VERTEX | wgpu_BufferUsages.COPY_DST);
         }
 
@@ -154,16 +159,25 @@ internal class Program
                     new() { offset = 12, shader_location = 1, format = wgpu_VertexFormat.Float32x2 },
                 }),
             };
+            //var instanceBufferLayout = new VertexBufferLayout
+            //{
+            //    array_stride = (ulong)sizeof(InstanceRaw),
+            //    step_mode = wgpu_VertexStepMode.Instance,
+            //    attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[]
+            //    {
+            //        new() { offset = 4 * 0, shader_location = 5, format = wgpu_VertexFormat.Float32x4 },
+            //        new() { offset = 4 * 4, shader_location = 6, format = wgpu_VertexFormat.Float32x4 },
+            //        new() { offset = 4 * 8, shader_location = 7, format = wgpu_VertexFormat.Float32x4 },
+            //        new() { offset = 4 * 12, shader_location = 8, format = wgpu_VertexFormat.Float32x4 },
+            //    }),
+            //};
             var instanceBufferLayout = new VertexBufferLayout
             {
-                array_stride = (ulong)sizeof(InstanceRaw),
+                array_stride = (ulong)sizeof(InstanceData),
                 step_mode = wgpu_VertexStepMode.Instance,
                 attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[]
                 {
-                    new() { offset = 4 * 0, shader_location = 5, format = wgpu_VertexFormat.Float32x4 },
-                    new() { offset = 4 * 4, shader_location = 6, format = wgpu_VertexFormat.Float32x4 },
-                    new() { offset = 4 * 8, shader_location = 7, format = wgpu_VertexFormat.Float32x4 },
-                    new() { offset = 4 * 12, shader_location = 8, format = wgpu_VertexFormat.Float32x4 },
+                    new() { offset = 0, shader_location = 5, format = wgpu_VertexFormat.Float32x3 },
                 }),
             };
 
@@ -293,15 +307,12 @@ internal class Program
         @group(1) @binding(0)
         var<uniform> camera: Camera;
 
-        struct VertexInput {
+        struct Vertex {
             @location(0) position: vec3<f32>,
             @location(1) tex_coords: vec2<f32>,
         }
-        struct InstanceInput {
-            @location(5) model_matrix_0: vec4<f32>,
-            @location(6) model_matrix_1: vec4<f32>,
-            @location(7) model_matrix_2: vec4<f32>,
-            @location(8) model_matrix_3: vec4<f32>,
+        struct InstanceData {
+            @location(5) offset: vec3<f32>,
         }
 
         struct VertexOutput {
@@ -311,18 +322,11 @@ internal class Program
 
         @vertex
         fn vs_main(
-            model: VertexInput,
-            instance: InstanceInput,
+            v: Vertex,
+            instance: InstanceData,
         ) -> VertexOutput {
-            let model_matrix = mat4x4<f32>(
-                instance.model_matrix_0,
-                instance.model_matrix_1,
-                instance.model_matrix_2,
-                instance.model_matrix_3,
-            );
             var out: VertexOutput;
-            out.tex_coords = model.tex_coords;
-            out.clip_position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
+            out.clip_position = vec4<f32>(v.position + instance.offset, 1.0);
             return out;
         }
 
@@ -596,10 +600,7 @@ internal struct CameraUniform
     }
 }
 
-internal struct InstanceRaw
-{
-    public required Matrix4 Model;
-}
+internal record struct InstanceData(Vector3 Offset);
 
 internal struct State
 {
