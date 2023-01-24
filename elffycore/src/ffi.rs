@@ -164,11 +164,18 @@ extern "cdecl" fn elffy_destroy_texture(texture: Box<wgpu::Texture>) {
 
 #[no_mangle]
 extern "cdecl" fn elffy_create_texture_view(
-    screen: &HostScreen,
     texture: &wgpu::Texture,
     desc: &TextureViewDescriptor,
 ) -> ApiRefResult<wgpu::TextureView> {
-    let value = screen.create_texture_view(texture, &desc.to_wgpu_type());
+    let desc = &desc.to_wgpu_type();
+    println!(
+        r"create_texture_view(
+texture: {:#?},
+desc: {:#?},
+);",
+        texture, desc,
+    );
+    let value = Box::new(texture.create_view(desc));
     make_ref_result(value, None)
 }
 

@@ -392,7 +392,7 @@ internal static class HostScreenInitializer
     public unsafe static (TextureViewHandle TextureView, SamplerHandle Sampler) CreateTextureViewSampler(HostScreenHandle screen, TextureHandle texture)
     {
         var texViewDesc = TextureViewDescriptor.Default;
-        var textureView = EngineCore.CreateTextureView(screen, texture, &texViewDesc);
+        var textureView = EngineCore.CreateTextureView(texture, &texViewDesc);
 
         var samplerDesc = new SamplerDescriptor
         {

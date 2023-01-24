@@ -111,7 +111,6 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiRefResult<TextureViewHandle> elffy_create_texture_view(
-        HostScreenHandle screen,
         TextureHandle texture,
         TextureViewDescriptor* desc);
 

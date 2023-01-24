@@ -286,22 +286,6 @@ impl HostScreen {
         Box::new(bind_group)
     }
 
-    pub fn create_texture_view(
-        &self,
-        texture: &wgpu::Texture,
-        desc: &wgpu::TextureViewDescriptor,
-    ) -> Box<wgpu::TextureView> {
-        println!(
-            r"create_texture_view(
-    texture: {:#?},
-    desc: {:#?},
-);",
-            texture, desc,
-        );
-        let texture_view = texture.create_view(desc);
-        Box::new(texture_view)
-    }
-
     pub fn create_sampler(&self, desc: &wgpu::SamplerDescriptor) -> Box<wgpu::Sampler> {
         println!(
             r"create_sampler(

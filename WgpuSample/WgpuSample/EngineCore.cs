@@ -229,10 +229,9 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static TextureViewHandle CreateTextureView(
-            HostScreenHandle screen,
             TextureHandle texture,
             TextureViewDescriptor* desc)
-            => elffy_create_texture_view(screen, texture, desc).Validate();
+            => elffy_create_texture_view(texture, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
