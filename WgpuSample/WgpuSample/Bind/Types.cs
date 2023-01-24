@@ -84,12 +84,6 @@ internal enum WindowStyle
     Fullscreen = 2,
 }
 
-internal readonly record struct HostScreenHandle(NativePointer Pointer) : IHandle<HostScreenHandle>
-{
-    public static HostScreenHandle DestroyedHandle => default;
-    public unsafe static explicit operator HostScreenHandle(void* nativePtr) => new(nativePtr);
-}
-
 internal readonly record struct BindGroupLayoutHandle(NativePointer Pointer) : IHandle<BindGroupLayoutHandle>
 {
     public static BindGroupLayoutHandle DestroyedHandle => default;
@@ -142,10 +136,17 @@ internal readonly record struct ShaderModuleHandle(NativePointer Pointer) : IHan
     public unsafe static explicit operator ShaderModuleHandle(void* nativePtr) => new(nativePtr);
 }
 
-internal readonly record struct TextureHandle(NativePointer Pointer) : IHandle<TextureHandle>
+internal unsafe readonly record struct TextureHandle(NativePointer Pointer) : IHandle<TextureHandle>
 {
     public static TextureHandle DestroyedHandle => default;
-    public unsafe static explicit operator TextureHandle(void* nativePtr) => new(nativePtr);
+    public static explicit operator TextureHandle(void* nativePtr) => new(nativePtr);
+
+    public TextureViewHandle CreateTextureView(in TextureViewDescriptor desc)
+    {
+        fixed(TextureViewDescriptor* descPtr = &desc) {
+            return EngineCore.CreateTextureView(this, descPtr);
+        }
+    }
 }
 
 internal readonly record struct TextureViewHandle(NativePointer Pointer) : IHandle<TextureViewHandle>

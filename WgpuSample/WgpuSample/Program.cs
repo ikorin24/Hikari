@@ -57,8 +57,7 @@ internal class Program
         var cameraUniform = CameraUniform.Default;
         cameraUniform.UpdateViewProj(camera);
 
-        var cameraBuffer = EngineCore.CreateBufferInit(
-            screen,
+        var cameraBuffer = screen.CreateBufferInit(
             new Slice<byte>(&cameraUniform, sizeof(CameraUniform)),
             wgpu_BufferUsages.UNIFORM | wgpu_BufferUsages.COPY_DST);
 
@@ -83,13 +82,12 @@ internal class Program
         BufferHandle instanceBuffer;
         int instanceCount = instances.Length;
         fixed(void* instanceData = instances) {
-            instanceBuffer = EngineCore.CreateBufferInit(
-                screen,
+            instanceBuffer = screen.CreateBufferInit(
                 new Slice<byte>(instanceData, sizeof(InstanceRaw) * instances.Length),
                 wgpu_BufferUsages.VERTEX | wgpu_BufferUsages.COPY_DST);
         }
 
-        var cameraBindGroupLayout = EngineCore.CreateBindGroupLayout(screen, UnsafeEx.StackPointer(new BindGroupLayoutDescriptor
+        var cameraBindGroupLayout = screen.CreateBindGroupLayout(new()
         {
             entries = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutEntry[1]
             {
@@ -106,7 +104,7 @@ internal class Program
                     count = 0,
                 },
             }),
-        }));
+        });
 
         BindGroupHandle cameraBindGroup;
         {
@@ -115,28 +113,27 @@ internal class Program
             {
                 new() { binding = 0, resource = BindingResource.Buffer(&bufferBinding), }
             };
-            var desc = new BindGroupDescriptor
+            cameraBindGroup = screen.CreateBindGroup(new BindGroupDescriptor
             {
                 layout = cameraBindGroupLayout,
                 entries = new Slice<BindGroupEntry>(Unsafe.AsPointer(ref entries[0]), entries.Length),
-            };
-            cameraBindGroup = EngineCore.CreateBindGroup(screen, &desc);
+            });
         }
 
-        var shader = EngineCore.CreateShaderModule(screen, ShaderSource);
+        var shader = screen.CreateShaderModule(ShaderSource);
 
         //// BindGroupLayout (uniform)
         //var uniformBindGroupLayout = HostScreenInitializer.CreateUniformBindGroupLayout(screen);
 
         // PipelineLayout
-        var pipelineLayout = EngineCore.CreatePipelineLayout(screen, UnsafeEx.StackPointer(new PipelineLayoutDescriptor
+        var pipelineLayout = screen.CreatePipelineLayout(new PipelineLayoutDescriptor
         {
             bind_group_layouts = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutHandle[]
             {
                 textureBindGroupLayout,
                 cameraBindGroupLayout,
             }),
-        }));
+        });
 
         //// Buffer (uniform)
         //var uniformBuffer = HostScreenInitializer.CreateUniformBuffer(screen, stackalloc Vector4[] { new Vector4(1, 0, 0, 1) });
@@ -170,7 +167,8 @@ internal class Program
                 }),
             };
 
-            var desc = new RenderPipelineDescriptor
+
+            renderPipeline = screen.CreateRenderPipeline(new RenderPipelineDescriptor
             {
                 layout = pipelineLayout,
                 vertex = new()
@@ -205,8 +203,7 @@ internal class Program
                     cull_mode = Opt.Some(wgpu_Face.Back),
                     polygon_mode = wgpu_PolygonMode.Fill,
                 },
-            };
-            renderPipeline = EngineCore.CreateRenderPipeline(screen, &desc);
+            });
         }
 
         // Buffer (vertex, index)
@@ -218,14 +215,12 @@ internal class Program
             var (vertices, indices) = SamplePrimitives.SampleData();
             indexCount = indices.Length;
             fixed(void* vData = vertices) {
-                vertexBuffer = EngineCore.CreateBufferInit(
-                    screen,
+                vertexBuffer = screen.CreateBufferInit(
                     new Slice<byte>(vData, sizeof(Vertex) * vertices.Length),
                     wgpu_BufferUsages.VERTEX);
             }
             fixed(void* iData = indices) {
-                indexBuffer = EngineCore.CreateBufferInit(
-                    screen,
+                indexBuffer = screen.CreateBufferInit(
                     new Slice<byte>(iData, sizeof(ushort) * indices.Length),
                     wgpu_BufferUsages.INDEX);
             }
@@ -290,7 +285,7 @@ internal class Program
         renderPass.DrawIndexed(0.._state.IndexCount, 0, 0.._state.InstanceCount);
     }
 
-    private unsafe static Slice<byte> ShaderSource => Slice.FromFixedSpanUnsafe("""
+    private unsafe static ReadOnlySpan<byte> ShaderSource => """
         // Vertex shader
         struct Camera {
             view_proj: mat4x4<f32>,
@@ -343,21 +338,21 @@ internal class Program
             return textureSample(t_diffuse, s_diffuse, in.tex_coords);
         }
             
-        """u8);
+        """u8;
 }
 
 internal static class HostScreenInitializer
 {
     public unsafe static TextureHandle CreateTexture(HostScreenHandle screen, string filepath)
     {
-        var pixelBytes = SamplePrimitives.LoadImagePixels(filepath, out var width, out var height);
+        var (pixelBytes, width, height) = SamplePrimitives.LoadImagePixels(filepath);
         var size = new wgpu_Extent3d
         {
             width = width,
             height = height,
             depth_or_array_layers = 1,
-        };
-        var desc = new TextureDescriptor
+        }; ;
+        var texture = screen.CreateTexture(new()
         {
             dimension = TextureDimension.D2,
             format = TextureFormat.Rgba8UnormSrgb,
@@ -365,36 +360,34 @@ internal static class HostScreenInitializer
             sample_count = 1,
             size = size,
             usage = wgpu_TextureUsages.TEXTURE_BINDING | wgpu_TextureUsages.COPY_DST,
-        };
-        var texture = EngineCore.CreateTexture(screen, &desc);
-        var writeTex = new ImageCopyTexture
-        {
-            texture = texture,
-            mip_level = 0,
-            aspect = TextureAspect.All,
-            origin_x = 0,
-            origin_y = 0,
-            origin_z = 0,
-        };
-        var dataLayout = new wgpu_ImageDataLayout
-        {
-            offset = 0,
-            bytes_per_row = 4 * width,
-            rows_per_image = height,
-        };
+        });
         fixed(byte* p = pixelBytes) {
-            var data = new Slice<byte>(p, pixelBytes.Length);
-            EngineCore.WriteTexture(screen, &writeTex, data, &dataLayout, &size);
+            screen.WriteTexture(
+                new ImageCopyTexture
+                {
+                    texture = texture,
+                    mip_level = 0,
+                    aspect = TextureAspect.All,
+                    origin_x = 0,
+                    origin_y = 0,
+                    origin_z = 0,
+                },
+                new Slice<byte>(p, pixelBytes.Length),
+                new wgpu_ImageDataLayout
+                {
+                    offset = 0,
+                    bytes_per_row = 4 * width,
+                    rows_per_image = height,
+                },
+                size);
         }
         return texture;
     }
 
     public unsafe static (TextureViewHandle TextureView, SamplerHandle Sampler) CreateTextureViewSampler(HostScreenHandle screen, TextureHandle texture)
     {
-        var texViewDesc = TextureViewDescriptor.Default;
-        var textureView = EngineCore.CreateTextureView(texture, &texViewDesc);
-
-        var samplerDesc = new SamplerDescriptor
+        var textureView = texture.CreateTextureView(TextureViewDescriptor.Default);
+        var sampler = screen.CreateSampler(new SamplerDescriptor
         {
             address_mode_u = wgpu_AddressMode.ClampToEdge,
             address_mode_v = wgpu_AddressMode.ClampToEdge,
@@ -407,15 +400,14 @@ internal static class HostScreenInitializer
             lod_min_clamp = 0,
             border_color = Opt.None<SamplerBorderColor>(),
             compare = Opt.None<wgpu_CompareFunction>(),
-        };
-        var sampler = EngineCore.CreateSampler(screen, &samplerDesc);
+        });
 
         return (TextureView: textureView, Sampler: sampler);
     }
 
     public unsafe static BindGroupLayoutHandle CreateTextureBindGroupLayout(HostScreenHandle screen)
     {
-        var desc = new BindGroupLayoutDescriptor
+        return screen.CreateBindGroupLayout(new()
         {
             entries = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutEntry[2]
             {
@@ -439,8 +431,7 @@ internal static class HostScreenInitializer
                     count = 0,
                 },
             }),
-        };
-        return EngineCore.CreateBindGroupLayout(screen, &desc);
+        });
     }
 
     public unsafe static BindGroupHandle CreateTextureBindGroup(
@@ -449,7 +440,7 @@ internal static class HostScreenInitializer
         TextureViewHandle textureView,
         SamplerHandle sampler)
     {
-        var desc = new BindGroupDescriptor
+        return screen.CreateBindGroup(new BindGroupDescriptor
         {
             layout = bindGroupLayout,
             entries = Slice.FromFixedSpanUnsafe((stackalloc BindGroupEntry[2]
@@ -465,8 +456,7 @@ internal static class HostScreenInitializer
                     resource = BindingResource.Sampler(sampler),
                 },
             })),
-        };
-        return EngineCore.CreateBindGroup(screen, &desc);
+        });
     }
 
     public unsafe static BufferHandle CreateUniformBuffer<T>(HostScreenHandle screen, Span<T> data) where T : unmanaged
@@ -474,17 +464,16 @@ internal static class HostScreenInitializer
 
     public unsafe static BufferHandle CreateUniformBuffer<T>(HostScreenHandle screen, ReadOnlySpan<T> data) where T : unmanaged
     {
-        var bytes = data.AsBytes();
-        fixed(byte* p = bytes) {
-            var contents = new Slice<byte>(p, (nuint)bytes.Length);
+        fixed(void* p = data) {
+            var contents = new Slice<byte>(p, (nuint)data.Length * (nuint)sizeof(T));
             var usage = wgpu_BufferUsages.UNIFORM | wgpu_BufferUsages.COPY_DST;
-            return EngineCore.CreateBufferInit(screen, contents, usage);
+            return screen.CreateBufferInit(contents, usage);
         }
     }
 
     public unsafe static BindGroupLayoutHandle CreateUniformBindGroupLayout(HostScreenHandle screen)
     {
-        var desc = new BindGroupLayoutDescriptor
+        return screen.CreateBindGroupLayout(new()
         {
             entries = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutEntry[1]
                 {
@@ -501,8 +490,7 @@ internal static class HostScreenInitializer
                     count = 0,
                 },
             }),
-        };
-        return EngineCore.CreateBindGroupLayout(screen, &desc);
+        });
     }
 
     //public unsafe static BindGroupHandle CreateUniformBindGroup(
@@ -543,7 +531,7 @@ internal static class HostScreenInitializer
         fixed(TVertex* v = vertices) {
             nuint bytelen = (nuint)sizeof(TVertex) * (nuint)vertices.Length;
             var contents = new Slice<byte>(v, bytelen);
-            vertexBuffer = EngineCore.CreateBufferInit(screen, contents, wgpu_BufferUsages.VERTEX);
+            vertexBuffer = screen.CreateBufferInit(contents, wgpu_BufferUsages.VERTEX);
             vertexCount = (uint)vertices.Length;
         }
 
@@ -553,7 +541,7 @@ internal static class HostScreenInitializer
         fixed(uint* i = indices) {
             nuint bytelen = (nuint)sizeof(uint) * (nuint)indices.Length;
             var contents = new Slice<byte>(i, bytelen);
-            indexBuffer = EngineCore.CreateBufferInit(screen, contents, wgpu_BufferUsages.INDEX);
+            indexBuffer = screen.CreateBufferInit(contents, wgpu_BufferUsages.INDEX);
             indexCount = (uint)indices.Length;
         }
 
@@ -645,18 +633,5 @@ internal unsafe static class UnsafeEx
     public static T* StackPointer<T>(in T x) where T : unmanaged
     {
         return (T*)Unsafe.AsPointer(ref Unsafe.AsRef(in x));
-    }
-}
-
-internal static class SpanExtensions
-{
-    public static ReadOnlySpan<T> AsReadOnly<T>(this Span<T> span) where T : unmanaged
-    {
-        return (ReadOnlySpan<T>)span;
-    }
-
-    public static ReadOnlySpan<byte> AsBytes<T>(this ReadOnlySpan<T> span) where T : unmanaged
-    {
-        return MemoryMarshal.AsBytes(span);
     }
 }
