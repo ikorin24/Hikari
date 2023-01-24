@@ -404,9 +404,14 @@ impl HostScreen {
         self.on_render.set(callbacks.on_render);
     }
 
-    // pub fn set_size(&self, width: u32, height: u32){
+    pub fn get_inner_size(&self) -> (u32, u32) {
+        self.window.inner_size().into()
+    }
 
-    // }
+    pub fn set_inner_size(&self, width: num::NonZeroU32, height: num::NonZeroU32) {
+        let size = dpi::PhysicalSize::<u32>::new(width.into(), height.into());
+        self.window.set_inner_size(size);
+    }
 
     pub fn handle_event(
         &self,

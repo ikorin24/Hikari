@@ -9,6 +9,12 @@ internal unsafe readonly record struct HostScreenHandle(NativePointer Pointer) :
     public static HostScreenHandle DestroyedHandle => default;
     public static explicit operator HostScreenHandle(void* nativePtr) => new(nativePtr);
 
+    public (uint Width, uint Height) InnerSize
+    {
+        get => EngineCore.ScreenGetInnerSize(this);
+        set => EngineCore.ScreenSetInnerSize(this, value.Width, value.Height);
+    }
+
     public void WriteTexture(
             in ImageCopyTexture texture,
             Slice<u8> data,

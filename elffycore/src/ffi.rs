@@ -2,7 +2,7 @@ use crate::engine::*;
 use crate::error::*;
 use crate::traceln;
 use crate::types::*;
-use std::num::NonZeroUsize;
+use std::num::{NonZeroU32, NonZeroUsize};
 
 #[no_mangle]
 extern "cdecl" fn elffy_engine_start(
@@ -13,6 +13,28 @@ extern "cdecl" fn elffy_engine_start(
     dispatch_err(err);
     let err_count = reset_tls_err_count();
     NonZeroUsize::new(err_count).unwrap()
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_screen_set_inner_size(
+    screen: &HostScreen,
+    width: u32,
+    height: u32,
+) -> ApiResult {
+    if let (Some(w), Some(h)) = (NonZeroU32::new(width), NonZeroU32::new(height)) {
+        screen.set_inner_size(w, h);
+    }
+    make_result()
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_screen_get_inner_size(
+    screen: &HostScreen,
+    width: &mut u32,
+    height: &mut u32,
+) -> ApiResult {
+    (*width, *height) = screen.get_inner_size();
+    make_result()
 }
 
 #[no_mangle]

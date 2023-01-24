@@ -12,8 +12,6 @@ using System.Threading;
 using Elffy.Bind;
 using System.Text;
 using System.Collections.Generic;
-using System.Runtime.ExceptionServices;
-using System.Collections.Concurrent;
 
 namespace Elffy
 {
@@ -78,6 +76,24 @@ namespace Elffy
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
             static void OnRender(HostScreenHandle screen, RenderPassRef render_pass) => _config.OnRender(screen, render_pass);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static (u32 Width, u32 Height) ScreenGetInnerSize(HostScreenHandle screen)
+        {
+            u32 width;
+            u32 height;
+            elffy_screen_get_inner_size(screen, &width, &height).Validate();
+            return (width, height);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public static void ScreenSetInnerSize(
+            HostScreenHandle screen,
+            u32 width,
+            u32 height)
+            => elffy_screen_set_inner_size(screen, width, height).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]

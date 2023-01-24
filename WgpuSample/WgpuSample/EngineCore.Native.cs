@@ -23,6 +23,18 @@ static unsafe partial class EngineCore
         HostScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_screen_get_inner_size(
+        HostScreenHandle screen,
+        u32* width,
+        u32* height);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_screen_set_inner_size(
+        HostScreenHandle screen,
+        u32 width,
+        u32 height);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_write_texture(
         HostScreenHandle screen,
         ImageCopyTexture* texture,

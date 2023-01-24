@@ -44,12 +44,13 @@ internal class Program
         // BindGroup
         var diffuseBindGroup = HostScreenInitializer.CreateTextureBindGroup(screen, textureBindGroupLayout, textureView, sampler);
 
+        var screenSize = screen.InnerSize;
         var camera = new Camera
         {
             eye = new(0.0f, 5.0f, -10.0f),
             target = new(0, 0, 0),
             up = new(0, 1, 0),
-            aspect = 1280f / 720f,  // width / height
+            aspect = (float)screenSize.Width / screenSize.Height,
             fovy = 45f / 180f * float.Pi,
             znear = 0.1f,
             zfar = 100f,
