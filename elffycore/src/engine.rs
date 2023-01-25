@@ -147,6 +147,7 @@ pub(crate) struct HostScreen {
     backend: wgpu::Backend,
     queue: wgpu::Queue,
     on_render: Cell<Option<HostScreenRenderFn>>,
+    on_resized: Cell<Option<HostScreenResizedFn>>,
 }
 
 impl HostScreen {
@@ -222,6 +223,7 @@ impl HostScreen {
             backend: adapter.get_info().backend,
             queue,
             on_render: Cell::new(None),
+            on_resized: Cell::new(None),
         })
     }
 
@@ -235,7 +237,7 @@ impl HostScreen {
 
     pub fn write_texture(
         &self,
-        texture: &ImageCopyTexture,
+        texture: wgpu::ImageCopyTexture,
         data: &[u8],
         data_layout: &wgpu::ImageDataLayout,
         size: &wgpu::Extent3d,
@@ -247,13 +249,12 @@ impl HostScreen {
     data_layout: {:#?},
     size: {:#?},
 );",
-            texture.to_wgpu_type(),
+            texture,
             data.len(),
             data_layout,
             size,
         );
-        self.queue
-            .write_texture(texture.to_wgpu_type(), data, *data_layout, *size)
+        self.queue.write_texture(texture, data, *data_layout, *size)
     }
 
     pub fn write_buffer(&self, buffer: &wgpu::Buffer, offset: u64, data: &[u8]) {
@@ -402,6 +403,7 @@ impl HostScreen {
 
     pub fn set_callbacks(&self, callbacks: HostScreenCallbacks) {
         self.on_render.set(callbacks.on_render);
+        self.on_resized.set(callbacks.on_resized);
     }
 
     pub fn get_inner_size(&self) -> (u32, u32) {
@@ -516,6 +518,10 @@ impl HostScreen {
             self.surface_size.set((width, height));
             let config = self.surface_config_data.to_surface_config(width, height);
             self.surface.configure(&self.device, &config);
+
+            if let Some(on_resized) = self.on_resized.get() {
+                on_resized(self, width.into(), height.into());
+            }
         }
     }
 }

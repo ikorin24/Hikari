@@ -45,7 +45,7 @@ extern "cdecl" fn elffy_write_texture(
     data_layout: &wgpu::ImageDataLayout,
     size: &wgpu::Extent3d,
 ) -> ApiResult {
-    screen.write_texture(texture, &data, data_layout, size);
+    screen.write_texture(texture.to_wgpu_type(), &data, data_layout, size);
     make_result()
 }
 

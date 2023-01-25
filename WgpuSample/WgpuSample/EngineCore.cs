@@ -60,7 +60,8 @@ namespace Elffy
 
                 return new HostScreenCallbacks
                 {
-                    on_render = &OnRender,
+                    on_render = new(&OnRender),
+                    on_resized = new(&OnResized),
                 };
             }
 
@@ -75,6 +76,9 @@ namespace Elffy
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
             static void OnRender(HostScreenHandle screen, RenderPassRef render_pass) => _config.OnRender(screen, render_pass);
+
+            [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+            static void OnResized(HostScreenHandle screen, uint width, uint height) => _config.OnResized(screen, width, height);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -428,10 +432,12 @@ namespace Elffy
     {
         public required EngineCoreStartAction OnStart { get; init; }
         public required EngineCoreRenderAction OnRender { get; init; }
+        public required EngineCoreResizedAction OnResized { get; init; }
     }
 
     internal delegate void EngineCoreStartAction(HostScreenHandle screen, in HostScreenInfo info);
     internal delegate void EngineCoreRenderAction(HostScreenHandle screen, RenderPassRef renderPass);
+    internal delegate void EngineCoreResizedAction(HostScreenHandle screen, uint width, uint height);
 
 
     public sealed class Never

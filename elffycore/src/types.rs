@@ -36,6 +36,7 @@ pub(crate) enum WindowStyle {
 #[derive(Default, Clone, Copy)]
 pub(crate) struct HostScreenCallbacks {
     pub on_render: Option<HostScreenRenderFn>,
+    pub on_resized: Option<HostScreenResizedFn>,
 }
 
 #[repr(C)]
@@ -1417,6 +1418,8 @@ pub(crate) type HostScreenInitFn =
     extern "cdecl" fn(screen: &HostScreen, screen_info: &HostScreenInfo) -> HostScreenCallbacks;
 pub(crate) type HostScreenRenderFn =
     extern "cdecl" fn(screen: &HostScreen, render_pass: &mut wgpu::RenderPass) -> ();
+pub(crate) type HostScreenResizedFn =
+    extern "cdecl" fn(screen: &HostScreen, width: u32, height: u32) -> ();
 
 // -------------------------
 

@@ -166,6 +166,23 @@ internal unsafe readonly struct HostScreenInitFn
     public HostScreenInitFn(delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> f) => _func = f;
 }
 
+internal unsafe readonly struct HostScreenRenderFn
+{
+#pragma warning disable IDE0052
+    private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassRef, void> _func;
+#pragma warning restore IDE0052
+    public HostScreenRenderFn(delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassRef, void> f) => _func = f;
+}
+
+internal unsafe readonly struct HostScreenResizedFn
+{
+#pragma warning disable IDE0052
+    private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, u32, u32, void> _func;
+#pragma warning restore IDE0052
+
+    public HostScreenResizedFn(delegate* unmanaged[Cdecl]<HostScreenHandle, u32, u32, void> f) => _func = f;
+}
+
 internal unsafe readonly struct DispatchErrFn
 {
 #pragma warning disable IDE0052
@@ -199,7 +216,8 @@ internal struct HostScreenInfo
 
 internal unsafe struct HostScreenCallbacks
 {
-    public required delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassRef, void> on_render;
+    public required HostScreenRenderFn on_render;
+    public required HostScreenResizedFn on_resized;
 }
 
 internal struct BindGroupLayoutDescriptor

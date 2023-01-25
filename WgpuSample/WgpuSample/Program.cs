@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -17,6 +18,7 @@ internal class Program
         {
             OnStart = OnStart,
             OnRender = OnRender,
+            OnResized = OnResized,
         });
     }
 
@@ -282,6 +284,11 @@ internal class Program
             //UniformBindGroupLayout = uniformBindGroupLayout,
             //UniformBindGroup = uniformBindGroup,
         };
+    }
+
+    private static void OnResized(HostScreenHandle screen, uint width, uint height)
+    {
+        Debug.WriteLine((width, height));
     }
 
     ////[StructLayout(LayoutKind.Sequential, Size = 4)]
