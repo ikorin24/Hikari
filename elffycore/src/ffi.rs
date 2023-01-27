@@ -1,7 +1,6 @@
 use crate::engine::*;
 use crate::error_handler::*;
 use crate::screen::*;
-use crate::traceln;
 use crate::types::*;
 use std::num::{NonZeroU32, NonZeroUsize};
 
@@ -213,14 +212,6 @@ extern "cdecl" fn elffy_create_texture_view(
     desc: &TextureViewDescriptor,
 ) -> ApiBoxResult<wgpu::TextureView> {
     let desc = &desc.to_wgpu_type();
-    traceln!(
-        r"create_texture_view(
-texture: {:#?},
-desc: {:#?},
-);",
-        texture,
-        desc,
-    );
     let value = Box::new(texture.create_view(desc));
     make_box_result(value, None)
 }

@@ -28,7 +28,7 @@ internal class Program
                         Opt.Some(new RenderPassColorAttachment
                         {
                             view = surfaceTextureView,
-                            clear = new wgpu_Color(0.1, 0.2, 0.3, 0),
+                            clear = new wgpu_Color(0, 0, 0, 0),
                         }),
                     };
                     var desc = new RenderPassDescriptor
@@ -315,6 +315,12 @@ internal class Program
     private static void OnResized(HostScreenHandle screen, uint width, uint height)
     {
         Debug.WriteLine((width, height));
+        var depth = _state.Depth;
+        EngineCore.DestroySampler(depth.Sampler);
+        EngineCore.DestroyTextureView(depth.View);
+        EngineCore.DestroyTexture(depth.Texture);
+        _state.Depth = default;
+        _state.Depth = CreateDepthTexture(screen, width, height);
     }
 
     ////[StructLayout(LayoutKind.Sequential, Size = 4)]
@@ -358,17 +364,6 @@ internal class Program
 
     private static unsafe void OnRender(HostScreenHandle screen, RenderPassRef renderPass)
     {
-        //var color = new Vector4
-        //{
-        //    X = Random.Shared.NextSingle(),
-        //    Y = 0,
-        //    Z = 0,
-        //    W = 0,
-        //};
-        //var data = new Slice<byte>(&color, (nuint)sizeof(Vector4));
-        //EngineCore.WriteBuffer(screen, _state.UniformBuffer, 0, data);
-        Console.WriteLine("<C#> OnRender");
-
         renderPass.SetPipeline(_state.RenderPipeline);
         renderPass.SetBindGroup(0, _state.DiffuseBindGroup);
         renderPass.SetBindGroup(1, _state.CameraBindGroup);

@@ -8,7 +8,6 @@ use windows as platform;
 
 use crate::engine;
 use crate::error_handler::*;
-use crate::traceln;
 use crate::types::*;
 use pollster::FutureExt;
 use std::cell::Cell;
@@ -145,32 +144,10 @@ impl HostScreen {
         data_layout: &wgpu::ImageDataLayout,
         size: &wgpu::Extent3d,
     ) {
-        traceln!(
-            r"write_texture(
-    texture: {:#?},
-    data: &[u8; {:?}],
-    data_layout: {:#?},
-    size: {:#?},
-);",
-            texture,
-            data.len(),
-            data_layout,
-            size,
-        );
         self.queue.write_texture(texture, data, *data_layout, *size)
     }
 
     pub fn write_buffer(&self, buffer: &wgpu::Buffer, offset: u64, data: &[u8]) {
-        traceln!(
-            r"write_buffer(
-    buffer: {:#?},
-    offset: {:#?},
-    data: &[u8; {:?}],
-);",
-            buffer,
-            offset,
-            data.len(),
-        );
         self.queue.write_buffer(buffer, offset, data)
     }
 
@@ -178,34 +155,16 @@ impl HostScreen {
         &self,
         desc: &wgpu::BindGroupLayoutDescriptor,
     ) -> Box<wgpu::BindGroupLayout> {
-        traceln!(
-            r"create_bind_group_layout(
-    desc: {:#?},
-);",
-            desc
-        );
         let layout = self.device.create_bind_group_layout(desc);
         Box::new(layout)
     }
 
     pub fn create_bind_group(&self, desc: &wgpu::BindGroupDescriptor) -> Box<wgpu::BindGroup> {
-        traceln!(
-            r"create_bind_group(
-    desc: {:#?},
-);",
-            desc
-        );
         let bind_group = self.device.create_bind_group(desc);
         Box::new(bind_group)
     }
 
     pub fn create_sampler(&self, desc: &wgpu::SamplerDescriptor) -> Box<wgpu::Sampler> {
-        traceln!(
-            r"create_sampler(
-    desc: {:#?},
-);",
-            desc
-        );
         let sampler = self.device.create_sampler(desc);
         Box::new(sampler)
     }
@@ -214,12 +173,6 @@ impl HostScreen {
         &self,
         desc: &wgpu::PipelineLayoutDescriptor,
     ) -> Box<wgpu::PipelineLayout> {
-        traceln!(
-            r"create_pipeline_layout(
-    desc: {:#?},
-);",
-            desc
-        );
         Box::new(self.device.create_pipeline_layout(desc))
     }
 
@@ -227,22 +180,10 @@ impl HostScreen {
         &self,
         desc: &wgpu::RenderPipelineDescriptor,
     ) -> Box<wgpu::RenderPipeline> {
-        traceln!(
-            r"create_render_pipeline(
-    desc: {:#?},
-);",
-            desc
-        );
         Box::new(self.device.create_render_pipeline(desc))
     }
 
     pub fn create_shader_module(&self, shader_source: &str) -> Box<wgpu::ShaderModule> {
-        traceln!(
-            r"create_shader_module(
-    shader_source: &str (len={:?}),
-);",
-            shader_source.len()
-        );
         let shader = self
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -257,14 +198,6 @@ impl HostScreen {
         contents: &[u8],
         usage: wgpu::BufferUsages,
     ) -> Box<wgpu::Buffer> {
-        traceln!(
-            r"create_buffer_init(
-    contents: &[u8; {:?}],
-    usage: {:#?},
-);",
-            contents.len(),
-            usage,
-        );
         let buffer = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -276,12 +209,6 @@ impl HostScreen {
     }
 
     pub fn create_texture(&self, desc: &wgpu::TextureDescriptor) -> Box<wgpu::Texture> {
-        traceln!(
-            r"create_texture(
-    desc: {:#?},
-);",
-            desc,
-        );
         Box::new(self.device.create_texture(desc))
     }
 
@@ -290,14 +217,6 @@ impl HostScreen {
         desc: &wgpu::TextureDescriptor,
         data: &[u8],
     ) -> Box<wgpu::Texture> {
-        traceln!(
-            r"create_texture_with_data(
-    desc: {:#?},
-    data: &[u8; {:?}]
-);",
-            desc,
-            data.len()
-        );
         let texture = self
             .device
             .create_texture_with_data(&self.queue, desc, data);

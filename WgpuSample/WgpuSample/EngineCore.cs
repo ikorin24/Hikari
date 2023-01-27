@@ -373,31 +373,30 @@ namespace Elffy
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DebuggerHidden]
+        [DebuggerNonUserCode]
         private static void ThrowNativeErrorIfNotZero(nuint errorCount)
         {
             if(errorCount != 0) {
                 ThrowNativeError(errorCount);
 
                 [DoesNotReturn]
-                [DebuggerHidden]
+                [DebuggerNonUserCode]
                 static void ThrowNativeError(nuint errorCount)
                 {
                     Debug.Assert(errorCount != 0);
                     var store = _nativeErrorStore;
-                    string[] messages;
                     if(store == null) {
-                        messages = new string[1] { "Some error occurred in the native code, but the error message could not be retrieved." };
+                        throw EngineCoreException.NewUnknownError();
                     }
                     else {
-                        Debug.Assert((nuint)store.Count == errorCount);
-                        messages = new string[store.Count];
-                        for(int i = 0; i < messages.Length; i++) {
-                            messages[i] = store[i].Message;
+                        EngineCoreException exception;
+                        {
+                            ReadOnlySpan<NativeError> errors = CollectionsMarshal.AsSpan(store);
+                            exception = new EngineCoreException(errors);
                         }
                         store.Clear();
+                        throw exception;
                     }
-                    throw new EngineCoreException(messages);
                 }
             }
         }
@@ -421,7 +420,7 @@ namespace Elffy
             private readonly void* _nativePtr;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            [DebuggerHidden]
+            //[DebuggerHidden]
             public THandle Validate()
             {
                 Debug.Assert((_errorCount == 0 && _nativePtr != null) || (_errorCount > 0 && _nativePtr == null));
@@ -431,30 +430,35 @@ namespace Elffy
                 return (THandle)_nativePtr;
             }
         }
-
-        private record struct NativeError(ErrMessageId Id, string Message);
     }
 
-    public sealed class EngineCoreException : Exception
+    internal record struct NativeError(ErrMessageId Id, string Message);
+
+    internal sealed class EngineCoreException : Exception
     {
-        private readonly string[] _messages;
+        //private readonly string[] _messages;
+        private readonly NativeError[] _errors;
 
-        public ReadOnlyMemory<string> Messages => _messages;
+        public ReadOnlyMemory<NativeError> Errors => _errors;
 
-        internal EngineCoreException(string[] messages) : base(BuildExceptionMessage(messages))
+        internal static EngineCoreException NewUnknownError() => new(ReadOnlySpan<NativeError>.Empty);
+        internal EngineCoreException(ReadOnlySpan<NativeError> errors) : base(BuildExceptionMessage(errors))
         {
-            _messages = messages;
+            _errors = errors.ToArray();
         }
 
-        private static string BuildExceptionMessage(string[] messages)
+        private static string BuildExceptionMessage(ReadOnlySpan<NativeError> errors)
         {
-            if(messages.Length == 1) {
-                return messages[0];
+            if(errors.Length == 0) {
+                return "Some error occurred in the native code, but the error message could not be retrieved.";
+            }
+            if(errors.Length == 1) {
+                return errors[0].Message;
             }
             else {
-                var sb = new StringBuilder($"Multiple errors occurred in the native code. (ErrorCount: {messages.Length}) \n");
-                foreach(var m in messages) {
-                    sb.AppendLine(m);
+                var sb = new StringBuilder($"Multiple errors occurred in the native code. (ErrorCount: {errors.Length}) \n");
+                foreach(var err in errors) {
+                    sb.AppendLine(err.Message);
                 }
                 return sb.ToString();
             }

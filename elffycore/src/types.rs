@@ -52,10 +52,6 @@ impl<'tex, 'desc> Default for RenderPassDescriptor<'tex, 'desc> {
     }
 }
 
-fn as_raw_bytes<'a, T: ?Sized>(x: &'a T) -> &'a [u8] {
-    unsafe { std::slice::from_raw_parts(x as *const T as *const u8, std::mem::size_of_val(x)) }
-}
-
 impl<'tex, 'desc> RenderPassDescriptor<'tex, 'desc> {
     pub fn begin_render_pass_with<'enc>(
         &self,
@@ -64,42 +60,12 @@ impl<'tex, 'desc> RenderPassDescriptor<'tex, 'desc> {
     where
         'tex: 'enc,
     {
-        let s = self.color_attachments_clear.as_slice();
-        println!(
-            "size of Opt<RenderPassColorAttachment>: {}",
-            std::mem::size_of::<Opt<RenderPassColorAttachment>>()
-        );
-        let span = as_raw_bytes(s);
-        // println!("s[0]: {:#?}", s[0]);
-        println!("span: {:#?}", span);
-
-        // println!(
-        //     "color_attachments_clear.len = {:?}",
-        //     self.color_attachments_clear.len()
-        // );
-        // println!(
-        //     "color_attachments_clear[0].exists = {:?}",
-        //     self.color_attachments_clear[0].exists
-        // );
-        // println!(
-        //     "color_attachments_clear[0].value.clear = {:?}",
-        //     self.color_attachments_clear[0].value.clear
-        // );
-        // let slice = self.color_attachments_clear.as_slice();
-        // let slice_data = as_raw_bytes(slice);
-        // println!("slice_data (len = {}): {:#?}", slice_data.len(), slice_data);
-
         let color_attachments: Vec<_> = self
             .color_attachments_clear
             .iter()
             // .map(|opt| opt.map_to_option(|value| value.to_wgpu_type()))
             .map(|opt| {
                 if opt.exists {
-                    let value = &opt.value;
-                    println!(
-                        "elffycore::RenderPassColorAttachment.clear: {:#?}",
-                        value.clear
-                    );
                     Some(opt.value.to_wgpu_type())
                 } else {
                     None
@@ -113,8 +79,6 @@ impl<'tex, 'desc> RenderPassDescriptor<'tex, 'desc> {
                 .depth_stencil_attachment_clear
                 .map_to_option(|x| x.to_wgpu_type()),
         };
-        println!("------------- RenderPassDescriptor -------------");
-        println!("{:#?}", desc);
         command_encoder.begin_render_pass(&desc)
     }
 }
