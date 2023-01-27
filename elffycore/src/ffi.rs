@@ -1,5 +1,6 @@
 use crate::engine::*;
-use crate::error::*;
+use crate::error_handler::*;
+use crate::screen::*;
 use crate::traceln;
 use crate::types::*;
 use std::num::{NonZeroU32, NonZeroUsize};

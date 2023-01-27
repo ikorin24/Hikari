@@ -1,7 +1,8 @@
 mod engine;
-mod error;
+mod error_handler;
 mod ffi;
 mod types;
+mod screen;
 
 #[macro_export]
 macro_rules! traceln {

@@ -42,6 +42,8 @@ namespace Elffy
             {
                 on_screen_init = new(&OnScreenInit),
                 err_dispatcher = new(&DispatchError),
+                on_command_begin = new(&OnCommandBegin),
+                on_resized = new(&OnResized),
             };
             var screenConfig = new HostScreenConfig
             {
@@ -58,17 +60,9 @@ namespace Elffy
             throw new UnreachableException();
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static HostScreenCallbacks OnScreenInit(HostScreenHandle screen, HostScreenInfo* info)
+            static void OnScreenInit(HostScreenHandle screen, HostScreenInfo* info)
             {
                 _config.OnStart(screen, in *info);
-
-                return new HostScreenCallbacks
-                {
-                    //on_render = new(&OnRender),
-                    on_command_begin = new(&OnCommandBegin),
-                    on_resized = new(&OnResized),
-                    //get_render_pass_desc = new(&GetRenderPassDesc),
-                };
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -96,12 +90,6 @@ namespace Elffy
                 {
                     color_attachments_clear = new(colorAttachments, (nuint)ColorAttachmentCount),
                     depth_stencil_attachment_clear = Opt.None<RenderPassDepthStencilAttachment>(),
-                    //depth_stencil_attachment_clear = Opt.Some(new RenderPassDepthStencilAttachment
-                    //{
-                    //    view = ...,
-                    //    depth_clear = Opt.Some(1f),
-                    //    stencil_clear = Opt.None<u32>(),
-                    //}),
                 };
 
                 // Use renderPass here.

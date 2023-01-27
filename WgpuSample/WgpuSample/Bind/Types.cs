@@ -185,9 +185,9 @@ internal readonly ref struct CommandEncoderMut
 internal unsafe readonly struct HostScreenInitFn
 {
 #pragma warning disable IDE0052
-    private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> _func;
+    private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, void> _func;
 #pragma warning restore IDE0052
-    public HostScreenInitFn(delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> f) => _func = f;
+    public HostScreenInitFn(delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, void> f) => _func = f;
 
     public bool IsNull => _func == null;
 }
@@ -244,8 +244,10 @@ internal unsafe readonly struct DispatchErrFn
 
 internal unsafe struct EngineCoreConfig
 {
-    public required HostScreenInitFn on_screen_init;
     public required DispatchErrFn err_dispatcher;
+    public required HostScreenInitFn on_screen_init;
+    public required OnCommandBeginFn on_command_begin;
+    public required HostScreenResizedFn on_resized;
 }
 
 internal readonly record struct ErrMessageId(nuint Value);
@@ -263,12 +265,6 @@ internal struct HostScreenInfo
 {
     public required wgpu_Backend backend;
     public required Opt<TextureFormat> surface_format;
-}
-
-internal unsafe struct HostScreenCallbacks
-{
-    public required OnCommandBeginFn on_command_begin;
-    public required HostScreenResizedFn on_resized;
 }
 
 internal unsafe struct RenderPassDescriptor

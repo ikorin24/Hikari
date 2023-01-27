@@ -1,5 +1,5 @@
-use crate::engine::HostScreen;
-use crate::error::*;
+use crate::error_handler::*;
+use crate::screen::HostScreen;
 use smallvec::SmallVec;
 use static_assertions::assert_eq_size;
 use std;
@@ -9,8 +9,10 @@ use std::{marker, num, ops, str};
 
 #[repr(C)]
 pub(crate) struct EngineCoreConfig {
-    pub on_screen_init: HostScreenInitFn,
     pub err_dispatcher: DispatchErrFn,
+    pub on_screen_init: HostScreenInitFn,
+    pub on_command_begin: OnCommandBeginFn,
+    pub on_resized: HostScreenResizedFn,
 }
 
 #[repr(C)]
@@ -30,13 +32,6 @@ pub(crate) enum WindowStyle {
     Default = 0,
     Fixed = 1,
     Fullscreen = 2,
-}
-
-#[repr(C)]
-#[derive(Default, Clone, Copy)]
-pub(crate) struct HostScreenCallbacks {
-    pub on_command_begin: Option<OnCommandBeginFn>,
-    pub on_resized: Option<HostScreenResizedFn>,
 }
 
 #[repr(C)]
@@ -1574,7 +1569,7 @@ pub(crate) struct HostScreenInfo {
 }
 
 pub(crate) type HostScreenInitFn =
-    extern "cdecl" fn(screen: &HostScreen, screen_info: &HostScreenInfo) -> HostScreenCallbacks;
+    extern "cdecl" fn(screen: &HostScreen, screen_info: &HostScreenInfo) -> ();
 // pub(crate) type HostScreenRenderFn =
 //     extern "cdecl" fn(screen: &HostScreen, render_pass: &mut wgpu::RenderPass) -> ();
 pub(crate) type OnCommandBeginFn = extern "cdecl" fn(
