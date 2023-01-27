@@ -2,6 +2,7 @@
 using u8 = System.Byte;
 using u32 = System.UInt32;
 using i32 = System.Int32;
+using f32 = System.Single;
 using u64 = System.UInt64;
 using System;
 using System.Runtime.CompilerServices;
@@ -39,7 +40,7 @@ namespace Elffy
             _config = config;
             var engineConfig = new EngineCoreConfig
             {
-                on_screen_init = new(&OnInit),
+                on_screen_init = new(&OnScreenInit),
                 err_dispatcher = new(&DispatchError),
             };
             var screenConfig = new HostScreenConfig
@@ -50,18 +51,23 @@ namespace Elffy
                 style = WindowStyle.Default,
                 title = Slice.FromFixedSpanUnsafe("Elffy"u8),
             };
+
+            Debug.Assert(engineConfig.on_screen_init.IsNull == false);
+            Debug.Assert(engineConfig.err_dispatcher.IsNull == false);
             elffy_engine_start(&engineConfig, &screenConfig);
             throw new UnreachableException();
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static HostScreenCallbacks OnInit(HostScreenHandle screen, HostScreenInfo* info)
+            static HostScreenCallbacks OnScreenInit(HostScreenHandle screen, HostScreenInfo* info)
             {
                 _config.OnStart(screen, in *info);
 
                 return new HostScreenCallbacks
                 {
-                    on_render = new(&OnRender),
+                    //on_render = new(&OnRender),
+                    on_command_begin = new(&OnCommandBegin),
                     on_resized = new(&OnResized),
+                    //get_render_pass_desc = new(&GetRenderPassDesc),
                 };
             }
 
@@ -75,11 +81,50 @@ namespace Elffy
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void OnRender(HostScreenHandle screen, RenderPassRef render_pass) => _config.OnRender(screen, render_pass);
+            static void OnCommandBegin(HostScreenHandle screen, TextureViewHandle surface_texture_view, CommandEncoderMut command_encoder)
+            {
+                const int ColorAttachmentCount = 1;
+                var colorAttachments = stackalloc Opt<RenderPassColorAttachment>[ColorAttachmentCount]
+                {
+                    Opt.Some(new RenderPassColorAttachment
+                    {
+                        view = surface_texture_view,
+                        clear = new wgpu_Color(0, 0, 0, 0),
+                    }),
+                };
+                var desc = new RenderPassDescriptor
+                {
+                    color_attachments_clear = new(colorAttachments, (nuint)ColorAttachmentCount),
+                    depth_stencil_attachment_clear = Opt.None<RenderPassDepthStencilAttachment>(),
+                    //depth_stencil_attachment_clear = Opt.Some(new RenderPassDepthStencilAttachment
+                    //{
+                    //    view = ...,
+                    //    depth_clear = Opt.Some(1f),
+                    //    stencil_clear = Opt.None<u32>(),
+                    //}),
+                };
+
+                // Use renderPass here.
+                // ...
+                var renderPass = _config.OnCommandBegin(
+                    screen.AsRef(),
+                    surface_texture_view,
+                    command_encoder,
+                    _createRenderPassFunc);
+                _config.OnRender(screen, renderPass.AsRef());
+                elffy_destroy_render_pass(renderPass);
+            }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
             static void OnResized(HostScreenHandle screen, uint width, uint height) => _config.OnResized(screen, width, height);
         }
+
+        private static readonly CreateRenderPassFunc _createRenderPassFunc = (CommandEncoderMut command_encoder, in RenderPassDescriptor desc) =>
+        {
+            fixed(RenderPassDescriptor* descPtr = &desc) {
+                return elffy_create_render_pass(command_encoder, descPtr).Validate();
+            }
+        };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
@@ -380,7 +425,7 @@ namespace Elffy
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        private readonly struct ApiRefResult<THandle> where THandle : unmanaged, IHandle<THandle>
+        private readonly struct ApiBoxResult<THandle> where THandle : unmanaged, IHandle<THandle>
         {
             // (_errorCount, _nativePtr) is (0, not null) or (not 0, null)
 
@@ -433,11 +478,21 @@ namespace Elffy
         public required EngineCoreStartAction OnStart { get; init; }
         public required EngineCoreRenderAction OnRender { get; init; }
         public required EngineCoreResizedAction OnResized { get; init; }
+        //public required GetRenderPassDescAction GetRenderPassDesc { get; init; }
+        public required OnCommandBeginFunc OnCommandBegin { get; init; }
     }
 
     internal delegate void EngineCoreStartAction(HostScreenHandle screen, in HostScreenInfo info);
     internal delegate void EngineCoreRenderAction(HostScreenHandle screen, RenderPassRef renderPass);
     internal delegate void EngineCoreResizedAction(HostScreenHandle screen, uint width, uint height);
+    //internal delegate void GetRenderPassDescAction(TextureViewRef surfaceTextureView, out RenderPassDescriptor desc);
+    internal delegate RenderPassBox OnCommandBeginFunc(
+        HostScreenRef screen,
+        TextureViewRef surfaceTextureView,
+        CommandEncoderMut commandEncoder,
+        CreateRenderPassFunc createRenderPass);
+
+    internal delegate RenderPassBox CreateRenderPassFunc(CommandEncoderMut commandEncoder, in RenderPassDescriptor desc);
 
 
     public sealed class Never

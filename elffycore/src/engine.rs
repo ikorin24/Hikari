@@ -4,7 +4,7 @@ use crate::types::*;
 use pollster::FutureExt;
 use std::cell::Cell;
 use std::error::Error;
-use std::num;
+use std::{iter, num};
 use wgpu::util::DeviceExt;
 use winit;
 use winit::event_loop::EventLoopWindowTarget;
@@ -17,9 +17,7 @@ pub(crate) fn engine_start(
     screen_config: &HostScreenConfig,
 ) -> Box<dyn Error> {
     env_logger::init();
-    if let Some(err_dispatcher) = engine_config.err_dispatcher {
-        set_err_dispatcher(err_dispatcher);
-    }
+    set_err_dispatcher(engine_config.err_dispatcher);
     let event_loop = event_loop::EventLoop::new();
     // let mut screens: Vec<Box<HostScreen>> = vec![];
     // let first_screen = match HostScreen::new(&screen_config, &event_loop) {
@@ -146,18 +144,13 @@ pub(crate) struct HostScreen {
     device: wgpu::Device,
     backend: wgpu::Backend,
     queue: wgpu::Queue,
-    on_render: Cell<Option<HostScreenRenderFn>>,
+    on_command_begin: Cell<Option<OnCommandBeginFn>>,
+    // on_render: Cell<Option<HostScreenRenderFn>>,
+    // get_render_pass_desc: Cell<Option<GetRenderPassDescFn>>,
     on_resized: Cell<Option<HostScreenResizedFn>>,
 }
 
 impl HostScreen {
-    const CLEAR_COLOR: wgpu::Color = wgpu::Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 0.0,
-    };
-
     pub fn new(
         config: &HostScreenConfig,
         event_loop: &event_loop::EventLoop<()>,
@@ -222,7 +215,9 @@ impl HostScreen {
             device,
             backend: adapter.get_info().backend,
             queue,
-            on_render: Cell::new(None),
+            on_command_begin: Cell::new(None),
+            // on_render: Cell::new(None),
+            // get_render_pass_desc: Cell::new(None),
             on_resized: Cell::new(None),
         })
     }
@@ -402,7 +397,7 @@ impl HostScreen {
     }
 
     pub fn set_callbacks(&self, callbacks: HostScreenCallbacks) {
-        self.on_render.set(callbacks.on_render);
+        self.on_command_begin.set(callbacks.on_command_begin);
         self.on_resized.set(callbacks.on_resized);
     }
 
@@ -456,8 +451,12 @@ impl HostScreen {
                 _ => {}
             },
             Event::RedrawRequested(window_id) if *window_id == self.window.id() => {
-                match self.render() {
-                    Ok(_) => {}
+                // `get_current_texture` function will wait for the surface
+                // to provide a new SurfaceTexture that we will render to.
+                match self.surface.get_current_texture() {
+                    Ok(output) => {
+                        self.render(output);
+                    }
                     Err(wgpu::SurfaceError::Lost) => {
                         let size = self.window.inner_size();
                         self.resize_surface(size.width, size.height);
@@ -474,42 +473,61 @@ impl HostScreen {
         }
     }
 
-    fn render(&self) -> Result<(), wgpu::SurfaceError> {
-        // `get_current_texture` function will wait for the surface
-        // to provide a new SurfaceTexture that we will render to.
-        let output = self.surface.get_current_texture()?;
+    fn render(&self, output: wgpu::SurfaceTexture) {
+        let on_command_begin = match self.on_command_begin.get() {
+            Some(x) => x,
+            None => {
+                return;
+            }
+        };
         let view = output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
-        let mut command_encoder =
-            self.device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Render Encoder"),
-                });
-        {
-            let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(Self::CLEAR_COLOR),
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: None,
-            });
-
-            if let Some(on_render) = self.on_render.get() {
-                on_render(self, &mut render_pass);
-            }
-        } // `render_pass` drops here.
-
-        self.queue.submit(std::iter::once(command_encoder.finish()));
+        let mut command_encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+        on_command_begin(self, &view, &mut command_encoder);
+        self.queue.submit(iter::once(command_encoder.finish()));
         output.present();
-
-        Ok(())
     }
+
+    // fn render(&self, output: wgpu::SurfaceTexture) {
+    //     let view = output
+    //         .texture
+    //         .create_view(&wgpu::TextureViewDescriptor::default());
+    //     let mut command_encoder =
+    //         self.device
+    //             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+    //                 label: Some("Render Encoder"),
+    //             });
+    //     let mut command_encoder = Box::new(command_encoder);
+    //     if let Some(get_render_pass_desc) = self.get_render_pass_desc.get() {
+    //         let mut desc = RenderPassDescriptor::default();
+    //         get_render_pass_desc(&view, &mut desc);
+    //         let mut render_pass = desc.begin_render_pass_with(command_encoder.as_mut());
+    //         println!("{:#?}", render_pass);
+    //         // if let Some(on_render) = self.on_render.get() {
+    //         //     println!("!!!!!!!!!!!!!!!!!!!renderer----------------------------------------------------------------------");
+    //         //     on_render(self, &mut render_pass);
+    //         // } else {
+    //         //     println!("no renderer----------------------------------------------------------------------");
+    //         // }
+
+    //         Self::hoge(&mut render_pass, command_encoder);
+    //         // self.queue.submit(iter::once(command_encoder.finish()));
+    //         // output.present();
+    //     }
+    //     // self.queue.submit(iter::once(command_encoder.finish()));
+    //     // output.present();
+    // }
+
+    // fn hoge<'cmd_enc>(
+    //     render_pass: &mut wgpu::RenderPass<'cmd_enc>,
+    //     command_encoder: Box<wgpu::CommandEncoder>,
+    // ) {
+    //     let command_encoder = *command_encoder;
+    //     command_encoder.finish();
+    // }
 
     fn resize_surface(&self, width: u32, height: u32) {
         if let (Some(width), Some(height)) =

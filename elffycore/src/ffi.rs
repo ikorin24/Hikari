@@ -16,6 +16,27 @@ extern "cdecl" fn elffy_engine_start(
 }
 
 #[no_mangle]
+extern "cdecl" fn elffy_create_render_pass<'tex, 'desc, 'cmd_enc>(
+    command_encoder: &'cmd_enc mut wgpu::CommandEncoder,
+    desc: &'desc RenderPassDescriptor<'tex, 'desc>,
+) -> ApiBoxResult<wgpu::RenderPass<'cmd_enc>>
+where
+    'tex: 'cmd_enc,
+{
+    let render_pass = desc.begin_render_pass_with(command_encoder);
+    // `command_encoder` is no longer accessible until `render_pass` will drop.
+
+    make_box_result(Box::new(render_pass), None)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_render_pass<'cmd_enc>(
+    render_pass: Box<wgpu::RenderPass<'cmd_enc>>,
+) {
+    drop(render_pass)
+}
+
+#[no_mangle]
 extern "cdecl" fn elffy_screen_set_inner_size(
     screen: &HostScreen,
     width: u32,
@@ -53,9 +74,9 @@ extern "cdecl" fn elffy_write_texture(
 extern "cdecl" fn elffy_create_bind_group_layout(
     screen: &HostScreen,
     desc: &BindGroupLayoutDescriptor,
-) -> ApiRefResult<wgpu::BindGroupLayout> {
+) -> ApiBoxResult<wgpu::BindGroupLayout> {
     let value = desc.use_wgpu_type(|x| screen.create_bind_group_layout(x));
-    make_ref_result(value, None)
+    make_box_result(value, None)
 }
 
 #[no_mangle]
@@ -67,9 +88,9 @@ extern "cdecl" fn elffy_destroy_bind_group_layout(layout: Box<wgpu::BindGroupLay
 extern "cdecl" fn elffy_create_bind_group(
     screen: &HostScreen,
     desc: &BindGroupDescriptor,
-) -> ApiRefResult<wgpu::BindGroup> {
+) -> ApiBoxResult<wgpu::BindGroup> {
     let value = desc.use_wgpu_type(|x| screen.create_bind_group(x));
-    make_ref_result(value, None)
+    make_box_result(value, None)
 }
 
 #[no_mangle]
@@ -81,9 +102,9 @@ extern "cdecl" fn elffy_destroy_bind_group(bind_group: Box<wgpu::BindGroup>) {
 extern "cdecl" fn elffy_create_pipeline_layout(
     screen: &HostScreen,
     desc: &PipelineLayoutDescriptor,
-) -> ApiRefResult<wgpu::PipelineLayout> {
+) -> ApiBoxResult<wgpu::PipelineLayout> {
     let value = screen.create_pipeline_layout(&desc.to_pipeline_descriptor());
-    make_ref_result(value, None)
+    make_box_result(value, None)
 }
 
 #[no_mangle]
@@ -95,14 +116,14 @@ extern "cdecl" fn elffy_destroy_pipeline_layout(layout: Box<wgpu::PipelineLayout
 extern "cdecl" fn elffy_create_render_pipeline(
     screen: &HostScreen,
     desc: &RenderPipelineDescription,
-) -> ApiRefResult<wgpu::RenderPipeline> {
+) -> ApiBoxResult<wgpu::RenderPipeline> {
     let value = match desc.use_wgpu_type(|x| Ok(screen.create_render_pipeline(x))) {
         Ok(value) => value,
         Err(err) => {
-            return error_ref_result(err);
+            return error_box_result(err);
         }
     };
-    make_ref_result(value, None)
+    make_box_result(value, None)
 }
 
 #[no_mangle]
@@ -115,9 +136,9 @@ extern "cdecl" fn elffy_create_buffer_init(
     screen: &HostScreen,
     contents: Slice<u8>,
     usage: wgpu::BufferUsages,
-) -> ApiRefResult<wgpu::Buffer> {
+) -> ApiBoxResult<wgpu::Buffer> {
     let value = screen.create_buffer_init(&contents, usage);
-    make_ref_result(value, Some(|value| value.destroy()))
+    make_box_result(value, Some(|value| value.destroy()))
 }
 
 #[no_mangle]
@@ -130,9 +151,9 @@ extern "cdecl" fn elffy_destroy_buffer(buffer: Box<wgpu::Buffer>) {
 extern "cdecl" fn elffy_create_sampler(
     screen: &HostScreen,
     desc: &SamplerDescriptor,
-) -> ApiRefResult<wgpu::Sampler> {
+) -> ApiBoxResult<wgpu::Sampler> {
     let value = screen.create_sampler(&desc.to_wgpu_type());
-    make_ref_result(value, None)
+    make_box_result(value, None)
 }
 
 #[no_mangle]
@@ -144,15 +165,15 @@ extern "cdecl" fn elffy_destroy_sampler(sampler: Box<wgpu::Sampler>) {
 extern "cdecl" fn elffy_create_shader_module(
     screen: &HostScreen,
     shader_source: Slice<u8>,
-) -> ApiRefResult<wgpu::ShaderModule> {
+) -> ApiBoxResult<wgpu::ShaderModule> {
     let shader_source = match shader_source.as_str() {
         Ok(s) => s,
         Err(err) => {
-            return error_ref_result(err);
+            return error_box_result(err);
         }
     };
     let value = screen.create_shader_module(shader_source);
-    make_ref_result(value, None)
+    make_box_result(value, None)
 }
 
 #[no_mangle]
@@ -164,9 +185,9 @@ extern "cdecl" fn elffy_destroy_shader_module(shader: Box<wgpu::ShaderModule>) {
 extern "cdecl" fn elffy_create_texture(
     screen: &HostScreen,
     desc: &TextureDescriptor,
-) -> ApiRefResult<wgpu::Texture> {
+) -> ApiBoxResult<wgpu::Texture> {
     let value = screen.create_texture(&desc.to_wgpu_type());
-    make_ref_result(value, Some(|value| value.destroy()))
+    make_box_result(value, Some(|value| value.destroy()))
 }
 
 #[no_mangle]
@@ -174,9 +195,9 @@ extern "cdecl" fn elffy_create_texture_with_data(
     screen: &HostScreen,
     desc: &TextureDescriptor,
     data: Slice<u8>,
-) -> ApiRefResult<wgpu::Texture> {
+) -> ApiBoxResult<wgpu::Texture> {
     let value = screen.create_texture_with_data(&desc.to_wgpu_type(), &data);
-    make_ref_result(value, Some(|value| value.destroy()))
+    make_box_result(value, Some(|value| value.destroy()))
 }
 
 #[no_mangle]
@@ -189,7 +210,7 @@ extern "cdecl" fn elffy_destroy_texture(texture: Box<wgpu::Texture>) {
 extern "cdecl" fn elffy_create_texture_view(
     texture: &wgpu::Texture,
     desc: &TextureViewDescriptor,
-) -> ApiRefResult<wgpu::TextureView> {
+) -> ApiBoxResult<wgpu::TextureView> {
     let desc = &desc.to_wgpu_type();
     traceln!(
         r"create_texture_view(
@@ -200,7 +221,7 @@ desc: {:#?},
         desc,
     );
     let value = Box::new(texture.create_view(desc));
-    make_ref_result(value, None)
+    make_box_result(value, None)
 }
 
 #[no_mangle]
@@ -280,23 +301,23 @@ extern "cdecl" fn elffy_draw_indexed<'a>(
 }
 
 #[inline]
-fn make_ref_result<T>(value: Box<T>, on_value_drop: Option<fn(Box<T>)>) -> ApiRefResult<T> {
+fn make_box_result<T>(value: Box<T>, on_value_drop: Option<fn(Box<T>)>) -> ApiBoxResult<T> {
     let err_count = reset_tls_err_count();
     match NonZeroUsize::new(err_count) {
         Some(err_count) => {
             if let Some(on_value_drop) = on_value_drop {
                 on_value_drop(value);
             }
-            ApiRefResult::err(err_count)
+            ApiBoxResult::err(err_count)
         }
-        None => ApiRefResult::ok(value),
+        None => ApiBoxResult::ok(value),
     }
 }
 
 #[inline]
-fn error_ref_result<T>(err: impl std::fmt::Display) -> ApiRefResult<T> {
+fn error_box_result<T>(err: impl std::fmt::Display) -> ApiBoxResult<T> {
     dispatch_err(err);
-    return ApiRefResult::err(reset_tls_err_count().try_into().unwrap());
+    return ApiBoxResult::err(reset_tls_err_count().try_into().unwrap());
 }
 
 #[inline]

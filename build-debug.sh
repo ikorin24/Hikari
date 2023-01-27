@@ -9,7 +9,7 @@ bins=(
 
 for target in ${!bins[@]}
 do
-    cargo build --target $target --manifest-path "${proj_dir}Cargo.toml"
+    cargo build --features trace-call --target $target --manifest-path "${proj_dir}Cargo.toml"
     target_outdir="${out_dir}${target}/"
     mkdir -p $target_outdir
     cp "${proj_dir}target/${target}/debug/${bins[$target]}" $target_outdir

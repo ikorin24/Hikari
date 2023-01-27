@@ -81,12 +81,12 @@ impl ApiResult {
 }
 
 #[repr(C)]
-pub(crate) struct ApiRefResult<T> {
+pub(crate) struct ApiBoxResult<T> {
     err_count: usize,
     value: Option<Box<T>>,
 }
 
-impl<T> ApiRefResult<T> {
+impl<T> ApiBoxResult<T> {
     #[inline]
     pub const fn ok(value: Box<T>) -> Self {
         Self {

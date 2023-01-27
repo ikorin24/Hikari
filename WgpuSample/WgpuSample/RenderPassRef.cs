@@ -11,12 +11,14 @@ namespace Elffy;
 internal readonly ref struct RenderPassRef
 {
 #pragma warning disable IDE0051
-    private readonly IntPtr _p;
+    private readonly NativePointer _p;
 #pragma warning restore IDE0051
 
-    [Obsolete("Don't use default constructor.")]
+    [Obsolete("Don't use default constructor.", true)]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public RenderPassRef() => throw new NotSupportedException("Don't use default constructor.");
+
+    public RenderPassRef(RenderPassBox renderPass) => _p = renderPass.Pointer;
 
     [DebuggerHidden]
     public void SetPipeline(RenderPipelineHandle renderPipeline) => EngineCore.SetPipeline(this, renderPipeline);
@@ -32,4 +34,13 @@ internal readonly ref struct RenderPassRef
 
     [DebuggerHidden]
     public void DrawIndexed(RangeU32 indices, i32 base_vertex, RangeU32 instances) => EngineCore.DrawIndexed(this, indices, base_vertex, instances);
+}
+
+internal readonly record struct RenderPassBox(NativePointer Pointer) : IHandle<RenderPassBox>
+{
+    public static RenderPassBox DestroyedHandle => default;
+
+    public unsafe static explicit operator RenderPassBox(void* nativePtr) => new(nativePtr);
+
+    public RenderPassRef AsRef() => new RenderPassRef(this);
 }

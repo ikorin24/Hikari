@@ -86,4 +86,13 @@ internal unsafe readonly record struct HostScreenHandle(NativePointer Pointer) :
             return EngineCore.CreateRenderPipeline(this, descPtr);
         }
     }
+
+    public HostScreenRef AsRef() => new HostScreenRef(this);
+}
+
+internal readonly ref struct HostScreenRef
+{
+    private readonly NativePointer _p;
+
+    public HostScreenRef(HostScreenHandle screen) => _p = screen.Pointer;
 }

@@ -19,6 +19,31 @@ internal class Program
             OnStart = OnStart,
             OnRender = OnRender,
             OnResized = OnResized,
+            OnCommandBegin = (HostScreenRef screen, TextureViewRef surfaceTextureView, CommandEncoderMut commandEncoder, CreateRenderPassFunc createRenderPass) =>
+            {
+                unsafe {
+                    const int ColorAttachmentCount = 1;
+                    var colorAttachments = stackalloc Opt<RenderPassColorAttachment>[ColorAttachmentCount]
+                    {
+                        Opt.Some(new RenderPassColorAttachment
+                        {
+                            view = surfaceTextureView,
+                            clear = new wgpu_Color(0.1, 0.2, 0.3, 0),
+                        }),
+                    };
+                    var desc = new RenderPassDescriptor
+                    {
+                        color_attachments_clear = new(colorAttachments, (nuint)ColorAttachmentCount),
+                        depth_stencil_attachment_clear = Opt.Some(new RenderPassDepthStencilAttachment
+                        {
+                            view = _state.Depth.View,
+                            depth_clear = Opt.Some(1f),
+                            stencil_clear = Opt.None<uint>(),
+                        }),
+                    };
+                    return createRenderPass(commandEncoder, desc);
+                }
+            },
         });
     }
 
@@ -61,7 +86,7 @@ internal class Program
         cameraUniform.UpdateViewProj(camera);
 
         var cameraBuffer = screen.CreateBufferInit(
-            new Slice<byte>(&cameraUniform, sizeof(CameraUniform)),
+            new Slice<byte>((byte*)&cameraUniform, sizeof(CameraUniform)),
             wgpu_BufferUsages.UNIFORM | wgpu_BufferUsages.COPY_DST);
 
         //var instances = Enumerable
@@ -89,9 +114,9 @@ internal class Program
         // Buffer (instance)
         BufferHandle instanceBuffer;
         int instanceCount = instances.Length;
-        fixed(void* instanceData = instances) {
+        fixed(InstanceData* instanceData = instances) {
             instanceBuffer = screen.CreateBufferInit(
-                new Slice<byte>(instanceData, sizeof(InstanceData) * instances.Length),
+                new Slice<byte>((byte*)instanceData, sizeof(InstanceData) * instances.Length),
                 wgpu_BufferUsages.VERTEX | wgpu_BufferUsages.COPY_DST);
         }
 
@@ -124,7 +149,7 @@ internal class Program
             cameraBindGroup = screen.CreateBindGroup(new BindGroupDescriptor
             {
                 layout = cameraBindGroupLayout,
-                entries = new Slice<BindGroupEntry>(Unsafe.AsPointer(ref entries[0]), entries.Length),
+                entries = new Slice<BindGroupEntry>((BindGroupEntry*)Unsafe.AsPointer(ref entries[0]), entries.Length),
             });
         }
 
@@ -149,7 +174,7 @@ internal class Program
         //// BindGroup (uniform)
         //var uniformBindGroup = HostScreenInitializer.CreateUniformBindGroup(screen, uniformBindGroupLayout, uniformBuffer);
 
-        var depthTexture = CreateDepthTexture(screen, screenSize.Width, screenSize.Height);
+        var depthTextureData = CreateDepthTexture(screen, screenSize.Width, screenSize.Height);
 
         // RenderPipeline
         RenderPipelineHandle renderPipeline;
@@ -222,15 +247,15 @@ internal class Program
                     cull_mode = Opt.Some(wgpu_Face.Back),
                     polygon_mode = wgpu_PolygonMode.Fill,
                 },
-                depth_stencil = Opt.None<DepthStencilState>(),
-                //depth_stencil = Opt.Some(new DepthStencilState
-                //{
-                //    format = depthTexture.Format,
-                //    depth_write_enabled = true,
-                //    depth_compare = wgpu_CompareFunction.Less,
-                //    stencil = wgpu_StencilState.Default,
-                //    bias = wgpu_DepthBiasState.Default,
-                //}),
+                //depth_stencil = Opt.None<DepthStencilState>(),
+                depth_stencil = Opt.Some(new DepthStencilState
+                {
+                    format = depthTextureData.Format,
+                    depth_write_enabled = true,
+                    depth_compare = wgpu_CompareFunction.Less,
+                    stencil = wgpu_StencilState.Default,
+                    bias = wgpu_DepthBiasState.Default,
+                }),
                 multisample = wgpu_MultisampleState.Default,
                 multiview = NonZeroU32OrNone.None,
             });
@@ -244,14 +269,14 @@ internal class Program
         {
             var (vertices, indices) = SamplePrimitives.SampleData();
             indexCount = indices.Length;
-            fixed(void* vData = vertices) {
+            fixed(Vertex* vData = vertices) {
                 vertexBuffer = screen.CreateBufferInit(
-                    new Slice<byte>(vData, sizeof(Vertex) * vertices.Length),
+                    new Slice<byte>((byte*)vData, sizeof(Vertex) * vertices.Length),
                     wgpu_BufferUsages.VERTEX);
             }
-            fixed(void* iData = indices) {
+            fixed(ushort* iData = indices) {
                 indexBuffer = screen.CreateBufferInit(
-                    new Slice<byte>(iData, sizeof(ushort) * indices.Length),
+                    new Slice<byte>((byte*)iData, sizeof(ushort) * indices.Length),
                     wgpu_BufferUsages.INDEX);
             }
             indexFormat = wgpu_IndexFormat.Uint16;
@@ -280,6 +305,7 @@ internal class Program
             CameraBuffer = cameraBuffer,
             CameraBindGroupLayout = cameraBindGroupLayout,
             CameraBindGroup = cameraBindGroup,
+            Depth = depthTextureData,
             //UniformBuffer = uniformBuffer,
             //UniformBindGroupLayout = uniformBindGroupLayout,
             //UniformBindGroup = uniformBindGroup,
@@ -341,6 +367,7 @@ internal class Program
         //};
         //var data = new Slice<byte>(&color, (nuint)sizeof(Vector4));
         //EngineCore.WriteBuffer(screen, _state.UniformBuffer, 0, data);
+        Console.WriteLine("<C#> OnRender");
 
         renderPass.SetPipeline(_state.RenderPipeline);
         renderPass.SetBindGroup(0, _state.DiffuseBindGroup);
@@ -522,8 +549,8 @@ internal static class HostScreenInitializer
 
     public unsafe static BufferHandle CreateUniformBuffer<T>(HostScreenHandle screen, ReadOnlySpan<T> data) where T : unmanaged
     {
-        fixed(void* p = data) {
-            var contents = new Slice<byte>(p, (nuint)data.Length * (nuint)sizeof(T));
+        fixed(T* p = data) {
+            var contents = new Slice<byte>((byte*)p, (nuint)data.Length * (nuint)sizeof(T));
             var usage = wgpu_BufferUsages.UNIFORM | wgpu_BufferUsages.COPY_DST;
             return screen.CreateBufferInit(contents, usage);
         }
@@ -588,7 +615,7 @@ internal static class HostScreenInitializer
         uint vertexCount;
         fixed(TVertex* v = vertices) {
             nuint bytelen = (nuint)sizeof(TVertex) * (nuint)vertices.Length;
-            var contents = new Slice<byte>(v, bytelen);
+            var contents = new Slice<byte>((byte*)v, bytelen);
             vertexBuffer = screen.CreateBufferInit(contents, wgpu_BufferUsages.VERTEX);
             vertexCount = (uint)vertices.Length;
         }
@@ -598,7 +625,7 @@ internal static class HostScreenInitializer
         const wgpu_IndexFormat indexFormat = wgpu_IndexFormat.Uint32;
         fixed(uint* i = indices) {
             nuint bytelen = (nuint)sizeof(uint) * (nuint)indices.Length;
-            var contents = new Slice<byte>(i, bytelen);
+            var contents = new Slice<byte>((byte*)i, bytelen);
             indexBuffer = screen.CreateBufferInit(contents, wgpu_BufferUsages.INDEX);
             indexCount = (uint)indices.Length;
         }
@@ -680,6 +707,8 @@ internal struct State
 
     public required BufferHandle InstanceBuffer;
     public required int InstanceCount;
+
+    public required DepthTextureData Depth;
 }
 
 internal record struct TextureData(

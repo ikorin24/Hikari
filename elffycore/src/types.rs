@@ -10,7 +10,7 @@ use std::{marker, num, ops, str};
 #[repr(C)]
 pub(crate) struct EngineCoreConfig {
     pub on_screen_init: HostScreenInitFn,
-    pub err_dispatcher: Option<DispatchErrFn>,
+    pub err_dispatcher: DispatchErrFn,
 }
 
 #[repr(C)]
@@ -35,8 +35,152 @@ pub(crate) enum WindowStyle {
 #[repr(C)]
 #[derive(Default, Clone, Copy)]
 pub(crate) struct HostScreenCallbacks {
-    pub on_render: Option<HostScreenRenderFn>,
+    pub on_command_begin: Option<OnCommandBeginFn>,
     pub on_resized: Option<HostScreenResizedFn>,
+}
+
+#[repr(C)]
+pub(crate) struct RenderPassDescriptor<'tex, 'desc> {
+    pub color_attachments_clear: Slice<'desc, Opt<RenderPassColorAttachment<'tex>>>,
+    pub depth_stencil_attachment_clear: Opt<RenderPassDepthStencilAttachment<'tex>>,
+}
+
+impl<'tex, 'desc> Default for RenderPassDescriptor<'tex, 'desc> {
+    fn default() -> Self {
+        Self {
+            color_attachments_clear: Default::default(),
+            depth_stencil_attachment_clear: Opt {
+                exists: false,
+                value: Default::default(),
+            },
+        }
+    }
+}
+
+fn as_raw_bytes<'a, T: ?Sized>(x: &'a T) -> &'a [u8] {
+    unsafe { std::slice::from_raw_parts(x as *const T as *const u8, std::mem::size_of_val(x)) }
+}
+
+impl<'tex, 'desc> RenderPassDescriptor<'tex, 'desc> {
+    pub fn begin_render_pass_with<'enc>(
+        &self,
+        command_encoder: &'enc mut wgpu::CommandEncoder,
+    ) -> wgpu::RenderPass<'enc>
+    where
+        'tex: 'enc,
+    {
+        let s = self.color_attachments_clear.as_slice();
+        println!(
+            "size of Opt<RenderPassColorAttachment>: {}",
+            std::mem::size_of::<Opt<RenderPassColorAttachment>>()
+        );
+        let span = as_raw_bytes(s);
+        // println!("s[0]: {:#?}", s[0]);
+        println!("span: {:#?}", span);
+
+        // println!(
+        //     "color_attachments_clear.len = {:?}",
+        //     self.color_attachments_clear.len()
+        // );
+        // println!(
+        //     "color_attachments_clear[0].exists = {:?}",
+        //     self.color_attachments_clear[0].exists
+        // );
+        // println!(
+        //     "color_attachments_clear[0].value.clear = {:?}",
+        //     self.color_attachments_clear[0].value.clear
+        // );
+        // let slice = self.color_attachments_clear.as_slice();
+        // let slice_data = as_raw_bytes(slice);
+        // println!("slice_data (len = {}): {:#?}", slice_data.len(), slice_data);
+
+        let color_attachments: Vec<_> = self
+            .color_attachments_clear
+            .iter()
+            // .map(|opt| opt.map_to_option(|value| value.to_wgpu_type()))
+            .map(|opt| {
+                if opt.exists {
+                    let value = &opt.value;
+                    println!(
+                        "elffycore::RenderPassColorAttachment.clear: {:#?}",
+                        value.clear
+                    );
+                    Some(opt.value.to_wgpu_type())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let desc = wgpu::RenderPassDescriptor {
+            label: None,
+            color_attachments: &color_attachments,
+            depth_stencil_attachment: self
+                .depth_stencil_attachment_clear
+                .map_to_option(|x| x.to_wgpu_type()),
+        };
+        println!("------------- RenderPassDescriptor -------------");
+        println!("{:#?}", desc);
+        command_encoder.begin_render_pass(&desc)
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct RenderPassColorAttachment<'tex> {
+    pub view: &'tex wgpu::TextureView,
+    pub clear: wgpu::Color,
+}
+
+impl<'tex> RenderPassColorAttachment<'tex> {
+    pub fn to_wgpu_type(&self) -> wgpu::RenderPassColorAttachment<'tex> {
+        wgpu::RenderPassColorAttachment {
+            view: self.view,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Clear(self.clear),
+                store: true,
+            },
+        }
+    }
+}
+
+#[repr(C)]
+pub(crate) struct RenderPassDepthStencilAttachment<'tex> {
+    pub view: Option<&'tex wgpu::TextureView>,
+    pub depth_clear: Opt<f32>,
+    pub stencil_clear: Opt<u32>,
+}
+
+impl<'tex> Default for RenderPassDepthStencilAttachment<'tex> {
+    fn default() -> Self {
+        Self {
+            view: None,
+            depth_clear: Opt {
+                exists: false,
+                value: 0f32,
+            },
+            stencil_clear: Opt {
+                exists: false,
+                value: 0u32,
+            },
+        }
+    }
+}
+
+impl<'tex> RenderPassDepthStencilAttachment<'tex> {
+    pub fn to_wgpu_type(&self) -> wgpu::RenderPassDepthStencilAttachment<'tex> {
+        wgpu::RenderPassDepthStencilAttachment {
+            view: self.view.unwrap(),
+            depth_ops: self.depth_clear.map_to_option(|c| wgpu::Operations {
+                load: wgpu::LoadOp::Clear(*c),
+                store: true,
+            }),
+            stencil_ops: self.stencil_clear.map_to_option(|c| wgpu::Operations {
+                load: wgpu::LoadOp::Clear(*c),
+                store: true,
+            }),
+        }
+    }
 }
 
 #[repr(C)]
@@ -1184,6 +1328,7 @@ impl<'a> VertexBufferLayout<'a> {
 /// ffi-safe `Option<T>`
 /// (use `Option<T>` if T is reference)
 #[repr(C)]
+#[derive(Debug)]
 pub(crate) struct Opt<T> {
     pub exists: bool,
     pub value: T,
@@ -1245,6 +1390,12 @@ pub(crate) struct Slice<'a, T> {
     pub len: usize,
 }
 
+impl<'a, T> Default for Slice<'a, T> {
+    fn default() -> Self {
+        Self { data: None, len: 0 }
+    }
+}
+
 impl<'a, T> ops::Deref for Slice<'a, T> {
     type Target = [T];
 
@@ -1256,9 +1407,17 @@ impl<'a, T> ops::Deref for Slice<'a, T> {
 impl<'a, T> Slice<'a, T> {
     #[inline]
     pub fn as_slice(&self) -> &'a [T] {
-        match self.data {
-            Some(data) => unsafe { std::slice::from_raw_parts(data as *const T, self.len) },
-            None => &[],
+        // match self.data {
+        //     Some(data) => unsafe { std::slice::from_raw_parts(data as *const T, self.len) },
+        //     None => &[],
+        // }
+        match self.len {
+            0 => &[],
+            _ => unsafe {
+                let r: &T = self.data.unwrap();
+                let p: *const T = r;
+                std::slice::from_raw_parts(p, self.len)
+            },
         }
     }
 
@@ -1416,8 +1575,17 @@ pub(crate) struct HostScreenInfo {
 
 pub(crate) type HostScreenInitFn =
     extern "cdecl" fn(screen: &HostScreen, screen_info: &HostScreenInfo) -> HostScreenCallbacks;
-pub(crate) type HostScreenRenderFn =
-    extern "cdecl" fn(screen: &HostScreen, render_pass: &mut wgpu::RenderPass) -> ();
+// pub(crate) type HostScreenRenderFn =
+//     extern "cdecl" fn(screen: &HostScreen, render_pass: &mut wgpu::RenderPass) -> ();
+pub(crate) type OnCommandBeginFn = extern "cdecl" fn(
+    screen: &HostScreen,
+    surface_texture_view: &wgpu::TextureView,
+    command_encoder: &mut wgpu::CommandEncoder,
+) -> ();
+// pub(crate) type GetRenderPassDescFn = extern "cdecl" fn(
+//     surface_texture_view: &wgpu::TextureView,
+//     desc_out: *mut RenderPassDescriptor,
+// ) -> ();
 pub(crate) type HostScreenResizedFn =
     extern "cdecl" fn(screen: &HostScreen, width: u32, height: u32) -> ();
 

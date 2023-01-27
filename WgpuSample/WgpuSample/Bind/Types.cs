@@ -5,6 +5,7 @@ using u32 = System.UInt32;
 using i32 = System.Int32;
 using u64 = System.UInt64;
 using f32 = System.Single;
+using f64 = System.Double;
 using System;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
@@ -156,6 +157,29 @@ internal readonly record struct TextureViewHandle(NativePointer Pointer) : IHand
 {
     public static TextureViewHandle DestroyedHandle => default;
     public unsafe static explicit operator TextureViewHandle(void* nativePtr) => new(nativePtr);
+    public static implicit operator TextureViewRef(TextureViewHandle x) => x.AsRef();
+
+    public TextureViewRef AsRef() => Unsafe.As<TextureViewHandle, TextureViewRef>(ref Unsafe.AsRef(in this));
+}
+
+internal readonly struct TextureViewRef : IEquatable<TextureViewRef>
+{
+    private readonly NativePointer _p;
+    public override bool Equals(object? obj) => obj is TextureViewRef @ref && Equals(@ref);
+    public bool Equals(TextureViewRef other) => _p.Equals(other._p);
+    public override int GetHashCode() => _p.GetHashCode();
+    public static bool operator ==(TextureViewRef left, TextureViewRef right) => left.Equals(right);
+    public static bool operator !=(TextureViewRef left, TextureViewRef right) => !(left == right);
+}
+
+internal readonly ref struct CommandEncoderRef
+{
+    private readonly NativePointer _p;
+}
+
+internal readonly ref struct CommandEncoderMut
+{
+    private readonly NativePointer _p;
 }
 
 internal unsafe readonly struct HostScreenInitFn
@@ -164,15 +188,40 @@ internal unsafe readonly struct HostScreenInitFn
     private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> _func;
 #pragma warning restore IDE0052
     public HostScreenInitFn(delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, HostScreenCallbacks> f) => _func = f;
+
+    public bool IsNull => _func == null;
 }
 
-internal unsafe readonly struct HostScreenRenderFn
+//internal unsafe readonly struct HostScreenRenderFn
+//{
+//#pragma warning disable IDE0052
+//    private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassRef, void> _func;
+//#pragma warning restore IDE0052
+//    public HostScreenRenderFn(delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassRef, void> f) => _func = f;
+//}
+
+internal unsafe readonly struct OnCommandBeginFn
 {
+    //#pragma warning disable IDE0052
+    //    // fn(&HostScreen, &wgpu::TextureView, &mut wgpu::CommandEncoder) -> ()
+    //    private readonly delegate* unmanaged[Cdecl]<HostScreenRef, TextureViewRef, CommandEncoderMut, void> _func;
+    //#pragma warning restore IDE0052
+    //    public OnCommandBeginFn(delegate* unmanaged[Cdecl]<HostScreenRef, TextureViewRef, CommandEncoderMut, void> f) => _func = f;
+
 #pragma warning disable IDE0052
-    private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassRef, void> _func;
+    // fn(&HostScreen, &wgpu::TextureView, &mut wgpu::CommandEncoder) -> ()
+    private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, TextureViewHandle, CommandEncoderMut, void> _func;
 #pragma warning restore IDE0052
-    public HostScreenRenderFn(delegate* unmanaged[Cdecl]<HostScreenHandle, RenderPassRef, void> f) => _func = f;
+    public OnCommandBeginFn(delegate* unmanaged[Cdecl]<HostScreenHandle, TextureViewHandle, CommandEncoderMut, void> f) => _func = f;
 }
+
+//internal unsafe readonly struct GetRenderPassDescFn
+//{
+//#pragma warning disable IDE0052
+//    private readonly delegate* unmanaged[Cdecl]<TextureViewRef, RenderPassDescriptor*, void> _func;
+//#pragma warning restore IDE0052
+//    public GetRenderPassDescFn(delegate* unmanaged[Cdecl]<TextureViewRef, RenderPassDescriptor*, void> f) => _func = f;
+//}
 
 internal unsafe readonly struct HostScreenResizedFn
 {
@@ -189,6 +238,8 @@ internal unsafe readonly struct DispatchErrFn
     private readonly delegate* unmanaged[Cdecl]<ErrMessageId, u8*, nuint, void> _func;
 #pragma warning restore IDE0052
     public DispatchErrFn(delegate* unmanaged[Cdecl]<ErrMessageId, u8*, nuint, void> f) => _func = f;
+
+    public bool IsNull => _func == null;
 }
 
 internal unsafe struct EngineCoreConfig
@@ -216,8 +267,27 @@ internal struct HostScreenInfo
 
 internal unsafe struct HostScreenCallbacks
 {
-    public required HostScreenRenderFn on_render;
+    public required OnCommandBeginFn on_command_begin;
     public required HostScreenResizedFn on_resized;
+}
+
+internal unsafe struct RenderPassDescriptor
+{
+    public required Slice<Opt<RenderPassColorAttachment>> color_attachments_clear;
+    public required Opt<RenderPassDepthStencilAttachment> depth_stencil_attachment_clear;
+}
+
+internal unsafe struct RenderPassColorAttachment
+{
+    public required TextureViewRef view;
+    public required wgpu_Color clear;
+}
+
+internal struct RenderPassDepthStencilAttachment
+{
+    public required TextureViewRef view;
+    public required Opt<f32> depth_clear;
+    public required Opt<u32> stencil_clear;
 }
 
 internal struct BindGroupLayoutDescriptor
@@ -726,6 +796,9 @@ internal enum wgpu_VertexStepMode : u32
     Instance = 1,
 }
 
+internal record struct wgpu_Color(f64 R, f64 G, f64 B, f64 A);
+
+
 internal struct BindingType
 {
     public required BindingTypeTag tag;
@@ -918,6 +991,7 @@ internal struct VertexBufferLayout
     public required Slice<wgpu_VertexAttribute> attributes;
 }
 
+[StructLayout(LayoutKind.Sequential)]
 internal struct Opt<T> where T : unmanaged
 {
     public required bool exists;
@@ -980,16 +1054,16 @@ internal struct Slice<T> where T : unmanaged
     public required nuint len;
 
     [SetsRequiredMembers]
-    public unsafe Slice(void* data, nuint len)
+    public unsafe Slice(T* data, nuint len)
     {
-        this.data = new((T*)data);
+        this.data = new(data);
         this.len = len;
     }
 
     [SetsRequiredMembers]
-    public unsafe Slice(void* data, int len)
+    public unsafe Slice(T* data, int len)
     {
-        this.data = new((T*)data);
+        this.data = new(data);
         this.len = checked((nuint)len);
     }
 

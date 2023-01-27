@@ -23,6 +23,15 @@ static unsafe partial class EngineCore
         HostScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiBoxResult<RenderPassBox> elffy_create_render_pass(
+        CommandEncoderMut command_encoder,
+        RenderPassDescriptor* desc);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial void elffy_destroy_render_pass(
+        RenderPassBox render_pass);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_get_inner_size(
         HostScreenHandle screen,
         u32* width,
@@ -43,7 +52,7 @@ static unsafe partial class EngineCore
         wgpu_Extent3d* size);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiRefResult<BindGroupLayoutHandle> elffy_create_bind_group_layout(
+    private static partial ApiBoxResult<BindGroupLayoutHandle> elffy_create_bind_group_layout(
         HostScreenHandle screen,
         BindGroupLayoutDescriptor* desc);
 
@@ -52,7 +61,7 @@ static unsafe partial class EngineCore
         BindGroupLayoutHandle handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiRefResult<BindGroupHandle> elffy_create_bind_group(
+    private static partial ApiBoxResult<BindGroupHandle> elffy_create_bind_group(
         HostScreenHandle screen,
         BindGroupDescriptor* desc);
 
@@ -61,7 +70,7 @@ static unsafe partial class EngineCore
         BindGroupHandle handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiRefResult<PipelineLayoutHandle> elffy_create_pipeline_layout(
+    private static partial ApiBoxResult<PipelineLayoutHandle> elffy_create_pipeline_layout(
         HostScreenHandle screen,
         PipelineLayoutDescriptor* desc);
 
@@ -70,7 +79,7 @@ static unsafe partial class EngineCore
         PipelineLayoutHandle handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiRefResult<RenderPipelineHandle> elffy_create_render_pipeline(
+    private static partial ApiBoxResult<RenderPipelineHandle> elffy_create_render_pipeline(
         HostScreenHandle screen,
         RenderPipelineDescriptor* desc);
 
@@ -79,7 +88,7 @@ static unsafe partial class EngineCore
         RenderPipelineHandle handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiRefResult<BufferHandle> elffy_create_buffer_init(
+    private static partial ApiBoxResult<BufferHandle> elffy_create_buffer_init(
         HostScreenHandle screen,
         Slice<u8> contents,
         wgpu_BufferUsages usage);
@@ -89,7 +98,7 @@ static unsafe partial class EngineCore
         BufferHandle handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiRefResult<SamplerHandle> elffy_create_sampler(
+    private static partial ApiBoxResult<SamplerHandle> elffy_create_sampler(
         HostScreenHandle screen,
         SamplerDescriptor* desc);
 
@@ -98,7 +107,7 @@ static unsafe partial class EngineCore
         SamplerHandle sampler);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiRefResult<ShaderModuleHandle> elffy_create_shader_module(
+    private static partial ApiBoxResult<ShaderModuleHandle> elffy_create_shader_module(
         HostScreenHandle screen,
         Slice<u8> shader_source);
 
@@ -107,12 +116,12 @@ static unsafe partial class EngineCore
         ShaderModuleHandle handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiRefResult<TextureHandle> elffy_create_texture(
+    private static partial ApiBoxResult<TextureHandle> elffy_create_texture(
         HostScreenHandle screen,
         TextureDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiRefResult<TextureHandle> elffy_create_texture_with_data(
+    private static partial ApiBoxResult<TextureHandle> elffy_create_texture_with_data(
         HostScreenHandle screen,
         TextureDescriptor* desc,
         Slice<u8> data);
@@ -122,7 +131,7 @@ static unsafe partial class EngineCore
         TextureHandle handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiRefResult<TextureViewHandle> elffy_create_texture_view(
+    private static partial ApiBoxResult<TextureViewHandle> elffy_create_texture_view(
         TextureHandle texture,
         TextureViewDescriptor* desc);
 
