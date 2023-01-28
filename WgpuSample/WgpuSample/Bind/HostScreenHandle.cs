@@ -1,98 +1,134 @@
 ﻿#nullable enable
 using System;
 using u8 = System.Byte;
+using Self = Elffy.Bind.Elffycore.HostScreen;
 
 namespace Elffy.Bind;
 
-internal unsafe readonly record struct HostScreenHandle(NativePointer Pointer) : IHandle<HostScreenHandle>
+internal unsafe static class HostScreenExtensions
 {
-    public static HostScreenHandle DestroyedHandle => default;
-    public static explicit operator HostScreenHandle(void* nativePtr) => new(nativePtr);
-
-    public (uint Width, uint Height) InnerSize
+    public static (uint Width, uint Height) GetInnerSize(this Ref<Self> self)
     {
-        get => EngineCore.ScreenGetInnerSize(this);
-        set => EngineCore.ScreenSetInnerSize(this, value.Width, value.Height);
+        return EngineCore.ScreenGetInnerSize(self);
     }
 
-    public void WriteTexture(
-            in ImageCopyTexture texture,
-            Slice<u8> data,
-            in wgpu_ImageDataLayout dataLayout,
-            in wgpu_Extent3d size)
+    public static void SetInnerSize(this Ref<Self> self, uint width, uint height)
+    {
+        EngineCore.ScreenSetInnerSize(self, width, height);
+    }
+
+    public static void WriteTexture(
+        this Ref<Self> self,
+        in ImageCopyTexture texture,
+        Slice<u8> data,
+        in wgpu_ImageDataLayout dataLayout,
+        in wgpu_Extent3d size)
     {
         fixed(ImageCopyTexture* texturePtr = &texture)
         fixed(wgpu_ImageDataLayout* dataLayoutPtr = &dataLayout)
         fixed(wgpu_Extent3d* sizePtr = &size) {
-            EngineCore.WriteTexture(this, texturePtr, data, dataLayoutPtr, sizePtr);
+            EngineCore.WriteTexture(self, texturePtr, data, dataLayoutPtr, sizePtr);
         }
     }
 
-    public TextureHandle CreateTexture(
-            in TextureDescriptor desc)
+    public static Box<Wgpu.Texture> CreateTexture(
+        this Ref<Self> self,
+        in TextureDescriptor desc)
     {
         fixed(TextureDescriptor* descPtr = &desc) {
-            return EngineCore.CreateTexture(this, descPtr);
+            return EngineCore.CreateTexture(self, descPtr);
         }
     }
 
-    public BufferHandle CreateBufferInit(
-            Slice<u8> contents,
-            wgpu_BufferUsages usage)
+    public static Box<Wgpu.Buffer> CreateBufferInit(
+        this Ref<Self> self,
+        Slice<u8> contents,
+        wgpu_BufferUsages usage)
     {
-        return EngineCore.CreateBufferInit(this, contents, usage);
+        return EngineCore.CreateBufferInit(self, contents, usage);
     }
 
-    public BindGroupLayoutHandle CreateBindGroupLayout(
-            in BindGroupLayoutDescriptor desc)
+    public static Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
+        this Ref<Self> self,
+        in BindGroupLayoutDescriptor desc)
     {
         fixed(BindGroupLayoutDescriptor* descPtr = &desc) {
-            return EngineCore.CreateBindGroupLayout(this, descPtr);
+            return EngineCore.CreateBindGroupLayout(self, descPtr);
         }
     }
 
-    public BindGroupHandle CreateBindGroup(
-            in BindGroupDescriptor desc)
+    public static Box<Wgpu.BindGroup> CreateBindGroup(
+        this Ref<Self> self,
+        in BindGroupDescriptor desc)
     {
         fixed(BindGroupDescriptor* descPtr = &desc) {
-            return EngineCore.CreateBindGroup(this, descPtr);
+            return EngineCore.CreateBindGroup(self, descPtr);
         }
     }
 
-    public ShaderModuleHandle CreateShaderModule(ReadOnlySpan<byte> shaderSource)
+    public static Box<Wgpu.ShaderModule> CreateShaderModule(
+        this Ref<Self> self,
+        ReadOnlySpan<byte> shaderSource)
     {
         fixed(byte* ptr = shaderSource) {
-            return EngineCore.CreateShaderModule(this, new Slice<u8>(ptr, shaderSource.Length));
+            return EngineCore.CreateShaderModule(self, new Slice<u8>(ptr, shaderSource.Length));
         }
     }
 
-    public SamplerHandle CreateSampler(in SamplerDescriptor desc)
+    public static Box<Wgpu.Sampler> CreateSampler(
+        this Ref<Self> self,
+        in SamplerDescriptor desc)
     {
         fixed(SamplerDescriptor* descPtr = &desc) {
-            return EngineCore.CreateSampler(this, descPtr);
+            return EngineCore.CreateSampler(self, descPtr);
         }
     }
 
-    public PipelineLayoutHandle CreatePipelineLayout(in PipelineLayoutDescriptor desc)
+    public static Box<Wgpu.PipelineLayout> CreatePipelineLayout(
+        this Ref<Self> self,
+        in PipelineLayoutDescriptor desc)
     {
         fixed(PipelineLayoutDescriptor* descPtr = &desc) {
-            return EngineCore.CreatePipelineLayout(this, descPtr);
+            return EngineCore.CreatePipelineLayout(self, descPtr);
         }
     }
 
-    public RenderPipelineHandle CreateRenderPipeline(in RenderPipelineDescriptor desc)
+    public static Box<Wgpu.RenderPipeline> CreateRenderPipeline(
+        this Ref<Self> self,
+        in RenderPipelineDescriptor desc)
     {
         fixed(RenderPipelineDescriptor* descPtr = &desc) {
-            return EngineCore.CreateRenderPipeline(this, descPtr);
+            return EngineCore.CreateRenderPipeline(self, descPtr);
         }
     }
-
-    public HostScreenRef AsRef() => new HostScreenRef(this);
 }
 
-internal readonly ref struct HostScreenRef
-{
-    private readonly NativePointer _p;
 
-    public HostScreenRef(HostScreenHandle screen) => _p = screen.Pointer;
+internal unsafe static class TextureExtensions
+{
+    public static Box<Wgpu.TextureView> CreateTextureView(this Ref<Wgpu.Texture> self)
+        => CreateTextureView(self, TextureViewDescriptor.Default);
+
+    public static Box<Wgpu.TextureView> CreateTextureView(
+        this Ref<Wgpu.Texture> self,
+        in TextureViewDescriptor desc)
+    {
+        fixed(TextureViewDescriptor* descPtr = &desc) {
+            return EngineCore.CreateTextureView(self, descPtr);
+        }
+    }
+}
+
+internal unsafe static class BufferExtensions
+{
+    public static BufferBinding AsEntireBufferBinding(
+        this Ref<Wgpu.Buffer> self)
+    {
+        return new BufferBinding
+        {
+            buffer = self,
+            offset = 0,
+            size = 0,
+        };
+    }
 }

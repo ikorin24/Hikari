@@ -19,31 +19,7 @@ internal class Program
             OnStart = OnStart,
             OnRender = OnRender,
             OnResized = OnResized,
-            OnCommandBegin = (HostScreenRef screen, TextureViewRef surfaceTextureView, CommandEncoderMut commandEncoder, CreateRenderPassFunc createRenderPass) =>
-            {
-                unsafe {
-                    const int ColorAttachmentCount = 1;
-                    var colorAttachments = stackalloc Opt<RenderPassColorAttachment>[ColorAttachmentCount]
-                    {
-                        Opt.Some(new RenderPassColorAttachment
-                        {
-                            view = surfaceTextureView,
-                            clear = new wgpu_Color(0, 0, 0, 0),
-                        }),
-                    };
-                    var desc = new RenderPassDescriptor
-                    {
-                        color_attachments_clear = new(colorAttachments, (nuint)ColorAttachmentCount),
-                        depth_stencil_attachment_clear = Opt.Some(new RenderPassDepthStencilAttachment
-                        {
-                            view = _state.Depth.View,
-                            depth_clear = Opt.Some(1f),
-                            stencil_clear = Opt.None<uint>(),
-                        }),
-                    };
-                    return createRenderPass(commandEncoder, desc);
-                }
-            },
+            OnCommandBegin = OnCommandBegin,
         });
     }
 
@@ -53,25 +29,25 @@ internal class Program
         NUM_INSTANCES_PER_ROW * 0.5f, 0, NUM_INSTANCES_PER_ROW * 0.5f
         );
 
-    private static unsafe void OnStart(HostScreenHandle screen, in HostScreenInfo info)
+    private static unsafe void OnStart(Ref<Elffycore.HostScreen> screen, in HostScreenInfo info)
     {
         var surfaceFormat = info.surface_format.Unwrap();
         System.Diagnostics.Debug.WriteLine(info.backend);
 
 
-        // Texture
-        var diffuseTexture = HostScreenInitializer.CreateTexture(screen, "happy-tree.png");
+        // Texture, TextureView, Sampler
+        var textureData = HostScreenInitializer.CreateTexture(screen, "happy-tree.png");
 
-        // TextureView, Sampler
-        var (textureView, sampler) = HostScreenInitializer.CreateTextureViewSampler(screen, diffuseTexture);
+        //// TextureView, Sampler
+        //var (textureView, sampler) = HostScreenInitializer.CreateTextureViewSampler(screen, diffuseTexture);
 
         // BindGroupLayout
         var textureBindGroupLayout = HostScreenInitializer.CreateTextureBindGroupLayout(screen);
 
         // BindGroup
-        var diffuseBindGroup = HostScreenInitializer.CreateTextureBindGroup(screen, textureBindGroupLayout, textureView, sampler);
+        var diffuseBindGroup = HostScreenInitializer.CreateTextureBindGroup(screen, textureBindGroupLayout, textureData.View, textureData.Sampler);
 
-        var screenSize = screen.InnerSize;
+        var screenSize = screen.GetInnerSize();
         var camera = new Camera
         {
             eye = new(0.0f, 5.0f, -10.0f),
@@ -112,7 +88,7 @@ internal class Program
         };
 
         // Buffer (instance)
-        BufferHandle instanceBuffer;
+        Box<Wgpu.Buffer> instanceBuffer;
         int instanceCount = instances.Length;
         fixed(InstanceData* instanceData = instances) {
             instanceBuffer = screen.CreateBufferInit(
@@ -139,17 +115,19 @@ internal class Program
             }),
         });
 
-        BindGroupHandle cameraBindGroup;
+        Box<Wgpu.BindGroup> cameraBindGroup;
         {
-            var bufferBinding = cameraBuffer.AsEntireBufferBinding();
-            Span<BindGroupEntry> entries = stackalloc BindGroupEntry[]
+            var bufferBinding = cameraBuffer.AsRef().AsEntireBufferBinding();
+            const int EntryCount = 1;
+            var entries = stackalloc BindGroupEntry[EntryCount]
             {
                 new() { binding = 0, resource = BindingResource.Buffer(&bufferBinding), }
             };
             cameraBindGroup = screen.CreateBindGroup(new BindGroupDescriptor
             {
                 layout = cameraBindGroupLayout,
-                entries = new Slice<BindGroupEntry>((BindGroupEntry*)Unsafe.AsPointer(ref entries[0]), entries.Length),
+                //entries = new Slice<BindGroupEntry>((BindGroupEntry*)Unsafe.AsPointer(ref entries[0]), entries.Length),
+                entries = new(entries, EntryCount),
             });
         }
 
@@ -161,7 +139,7 @@ internal class Program
         // PipelineLayout
         var pipelineLayout = screen.CreatePipelineLayout(new PipelineLayoutDescriptor
         {
-            bind_group_layouts = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutHandle[]
+            bind_group_layouts = Slice.FromFixedSpanUnsafe(stackalloc Ref<Wgpu.BindGroupLayout>[]
             {
                 textureBindGroupLayout,
                 cameraBindGroupLayout,
@@ -177,7 +155,7 @@ internal class Program
         var depthTextureData = CreateDepthTexture(screen, screenSize.Width, screenSize.Height);
 
         // RenderPipeline
-        RenderPipelineHandle renderPipeline;
+        Box<Wgpu.RenderPipeline> renderPipeline;
         {
             var vertexBufferLayout = new VertexBufferLayout
             {
@@ -262,8 +240,8 @@ internal class Program
         }
 
         // Buffer (vertex, index)
-        BufferHandle vertexBuffer;
-        BufferHandle indexBuffer;
+        Box<Wgpu.Buffer> vertexBuffer;
+        Box<Wgpu.Buffer> indexBuffer;
         int indexCount;
         wgpu_IndexFormat indexFormat;
         {
@@ -296,9 +274,7 @@ internal class Program
             IndexFormat = indexFormat,
             InstanceBuffer = instanceBuffer,
             InstanceCount = instanceCount,
-            DiffuseTexture = diffuseTexture,
-            TextureView = textureView,
-            Sampler = sampler,
+            DiffuseTextureData = textureData,
             TextureBindGroupLayout = textureBindGroupLayout,
             DiffuseBindGroup = diffuseBindGroup,
 
@@ -312,7 +288,35 @@ internal class Program
         };
     }
 
-    private static void OnResized(HostScreenHandle screen, uint width, uint height)
+    private unsafe static Box<Wgpu.RenderPass> OnCommandBegin(
+        Ref<Elffycore.HostScreen> screen,
+        Ref<Wgpu.TextureView> surfaceTextureView,
+        MutRef<Wgpu.CommandEncoder> commandEncoder,
+        CreateRenderPassFunc createRenderPass)
+    {
+        const int ColorAttachmentCount = 1;
+        var colorAttachments = stackalloc Opt<RenderPassColorAttachment>[ColorAttachmentCount]
+        {
+            Opt.Some(new RenderPassColorAttachment
+            {
+                view = surfaceTextureView,
+                clear = new wgpu_Color(0, 0, 0, 0),
+            }),
+        };
+        var desc = new RenderPassDescriptor
+        {
+            color_attachments_clear = new(colorAttachments, (nuint)ColorAttachmentCount),
+            depth_stencil_attachment_clear = Opt.Some(new RenderPassDepthStencilAttachment
+            {
+                view = _state.Depth.View,
+                depth_clear = Opt.Some(1f),
+                stencil_clear = Opt.None<uint>(),
+            }),
+        };
+        return createRenderPass(commandEncoder, desc);
+    }
+
+    private static void OnResized(Ref<Elffycore.HostScreen> screen, uint width, uint height)
     {
         Debug.WriteLine((width, height));
         var depth = _state.Depth;
@@ -329,7 +333,7 @@ internal class Program
     //    public Vector3 Value;
     //}
 
-    private static DepthTextureData CreateDepthTexture(HostScreenHandle screen, uint width, uint height)
+    private static DepthTextureData CreateDepthTexture(Ref<Elffycore.HostScreen> screen, uint width, uint height)
     {
         const TextureFormat DepthTextureFormat = TextureFormat.Depth32Float;
         var texture = screen.CreateTexture(new TextureDescriptor
@@ -346,7 +350,7 @@ internal class Program
             format = DepthTextureFormat,
             usage = wgpu_TextureUsages.RENDER_ATTACHMENT | wgpu_TextureUsages.TEXTURE_BINDING,
         });
-        var view = texture.CreateTextureView();
+        var view = texture.AsRef().CreateTextureView();
         var sampler = screen.CreateSampler(new SamplerDescriptor
         {
             address_mode_u = wgpu_AddressMode.ClampToEdge,
@@ -362,7 +366,7 @@ internal class Program
         return new DepthTextureData(texture, view, sampler, DepthTextureFormat);
     }
 
-    private static unsafe void OnRender(HostScreenHandle screen, RenderPassRef renderPass)
+    private static unsafe void OnRender(Ref<Elffycore.HostScreen> screen, MutRef<Wgpu.RenderPass> renderPass)
     {
         renderPass.SetPipeline(_state.RenderPipeline);
         renderPass.SetBindGroup(0, _state.DiffuseBindGroup);
@@ -423,7 +427,7 @@ internal class Program
 
 internal static class HostScreenInitializer
 {
-    public unsafe static TextureHandle CreateTexture(HostScreenHandle screen, string filepath)
+    public unsafe static TextureData CreateTexture(Ref<Elffycore.HostScreen> screen, string filepath)
     {
         var (pixelBytes, width, height) = SamplePrimitives.LoadImagePixels(filepath);
         var size = new wgpu_Extent3d
@@ -461,12 +465,8 @@ internal static class HostScreenInitializer
                 },
                 size);
         }
-        return texture;
-    }
 
-    public unsafe static (TextureViewHandle TextureView, SamplerHandle Sampler) CreateTextureViewSampler(HostScreenHandle screen, TextureHandle texture)
-    {
-        var textureView = texture.CreateTextureView(TextureViewDescriptor.Default);
+        var textureView = texture.AsRef().CreateTextureView(TextureViewDescriptor.Default);
         var sampler = screen.CreateSampler(new SamplerDescriptor
         {
             address_mode_u = wgpu_AddressMode.ClampToEdge,
@@ -481,11 +481,38 @@ internal static class HostScreenInitializer
             border_color = Opt.None<SamplerBorderColor>(),
             compare = Opt.None<wgpu_CompareFunction>(),
         });
-
-        return (TextureView: textureView, Sampler: sampler);
+        return new TextureData
+        {
+            Texture = texture,
+            Sampler = sampler,
+            View = textureView,
+        };
     }
 
-    public unsafe static BindGroupLayoutHandle CreateTextureBindGroupLayout(HostScreenHandle screen)
+    //public unsafe static (Box<Wgpu.TextureView> TextureView, Box<Wgpu.Sampler> Sampler) CreateTextureViewSampler(
+    //    Ref<Elffycore.HostScreen> screen,
+    //    Ref<Wgpu.Texture> texture)
+    //{
+    //    var textureView = texture.CreateTextureView(TextureViewDescriptor.Default);
+    //    var sampler = screen.CreateSampler(new SamplerDescriptor
+    //    {
+    //        address_mode_u = wgpu_AddressMode.ClampToEdge,
+    //        address_mode_v = wgpu_AddressMode.ClampToEdge,
+    //        address_mode_w = wgpu_AddressMode.ClampToEdge,
+    //        mag_filter = wgpu_FilterMode.Linear,
+    //        min_filter = wgpu_FilterMode.Nearest,
+    //        mipmap_filter = wgpu_FilterMode.Nearest,
+    //        anisotropy_clamp = 0,
+    //        lod_max_clamp = 0,
+    //        lod_min_clamp = 0,
+    //        border_color = Opt.None<SamplerBorderColor>(),
+    //        compare = Opt.None<wgpu_CompareFunction>(),
+    //    });
+
+    //    return (TextureView: textureView, Sampler: sampler);
+    //}
+
+    public unsafe static Box<Wgpu.BindGroupLayout> CreateTextureBindGroupLayout(Ref<Elffycore.HostScreen> screen)
     {
         return screen.CreateBindGroupLayout(new()
         {
@@ -514,11 +541,11 @@ internal static class HostScreenInitializer
         });
     }
 
-    public unsafe static BindGroupHandle CreateTextureBindGroup(
-        HostScreenHandle screen,
-        BindGroupLayoutHandle bindGroupLayout,
-        TextureViewHandle textureView,
-        SamplerHandle sampler)
+    public unsafe static Box<Wgpu.BindGroup> CreateTextureBindGroup(
+        Ref<Elffycore.HostScreen> screen,
+        Ref<Wgpu.BindGroupLayout> bindGroupLayout,
+        Ref<Wgpu.TextureView> textureView,
+        Ref<Wgpu.Sampler> sampler)
     {
         return screen.CreateBindGroup(new BindGroupDescriptor
         {
@@ -539,10 +566,10 @@ internal static class HostScreenInitializer
         });
     }
 
-    public unsafe static BufferHandle CreateUniformBuffer<T>(HostScreenHandle screen, Span<T> data) where T : unmanaged
+    public unsafe static Box<Wgpu.Buffer> CreateUniformBuffer<T>(Ref<Elffycore.HostScreen> screen, Span<T> data) where T : unmanaged
         => CreateUniformBuffer(screen, (ReadOnlySpan<T>)data);
 
-    public unsafe static BufferHandle CreateUniformBuffer<T>(HostScreenHandle screen, ReadOnlySpan<T> data) where T : unmanaged
+    public unsafe static Box<Wgpu.Buffer> CreateUniformBuffer<T>(Ref<Elffycore.HostScreen> screen, ReadOnlySpan<T> data) where T : unmanaged
     {
         fixed(T* p = data) {
             var contents = new Slice<byte>((byte*)p, (nuint)data.Length * (nuint)sizeof(T));
@@ -551,7 +578,7 @@ internal static class HostScreenInitializer
         }
     }
 
-    public unsafe static BindGroupLayoutHandle CreateUniformBindGroupLayout(HostScreenHandle screen)
+    public unsafe static Box<Wgpu.BindGroupLayout> CreateUniformBindGroupLayout(Ref<Elffycore.HostScreen> screen)
     {
         return screen.CreateBindGroupLayout(new()
         {
@@ -596,17 +623,17 @@ internal static class HostScreenInitializer
     //}
 
     public unsafe static (
-        BufferHandle VertexBuffer,
+        Box<Wgpu.Buffer> VertexBuffer,
         uint VertexCount,
-        BufferHandle IndexBuffer,
+        Box<Wgpu.Buffer> IndexBuffer,
         uint IndexCount,
         wgpu_IndexFormat IndexFormat
     ) CreateVertexIndexBuffer<TVertex>(
-            HostScreenHandle screen,
+            Ref<Elffycore.HostScreen> screen,
             ReadOnlySpan<TVertex> vertices,
             ReadOnlySpan<uint> indices) where TVertex : unmanaged
     {
-        BufferHandle vertexBuffer;
+        Box<Wgpu.Buffer> vertexBuffer;
         uint vertexCount;
         fixed(TVertex* v = vertices) {
             nuint bytelen = (nuint)sizeof(TVertex) * (nuint)vertices.Length;
@@ -615,7 +642,7 @@ internal static class HostScreenInitializer
             vertexCount = (uint)vertices.Length;
         }
 
-        BufferHandle indexBuffer;
+        Box<Wgpu.Buffer> indexBuffer;
         uint indexCount;
         const wgpu_IndexFormat indexFormat = wgpu_IndexFormat.Uint32;
         fixed(uint* i = indices) {
@@ -680,41 +707,44 @@ internal record struct InstanceData(Vector3 Offset);
 
 internal struct State
 {
-    public required PipelineLayoutHandle PipelineLayout;
-    public required ShaderModuleHandle Shader;
-    public required RenderPipelineHandle RenderPipeline;
+    public required Box<Wgpu.PipelineLayout> PipelineLayout;
+    public required Box<Wgpu.ShaderModule> Shader;
+    public required Box<Wgpu.RenderPipeline> RenderPipeline;
 
-    public required BufferHandle VertexBuffer;
+    public required Box<Wgpu.Buffer> VertexBuffer;
     //public required uint VertexCount;
-    public required BufferHandle IndexBuffer;
+    public required Box<Wgpu.Buffer> IndexBuffer;
     public required int IndexCount;
     public required wgpu_IndexFormat IndexFormat;
 
-    public required TextureHandle DiffuseTexture;
-    public required TextureViewHandle TextureView;
-    public required SamplerHandle Sampler;
-    public required BindGroupLayoutHandle TextureBindGroupLayout;
-    public required BindGroupHandle DiffuseBindGroup;
+    //public required TextureHandle DiffuseTexture;
+    //public required TextureViewHandle TextureView;
+    //public required Box<Wgpu.Sampler> Sampler;
+    public required TextureData DiffuseTextureData;
 
-    public required BufferHandle CameraBuffer;
-    public required BindGroupLayoutHandle CameraBindGroupLayout;
-    public required BindGroupHandle CameraBindGroup;
 
-    public required BufferHandle InstanceBuffer;
+    public required Box<Wgpu.BindGroupLayout> TextureBindGroupLayout;
+    public required Box<Wgpu.BindGroup> DiffuseBindGroup;
+
+    public required Box<Wgpu.Buffer> CameraBuffer;
+    public required Box<Wgpu.BindGroupLayout> CameraBindGroupLayout;
+    public required Box<Wgpu.BindGroup> CameraBindGroup;
+
+    public required Box<Wgpu.Buffer> InstanceBuffer;
     public required int InstanceCount;
 
     public required DepthTextureData Depth;
 }
 
 internal record struct TextureData(
-    TextureHandle Texture,
-    TextureViewHandle View,
-    SamplerHandle Sampler);
+    Box<Wgpu.Texture> Texture,
+    Box<Wgpu.TextureView> View,
+    Box<Wgpu.Sampler> Sampler);
 
 internal record struct DepthTextureData(
-    TextureHandle Texture,
-    TextureViewHandle View,
-    SamplerHandle Sampler,
+    Box<Wgpu.Texture> Texture,
+    Box<Wgpu.TextureView> View,
+    Box<Wgpu.Sampler> Sampler,
     TextureFormat Format);
 
 

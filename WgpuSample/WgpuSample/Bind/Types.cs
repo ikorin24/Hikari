@@ -14,70 +14,42 @@ using System.Diagnostics;
 
 namespace Elffy.Bind;
 
-#pragma warning disable IDE1006 // naming style
+//internal interface IHandle
+//{
+//    NativePointer Pointer { get; }
+//}
 
-/// <summary>Opaque wrapper of a native pointer</summary>
-[StructLayout(LayoutKind.Sequential)]
-internal unsafe readonly struct NativePointer : IEquatable<NativePointer>
-{
-    private readonly void* _ptr;
+//internal interface IHandle<TSelf> :
+//    IHandle
+//    where TSelf : unmanaged, IHandle<TSelf>
+//{
+//    static abstract TSelf DestroyedHandle { get; }
+//    unsafe static abstract explicit operator TSelf(void* nativePtr);
+//}
 
-    internal static NativePointer Null => default;
+//internal static class HandleExtensions
+//{
+//    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+//    public static bool IsDestroyed<THandle>(this THandle handle)
+//        where THandle : unmanaged, IHandle<THandle>, IEquatable<THandle>
+//    {
+//        return handle.Equals(THandle.DestroyedHandle);
+//    }
 
-    private NativePointer(void* p) => _ptr = p;
+//    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+//    [DebuggerHidden]
+//    public static void ThrowIfDestroyed<THandle>(this THandle handle)
+//        where THandle : unmanaged, IHandle<THandle>, IEquatable<THandle>
+//    {
+//        if(handle.Equals(THandle.DestroyedHandle)) {
+//            Throw();
 
-    public override bool Equals(object? obj) => obj is NativePointer handle && Equals(handle);
-
-    public bool Equals(NativePointer other) => _ptr == other._ptr;
-
-    public override int GetHashCode() => ((IntPtr)_ptr).GetHashCode();
-
-    public static bool operator ==(NativePointer left, NativePointer right) => left.Equals(right);
-
-    public static bool operator !=(NativePointer left, NativePointer right) => !(left == right);
-
-    public override string ToString() => ((IntPtr)_ptr).ToString();
-
-    public unsafe static implicit operator NativePointer(void* nativePtr) => new(nativePtr);
-    public unsafe static implicit operator void*(NativePointer nativePtr) => nativePtr._ptr;
-}
-
-internal interface IHandle
-{
-    NativePointer Pointer { get; }
-}
-
-internal interface IHandle<TSelf> :
-    IHandle
-    where TSelf : unmanaged, IHandle<TSelf>
-{
-    static abstract TSelf DestroyedHandle { get; }
-    unsafe static abstract explicit operator TSelf(void* nativePtr);
-}
-
-internal static class HandleExtensions
-{
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsDestroyed<THandle>(this THandle handle)
-        where THandle : unmanaged, IHandle<THandle>, IEquatable<THandle>
-    {
-        return handle.Equals(THandle.DestroyedHandle);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
-    public static void ThrowIfDestroyed<THandle>(this THandle handle)
-        where THandle : unmanaged, IHandle<THandle>, IEquatable<THandle>
-    {
-        if(handle.Equals(THandle.DestroyedHandle)) {
-            Throw();
-
-            [DoesNotReturn]
-            [DebuggerHidden]
-            static void Throw() => throw new InvalidOperationException($"The handle is already destroyed (handle type '{typeof(THandle).Name}')");
-        }
-    }
-}
+//            [DoesNotReturn]
+//            [DebuggerHidden]
+//            static void Throw() => throw new InvalidOperationException($"The handle is already destroyed (handle type '{typeof(THandle).Name}')");
+//        }
+//    }
+//}
 
 internal enum WindowStyle
 {
@@ -86,108 +58,108 @@ internal enum WindowStyle
     Fullscreen = 2,
 }
 
-internal readonly record struct BindGroupLayoutHandle(NativePointer Pointer) : IHandle<BindGroupLayoutHandle>
-{
-    public static BindGroupLayoutHandle DestroyedHandle => default;
-    public unsafe static explicit operator BindGroupLayoutHandle(void* nativePtr) => new(nativePtr);
-}
+//internal readonly record struct BindGroupLayoutHandle(NativePointer Pointer) : IHandle<BindGroupLayoutHandle>
+//{
+//    public static BindGroupLayoutHandle DestroyedHandle => default;
+//    public unsafe static explicit operator BindGroupLayoutHandle(void* nativePtr) => new(nativePtr);
+//}
 
-internal readonly record struct BindGroupHandle(NativePointer Pointer) : IHandle<BindGroupHandle>
-{
-    public static BindGroupHandle DestroyedHandle => default;
-    public unsafe static explicit operator BindGroupHandle(void* nativePtr) => new(nativePtr);
-}
+//internal readonly record struct BindGroupHandle(NativePointer Pointer) : IHandle<BindGroupHandle>
+//{
+//    public static BindGroupHandle DestroyedHandle => default;
+//    public unsafe static explicit operator BindGroupHandle(void* nativePtr) => new(nativePtr);
+//}
 
-internal readonly record struct BufferHandle(NativePointer Pointer) : IHandle<BufferHandle>
-{
-    public static BufferHandle DestroyedHandle => default;
-    public unsafe static explicit operator BufferHandle(void* nativePtr) => new(nativePtr);
+//internal readonly record struct BufferHandle(NativePointer Pointer) : IHandle<BufferHandle>
+//{
+//    public static BufferHandle DestroyedHandle => default;
+//    public unsafe static explicit operator BufferHandle(void* nativePtr) => new(nativePtr);
 
-    public BufferBinding AsEntireBufferBinding()
-    {
-        return new BufferBinding
-        {
-            buffer = this,
-            offset = 0,
-            size = 0,
-        };
-    }
-}
+//    public BufferBinding AsEntireBufferBinding()
+//    {
+//        return new BufferBinding
+//        {
+//            buffer = this,
+//            offset = 0,
+//            size = 0,
+//        };
+//    }
+//}
 
-internal readonly record struct RenderPipelineHandle(NativePointer Pointer) : IHandle<RenderPipelineHandle>
-{
-    public static RenderPipelineHandle DestroyedHandle => default;
-    public unsafe static explicit operator RenderPipelineHandle(void* nativePtr) => new(nativePtr);
-}
+//internal readonly record struct RenderPipelineHandle(NativePointer Pointer) : IHandle<RenderPipelineHandle>
+//{
+//    public static RenderPipelineHandle DestroyedHandle => default;
+//    public unsafe static explicit operator RenderPipelineHandle(void* nativePtr) => new(nativePtr);
+//}
 
-internal readonly record struct SamplerHandle(NativePointer Pointer) : IHandle<SamplerHandle>
-{
-    public static SamplerHandle DestroyedHandle => default;
-    public unsafe static explicit operator SamplerHandle(void* nativePtr) => new(nativePtr);
-}
+//internal readonly record struct SamplerHandle(NativePointer Pointer) : IHandle<SamplerHandle>
+//{
+//    public static SamplerHandle DestroyedHandle => default;
+//    public unsafe static explicit operator SamplerHandle(void* nativePtr) => new(nativePtr);
+//}
 
-internal readonly record struct PipelineLayoutHandle(NativePointer Pointer) : IHandle<PipelineLayoutHandle>
-{
-    public static PipelineLayoutHandle DestroyedHandle => default;
-    public unsafe static explicit operator PipelineLayoutHandle(void* nativePtr) => new(nativePtr);
-}
+//internal readonly record struct PipelineLayoutHandle(NativePointer Pointer) : IHandle<PipelineLayoutHandle>
+//{
+//    public static PipelineLayoutHandle DestroyedHandle => default;
+//    public unsafe static explicit operator PipelineLayoutHandle(void* nativePtr) => new(nativePtr);
+//}
 
-internal readonly record struct ShaderModuleHandle(NativePointer Pointer) : IHandle<ShaderModuleHandle>
-{
-    public static ShaderModuleHandle DestroyedHandle => default;
-    public unsafe static explicit operator ShaderModuleHandle(void* nativePtr) => new(nativePtr);
-}
+//internal readonly record struct ShaderModuleHandle(NativePointer Pointer) : IHandle<ShaderModuleHandle>
+//{
+//    public static ShaderModuleHandle DestroyedHandle => default;
+//    public unsafe static explicit operator ShaderModuleHandle(void* nativePtr) => new(nativePtr);
+//}
 
-internal unsafe readonly record struct TextureHandle(NativePointer Pointer) : IHandle<TextureHandle>
-{
-    public static TextureHandle DestroyedHandle => default;
-    public static explicit operator TextureHandle(void* nativePtr) => new(nativePtr);
+//internal unsafe readonly record struct TextureHandle(NativePointer Pointer) : IHandle<TextureHandle>
+//{
+//    public static TextureHandle DestroyedHandle => default;
+//    public static explicit operator TextureHandle(void* nativePtr) => new(nativePtr);
 
-    public TextureViewHandle CreateTextureView() => CreateTextureView(TextureViewDescriptor.Default);
+//    public TextureViewHandle CreateTextureView() => CreateTextureView(TextureViewDescriptor.Default);
 
-    public TextureViewHandle CreateTextureView(in TextureViewDescriptor desc)
-    {
-        fixed(TextureViewDescriptor* descPtr = &desc) {
-            return EngineCore.CreateTextureView(this, descPtr);
-        }
-    }
-}
+//    public TextureViewHandle CreateTextureView(in TextureViewDescriptor desc)
+//    {
+//        fixed(TextureViewDescriptor* descPtr = &desc) {
+//            return EngineCore.CreateTextureView(this, descPtr);
+//        }
+//    }
+//}
 
-internal readonly record struct TextureViewHandle(NativePointer Pointer) : IHandle<TextureViewHandle>
-{
-    public static TextureViewHandle DestroyedHandle => default;
-    public unsafe static explicit operator TextureViewHandle(void* nativePtr) => new(nativePtr);
-    public static implicit operator TextureViewRef(TextureViewHandle x) => x.AsRef();
+//internal readonly record struct TextureViewHandle(NativePointer Pointer) : IHandle<TextureViewHandle>
+//{
+//    public static TextureViewHandle DestroyedHandle => default;
+//    public unsafe static explicit operator TextureViewHandle(void* nativePtr) => new(nativePtr);
+//    public static implicit operator TextureViewRef(TextureViewHandle x) => x.AsRef();
 
-    public TextureViewRef AsRef() => Unsafe.As<TextureViewHandle, TextureViewRef>(ref Unsafe.AsRef(in this));
-}
+//    public TextureViewRef AsRef() => Unsafe.As<TextureViewHandle, TextureViewRef>(ref Unsafe.AsRef(in this));
+//}
 
-internal readonly struct TextureViewRef : IEquatable<TextureViewRef>
-{
-    private readonly NativePointer _p;
-    public override bool Equals(object? obj) => obj is TextureViewRef @ref && Equals(@ref);
-    public bool Equals(TextureViewRef other) => _p.Equals(other._p);
-    public override int GetHashCode() => _p.GetHashCode();
-    public static bool operator ==(TextureViewRef left, TextureViewRef right) => left.Equals(right);
-    public static bool operator !=(TextureViewRef left, TextureViewRef right) => !(left == right);
-}
+//internal readonly struct TextureViewRef : IEquatable<TextureViewRef>
+//{
+//    private readonly NativePointer _p;
+//    public override bool Equals(object? obj) => obj is TextureViewRef @ref && Equals(@ref);
+//    public bool Equals(TextureViewRef other) => _p.Equals(other._p);
+//    public override int GetHashCode() => _p.GetHashCode();
+//    public static bool operator ==(TextureViewRef left, TextureViewRef right) => left.Equals(right);
+//    public static bool operator !=(TextureViewRef left, TextureViewRef right) => !(left == right);
+//}
 
-internal readonly ref struct CommandEncoderRef
-{
-    private readonly NativePointer _p;
-}
+//internal readonly ref struct CommandEncoderRef
+//{
+//    private readonly NativePointer _p;
+//}
 
-internal readonly ref struct CommandEncoderMut
-{
-    private readonly NativePointer _p;
-}
+//internal readonly ref struct CommandEncoderMut
+//{
+//    private readonly NativePointer _p;
+//}
 
 internal unsafe readonly struct HostScreenInitFn
 {
 #pragma warning disable IDE0052
-    private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, void> _func;
+    private readonly delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, HostScreenInfo*, void> _func;
 #pragma warning restore IDE0052
-    public HostScreenInitFn(delegate* unmanaged[Cdecl]<HostScreenHandle, HostScreenInfo*, void> f) => _func = f;
+    public HostScreenInitFn(delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, HostScreenInfo*, void> f) => _func = f;
 
     public bool IsNull => _func == null;
 }
@@ -202,17 +174,12 @@ internal unsafe readonly struct HostScreenInitFn
 
 internal unsafe readonly struct OnCommandBeginFn
 {
-    //#pragma warning disable IDE0052
-    //    // fn(&HostScreen, &wgpu::TextureView, &mut wgpu::CommandEncoder) -> ()
-    //    private readonly delegate* unmanaged[Cdecl]<HostScreenRef, TextureViewRef, CommandEncoderMut, void> _func;
-    //#pragma warning restore IDE0052
-    //    public OnCommandBeginFn(delegate* unmanaged[Cdecl]<HostScreenRef, TextureViewRef, CommandEncoderMut, void> f) => _func = f;
-
 #pragma warning disable IDE0052
     // fn(&HostScreen, &wgpu::TextureView, &mut wgpu::CommandEncoder) -> ()
-    private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, TextureViewHandle, CommandEncoderMut, void> _func;
+    private readonly delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, Ref<Wgpu.TextureView>, MutRef<Wgpu.CommandEncoder>, void> _func;
 #pragma warning restore IDE0052
-    public OnCommandBeginFn(delegate* unmanaged[Cdecl]<HostScreenHandle, TextureViewHandle, CommandEncoderMut, void> f) => _func = f;
+
+    public OnCommandBeginFn(delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, Ref<Wgpu.TextureView>, MutRef<Wgpu.CommandEncoder>, void> f) => _func = f;
 }
 
 //internal unsafe readonly struct GetRenderPassDescFn
@@ -226,10 +193,10 @@ internal unsafe readonly struct OnCommandBeginFn
 internal unsafe readonly struct HostScreenResizedFn
 {
 #pragma warning disable IDE0052
-    private readonly delegate* unmanaged[Cdecl]<HostScreenHandle, u32, u32, void> _func;
+    private readonly delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, u32, u32, void> _func;
 #pragma warning restore IDE0052
 
-    public HostScreenResizedFn(delegate* unmanaged[Cdecl]<HostScreenHandle, u32, u32, void> f) => _func = f;
+    public HostScreenResizedFn(delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, u32, u32, void> f) => _func = f;
 }
 
 internal unsafe readonly struct DispatchErrFn
@@ -267,21 +234,21 @@ internal struct HostScreenInfo
     public required Opt<TextureFormat> surface_format;
 }
 
-internal unsafe struct RenderPassDescriptor
+internal struct RenderPassDescriptor
 {
     public required Slice<Opt<RenderPassColorAttachment>> color_attachments_clear;
     public required Opt<RenderPassDepthStencilAttachment> depth_stencil_attachment_clear;
 }
 
-internal unsafe struct RenderPassColorAttachment
+internal ref struct RenderPassColorAttachment
 {
-    public required TextureViewRef view;
+    public required Ref<Wgpu.TextureView> view;
     public required wgpu_Color clear;
 }
 
-internal struct RenderPassDepthStencilAttachment
+internal ref struct RenderPassDepthStencilAttachment
 {
-    public required TextureViewRef view;
+    public required Ref<Wgpu.TextureView> view;
     public required Opt<f32> depth_clear;
     public required Opt<u32> stencil_clear;
 }
@@ -291,9 +258,9 @@ internal struct BindGroupLayoutDescriptor
     public required Slice<BindGroupLayoutEntry> entries;
 }
 
-internal struct ImageCopyTexture
+internal ref struct ImageCopyTexture
 {
-    public required TextureHandle texture;
+    public required Ref<Wgpu.Texture> texture;
     public required u32 mip_level;
     public required u32 origin_x;
     public required u32 origin_y;
@@ -345,19 +312,19 @@ internal enum SamplerBorderColor
     Zero = 3,
 }
 
-internal unsafe struct BindGroupDescriptor
+internal ref struct BindGroupDescriptor
 {
-    public required BindGroupLayoutHandle layout;
+    public required Ref<Wgpu.BindGroupLayout> layout;
     public required Slice<BindGroupEntry> entries;
 }
 
-internal struct BindGroupEntry
+internal ref struct BindGroupEntry
 {
     public required u32 binding;
     public required BindingResource resource;
 }
 
-internal struct BindingResource
+internal ref struct BindingResource
 {
     public required BindingResourceTag tag;
     public required Pointer payload;
@@ -368,16 +335,16 @@ internal struct BindingResource
         payload = payload,
     };
 
-    public unsafe static BindingResource TextureView(TextureViewHandle textureView) => new()
+    public unsafe static BindingResource TextureView(Ref<Wgpu.TextureView> textureView) => new()
     {
         tag = BindingResourceTag.TextureView,
-        payload = textureView.Pointer,
+        payload = textureView.AsPtr(),
     };
 
-    public unsafe static BindingResource Sampler(SamplerHandle sampler) => new()
+    public unsafe static BindingResource Sampler(Ref<Wgpu.Sampler> sampler) => new()
     {
         tag = BindingResourceTag.Sampler,
-        payload = sampler.Pointer,
+        payload = sampler.AsPtr(),
     };
 }
 
@@ -406,21 +373,21 @@ internal enum BindingResourceTag
     TextureViewArray = 5,
 }
 
-internal struct BufferBinding
+internal ref struct BufferBinding
 {
-    public required BufferHandle buffer;
+    public required Ref<Wgpu.Buffer> buffer;
     public required u64 offset;
     public required u64 size;
 }
 
-internal struct PipelineLayoutDescriptor
+internal ref struct PipelineLayoutDescriptor
 {
-    public required Slice<BindGroupLayoutHandle> bind_group_layouts;
+    public required Slice<Ref<Wgpu.BindGroupLayout>> bind_group_layouts;
 }
 
-internal struct RenderPipelineDescriptor
+internal ref struct RenderPipelineDescriptor
 {
-    public required PipelineLayoutHandle layout;
+    public required Ref<Wgpu.PipelineLayout> layout;
     public required VertexState vertex;
     public required Opt<FragmentState> fragment;
     public required PrimitiveState primitive;
@@ -507,16 +474,16 @@ internal struct wgpu_MultisampleState
     };
 }
 
-internal struct VertexState
+internal ref struct VertexState
 {
-    public required ShaderModuleHandle module;
+    public required Ref<Wgpu.ShaderModule> module;
     public required Slice<u8> entry_point;
     public required Slice<VertexBufferLayout> buffers;
 }
 
-internal struct FragmentState
+internal ref struct FragmentState
 {
-    public required ShaderModuleHandle module;
+    public required Ref<Wgpu.ShaderModule> module;
     public required Slice<u8> entry_point;
     public required Slice<Opt<ColorTargetState>> targets;
 }
@@ -1021,13 +988,13 @@ internal static class Opt
     };
 }
 
-internal struct BufSlice
+internal ref struct BufSlice
 {
-    public required BufferHandle buffer;
+    public required Ref<Wgpu.Buffer> buffer;
     public required RangeBoundsU64 range;
 
     [SetsRequiredMembers]
-    public BufSlice(BufferHandle buffer, RangeBoundsU64 range)
+    public BufSlice(Ref<Wgpu.Buffer> buffer, RangeBoundsU64 range)
     {
         this.buffer = buffer;
         this.range = range;
@@ -1090,7 +1057,7 @@ internal static class Slice
 }
 
 [StructLayout(LayoutKind.Sequential)]
-internal struct DrawBufferArg
+internal ref struct DrawBufferArg
 {
     public required SlotBufSlice vertex_buffer;
     public required RangeU32 vertices_range;
@@ -1098,7 +1065,7 @@ internal struct DrawBufferArg
 }
 
 [StructLayout(LayoutKind.Sequential)]
-internal struct DrawBufferIndexedArg
+internal ref struct DrawBufferIndexedArg
 {
     public required BufSlice vertex_buffer_slice;
     public required u32 slot;
@@ -1111,7 +1078,7 @@ internal struct DrawBufferIndexedArg
 }
 
 [StructLayout(LayoutKind.Sequential)]
-internal struct DrawBuffersIndexedArg
+internal ref struct DrawBuffersIndexedArg
 {
     public required Slice<SlotBufSlice> vertex_buffers;
     public required BufSlice index_buffer_slice;
@@ -1122,7 +1089,7 @@ internal struct DrawBuffersIndexedArg
     public required u32 instance_end_excluded;
 }
 
-internal struct SlotBufSlice
+internal ref struct SlotBufSlice
 {
     public required BufSlice buffer_slice;
     public required u32 slot;

@@ -60,7 +60,7 @@ namespace Elffy
             throw new UnreachableException();
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void OnScreenInit(HostScreenHandle screen, HostScreenInfo* info)
+            static void OnScreenInit(Ref<Elffycore.HostScreen> screen, HostScreenInfo* info)
             {
                 _config.OnStart(screen, in *info);
             }
@@ -75,7 +75,7 @@ namespace Elffy
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void OnCommandBegin(HostScreenHandle screen, TextureViewHandle surface_texture_view, CommandEncoderMut command_encoder)
+            static void OnCommandBegin(Ref<Elffycore.HostScreen> screen, Ref<Wgpu.TextureView> surface_texture_view, MutRef<Wgpu.CommandEncoder> command_encoder)
             {
                 const int ColorAttachmentCount = 1;
                 var colorAttachments = stackalloc Opt<RenderPassColorAttachment>[ColorAttachmentCount]
@@ -95,28 +95,30 @@ namespace Elffy
                 // Use renderPass here.
                 // ...
                 var renderPass = _config.OnCommandBegin(
-                    screen.AsRef(),
+                    screen,
                     surface_texture_view,
                     command_encoder,
                     _createRenderPassFunc);
-                _config.OnRender(screen, renderPass.AsRef());
+                _config.OnRender(screen, renderPass);
                 elffy_destroy_render_pass(renderPass);
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void OnResized(HostScreenHandle screen, uint width, uint height) => _config.OnResized(screen, width, height);
+            static void OnResized(Ref<Elffycore.HostScreen> screen, uint width, uint height) => _config.OnResized(screen, width, height);
         }
 
-        private static readonly CreateRenderPassFunc _createRenderPassFunc = (CommandEncoderMut command_encoder, in RenderPassDescriptor desc) =>
-        {
-            fixed(RenderPassDescriptor* descPtr = &desc) {
-                return elffy_create_render_pass(command_encoder, descPtr).Validate();
-            }
-        };
+        private static readonly CreateRenderPassFunc _createRenderPassFunc =
+            (MutRef<Wgpu.CommandEncoder> command_encoder, in RenderPassDescriptor desc) =>
+            {
+                fixed(RenderPassDescriptor* descPtr = &desc) {
+                    return elffy_create_render_pass(command_encoder, descPtr).Validate();
+                }
+            };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static (u32 Width, u32 Height) ScreenGetInnerSize(HostScreenHandle screen)
+        public static (u32 Width, u32 Height) ScreenGetInnerSize(
+            Ref<Elffycore.HostScreen> screen)
         {
             u32 width;
             u32 height;
@@ -127,7 +129,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void ScreenSetInnerSize(
-            HostScreenHandle screen,
+            Ref<Elffycore.HostScreen> screen,
             u32 width,
             u32 height)
             => elffy_screen_set_inner_size(screen, width, height).Validate();
@@ -135,7 +137,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void WriteTexture(
-            HostScreenHandle screen,
+            Ref<Elffycore.HostScreen> screen,
             ImageCopyTexture* texture,
             Slice<u8> data,
             wgpu_ImageDataLayout* data_layout,
@@ -144,72 +146,72 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static BindGroupLayoutHandle CreateBindGroupLayout(
-            HostScreenHandle screen,
+        public static Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
+            Ref<Elffycore.HostScreen> screen,
             BindGroupLayoutDescriptor* desc)
             => elffy_create_bind_group_layout(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyBindGroupLayout(
-            BindGroupLayoutHandle handle)
+            Box<Wgpu.BindGroupLayout> handle)
         {
-            handle.ThrowIfDestroyed();
+            handle.ThrowIfInvalid();
             elffy_destroy_bind_group_layout(handle);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static BindGroupHandle CreateBindGroup(
-            HostScreenHandle screen,
+        public static Box<Wgpu.BindGroup> CreateBindGroup(
+            Ref<Elffycore.HostScreen> screen,
             BindGroupDescriptor* desc)
             => elffy_create_bind_group(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyBindGroup(
-            BindGroupHandle handle)
+            Box<Wgpu.BindGroup> handle)
         {
-            handle.ThrowIfDestroyed();
+            handle.ThrowIfInvalid();
             elffy_destroy_bind_group(handle);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static PipelineLayoutHandle CreatePipelineLayout(
-            HostScreenHandle screen,
+        public static Box<Wgpu.PipelineLayout> CreatePipelineLayout(
+            Ref<Elffycore.HostScreen> screen,
             PipelineLayoutDescriptor* desc)
             => elffy_create_pipeline_layout(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyPipelineLayout(
-            PipelineLayoutHandle handle)
+            Box<Wgpu.PipelineLayout> handle)
         {
-            handle.ThrowIfDestroyed();
+            handle.ThrowIfInvalid();
             elffy_destroy_pipeline_layout(handle);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static RenderPipelineHandle CreateRenderPipeline(
-            HostScreenHandle screen,
+        public static Box<Wgpu.RenderPipeline> CreateRenderPipeline(
+            Ref<Elffycore.HostScreen> screen,
             RenderPipelineDescriptor* desc)
             => elffy_create_render_pipeline(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyRenderPipeline(
-            RenderPipelineHandle handle)
+            Box<Wgpu.RenderPipeline> handle)
         {
-            handle.ThrowIfDestroyed();
+            handle.ThrowIfInvalid();
             elffy_destroy_render_pipeline(handle);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static BufferHandle CreateBufferInit(
-            HostScreenHandle screen,
+        public static Box<Wgpu.Buffer> CreateBufferInit(
+            Ref<Elffycore.HostScreen> screen,
             Slice<u8> contents,
             wgpu_BufferUsages usage)
             => elffy_create_buffer_init(screen, contents, usage).Validate();
@@ -217,55 +219,55 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyBuffer(
-            BufferHandle handle)
+            Box<Wgpu.Buffer> handle)
         {
-            handle.ThrowIfDestroyed();
+            handle.ThrowIfInvalid();
             elffy_destroy_buffer(handle);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static SamplerHandle CreateSampler(
-            HostScreenHandle screen,
+        public static Box<Wgpu.Sampler> CreateSampler(
+            Ref<Elffycore.HostScreen> screen,
             SamplerDescriptor* desc)
             => elffy_create_sampler(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroySampler(
-            SamplerHandle handle)
+            Box<Wgpu.Sampler> handle)
         {
-            handle.ThrowIfDestroyed();
+            handle.ThrowIfInvalid();
             elffy_destroy_sampler(handle);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static ShaderModuleHandle CreateShaderModule(
-            HostScreenHandle screen,
+        public static Box<Wgpu.ShaderModule> CreateShaderModule(
+            Ref<Elffycore.HostScreen> screen,
             Slice<u8> shader_source)
             => elffy_create_shader_module(screen, shader_source).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyShaderModule(
-            ShaderModuleHandle handle)
+            Box<Wgpu.ShaderModule> handle)
         {
-            handle.ThrowIfDestroyed();
+            handle.ThrowIfInvalid();
             elffy_destroy_shader_module(handle);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static TextureHandle CreateTexture(
-            HostScreenHandle screen,
+        public static Box<Wgpu.Texture> CreateTexture(
+            Ref<Elffycore.HostScreen> screen,
             TextureDescriptor* desc)
             => elffy_create_texture(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static TextureHandle CreateTextureWithData(
-            HostScreenHandle screen,
+        public static Box<Wgpu.Texture> CreateTextureWithData(
+            Ref<Elffycore.HostScreen> screen,
             TextureDescriptor* desc,
             Slice<u8> data)
             => elffy_create_texture_with_data(screen, desc, data).Validate();
@@ -273,88 +275,88 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyTexture(
-            TextureHandle handle)
+            Box<Wgpu.Texture> handle)
         {
-            handle.ThrowIfDestroyed();
+            handle.ThrowIfInvalid();
             elffy_destroy_texture(handle);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static TextureViewHandle CreateTextureView(
-            TextureHandle texture,
+        public static Box<Wgpu.TextureView> CreateTextureView(
+            Ref<Wgpu.Texture> texture,
             TextureViewDescriptor* desc)
             => elffy_create_texture_view(texture, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyTextureView(
-            TextureViewHandle handle)
+            Box<Wgpu.TextureView> handle)
         {
-            handle.ThrowIfDestroyed();
+            handle.ThrowIfInvalid();
             elffy_destroy_texture_view(handle);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void WriteBuffer(
-            HostScreenHandle screen,
-            BufferHandle buffer,
+            Ref<Elffycore.HostScreen> screen,
+            Ref<Wgpu.Buffer> buffer,
             u64 offset,
             Slice<u8> data)
         {
-            screen.ThrowIfDestroyed();
-            buffer.ThrowIfDestroyed();
+            screen.ThrowIfInvalid();
+            buffer.ThrowIfInvalid();
             elffy_write_buffer(screen, buffer, offset, data).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void SetPipeline(
-            RenderPassRef render_pass,
-            RenderPipelineHandle render_pipeline)
+            MutRef<Wgpu.RenderPass> render_pass,
+            Ref<Wgpu.RenderPipeline> render_pipeline)
         {
-            render_pipeline.ThrowIfDestroyed();
+            render_pipeline.ThrowIfInvalid();
             elffy_set_pipeline(render_pass, render_pipeline).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void SetBindGroup(
-            RenderPassRef render_pass,
+            MutRef<Wgpu.RenderPass> render_pass,
             u32 index,
-            BindGroupHandle bind_group)
+            Ref<Wgpu.BindGroup> bind_group)
         {
-            bind_group.ThrowIfDestroyed();
+            bind_group.ThrowIfInvalid();
             elffy_set_bind_group(render_pass, index, bind_group).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void SetVertexBuffer(
-            RenderPassRef render_pass,
+            MutRef<Wgpu.RenderPass> render_pass,
             u32 slot,
             BufSlice buffer_slice)
         {
-            buffer_slice.buffer.ThrowIfDestroyed();
+            buffer_slice.buffer.ThrowIfInvalid();
             elffy_set_vertex_buffer(render_pass, slot, buffer_slice).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void SetIndexBuffer(
-            RenderPassRef render_pass,
+            MutRef<Wgpu.RenderPass> render_pass,
             BufSlice buffer_slice,
             wgpu_IndexFormat index_format)
         {
-            buffer_slice.buffer.ThrowIfDestroyed();
+            buffer_slice.buffer.ThrowIfInvalid();
             elffy_set_index_buffer(render_pass, buffer_slice, index_format).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void Draw(
-            RenderPassRef render_pass,
+            MutRef<Wgpu.RenderPass> render_pass,
             RangeU32 vertices,
             RangeU32 instances)
         {
@@ -364,7 +366,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DrawIndexed(
-            RenderPassRef render_pass,
+            MutRef<Wgpu.RenderPass> render_pass,
             RangeU32 indices,
             i32 base_vertex,
             RangeU32 instances)
@@ -411,8 +413,28 @@ namespace Elffy
             public void Validate() => EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
         }
 
+        //[StructLayout(LayoutKind.Sequential)]
+        //private readonly struct ApiBoxResult<THandle> where THandle : unmanaged, IHandle<THandle>
+        //{
+        //    // (_errorCount, _nativePtr) is (0, not null) or (not 0, null)
+
+        //    private readonly uint _errorCount;
+        //    private readonly void* _nativePtr;
+
+        //    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //    //[DebuggerHidden]
+        //    public THandle Validate()
+        //    {
+        //        Debug.Assert((_errorCount == 0 && _nativePtr != null) || (_errorCount > 0 && _nativePtr == null));
+        //        EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
+        //        Debug.Assert(_errorCount == 0);
+        //        Debug.Assert(_nativePtr != null);
+        //        return (THandle)_nativePtr;
+        //    }
+        //}
+
         [StructLayout(LayoutKind.Sequential)]
-        private readonly struct ApiBoxResult<THandle> where THandle : unmanaged, IHandle<THandle>
+        private readonly struct ApiBoxResult<T> where T : INativeTypeMarker
         {
             // (_errorCount, _nativePtr) is (0, not null) or (not 0, null)
 
@@ -421,13 +443,14 @@ namespace Elffy
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             //[DebuggerHidden]
-            public THandle Validate()
+            public Box<T> Validate()
             {
-                Debug.Assert((_errorCount == 0 && _nativePtr != null) || (_errorCount > 0 && _nativePtr == null));
+                var nativePtr = _nativePtr;
+                Debug.Assert((_errorCount == 0 && nativePtr != null) || (_errorCount > 0 && nativePtr == null));
                 EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
                 Debug.Assert(_errorCount == 0);
-                Debug.Assert(_nativePtr != null);
-                return (THandle)_nativePtr;
+                Debug.Assert(nativePtr != null);
+                return *(Box<T>*)(&nativePtr);
             }
         }
     }
@@ -470,21 +493,19 @@ namespace Elffy
         public required EngineCoreStartAction OnStart { get; init; }
         public required EngineCoreRenderAction OnRender { get; init; }
         public required EngineCoreResizedAction OnResized { get; init; }
-        //public required GetRenderPassDescAction GetRenderPassDesc { get; init; }
         public required OnCommandBeginFunc OnCommandBegin { get; init; }
     }
 
-    internal delegate void EngineCoreStartAction(HostScreenHandle screen, in HostScreenInfo info);
-    internal delegate void EngineCoreRenderAction(HostScreenHandle screen, RenderPassRef renderPass);
-    internal delegate void EngineCoreResizedAction(HostScreenHandle screen, uint width, uint height);
-    //internal delegate void GetRenderPassDescAction(TextureViewRef surfaceTextureView, out RenderPassDescriptor desc);
-    internal delegate RenderPassBox OnCommandBeginFunc(
-        HostScreenRef screen,
-        TextureViewRef surfaceTextureView,
-        CommandEncoderMut commandEncoder,
+    internal delegate void EngineCoreStartAction(Ref<Elffycore.HostScreen> screen, in HostScreenInfo info);
+    internal delegate void EngineCoreRenderAction(Ref<Elffycore.HostScreen> screen, MutRef<Wgpu.RenderPass> renderPass);
+    internal delegate void EngineCoreResizedAction(Ref<Elffycore.HostScreen> screen, uint width, uint height);
+    internal delegate Box<Wgpu.RenderPass> OnCommandBeginFunc(
+        Ref<Elffycore.HostScreen> screen,
+        Ref<Wgpu.TextureView> surfaceTextureView,
+        MutRef<Wgpu.CommandEncoder> commandEncoder,
         CreateRenderPassFunc createRenderPass);
 
-    internal delegate RenderPassBox CreateRenderPassFunc(CommandEncoderMut commandEncoder, in RenderPassDescriptor desc);
+    internal delegate Box<Wgpu.RenderPass> CreateRenderPassFunc(MutRef<Wgpu.CommandEncoder> commandEncoder, in RenderPassDescriptor desc);
 
 
     public sealed class Never

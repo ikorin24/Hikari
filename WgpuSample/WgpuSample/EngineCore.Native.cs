@@ -23,177 +23,162 @@ static unsafe partial class EngineCore
         HostScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiBoxResult<RenderPassBox> elffy_create_render_pass(
-        CommandEncoderMut command_encoder,
+    private static partial ApiBoxResult<Wgpu.RenderPass> elffy_create_render_pass(
+        MutRef<Wgpu.CommandEncoder> command_encoder,
         RenderPassDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_render_pass(
-        RenderPassBox render_pass);
-
-    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiResult elffy_screen_get_inner_size(
-        HostScreenHandle screen,
-        u32* width,
-        u32* height);
+        Box<Wgpu.RenderPass> render_pass);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_set_inner_size(
-        HostScreenHandle screen,
+        Ref<Elffycore.HostScreen> screen,
         u32 width,
         u32 height);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_screen_get_inner_size(
+        Ref<Elffycore.HostScreen> screen,
+        u32* width,
+        u32* height);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_write_texture(
-        HostScreenHandle screen,
+        Ref<Elffycore.HostScreen> screen,
         ImageCopyTexture* texture,
         Slice<u8> data,
         wgpu_ImageDataLayout* data_layout,
         wgpu_Extent3d* size);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiBoxResult<BindGroupLayoutHandle> elffy_create_bind_group_layout(
-        HostScreenHandle screen,
+    private static partial ApiBoxResult<Wgpu.BindGroupLayout> elffy_create_bind_group_layout(
+        Ref<Elffycore.HostScreen> screen,
         BindGroupLayoutDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_bind_group_layout(
-        BindGroupLayoutHandle handle);
+        Box<Wgpu.BindGroupLayout> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiBoxResult<BindGroupHandle> elffy_create_bind_group(
-        HostScreenHandle screen,
+    private static partial ApiBoxResult<Wgpu.BindGroup> elffy_create_bind_group(
+        Ref<Elffycore.HostScreen> screen,
         BindGroupDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_bind_group(
-        BindGroupHandle handle);
+        Box<Wgpu.BindGroup> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiBoxResult<PipelineLayoutHandle> elffy_create_pipeline_layout(
-        HostScreenHandle screen,
+    private static partial ApiBoxResult<Wgpu.PipelineLayout> elffy_create_pipeline_layout(
+        Ref<Elffycore.HostScreen> screen,
         PipelineLayoutDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_pipeline_layout(
-        PipelineLayoutHandle handle);
+        Box<Wgpu.PipelineLayout> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiBoxResult<RenderPipelineHandle> elffy_create_render_pipeline(
-        HostScreenHandle screen,
+    private static partial ApiBoxResult<Wgpu.RenderPipeline> elffy_create_render_pipeline(
+        Ref<Elffycore.HostScreen> screen,
         RenderPipelineDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_render_pipeline(
-        RenderPipelineHandle handle);
+        Box<Wgpu.RenderPipeline> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiBoxResult<BufferHandle> elffy_create_buffer_init(
-        HostScreenHandle screen,
+    private static partial ApiBoxResult<Wgpu.Buffer> elffy_create_buffer_init(
+        Ref<Elffycore.HostScreen> screen,
         Slice<u8> contents,
         wgpu_BufferUsages usage);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_buffer(
-        BufferHandle handle);
+        Box<Wgpu.Buffer> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiBoxResult<SamplerHandle> elffy_create_sampler(
-        HostScreenHandle screen,
+    private static partial ApiBoxResult<Wgpu.Sampler> elffy_create_sampler(
+        Ref<Elffycore.HostScreen> screen,
         SamplerDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_sampler(
-        SamplerHandle sampler);
+        Box<Wgpu.Sampler> sampler);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiBoxResult<ShaderModuleHandle> elffy_create_shader_module(
-        HostScreenHandle screen,
+    private static partial ApiBoxResult<Wgpu.ShaderModule> elffy_create_shader_module(
+        Ref<Elffycore.HostScreen> screen,
         Slice<u8> shader_source);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_shader_module(
-        ShaderModuleHandle handle);
+        Box<Wgpu.ShaderModule> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiBoxResult<TextureHandle> elffy_create_texture(
-        HostScreenHandle screen,
+    private static partial ApiBoxResult<Wgpu.Texture> elffy_create_texture(
+        Ref<Elffycore.HostScreen> screen,
         TextureDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiBoxResult<TextureHandle> elffy_create_texture_with_data(
-        HostScreenHandle screen,
+    private static partial ApiBoxResult<Wgpu.Texture> elffy_create_texture_with_data(
+        Ref<Elffycore.HostScreen> screen,
         TextureDescriptor* desc,
         Slice<u8> data);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_texture(
-        TextureHandle handle);
+        Box<Wgpu.Texture> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiBoxResult<TextureViewHandle> elffy_create_texture_view(
-        TextureHandle texture,
+    private static partial ApiBoxResult<Wgpu.TextureView> elffy_create_texture_view(
+        Ref<Wgpu.Texture> texture,
         TextureViewDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_texture_view(
-        TextureViewHandle handle);
+        Box<Wgpu.TextureView> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_write_buffer(
-        HostScreenHandle screen,
-        BufferHandle buffer,
+        Ref<Elffycore.HostScreen> screen,
+        Ref<Wgpu.Buffer> buffer,
         u64 offset,
         Slice<u8> data);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_set_pipeline(
-        RenderPassRef render_pass,
-        RenderPipelineHandle render_pipeline);
+        MutRef<Wgpu.RenderPass> render_pass,
+        Ref<Wgpu.RenderPipeline> render_pipeline);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_set_bind_group(
-        RenderPassRef render_pass,
+        MutRef<Wgpu.RenderPass> render_pass,
         u32 index,
-        BindGroupHandle bind_group);
+        Ref<Wgpu.BindGroup> bind_group);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_set_vertex_buffer(
-        RenderPassRef render_pass,
+        MutRef<Wgpu.RenderPass> render_pass,
         u32 slot,
         BufSlice buffer_slice);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_set_index_buffer(
-        RenderPassRef render_pass,
+        MutRef<Wgpu.RenderPass> render_pass,
         BufSlice buffer_slice,
         wgpu_IndexFormat index_format);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_draw(
-        RenderPassRef render_pass,
+        MutRef<Wgpu.RenderPass> render_pass,
         RangeU32 vertices,
         RangeU32 instances);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_draw_indexed(
-        RenderPassRef render_pass,
+        MutRef<Wgpu.RenderPass> render_pass,
         RangeU32 indices,
         i32 base_vertex,
         RangeU32 instances);
-
-    //[LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    //private static partial ApiResult elffy_draw_buffer(
-    //    RenderPassRef render_pass,
-    //    DrawBufferArg* arg);
-
-    //[LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    //private static partial ApiResult elffy_draw_buffer_indexed(
-    //    RenderPassRef render_pass,
-    //    DrawBufferIndexedArg* arg);
-
-    //[LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    //private static partial ApiResult elffy_draw_buffers_indexed(
-    //    RenderPassRef render_pass,
-    //    DrawBuffersIndexedArg* arg);
 }
