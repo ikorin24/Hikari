@@ -16,6 +16,19 @@ extern "cdecl" fn elffy_engine_start(
 }
 
 #[no_mangle]
+extern "cdecl" fn elffy_screen_set_title(screen: &HostScreen, title: Slice<u8>) -> ApiResult {
+    match title.as_str() {
+        Ok(title) => {
+            screen.get_window().set_title(title);
+        }
+        Err(err) => {
+            dispatch_err(err);
+        }
+    }
+    make_result()
+}
+
+#[no_mangle]
 extern "cdecl" fn elffy_create_render_pass<'tex, 'desc, 'cmd_enc>(
     command_encoder: &'cmd_enc mut wgpu::CommandEncoder,
     desc: &'desc RenderPassDescriptor<'tex, 'desc>,

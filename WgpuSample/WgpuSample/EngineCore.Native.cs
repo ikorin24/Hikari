@@ -23,6 +23,11 @@ static unsafe partial class EngineCore
         Elffycore.HostScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_screen_set_title(
+        Ref<Elffycore.HostScreen> screen,
+        Slice<u8> title);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.RenderPass> elffy_create_render_pass(
         MutRef<Wgpu.CommandEncoder> command_encoder,
         RenderPassDescriptor* desc);

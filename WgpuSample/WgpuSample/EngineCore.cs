@@ -151,6 +151,15 @@ namespace Elffy
             };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static void ScreenSetTitle(this Ref<Elffycore.HostScreen> screen, ReadOnlySpan<byte> title)
+        {
+            fixed(byte* p = title) {
+                var titleRaw = new Slice<byte>(p, title.Length);
+                elffy_screen_set_title(screen, titleRaw).Validate();
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static (u32 Width, u32 Height) ScreenGetInnerSize(
             Ref<Elffycore.HostScreen> screen)

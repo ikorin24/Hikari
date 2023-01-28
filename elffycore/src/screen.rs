@@ -29,6 +29,10 @@ pub(crate) struct HostScreen {
 }
 
 impl HostScreen {
+    pub fn get_window(&self) -> &window::Window {
+        &self.window
+    }
+
     pub fn new(
         config: &HostScreenConfig,
         event_loop: &event_loop::EventLoop<()>,

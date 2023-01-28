@@ -40,6 +40,8 @@ internal class Program
 
     private static unsafe void OnStart(Ref<Elffycore.HostScreen> screen, in HostScreenInfo info)
     {
+        screen.ScreenSetTitle("sample"u8);
+
         var surfaceFormat = info.surface_format.Unwrap();
         System.Diagnostics.Debug.WriteLine(info.backend);
 
