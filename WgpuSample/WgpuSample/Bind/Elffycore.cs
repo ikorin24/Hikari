@@ -2,7 +2,10 @@
 
 namespace Elffy.Bind;
 
+/// <summary>
+/// `elffycore` module in Rust
+/// </summary>
 internal static class Elffycore
 {
-    internal readonly struct HostScreen : INativeTypeMarker { }
+    internal sealed class HostScreen : INativeTypeMarker { private HostScreen() { } }
 }

@@ -28,7 +28,7 @@ namespace Elffy
         public static bool IsStarted => _isStarted == 1;
 
         [DoesNotReturn]
-        public static Never EngineStart(in EngineConfig config)
+        public static Never EngineStart(EngineConfig config, HostScreenConfig screenConfig)
         {
             if(Interlocked.CompareExchange(ref _isStarted, 1, 0) == 1) {
                 throw new InvalidOperationException("The engine is already running.");
@@ -40,25 +40,17 @@ namespace Elffy
             }
 
             _config = config;
-            var engineConfig = new EngineCoreConfig
+            var engineCoreConfig = new EngineCoreConfig
             {
                 on_screen_init = new HostScreenInitFn(&OnScreenInit),
                 err_dispatcher = new DispatchErrFn(&DispatchError),
                 on_command_begin = new OnCommandBeginFn(&OnCommandBegin),
                 on_resized = new HostScreenResizedFn(&OnResized),
             };
-            var screenConfig = new HostScreenConfig
-            {
-                backend = wgpu_Backends.ALL,
-                width = 1280,
-                height = 720,
-                style = WindowStyle.Default,
-                title = Slice.FromFixedSpanUnsafe("Elffy"u8),
-            };
 
-            Debug.Assert(engineConfig.on_screen_init.IsNull == false);
-            Debug.Assert(engineConfig.err_dispatcher.IsNull == false);
-            elffy_engine_start(&engineConfig, &screenConfig);
+            Debug.Assert(engineCoreConfig.on_screen_init.IsNull == false);
+            Debug.Assert(engineCoreConfig.err_dispatcher.IsNull == false);
+            elffy_engine_start(&engineCoreConfig, &screenConfig);
             throw new UnreachableException();
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]

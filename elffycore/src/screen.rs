@@ -18,39 +18,6 @@ use winit;
 use winit::event_loop::EventLoopWindowTarget;
 use winit::{dpi, event, event_loop, window};
 
-#[derive(Clone, Copy)]
-struct SurfaceConfigData {
-    pub usage: wgpu::TextureUsages,
-    pub format: wgpu::TextureFormat,
-    pub present_mode: wgpu::PresentMode,
-}
-
-impl From<wgpu::SurfaceConfiguration> for SurfaceConfigData {
-    fn from(x: wgpu::SurfaceConfiguration) -> Self {
-        Self {
-            usage: x.usage,
-            format: x.format,
-            present_mode: x.present_mode,
-        }
-    }
-}
-
-impl SurfaceConfigData {
-    pub fn to_surface_config(
-        &self,
-        width: num::NonZeroU32,
-        height: num::NonZeroU32,
-    ) -> wgpu::SurfaceConfiguration {
-        wgpu::SurfaceConfiguration {
-            usage: self.usage,
-            format: self.format,
-            width: width.into(),
-            height: height.into(),
-            present_mode: self.present_mode,
-        }
-    }
-}
-
 pub(crate) struct HostScreen {
     window: window::Window,
     surface: wgpu::Surface,
@@ -313,11 +280,44 @@ impl HostScreen {
             (num::NonZeroU32::new(width), num::NonZeroU32::new(height))
         {
             self.surface_size.set((width, height));
-            let config = self.surface_config_data.to_surface_config(width, height);
+            let config = self.surface_config_data.to_wgpu_type(width, height);
             self.surface.configure(&self.device, &config);
 
             let on_resized = engine::get_callback_resized().unwrap();
             on_resized(self, width.into(), height.into());
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct SurfaceConfigData {
+    pub usage: wgpu::TextureUsages,
+    pub format: wgpu::TextureFormat,
+    pub present_mode: wgpu::PresentMode,
+}
+
+impl SurfaceConfigData {
+    pub fn to_wgpu_type(
+        &self,
+        width: num::NonZeroU32,
+        height: num::NonZeroU32,
+    ) -> wgpu::SurfaceConfiguration {
+        wgpu::SurfaceConfiguration {
+            usage: self.usage,
+            format: self.format,
+            width: width.into(),
+            height: height.into(),
+            present_mode: self.present_mode,
+        }
+    }
+}
+
+impl From<wgpu::SurfaceConfiguration> for SurfaceConfigData {
+    fn from(x: wgpu::SurfaceConfiguration) -> Self {
+        Self {
+            usage: x.usage,
+            format: x.format,
+            present_mode: x.present_mode,
         }
     }
 }

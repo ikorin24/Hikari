@@ -14,13 +14,22 @@ internal class Program
     private static void Main(string[] args)
     {
         Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1", EnvironmentVariableTarget.Process);
-        EngineCore.EngineStart(new()
+        var engineConfig = new EngineConfig
         {
             OnStart = OnStart,
             OnRender = OnRender,
             OnResized = OnResized,
             OnCommandBegin = OnCommandBegin,
-        });
+        };
+        var screenConfig = new HostScreenConfig
+        {
+            backend = wgpu_Backends.ALL,
+            width = 1280,
+            height = 720,
+            style = WindowStyle.Default,
+            title = Slice.FromFixedSpanUnsafe("Elffy"u8),
+        };
+        EngineCore.EngineStart(engineConfig, screenConfig);
     }
 
     private static State _state;
@@ -334,8 +343,9 @@ internal class Program
 
     private static void OnResized(Ref<Elffycore.HostScreen> screen, uint width, uint height)
     {
-        Debug.WriteLine((width, height));
         var depth = _state.Depth;
+        if(width == depth.Width && height == depth.Height) { return; }
+        Debug.WriteLine((width, height));
         EngineCore.DestroySampler(depth.Sampler);
         EngineCore.DestroyTextureView(depth.View);
         EngineCore.DestroyTexture(depth.Texture);
@@ -379,7 +389,7 @@ internal class Program
             lod_min_clamp = 0f,
             lod_max_clamp = 100f,
         });
-        return new DepthTextureData(texture, view, sampler, DepthTextureFormat);
+        return new DepthTextureData(width, height, texture, view, sampler, DepthTextureFormat);
     }
 
     private static unsafe void OnRender(Ref<Elffycore.HostScreen> screen, MutRef<Wgpu.RenderPass> renderPass)
@@ -761,6 +771,8 @@ internal record struct TextureData(
     Box<Wgpu.Sampler> Sampler);
 
 internal record struct DepthTextureData(
+    uint Width,
+    uint Height,
     Box<Wgpu.Texture> Texture,
     Box<Wgpu.TextureView> View,
     Box<Wgpu.Sampler> Sampler,

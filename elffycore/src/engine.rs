@@ -55,7 +55,7 @@ pub(crate) fn engine_start(
         };
     }
     let event_loop = event_loop::EventLoop::new();
-    let screen = match HostScreen::new(&screen_config, &event_loop) {
+    let screen = match HostScreen::new(screen_config, &event_loop) {
         Ok(screen) => Box::new(screen),
         Err(err) => {
             return err;
