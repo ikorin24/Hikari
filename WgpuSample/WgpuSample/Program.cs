@@ -126,8 +126,7 @@ internal class Program
             cameraBindGroup = screen.CreateBindGroup(new BindGroupDescriptor
             {
                 layout = cameraBindGroupLayout,
-                //entries = new Slice<BindGroupEntry>((BindGroupEntry*)Unsafe.AsPointer(ref entries[0]), entries.Length),
-                entries = new(entries, EntryCount),
+                entries = new() { data = entries, len = EntryCount },
             });
         }
 
@@ -137,14 +136,19 @@ internal class Program
         //var uniformBindGroupLayout = HostScreenInitializer.CreateUniformBindGroupLayout(screen);
 
         // PipelineLayout
-        var pipelineLayout = screen.CreatePipelineLayout(new PipelineLayoutDescriptor
+        Box<Wgpu.PipelineLayout> pipelineLayout;
         {
-            bind_group_layouts = Slice.FromFixedSpanUnsafe(stackalloc Ref<Wgpu.BindGroupLayout>[]
+            const int BindGroupLayoutCount = 2;
+            var bindGroupLayouts = stackalloc Ref<Wgpu.BindGroupLayout>[BindGroupLayoutCount] { textureBindGroupLayout, cameraBindGroupLayout };
+            pipelineLayout = screen.CreatePipelineLayout(new PipelineLayoutDescriptor
             {
-                textureBindGroupLayout,
-                cameraBindGroupLayout,
-            }),
-        });
+                bind_group_layouts = new()
+                {
+                    data = bindGroupLayouts,
+                    len = BindGroupLayoutCount,
+                },
+            });
+        }
 
         //// Buffer (uniform)
         //var uniformBuffer = HostScreenInitializer.CreateUniformBuffer(screen, stackalloc Vector4[] { new Vector4(1, 0, 0, 1) });
@@ -203,20 +207,24 @@ internal class Program
                         instanceBufferLayout,
                     }),
                 },
-                fragment = Opt.Some(new FragmentState
+                fragment = new()
                 {
-                    module = shader,
-                    entry_point = Slice.FromFixedSpanUnsafe("fs_main"u8),
-                    targets = Slice.FromFixedSpanUnsafe(stackalloc Opt<ColorTargetState>[]
+                    exists = true,
+                    value = new FragmentState()
                     {
-                        Opt.Some(new ColorTargetState
-                        {
-                            format = surfaceFormat,
-                            blend = Opt.Some(wgpu_BlendState.REPLACE),
-                            write_mask = wgpu_ColorWrites.ALL,
-                        })
-                    }),
-                }),
+                        module = shader,
+                        entry_point = Slice.FromFixedSpanUnsafe("fs_main"u8),
+                        targets = Slice.FromFixedSpanUnsafe(stackalloc Opt<ColorTargetState>[]
+                            {
+                            Opt.Some(new ColorTargetState
+                            {
+                                format = surfaceFormat,
+                                blend = Opt.Some(wgpu_BlendState.REPLACE),
+                                write_mask = wgpu_ColorWrites.ALL,
+                            })
+                        }),
+                    }
+                },
                 primitive = new()
                 {
                     topology = wgpu_PrimitiveTopology.TriangleList,
@@ -295,23 +303,31 @@ internal class Program
         CreateRenderPassFunc createRenderPass)
     {
         const int ColorAttachmentCount = 1;
-        var colorAttachments = stackalloc Opt<RenderPassColorAttachment>[ColorAttachmentCount]
+        var colorAttachments = stackalloc Opt_RenderPassColorAttachment[ColorAttachmentCount]
         {
-            Opt.Some(new RenderPassColorAttachment
+            new()
             {
-                view = surfaceTextureView,
-                clear = new wgpu_Color(0, 0, 0, 0),
-            }),
+                exists = true,
+                value = new RenderPassColorAttachment
+                {
+                    view = surfaceTextureView,
+                    clear = new wgpu_Color(0, 0, 0, 0),
+                }
+            },
         };
         var desc = new RenderPassDescriptor
         {
-            color_attachments_clear = new(colorAttachments, (nuint)ColorAttachmentCount),
-            depth_stencil_attachment_clear = Opt.Some(new RenderPassDepthStencilAttachment
+            color_attachments_clear = new() { data = colorAttachments, len = ColorAttachmentCount },
+            depth_stencil_attachment_clear = new()
             {
-                view = _state.Depth.View,
-                depth_clear = Opt.Some(1f),
-                stencil_clear = Opt.None<uint>(),
-            }),
+                exists = true,
+                value = new RenderPassDepthStencilAttachment
+                {
+                    view = _state.Depth.View,
+                    depth_clear = Opt.Some(1f),
+                    stencil_clear = Opt.None<uint>(),
+                }
+            }
         };
         return createRenderPass(commandEncoder, desc);
     }
@@ -547,22 +563,25 @@ internal static class HostScreenInitializer
         Ref<Wgpu.TextureView> textureView,
         Ref<Wgpu.Sampler> sampler)
     {
+        const int EntryCount = 2;
+        var entries = stackalloc BindGroupEntry[EntryCount]
+        {
+            new()
+            {
+                binding = 0,
+                resource = BindingResource.TextureView(textureView),
+            },
+            new()
+            {
+                binding = 1,
+                resource = BindingResource.Sampler(sampler),
+            },
+        };
+
         return screen.CreateBindGroup(new BindGroupDescriptor
         {
             layout = bindGroupLayout,
-            entries = Slice.FromFixedSpanUnsafe((stackalloc BindGroupEntry[2]
-            {
-                new()
-                {
-                    binding = 0,
-                    resource = BindingResource.TextureView(textureView),
-                },
-                new()
-                {
-                    binding = 1,
-                    resource = BindingResource.Sampler(sampler),
-                },
-            })),
+            entries = new() { data = entries, len = EntryCount }
         });
     }
 

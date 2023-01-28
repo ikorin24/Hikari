@@ -234,16 +234,41 @@ internal struct HostScreenInfo
     public required Opt<TextureFormat> surface_format;
 }
 
-internal struct RenderPassDescriptor
+internal ref struct RenderPassDescriptor
 {
-    public required Slice<Opt<RenderPassColorAttachment>> color_attachments_clear;
-    public required Opt<RenderPassDepthStencilAttachment> depth_stencil_attachment_clear;
+    public required Slice_Opt_RenderPassColorAttachment color_attachments_clear;
+    public required Opt_RenderPassDepthStencilAttachment depth_stencil_attachment_clear;
+}
+
+// Slice<Opt<RenderPassColorAttachment>>
+internal unsafe ref struct Slice_Opt_RenderPassColorAttachment
+{
+    public required Opt_RenderPassColorAttachment* data;
+    public required nuint len;
+}
+
+// Opt<RenderPassColorAttachment>
+internal ref struct Opt_RenderPassColorAttachment
+{
+    public required bool exists;
+    public required RenderPassColorAttachment value;
+
+    public static Opt_RenderPassColorAttachment None => default;
 }
 
 internal ref struct RenderPassColorAttachment
 {
     public required Ref<Wgpu.TextureView> view;
     public required wgpu_Color clear;
+}
+
+// Opt<RenderPassDepthStencilAttachment>
+internal ref struct Opt_RenderPassDepthStencilAttachment
+{
+    public required bool exists;
+    public required RenderPassDepthStencilAttachment value;
+
+    public static Opt_RenderPassDepthStencilAttachment None => default;
 }
 
 internal ref struct RenderPassDepthStencilAttachment
@@ -315,7 +340,14 @@ internal enum SamplerBorderColor
 internal ref struct BindGroupDescriptor
 {
     public required Ref<Wgpu.BindGroupLayout> layout;
-    public required Slice<BindGroupEntry> entries;
+    public required Slice_BindGroupEntry entries;
+}
+
+// Slice<BindGroupEntry>
+internal unsafe ref struct Slice_BindGroupEntry
+{
+    public required BindGroupEntry* data;
+    public required nuint len;
 }
 
 internal ref struct BindGroupEntry
@@ -382,14 +414,21 @@ internal ref struct BufferBinding
 
 internal ref struct PipelineLayoutDescriptor
 {
-    public required Slice<Ref<Wgpu.BindGroupLayout>> bind_group_layouts;
+    public required Slice_Ref_WgpuBindGroupLayout bind_group_layouts;
+}
+
+// Slice<Ref<Wgpu.BindGroupLayout>>
+internal unsafe ref struct Slice_Ref_WgpuBindGroupLayout
+{
+    public required Ref<Wgpu.BindGroupLayout>* data;
+    public required nuint len;
 }
 
 internal ref struct RenderPipelineDescriptor
 {
     public required Ref<Wgpu.PipelineLayout> layout;
     public required VertexState vertex;
-    public required Opt<FragmentState> fragment;
+    public required Opt_FragmentState fragment;
     public required PrimitiveState primitive;
     public required Opt<DepthStencilState> depth_stencil;
     public required wgpu_MultisampleState multisample;
@@ -486,6 +525,13 @@ internal ref struct FragmentState
     public required Ref<Wgpu.ShaderModule> module;
     public required Slice<u8> entry_point;
     public required Slice<Opt<ColorTargetState>> targets;
+}
+
+// Opt<FragmentState>
+internal ref struct Opt_FragmentState
+{
+    public required bool exists;
+    public required FragmentState value;
 }
 
 internal struct ColorTargetState
@@ -1074,13 +1120,20 @@ internal ref struct DrawBufferIndexedArg
 [StructLayout(LayoutKind.Sequential)]
 internal ref struct DrawBuffersIndexedArg
 {
-    public required Slice<SlotBufSlice> vertex_buffers;
+    public required Slice_SlotBufSlice vertex_buffers;
     public required BufferSlice index_buffer_slice;
     public required wgpu_IndexFormat index_format;
     public required u32 index_start;
     public required u32 index_end_excluded;
     public required u32 instance_start;
     public required u32 instance_end_excluded;
+}
+
+// Slice<SlotBufSlice>
+internal unsafe ref struct Slice_SlotBufSlice
+{
+    public required SlotBufSlice* data;
+    public required nuint len;
 }
 
 internal ref struct SlotBufSlice

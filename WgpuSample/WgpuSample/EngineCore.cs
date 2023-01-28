@@ -78,18 +78,40 @@ namespace Elffy
             static void OnCommandBegin(Ref<Elffycore.HostScreen> screen, Ref<Wgpu.TextureView> surface_texture_view, MutRef<Wgpu.CommandEncoder> command_encoder)
             {
                 const int ColorAttachmentCount = 1;
-                var colorAttachments = stackalloc Opt<RenderPassColorAttachment>[ColorAttachmentCount]
+                //var colorAttachments = stackalloc Opt<RenderPassColorAttachment>[ColorAttachmentCount]
+                //{
+                //    Opt.Some(new RenderPassColorAttachment
+                //    {
+                //        view = surface_texture_view,
+                //        clear = new wgpu_Color(0, 0, 0, 0),
+                //    }),
+                //};
+                //var desc = new RenderPassDescriptor
+                //{
+                //    color_attachments_clear = new(colorAttachments, (nuint)ColorAttachmentCount),
+                //    depth_stencil_attachment_clear = Opt.None<RenderPassDepthStencilAttachment>(),
+                //};
+
+                var colorAttachments = stackalloc Opt_RenderPassColorAttachment[ColorAttachmentCount]
                 {
-                    Opt.Some(new RenderPassColorAttachment
+                    new()
                     {
-                        view = surface_texture_view,
-                        clear = new wgpu_Color(0, 0, 0, 0),
-                    }),
+                        exists = true,
+                        value = new RenderPassColorAttachment
+                        {
+                            view = surface_texture_view,
+                            clear = new wgpu_Color(0, 0, 0, 0),
+                        },
+                    },
                 };
                 var desc = new RenderPassDescriptor
                 {
-                    color_attachments_clear = new(colorAttachments, (nuint)ColorAttachmentCount),
-                    depth_stencil_attachment_clear = Opt.None<RenderPassDepthStencilAttachment>(),
+                    color_attachments_clear = new()
+                    {
+                        data = colorAttachments,
+                        len = ColorAttachmentCount,
+                    },
+                    depth_stencil_attachment_clear = Opt_RenderPassDepthStencilAttachment.None,
                 };
 
                 // Use renderPass here.
