@@ -22,13 +22,13 @@ namespace Elffy
         private static List<NativeError>? _nativeErrorStore;
         [ThreadStatic]
         private static Action<IntPtr, nuint>? _writeBufferWriterTemp;
-        private static EngineConfig _config;
+        private static EngineCoreConfig _config;
         private static int _isStarted = 0;
 
         public static bool IsStarted => _isStarted == 1;
 
         [DoesNotReturn]
-        public static Never EngineStart(EngineConfig config, HostScreenConfig screenConfig)
+        public static Never EngineStart(in EngineCoreConfig config, in HostScreenConfig screenConfig)
         {
             if(Interlocked.CompareExchange(ref _isStarted, 1, 0) == 1) {
                 throw new InvalidOperationException("The engine is already running.");
@@ -40,7 +40,7 @@ namespace Elffy
             }
 
             _config = config;
-            var engineCoreConfig = new EngineCoreConfig
+            var engineCoreConfigRaw = new Elffycore.EngineCoreConfig
             {
                 on_screen_init = new HostScreenInitFn(&OnScreenInit),
                 err_dispatcher = new DispatchErrFn(&DispatchError),
@@ -48,9 +48,18 @@ namespace Elffy
                 on_resized = new HostScreenResizedFn(&OnResized),
             };
 
-            Debug.Assert(engineCoreConfig.on_screen_init.IsNull == false);
-            Debug.Assert(engineCoreConfig.err_dispatcher.IsNull == false);
-            elffy_engine_start(&engineCoreConfig, &screenConfig);
+            var screenConfigRaw = new Elffycore.HostScreenConfig
+            {
+                title = Slice<u8>.Empty,
+                style = screenConfig.Style,
+                width = screenConfig.Width,
+                height = screenConfig.Height,
+                backend = screenConfig.Backend,
+            };
+
+            Debug.Assert(engineCoreConfigRaw.on_screen_init.IsNull == false);
+            Debug.Assert(engineCoreConfigRaw.err_dispatcher.IsNull == false);
+            elffy_engine_start(&engineCoreConfigRaw, &screenConfigRaw);
             throw new UnreachableException();
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -514,12 +523,20 @@ namespace Elffy
         }
     }
 
-    internal readonly struct EngineConfig
+    internal readonly struct EngineCoreConfig
     {
         public required EngineCoreStartAction OnStart { get; init; }
         public required EngineCoreRenderAction OnRender { get; init; }
         public required EngineCoreResizedAction OnResized { get; init; }
         public required OnCommandBeginFunc OnCommandBegin { get; init; }
+    }
+
+    internal readonly ref struct HostScreenConfig
+    {
+        public required WindowStyle Style { get; init; }
+        public required u32 Width { get; init; }
+        public required u32 Height { get; init; }
+        public required wgpu_Backends Backend { get; init; }
     }
 
     internal delegate void EngineCoreStartAction(Ref<Elffycore.HostScreen> screen, in HostScreenInfo info);

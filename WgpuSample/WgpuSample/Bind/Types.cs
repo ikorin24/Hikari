@@ -62,24 +62,7 @@ internal unsafe readonly struct DispatchErrFn
     public DispatchErrFn(delegate* unmanaged[Cdecl]<ErrMessageId, u8*, nuint, void> f) => _func = f;
 }
 
-internal unsafe struct EngineCoreConfig
-{
-    public required DispatchErrFn err_dispatcher;
-    public required HostScreenInitFn on_screen_init;
-    public required OnCommandBeginFn on_command_begin;
-    public required HostScreenResizedFn on_resized;
-}
-
 internal readonly record struct ErrMessageId(nuint Value);
-
-internal struct HostScreenConfig
-{
-    public required Slice<u8> title;
-    public required WindowStyle style;
-    public required u32 width;
-    public required u32 height;
-    public required wgpu_Backends backend;
-}
 
 internal struct HostScreenInfo
 {
@@ -914,6 +897,8 @@ internal struct Slice<T> where T : unmanaged
 {
     public required NullableRef<T> data;
     public required nuint len;
+
+    public static Slice<T> Empty => default;
 
     [SetsRequiredMembers]
     public unsafe Slice(T* data, nuint len)

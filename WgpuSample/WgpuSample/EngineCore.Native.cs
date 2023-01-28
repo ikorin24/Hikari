@@ -19,8 +19,8 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_engine_start(
-        EngineCoreConfig* engine_config,
-        HostScreenConfig* screen_config);
+        Elffycore.EngineCoreConfig* engine_config,
+        Elffycore.HostScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.RenderPass> elffy_create_render_pass(

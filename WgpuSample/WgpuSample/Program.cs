@@ -14,7 +14,7 @@ internal class Program
     private static void Main(string[] args)
     {
         Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1", EnvironmentVariableTarget.Process);
-        var engineConfig = new EngineConfig
+        var engineConfig = new EngineCoreConfig
         {
             OnStart = OnStart,
             OnRender = OnRender,
@@ -23,11 +23,11 @@ internal class Program
         };
         var screenConfig = new HostScreenConfig
         {
-            backend = wgpu_Backends.ALL,
-            width = 1280,
-            height = 720,
-            style = WindowStyle.Default,
-            title = Slice.FromFixedSpanUnsafe("Elffy"u8),
+            Backend = wgpu_Backends.ALL,
+            Width = 1280,
+            Height = 720,
+            Style = WindowStyle.Default,
+            //Title = Slice.FromFixedSpanUnsafe("Elffy"u8),
         };
         EngineCore.EngineStart(engineConfig, screenConfig);
     }
