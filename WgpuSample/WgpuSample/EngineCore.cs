@@ -25,6 +25,8 @@ namespace Elffy
         private static EngineConfig _config;
         private static int _isStarted = 0;
 
+        public static bool IsStarted => _isStarted == 1;
+
         [DoesNotReturn]
         public static Never EngineStart(in EngineConfig config)
         {
@@ -40,10 +42,10 @@ namespace Elffy
             _config = config;
             var engineConfig = new EngineCoreConfig
             {
-                on_screen_init = new(&OnScreenInit),
-                err_dispatcher = new(&DispatchError),
-                on_command_begin = new(&OnCommandBegin),
-                on_resized = new(&OnResized),
+                on_screen_init = new HostScreenInitFn(&OnScreenInit),
+                err_dispatcher = new DispatchErrFn(&DispatchError),
+                on_command_begin = new OnCommandBeginFn(&OnCommandBegin),
+                on_resized = new HostScreenResizedFn(&OnResized),
             };
             var screenConfig = new HostScreenConfig
             {
@@ -60,8 +62,15 @@ namespace Elffy
             throw new UnreachableException();
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void OnScreenInit(Ref<Elffycore.HostScreen> screen, HostScreenInfo* info)
+            static void OnScreenInit(
+                void* screen_,  // Ref<Elffycore.HostScreen> screen
+                void* info_     // HostScreenInfo* info
+                )
             {
+                // UnmanagedCallersOnly methods cannot have generic type args.
+                Ref<Elffycore.HostScreen> screen = *(Ref<Elffycore.HostScreen>*)(&screen_);
+                HostScreenInfo* info = (HostScreenInfo*)info_;
+
                 _config.OnStart(screen, in *info);
             }
 
@@ -75,23 +84,19 @@ namespace Elffy
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void OnCommandBegin(Ref<Elffycore.HostScreen> screen, Ref<Wgpu.TextureView> surface_texture_view, MutRef<Wgpu.CommandEncoder> command_encoder)
+            static void OnCommandBegin(
+                void* screen_,                  // Ref<Elffycore.HostScreen>
+                void* surface_texture_view_,    // Ref<Wgpu.TextureView>
+                void* command_encoder_          // MutRef<Wgpu.CommandEncoder>
+                )
             {
-                const int ColorAttachmentCount = 1;
-                //var colorAttachments = stackalloc Opt<RenderPassColorAttachment>[ColorAttachmentCount]
-                //{
-                //    Opt.Some(new RenderPassColorAttachment
-                //    {
-                //        view = surface_texture_view,
-                //        clear = new wgpu_Color(0, 0, 0, 0),
-                //    }),
-                //};
-                //var desc = new RenderPassDescriptor
-                //{
-                //    color_attachments_clear = new(colorAttachments, (nuint)ColorAttachmentCount),
-                //    depth_stencil_attachment_clear = Opt.None<RenderPassDepthStencilAttachment>(),
-                //};
+                // UnmanagedCallersOnly methods cannot have generic type args.
 
+                Ref<Elffycore.HostScreen> screen = *(Ref<Elffycore.HostScreen>*)(&screen_);
+                Ref<Wgpu.TextureView> surface_texture_view = *(Ref<Wgpu.TextureView>*)(&surface_texture_view_);
+                MutRef<Wgpu.CommandEncoder> command_encoder = *(MutRef<Wgpu.CommandEncoder>*)(&command_encoder_);
+
+                const int ColorAttachmentCount = 1;
                 var colorAttachments = stackalloc Opt_RenderPassColorAttachment[ColorAttachmentCount]
                 {
                     new()
@@ -114,8 +119,6 @@ namespace Elffy
                     depth_stencil_attachment_clear = Opt_RenderPassDepthStencilAttachment.None,
                 };
 
-                // Use renderPass here.
-                // ...
                 var renderPass = _config.OnCommandBegin(
                     screen,
                     surface_texture_view,
@@ -126,7 +129,16 @@ namespace Elffy
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void OnResized(Ref<Elffycore.HostScreen> screen, uint width, uint height) => _config.OnResized(screen, width, height);
+            static void OnResized(
+                void* screen_,      // Ref<Elffycore.HostScreen>
+                uint width,
+                uint height)
+            {
+                // UnmanagedCallersOnly methods cannot have generic type args.
+                Ref<Elffycore.HostScreen> screen = *(Ref<Elffycore.HostScreen>*)(&screen_);
+
+                _config.OnResized(screen, width, height);
+            }
         }
 
         private static readonly CreateRenderPassFunc _createRenderPassFunc =
