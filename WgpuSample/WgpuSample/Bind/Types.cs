@@ -988,13 +988,13 @@ internal static class Opt
     };
 }
 
-internal ref struct BufSlice
+internal ref struct BufferSlice
 {
     public required Ref<Wgpu.Buffer> buffer;
     public required RangeBoundsU64 range;
 
     [SetsRequiredMembers]
-    public BufSlice(Ref<Wgpu.Buffer> buffer, RangeBoundsU64 range)
+    public BufferSlice(Ref<Wgpu.Buffer> buffer, RangeBoundsU64 range)
     {
         this.buffer = buffer;
         this.range = range;
@@ -1029,12 +1029,6 @@ internal struct Slice<T> where T : unmanaged
         this.data = new(data);
         this.len = checked((nuint)len);
     }
-
-    public unsafe readonly Slice<u8> AsBytes() => new()
-    {
-        data = data.Cast<u8>(),
-        len = len * (nuint)sizeof(T)
-    };
 }
 
 internal static class Slice
@@ -1067,9 +1061,9 @@ internal ref struct DrawBufferArg
 [StructLayout(LayoutKind.Sequential)]
 internal ref struct DrawBufferIndexedArg
 {
-    public required BufSlice vertex_buffer_slice;
+    public required BufferSlice vertex_buffer_slice;
     public required u32 slot;
-    public required BufSlice index_buffer_slice;
+    public required BufferSlice index_buffer_slice;
     public required wgpu_IndexFormat index_format;
     public required u32 index_start;
     public required u32 index_end_excluded;
@@ -1081,7 +1075,7 @@ internal ref struct DrawBufferIndexedArg
 internal ref struct DrawBuffersIndexedArg
 {
     public required Slice<SlotBufSlice> vertex_buffers;
-    public required BufSlice index_buffer_slice;
+    public required BufferSlice index_buffer_slice;
     public required wgpu_IndexFormat index_format;
     public required u32 index_start;
     public required u32 index_end_excluded;
@@ -1091,7 +1085,7 @@ internal ref struct DrawBuffersIndexedArg
 
 internal ref struct SlotBufSlice
 {
-    public required BufSlice buffer_slice;
+    public required BufferSlice buffer_slice;
     public required u32 slot;
 }
 
@@ -1124,15 +1118,39 @@ internal struct RangeBoundsU64
     public required bool has_start;
     public required bool has_end_excluded;
 
-    public static RangeBoundsU64 All => default;
-}
+    public static RangeBoundsU64 RangeFull => default;
 
-internal struct RangeBoundsU32
-{
-    public required u32 start;
-    public required u32 end_excluded;
-    public required bool has_start;
-    public required bool has_end_excluded;
+    public static RangeBoundsU64 StartAt(u64 start) => new()
+    {
+        start = start,
+        has_start = true,
+        end_excluded = default,
+        has_end_excluded = false,
+    };
+
+    public static RangeBoundsU64 EndAt(u64 endExcluded) => new()
+    {
+        start = default,
+        has_start = false,
+        end_excluded = endExcluded,
+        has_end_excluded = true,
+    };
+
+    public static RangeBoundsU64 StartEnd(u64 start, u64 endExcluded) => new()
+    {
+        start = start,
+        has_start = true,
+        end_excluded = endExcluded,
+        has_end_excluded = true,
+    };
+
+    public static RangeBoundsU64 StartLength(u64 start, u64 length) => new()
+    {
+        start = start,
+        has_start = true,
+        end_excluded = start + length,
+        has_end_excluded = true,
+    };
 }
 
 internal readonly struct NonZeroU32OrNone : IEquatable<NonZeroU32OrNone>

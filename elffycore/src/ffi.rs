@@ -255,19 +255,19 @@ extern "cdecl" fn elffy_set_bind_group<'a>(
 extern "cdecl" fn elffy_set_vertex_buffer<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
     slot: u32,
-    buffer_slice: BufSlice<'a>,
+    buffer_slice: BufferSlice<'a>,
 ) -> ApiResult {
-    render_pass.set_vertex_buffer(slot, buffer_slice.to_buffer_slice());
+    render_pass.set_vertex_buffer(slot, buffer_slice.to_wgpu_type());
     make_result()
 }
 
 #[no_mangle]
 extern "cdecl" fn elffy_set_index_buffer<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
-    buffer_slice: BufSlice<'a>,
+    buffer_slice: BufferSlice<'a>,
     index_format: wgpu::IndexFormat,
 ) -> ApiResult {
-    render_pass.set_index_buffer(buffer_slice.to_buffer_slice(), index_format);
+    render_pass.set_index_buffer(buffer_slice.to_wgpu_type(), index_format);
     make_result()
 }
 

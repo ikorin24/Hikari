@@ -1331,13 +1331,13 @@ impl<T: Copy> Opt<T> {
 
 #[repr(C)]
 #[derive(Debug)]
-pub(crate) struct BufSlice<'a> {
+pub(crate) struct BufferSlice<'a> {
     pub buffer: &'a wgpu::Buffer,
     pub range: RangeBoundsU64,
 }
 
-impl<'a> BufSlice<'a> {
-    pub fn to_buffer_slice(&self) -> wgpu::BufferSlice<'a> {
+impl<'a> BufferSlice<'a> {
+    pub fn to_wgpu_type(&self) -> wgpu::BufferSlice<'a> {
         self.buffer.slice(self.range)
     }
 }
@@ -1404,9 +1404,9 @@ pub(crate) struct DrawBufferArg<'a> {
 #[repr(C)]
 #[derive(Debug)]
 pub(crate) struct DrawBufferIndexedArg<'a> {
-    pub vertex_buffer_slice: BufSlice<'a>,
+    pub vertex_buffer_slice: BufferSlice<'a>,
     pub slot: u32,
-    pub index_buffer_slice: BufSlice<'a>,
+    pub index_buffer_slice: BufferSlice<'a>,
     pub index_format: wgpu::IndexFormat,
     pub index_start: u32,
     pub index_end_excluded: u32,
@@ -1418,7 +1418,7 @@ pub(crate) struct DrawBufferIndexedArg<'a> {
 #[derive(Debug)]
 pub(crate) struct DrawBuffersIndexedArg<'a> {
     pub vertex_buffers: Slice<'a, SlotBufSlice<'a>>,
-    pub index_buffer_slice: BufSlice<'a>,
+    pub index_buffer_slice: BufferSlice<'a>,
     pub index_format: wgpu::IndexFormat,
     pub index_start: u32,
     pub index_end_excluded: u32,
@@ -1429,14 +1429,14 @@ pub(crate) struct DrawBuffersIndexedArg<'a> {
 #[repr(C)]
 #[derive(Debug)]
 pub(crate) struct SlotBufSlice<'a> {
-    pub buffer_slice: BufSlice<'a>,
+    pub buffer_slice: BufferSlice<'a>,
     pub slot: u32,
 }
 
 #[repr(C)]
 #[derive(Debug)]
 pub(crate) struct IndexBufSlice<'a> {
-    pub buffer_slice: BufSlice<'a>,
+    pub buffer_slice: BufferSlice<'a>,
     pub format: wgpu::IndexFormat,
 }
 
@@ -1491,33 +1491,6 @@ impl ops::RangeBounds<u64> for RangeBoundsU64 {
     }
 
     fn end_bound(&self) -> ops::Bound<&u64> {
-        if self.has_end_excluded {
-            ops::Bound::Excluded(&self.end_excluded)
-        } else {
-            ops::Bound::Unbounded
-        }
-    }
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct RangeBoundsU32 {
-    pub start: u32,
-    pub end_excluded: u32,
-    pub has_start: bool,
-    pub has_end_excluded: bool,
-}
-
-impl ops::RangeBounds<u32> for RangeBoundsU32 {
-    fn start_bound(&self) -> ops::Bound<&u32> {
-        if self.has_start {
-            ops::Bound::Included(&self.start)
-        } else {
-            ops::Bound::Unbounded
-        }
-    }
-
-    fn end_bound(&self) -> ops::Bound<&u32> {
         if self.has_end_excluded {
             ops::Bound::Excluded(&self.end_excluded)
         } else {

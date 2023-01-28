@@ -131,4 +131,8 @@ internal unsafe static class BufferExtensions
             size = 0,
         };
     }
+
+    public static BufferSlice AsSlice(this Ref<Wgpu.Buffer> self) => new BufferSlice(self, RangeBoundsU64.RangeFull);
+
+    public static BufferSlice AsSlice(this Ref<Wgpu.Buffer> self, RangeBoundsU64 range) => new BufferSlice(self, range);
 }

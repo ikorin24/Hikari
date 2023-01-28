@@ -336,7 +336,7 @@ namespace Elffy
         public static void SetVertexBuffer(
             MutRef<Wgpu.RenderPass> render_pass,
             u32 slot,
-            BufSlice buffer_slice)
+            BufferSlice buffer_slice)
         {
             buffer_slice.buffer.ThrowIfInvalid();
             elffy_set_vertex_buffer(render_pass, slot, buffer_slice).Validate();
@@ -346,7 +346,7 @@ namespace Elffy
         [DebuggerHidden]
         public static void SetIndexBuffer(
             MutRef<Wgpu.RenderPass> render_pass,
-            BufSlice buffer_slice,
+            BufferSlice buffer_slice,
             wgpu_IndexFormat index_format)
         {
             buffer_slice.buffer.ThrowIfInvalid();

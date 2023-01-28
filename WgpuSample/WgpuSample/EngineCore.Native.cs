@@ -161,12 +161,12 @@ static unsafe partial class EngineCore
     private static partial ApiResult elffy_set_vertex_buffer(
         MutRef<Wgpu.RenderPass> render_pass,
         u32 slot,
-        BufSlice buffer_slice);
+        BufferSlice buffer_slice);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_set_index_buffer(
         MutRef<Wgpu.RenderPass> render_pass,
-        BufSlice buffer_slice,
+        BufferSlice buffer_slice,
         wgpu_IndexFormat index_format);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]

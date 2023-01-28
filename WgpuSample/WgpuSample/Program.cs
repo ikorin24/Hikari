@@ -372,9 +372,9 @@ internal class Program
         renderPass.SetBindGroup(0, _state.DiffuseBindGroup);
         renderPass.SetBindGroup(1, _state.CameraBindGroup);
 
-        renderPass.SetVertexBuffer(0, new BufSlice(_state.VertexBuffer, RangeBoundsU64.All));
-        renderPass.SetVertexBuffer(1, new BufSlice(_state.InstanceBuffer, RangeBoundsU64.All));
-        renderPass.SetIndexBuffer(new BufSlice(_state.IndexBuffer, RangeBoundsU64.All), _state.IndexFormat);
+        renderPass.SetVertexBuffer(0, _state.VertexBuffer.AsRef().AsSlice());
+        renderPass.SetVertexBuffer(1, _state.InstanceBuffer.AsRef().AsSlice());
+        renderPass.SetIndexBuffer(_state.IndexBuffer.AsRef().AsSlice(), _state.IndexFormat);
 
         renderPass.DrawIndexed(0.._state.IndexCount, 0, 0.._state.InstanceCount);
     }
