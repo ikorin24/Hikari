@@ -54,24 +54,25 @@ pub(crate) fn engine_start(
         }
     };
     let screen_id = HostScreenId::new(&screen);
+    let window_id = screen.get_window().id();
     let screen_info = &screen.get_info();
     {
         let on_screen_init = engine_config.on_screen_init;
         on_screen_init(screen, screen_info, screen_id);
     }
     event_loop.run(move |event, _event_loop, control_flow| {
-        handle_event(&screen_id, &event, control_flow);
+        handle_event(screen_id, window_id, &event, control_flow);
     });
 }
 
 fn handle_event(
-    screen_id: &HostScreenId,
+    target_screen_id: HostScreenId,
+    target_window_id: window::WindowId,
     event: &event::Event<()>,
     control_flow: &mut event_loop::ControlFlow,
 ) {
     use winit::event::*;
 
-    let target_window_id = screen_id.window_id();
     match event {
         Event::WindowEvent {
             ref event,
@@ -98,22 +99,26 @@ fn handle_event(
             } => {}
             WindowEvent::Resized(physical_size) => {
                 let event_resized = get_callback(|engine| engine.event_resized).unwrap();
-                event_resized(*screen_id, physical_size.width, physical_size.height);
+                event_resized(target_screen_id, physical_size.width, physical_size.height);
             }
             WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                 let event_resized = get_callback(|engine| engine.event_resized).unwrap();
-                event_resized(*screen_id, new_inner_size.width, new_inner_size.height);
+                event_resized(
+                    target_screen_id,
+                    new_inner_size.width,
+                    new_inner_size.height,
+                );
             }
             _ => {}
         },
         Event::RedrawRequested(window_id) if *window_id == target_window_id => {
             let event_redraw_requested =
                 get_callback(|engine| engine.event_redraw_requested).unwrap();
-            event_redraw_requested(*screen_id);
+            event_redraw_requested(target_screen_id);
         }
         Event::MainEventsCleared => {
             let event_cleared = get_callback(|engine| engine.event_cleared).unwrap();
-            event_cleared(*screen_id);
+            event_cleared(target_screen_id);
         }
         _ => {}
     }

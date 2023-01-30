@@ -331,30 +331,15 @@ impl HostScreen {
     }
 }
 
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Clone, Copy)]
-pub(crate) struct HostScreenId {
-    screen: usize,
-    window: usize,
-}
+pub(crate) struct HostScreenId(usize);
 
 impl HostScreenId {
-    pub fn new(screen: &Box<HostScreen>) -> HostScreenId {
+    pub fn new(screen: &Box<HostScreen>) -> Self {
         let screen_ref: &HostScreen = screen.as_ref();
         let screen_addr = screen_ref as *const HostScreen as usize;
-        let window_id = screen.get_window().id();
-        let window_id_value: usize = unsafe { std::mem::transmute(window_id) };
-        static_assertions::assert_eq_size!(window::WindowId, usize);
-        static_assertions::assert_eq_size_val!(window_id, window_id_value);
-        HostScreenId {
-            screen: screen_addr,
-            window: window_id_value,
-        }
-    }
-
-    pub fn window_id(&self) -> window::WindowId {
-        static_assertions::assert_eq_size!(window::WindowId, usize);
-        unsafe { std::mem::transmute(self.window) }
+        Self(screen_addr)
     }
 }
 

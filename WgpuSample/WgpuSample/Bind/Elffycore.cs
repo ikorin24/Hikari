@@ -6,6 +6,7 @@ using i32 = System.Int32;
 using u64 = System.UInt64;
 using f32 = System.Single;
 using f64 = System.Double;
+using System;
 
 namespace Elffy.Bind;
 
@@ -80,13 +81,19 @@ internal static class Elffycore
         public ResizedEventFn(delegate* unmanaged[Cdecl]<HostScreenId, u32, u32, void> f) => _func = f;
     }
 
-    internal readonly struct HostScreenId
+    internal readonly struct HostScreenId : IEquatable<HostScreenId>
     {
-        private readonly nuint screen;
-        private readonly nuint window;
+        private readonly nuint _id;
 
-        public nuint Screen => screen;
-        public nuint Window => window;
+        public override bool Equals(object? obj) => obj is HostScreenId id && Equals(id);
+
+        public bool Equals(HostScreenId other) => _id == other._id;
+
+        public override int GetHashCode() => _id.GetHashCode();
+
+        public static bool operator ==(HostScreenId left, HostScreenId right) => left.Equals(right);
+
+        public static bool operator !=(HostScreenId left, HostScreenId right) => !(left == right);
     }
 
     internal readonly struct BeginCommandData

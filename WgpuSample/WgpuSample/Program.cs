@@ -45,7 +45,7 @@ internal class Program
     {
         var list = (ReadOnlySpan<State>)CollectionsMarshal.AsSpan(_stateList);
         foreach(var s in list) {
-            if(s.Id.Screen == id.Screen) {
+            if(s.Id == id) {
                 state = s;
                 return true;
             }
