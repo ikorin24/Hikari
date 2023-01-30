@@ -3,6 +3,7 @@ using u8 = System.Byte;
 using u32 = System.UInt32;
 using i32 = System.Int32;
 using u64 = System.UInt64;
+using NonZeroUsize = System.UIntPtr;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -18,7 +19,7 @@ static unsafe partial class EngineCore
     private const string CoreDll = $"{DllDir}elffycore";
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial void elffy_engine_start(
+    private static partial NonZeroUsize elffy_engine_start(
         Elffycore.EngineCoreConfig* engine_config,
         Elffycore.HostScreenConfig* screen_config);
 

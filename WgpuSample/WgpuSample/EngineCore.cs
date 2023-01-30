@@ -58,8 +58,12 @@ namespace Elffy
                 backend = screenConfig.Backend,
             };
 
-            elffy_engine_start(&engineCoreConfigRaw, &screenConfigRaw);
+            var errorCount = elffy_engine_start(&engineCoreConfigRaw, &screenConfigRaw);
+            Debug.Assert(errorCount > 0);
+            ThrowNativeErrorIfNotZero(errorCount);
+
             throw new UnreachableException();
+
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
             static void OnScreenInit(
