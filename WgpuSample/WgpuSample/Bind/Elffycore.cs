@@ -10,7 +10,7 @@ using f64 = System.Double;
 namespace Elffy.Bind;
 
 /// <summary>
-/// `elffycore` module in Rust
+/// `elffycore` crate in Rust
 /// </summary>
 internal static class Elffycore
 {
@@ -32,6 +32,31 @@ internal static class Elffycore
         public required u32 width;
         public required u32 height;
         public required Wgpu.Backends backend;
+    }
+
+    internal readonly record struct ErrMessageId(nuint Value);
+
+    internal struct HostScreenInfo
+    {
+        public required Wgpu.Backend backend;
+        public required Opt<TextureFormat> surface_format;
+    }
+
+    internal unsafe readonly struct HostScreenInitFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<Box<HostScreen>, HostScreenInfo*, HostScreenId, void> _func;
+
+        public HostScreenInitFn(delegate* unmanaged[Cdecl]<void*, HostScreenInfo*, HostScreenId, void> f)
+        {
+            _func = (delegate* unmanaged[Cdecl]<Box<HostScreen>, HostScreenInfo*, HostScreenId, void>)f;
+        }
+    }
+
+    internal unsafe readonly struct DispatchErrFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<ErrMessageId, u8*, nuint, void> _func;
+
+        public DispatchErrFn(delegate* unmanaged[Cdecl]<ErrMessageId, u8*, nuint, void> f) => _func = f;
     }
 
     internal unsafe readonly struct ClearedEventFn

@@ -20,33 +20,6 @@ internal enum WindowStyle
     Fullscreen = 2,
 }
 
-internal unsafe readonly struct HostScreenInitFn
-{
-    private readonly delegate* unmanaged[Cdecl]<Box<Elffycore.HostScreen>, HostScreenInfo*, Elffycore.HostScreenId, void> _func;
-
-    public bool IsNull => _func == null;
-    public HostScreenInitFn(delegate* unmanaged[Cdecl]<void*, HostScreenInfo*, Elffycore.HostScreenId, void> f)
-    {
-        _func = (delegate* unmanaged[Cdecl]<Box<Elffycore.HostScreen>, HostScreenInfo*, Elffycore.HostScreenId, void>)f;
-    }
-}
-
-internal unsafe readonly struct DispatchErrFn
-{
-    private readonly delegate* unmanaged[Cdecl]<ErrMessageId, u8*, nuint, void> _func;
-    public bool IsNull => _func == null;
-
-    public DispatchErrFn(delegate* unmanaged[Cdecl]<ErrMessageId, u8*, nuint, void> f) => _func = f;
-}
-
-internal readonly record struct ErrMessageId(nuint Value);
-
-internal struct HostScreenInfo
-{
-    public required Wgpu.Backend backend;
-    public required Opt<TextureFormat> surface_format;
-}
-
 internal ref struct RenderPassDescriptor
 {
     public required Slice_Opt_RenderPassColorAttachment color_attachments_clear;

@@ -14,7 +14,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace Elffy.Bind;
 
 /// <summary>
-/// `wgpu` module in Rust
+/// `wgpu` crate in Rust
 /// </summary>
 internal static class Wgpu
 {

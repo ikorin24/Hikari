@@ -42,11 +42,11 @@ namespace Elffy
             _config = config;
             var engineCoreConfigRaw = new Elffycore.EngineCoreConfig
             {
-                err_dispatcher = new DispatchErrFn(&DispatchError),
-                on_screen_init = new HostScreenInitFn(&OnScreenInit),
-                event_cleared = new Elffycore.ClearedEventFn(&EventCleared),
-                event_redraw_requested = new Elffycore.RedrawRequestedEventFn(&EventRedrawRequested),
-                event_resized = new Elffycore.ResizedEventFn(&EventResized),
+                err_dispatcher = new(&DispatchError),
+                on_screen_init = new(&OnScreenInit),
+                event_cleared = new(&EventCleared),
+                event_redraw_requested = new(&EventRedrawRequested),
+                event_resized = new(&EventResized),
             };
 
             var screenConfigRaw = new Elffycore.HostScreenConfig
@@ -68,7 +68,7 @@ namespace Elffy
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
             static void OnScreenInit(
                 void* screen_,  // Box<Elffycore.HostScreen> screen
-                HostScreenInfo* info,
+                Elffycore.HostScreenInfo* info,
                 Elffycore.HostScreenId id
                 )
             {
@@ -97,7 +97,7 @@ namespace Elffy
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void DispatchError(ErrMessageId id, byte* messagePtr, nuint messageByteLen)
+            static void DispatchError(Elffycore.ErrMessageId id, byte* messagePtr, nuint messageByteLen)
             {
                 var len = (int)nuint.Min(messageByteLen, (nuint)int.MaxValue);
                 var message = Encoding.UTF8.GetString(messagePtr, len);
@@ -502,7 +502,7 @@ namespace Elffy
         }
     }
 
-    internal record struct NativeError(ErrMessageId Id, string Message);
+    internal record struct NativeError(Elffycore.ErrMessageId Id, string Message);
 
     internal sealed class EngineCoreException : Exception
     {
@@ -537,7 +537,7 @@ namespace Elffy
 
     internal readonly struct EngineCoreConfig
     {
-        public required Action<Box<Elffycore.HostScreen>, HostScreenInfo, Elffycore.HostScreenId> OnStart { get; init; }
+        public required Action<Box<Elffycore.HostScreen>, Elffycore.HostScreenInfo, Elffycore.HostScreenId> OnStart { get; init; }
         public required Action<Elffycore.HostScreenId> OnRedrawRequested { get; init; }
         public required Action<Elffycore.HostScreenId> OnCleared { get; init; }
 

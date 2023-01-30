@@ -121,7 +121,7 @@ internal class Program
         }
     }
 
-    private static unsafe void OnStart(Box<Elffycore.HostScreen> screen, HostScreenInfo info, Elffycore.HostScreenId id)
+    private static unsafe void OnStart(Box<Elffycore.HostScreen> screen, Elffycore.HostScreenInfo info, Elffycore.HostScreenId id)
     {
         var screenRef = screen.AsRef();
         screenRef.ScreenSetTitle("sample"u8);
