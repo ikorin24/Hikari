@@ -123,13 +123,9 @@ extern "cdecl" fn elffy_screen_set_inner_size(
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_screen_get_inner_size(
-    screen: &HostScreen,
-    width: &mut u32,
-    height: &mut u32,
-) -> ApiResult {
-    (*width, *height) = screen.get_inner_size();
-    make_result()
+extern "cdecl" fn elffy_screen_get_inner_size(screen: &HostScreen) -> ApiValueResult<SizeU32> {
+    let size = screen.get_inner_size().into();
+    make_value_result(size)
 }
 
 #[no_mangle]

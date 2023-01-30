@@ -1287,6 +1287,22 @@ impl<'a> VertexBufferLayout<'a> {
 }
 
 #[repr(C)]
+#[derive(Default, Clone, Copy)]
+pub(crate) struct SizeU32 {
+    pub width: u32,
+    pub height: u32,
+}
+
+impl From<(u32, u32)> for SizeU32 {
+    fn from(value: (u32, u32)) -> Self {
+        Self {
+            width: value.0,
+            height: value.1,
+        }
+    }
+}
+
+#[repr(C)]
 pub(crate) struct BeginCommandData {
     success: bool,
     command_encoder: Option<Box<wgpu::CommandEncoder>>,

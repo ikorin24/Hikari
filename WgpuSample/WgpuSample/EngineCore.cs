@@ -170,14 +170,12 @@ namespace Elffy
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DebuggerHidden]
+        //[DebuggerHidden]
         public static (u32 Width, u32 Height) ScreenGetInnerSize(
             Ref<Elffycore.HostScreen> screen)
         {
-            u32 width;
-            u32 height;
-            elffy_screen_get_inner_size(screen, &width, &height).Validate();
-            return (width, height);
+            var size = elffy_screen_get_inner_size(screen).Validate();
+            return (size.width, size.height);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -470,7 +468,7 @@ namespace Elffy
         {
             // (_errorCount, _nativePtr) is (0, not null) or (not 0, null)
 
-            private readonly uint _errorCount;
+            private readonly nuint _errorCount;
             private readonly void* _nativePtr;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -488,7 +486,7 @@ namespace Elffy
 
         private readonly struct ApiValueResult<T> where T : unmanaged
         {
-            private readonly uint _errorCount;
+            private readonly nuint _errorCount;
             private readonly T _value;
 
             [UnscopedRef]

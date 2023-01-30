@@ -36,7 +36,6 @@ internal class Program
             Width = 1280,
             Height = 720,
             Style = WindowStyle.Default,
-            //Title = Slice.FromFixedSpanUnsafe("Elffy"u8),
         };
         EngineCore.EngineStart(engineConfig, screenConfig);
     }

@@ -71,4 +71,10 @@ internal static class Elffycore
         public readonly OptionBox<Wgpu.SurfaceTexture> surface_texture;
         public readonly OptionBox<Wgpu.TextureView> surface_texture_view;
     }
+
+    internal struct SizeU32
+    {
+        public u32 width;
+        public u32 height;
+    }
 }
