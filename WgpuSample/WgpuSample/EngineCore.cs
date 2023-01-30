@@ -468,7 +468,7 @@ namespace Elffy
             public void Validate() => EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
         }
 
-        private readonly struct ApiBoxResult<T> where T : INativeTypeMarker
+        private readonly struct ApiBoxResult<T> where T : INativeTypeNonReprC
         {
             // (_errorCount, _nativePtr) is (0, not null) or (not 0, null)
 

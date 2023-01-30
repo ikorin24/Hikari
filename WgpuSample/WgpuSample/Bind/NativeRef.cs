@@ -7,7 +7,9 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy.Bind;
 
-internal readonly struct OptionBox<T> where T : INativeTypeMarker
+/// <summary>`Option&lt;Box&lt;T&gt;&gt;` in Rust</summary>
+/// <typeparam name="T">native type in Box</typeparam>
+internal readonly struct OptionBox<T> where T : INativeTypeNonReprC
 {
     private readonly NativePointer _p;
     public static OptionBox<T> None => default;
@@ -39,7 +41,7 @@ internal readonly struct OptionBox<T> where T : INativeTypeMarker
 
 /// <summary>`Box&lt;T&gt;` in Rust</summary>
 /// <typeparam name="T">native type in Box</typeparam>
-internal readonly struct Box<T> where T : INativeTypeMarker
+internal readonly struct Box<T> where T : INativeTypeNonReprC
 {
     private readonly NativePointer _p;
 
@@ -79,7 +81,7 @@ internal readonly struct Box<T> where T : INativeTypeMarker
 
 /// <summary>`&amp;mut T` in Rust</summary>
 /// <typeparam name="T">referenced native type</typeparam>
-internal readonly ref struct MutRef<T> where T : INativeTypeMarker
+internal readonly ref struct MutRef<T> where T : INativeTypeNonReprC
 {
     private readonly NativePointer _p;
 
@@ -109,7 +111,7 @@ internal readonly ref struct MutRef<T> where T : INativeTypeMarker
 
 /// <summary>`&amp;T` in Rust</summary>
 /// <typeparam name="T">referenced native type</typeparam>
-internal readonly ref struct Ref<T> where T : INativeTypeMarker
+internal readonly ref struct Ref<T> where T : INativeTypeNonReprC
 {
     private readonly NativePointer _p;
 
@@ -136,6 +138,6 @@ internal readonly ref struct Ref<T> where T : INativeTypeMarker
     }
 }
 
-internal interface INativeTypeMarker
+internal interface INativeTypeNonReprC
 {
 }

@@ -14,7 +14,7 @@ namespace Elffy.Bind;
 /// </summary>
 internal static class Elffycore
 {
-    internal sealed class HostScreen : INativeTypeMarker { private HostScreen() { } }
+    internal sealed class HostScreen : INativeTypeNonReprC { private HostScreen() { } }
 
     internal unsafe struct EngineCoreConfig
     {
