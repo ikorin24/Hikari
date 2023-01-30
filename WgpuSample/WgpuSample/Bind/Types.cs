@@ -621,28 +621,22 @@ internal enum wgpu_VertexStepMode : u32
 internal record struct wgpu_Color(f64 R, f64 G, f64 B, f64 A);
 
 
-internal struct BindingType
+internal unsafe readonly struct BindingType
 {
-    public required BindingTypeTag tag;
-    public required Pointer payload;
+    private readonly BindingTypeTag tag;
+    private readonly void* payload;
 
-    public unsafe static BindingType Buffer(BufferBindingData* payload) => new()
+    private BindingType(BindingTypeTag tag, void* payload)
     {
-        tag = BindingTypeTag.Buffer,
-        payload = payload,
-    };
+        this.tag = tag;
+        this.payload = payload;
+    }
 
-    public unsafe static BindingType Texture(TextureBindingData* payload) => new()
-    {
-        tag = BindingTypeTag.Texture,
-        payload = payload,
-    };
+    public unsafe static BindingType Buffer(BufferBindingData* payload) => new(BindingTypeTag.Buffer, payload);
 
-    public unsafe static BindingType Sampler(SamplerBindingType* payload) => new()
-    {
-        tag = BindingTypeTag.Sampler,
-        payload = payload,
-    };
+    public unsafe static BindingType Texture(TextureBindingData* payload) => new(BindingTypeTag.Texture, payload);
+
+    public unsafe static BindingType Sampler(SamplerBindingType* payload) => new(BindingTypeTag.Sampler, payload);
 }
 
 internal enum BindingTypeTag
@@ -852,19 +846,9 @@ internal ref struct BufferSlice
     }
 }
 
-internal unsafe readonly struct NullableRef<T> where T : unmanaged
-{
-    private readonly T* _p;
-    public static explicit operator NullableRef<T>(T* pointer) => new(pointer);
-
-    public NullableRef(T* pointer) => _p = pointer;
-
-    public NullableRef<U> Cast<U>() where U : unmanaged => new((U*)_p);
-}
-
 internal struct Slice<T> where T : unmanaged
 {
-    public required NullableRef<T> data;
+    public unsafe required T* data; // allow null
     public required nuint len;
 
     public static Slice<T> Empty => default;
@@ -872,68 +856,28 @@ internal struct Slice<T> where T : unmanaged
     [SetsRequiredMembers]
     public unsafe Slice(T* data, nuint len)
     {
-        this.data = new(data);
+        this.data = data;
         this.len = len;
     }
 
     [SetsRequiredMembers]
     public unsafe Slice(T* data, int len)
     {
-        this.data = new(data);
+        this.data = data;
         this.len = checked((nuint)len);
     }
 }
 
 internal static class Slice
 {
-    public static Slice<T> Empty<T>() where T : unmanaged => default;
-
     public unsafe static Slice<T> FromFixedSpanUnsafe<T>(Span<T> fixedSpan) where T : unmanaged
         => FromFixedSpanUnsafe((ReadOnlySpan<T>)fixedSpan);
 
     public unsafe static Slice<T> FromFixedSpanUnsafe<T>(ReadOnlySpan<T> fixedSpan) where T : unmanaged
     {
         var pointer = (T*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(fixedSpan));
-        return new Slice<T> { data = new(pointer), len = (nuint)fixedSpan.Length };
+        return new Slice<T>(pointer, fixedSpan.Length);
     }
-
-    public unsafe static Slice<T> FromFixedSingleUnsafe<T>(T* item) where T : unmanaged
-    {
-        return new Slice<T> { data = new(item), len = 1 };
-    }
-}
-
-[StructLayout(LayoutKind.Sequential)]
-internal ref struct DrawBufferArg
-{
-    public required SlotBufSlice vertex_buffer;
-    public required RangeU32 vertices_range;
-    public required RangeU32 instances_range;
-}
-
-[StructLayout(LayoutKind.Sequential)]
-internal ref struct DrawBufferIndexedArg
-{
-    public required BufferSlice vertex_buffer_slice;
-    public required u32 slot;
-    public required BufferSlice index_buffer_slice;
-    public required wgpu_IndexFormat index_format;
-    public required u32 index_start;
-    public required u32 index_end_excluded;
-    public required u32 instance_start;
-    public required u32 instance_end_excluded;
-}
-
-[StructLayout(LayoutKind.Sequential)]
-internal ref struct DrawBuffersIndexedArg
-{
-    public required Slice_SlotBufSlice vertex_buffers;
-    public required BufferSlice index_buffer_slice;
-    public required wgpu_IndexFormat index_format;
-    public required u32 index_start;
-    public required u32 index_end_excluded;
-    public required u32 instance_start;
-    public required u32 instance_end_excluded;
 }
 
 // Slice<SlotBufSlice>
