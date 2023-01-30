@@ -7,7 +7,7 @@ use macos as platform;
 use windows as platform;
 
 use crate::error_handler::*;
-use crate::types::*;
+use crate::*;
 use pollster::FutureExt;
 use std::cell::Cell;
 use std::error::Error;

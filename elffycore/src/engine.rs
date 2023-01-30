@@ -1,6 +1,6 @@
 use crate::error_handler::*;
 use crate::screen::*;
-use crate::types::*;
+use crate::*;
 use std::error::Error;
 use std::fmt::Debug;
 use std::sync;

@@ -1,7 +1,7 @@
 use crate::engine::*;
 use crate::error_handler::*;
 use crate::screen::*;
-use crate::types::*;
+use crate::*;
 use std::num::{NonZeroU32, NonZeroUsize};
 
 #[no_mangle]
