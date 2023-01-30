@@ -33,14 +33,11 @@ static unsafe partial class EngineCore
         Ref<Elffycore.HostScreen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial void elffy_begin_command(
-        Ref<Elffycore.HostScreen> screen,
-        Box<Wgpu.CommandEncoder>* command_encoder_out,
-        Box<Wgpu.SurfaceTexture>* surface_tex_out,
-        Box<Wgpu.TextureView>* surface_tex_view_out);
+    private static partial ApiValueResult<Elffycore.BeginCommandData> elffy_screen_begin_command(
+        Ref<Elffycore.HostScreen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial void elffy_finish_command(
+    private static partial ApiResult elffy_screen_finish_command(
         Ref<Elffycore.HostScreen> screen,
         Box<Wgpu.CommandEncoder> command_encoder,
         Box<Wgpu.SurfaceTexture> surface_tex,

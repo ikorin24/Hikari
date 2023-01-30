@@ -63,4 +63,12 @@ internal static class Elffycore
         public nuint Screen => screen;
         public nuint Window => window;
     }
+
+    internal readonly struct BeginCommandData
+    {
+        public readonly bool success;
+        public readonly OptionBox<Wgpu.CommandEncoder> command_encoder;
+        public readonly OptionBox<Wgpu.SurfaceTexture> surface_texture;
+        public readonly OptionBox<Wgpu.TextureView> surface_texture_view;
+    }
 }

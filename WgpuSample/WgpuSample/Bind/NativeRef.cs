@@ -7,6 +7,36 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy.Bind;
 
+internal readonly struct OptionBox<T> where T : INativeTypeMarker
+{
+    private readonly NativePointer _p;
+    public static OptionBox<T> None => default;
+    public unsafe bool IsNone => (void*)_p == null;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool AsBox(out Box<T> box)
+    {
+        box = Unsafe.As<OptionBox<T>, Box<T>>(ref Unsafe.AsRef(in this));
+        return IsNone;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Box<T> Unwrap()
+    {
+        if(IsNone) {
+            Throw();
+            static void Throw() => throw new InvalidOperationException("Cannot unwrap None");
+        }
+        return Unsafe.As<OptionBox<T>, Box<T>>(ref Unsafe.AsRef(in this));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Box<T> UnwrapUnchecked()
+    {
+        return Unsafe.As<OptionBox<T>, Box<T>>(ref Unsafe.AsRef(in this));
+    }
+}
+
 /// <summary>`Box&lt;T&gt;` in Rust</summary>
 /// <typeparam name="T">native type in Box</typeparam>
 internal readonly struct Box<T> where T : INativeTypeMarker

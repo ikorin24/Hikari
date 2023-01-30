@@ -6,13 +6,12 @@ use macos as platform;
 #[cfg(target_os = "windows")]
 use windows as platform;
 
-use crate::engine;
 use crate::error_handler::*;
 use crate::types::*;
 use pollster::FutureExt;
 use std::cell::Cell;
 use std::error::Error;
-use std::{iter, num};
+use std::num;
 use wgpu::util::DeviceExt;
 use winit;
 use winit::{dpi, event_loop, window};

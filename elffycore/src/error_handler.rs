@@ -104,6 +104,29 @@ impl<T> ApiBoxResult<T> {
     }
 }
 
+#[repr(C)]
+pub(crate) struct ApiValueResult<T: Default + 'static> {
+    err_count: usize,
+    value: T,
+}
+
+impl<T: Default> ApiValueResult<T> {
+    #[inline]
+    pub const fn ok(value: T) -> Self {
+        Self {
+            err_count: 0,
+            value,
+        }
+    }
+    #[inline]
+    pub fn err(err_count: NonZeroUsize) -> Self {
+        Self {
+            err_count: err_count.into(),
+            value: Default::default(),
+        }
+    }
+}
+
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct ErrMessageId(NonZeroUsize);

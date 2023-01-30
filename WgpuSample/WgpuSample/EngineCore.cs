@@ -58,8 +58,6 @@ namespace Elffy
                 backend = screenConfig.Backend,
             };
 
-            Debug.Assert(engineCoreConfigRaw.on_screen_init.IsNull == false);
-            Debug.Assert(engineCoreConfigRaw.err_dispatcher.IsNull == false);
             elffy_engine_start(&engineCoreConfigRaw, &screenConfigRaw);
             throw new UnreachableException();
 
@@ -125,29 +123,27 @@ namespace Elffy
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void BeginCommand(
+        public static bool ScreenBeginCommand(
             this Ref<Elffycore.HostScreen> screen,
             out Box<Wgpu.CommandEncoder> commandEncoder,
             out Box<Wgpu.SurfaceTexture> surfaceTexture,
             out Box<Wgpu.TextureView> surfaceTextureView)
         {
-            Box<Wgpu.CommandEncoder> command_encoder_out;
-            Box<Wgpu.SurfaceTexture> surface_tex_out;
-            Box<Wgpu.TextureView> surface_tex_view_out;
-            elffy_begin_command(screen, &command_encoder_out, &surface_tex_out, &surface_tex_view_out);
-            commandEncoder = command_encoder_out;
-            surfaceTexture = surface_tex_out;
-            surfaceTextureView = surface_tex_view_out;
+            ref readonly var data = ref elffy_screen_begin_command(screen).Validate();
+            commandEncoder = data.command_encoder.UnwrapUnchecked();
+            surfaceTexture = data.surface_texture.UnwrapUnchecked();
+            surfaceTextureView = data.surface_texture_view.UnwrapUnchecked();
+            return data.success;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void FinishCommand(
+        public static void ScreenFinishCommand(
             this Ref<Elffycore.HostScreen> screen,
             Box<Wgpu.CommandEncoder> commandEncoder,
             Box<Wgpu.SurfaceTexture> surfaceTexture,
             Box<Wgpu.TextureView> surfaceTextureView)
         {
-            elffy_finish_command(screen, commandEncoder, surfaceTexture, surfaceTextureView);
+            elffy_screen_finish_command(screen, commandEncoder, surfaceTexture, surfaceTextureView).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -461,7 +457,6 @@ namespace Elffy
             }
         }
 
-        [StructLayout(LayoutKind.Sequential)]
         private readonly struct ApiResult
         {
             private readonly nuint _errorCount;
@@ -471,27 +466,6 @@ namespace Elffy
             public void Validate() => EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
         }
 
-        //[StructLayout(LayoutKind.Sequential)]
-        //private readonly struct ApiBoxResult<THandle> where THandle : unmanaged, IHandle<THandle>
-        //{
-        //    // (_errorCount, _nativePtr) is (0, not null) or (not 0, null)
-
-        //    private readonly uint _errorCount;
-        //    private readonly void* _nativePtr;
-
-        //    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //    //[DebuggerHidden]
-        //    public THandle Validate()
-        //    {
-        //        Debug.Assert((_errorCount == 0 && _nativePtr != null) || (_errorCount > 0 && _nativePtr == null));
-        //        EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
-        //        Debug.Assert(_errorCount == 0);
-        //        Debug.Assert(_nativePtr != null);
-        //        return (THandle)_nativePtr;
-        //    }
-        //}
-
-        [StructLayout(LayoutKind.Sequential)]
         private readonly struct ApiBoxResult<T> where T : INativeTypeMarker
         {
             // (_errorCount, _nativePtr) is (0, not null) or (not 0, null)
@@ -509,6 +483,19 @@ namespace Elffy
                 Debug.Assert(_errorCount == 0);
                 Debug.Assert(nativePtr != null);
                 return *(Box<T>*)(&nativePtr);
+            }
+        }
+
+        private readonly struct ApiValueResult<T> where T : unmanaged
+        {
+            private readonly uint _errorCount;
+            private readonly T _value;
+
+            [UnscopedRef]
+            public ref readonly T Validate()
+            {
+                EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
+                return ref _value;
             }
         }
     }

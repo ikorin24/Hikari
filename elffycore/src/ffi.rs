@@ -32,12 +32,9 @@ extern "cdecl" fn elffy_screen_request_redraw(screen: &HostScreen) -> ApiResult 
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_begin_command(
+extern "cdecl" fn elffy_screen_begin_command(
     screen: &HostScreen,
-    command_encoder_out: &mut Box<wgpu::CommandEncoder>,
-    surface_tex_out: &mut Box<wgpu::SurfaceTexture>,
-    surface_tex_view_out: &mut Box<wgpu::TextureView>,
-) -> () {
+) -> ApiValueResult<BeginCommandData> {
     match screen.get_surface().get_current_texture() {
         Ok(surface_texture) => {
             let view = surface_texture
@@ -46,35 +43,37 @@ extern "cdecl" fn elffy_begin_command(
             let command_encoder = screen
                 .get_device()
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-            *command_encoder_out = Box::new(command_encoder);
-            *surface_tex_out = Box::new(surface_texture);
-            *surface_tex_view_out = Box::new(view);
-            return;
+            let value = BeginCommandData::new(
+                Box::new(command_encoder),
+                Box::new(surface_texture),
+                Box::new(view),
+            );
+            make_value_result(value)
         }
-        // Err(wgpu::SurfaceError::Lost) => {
-        //     let size = screen.get_window().inner_size();
-        //     screen.resize_surface(size.width, size.height);
-        //     todo!();
-        // }
-        Err(err) => {
-            todo!();
+        Err(wgpu::SurfaceError::Lost) => {
+            let size = screen.get_window().inner_size();
+            screen.resize_surface(size.width, size.height);
+            let value = BeginCommandData::failed();
+            make_value_result(value)
         }
+        Err(err) => error_value_result(err),
     }
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_finish_command(
+extern "cdecl" fn elffy_screen_finish_command(
     screen: &HostScreen,
     command_encoder: Box<wgpu::CommandEncoder>,
     surface_tex: Box<wgpu::SurfaceTexture>,
     surface_tex_view: Box<wgpu::TextureView>,
-) -> () {
+) -> ApiResult {
     let command_encoder = *command_encoder;
     screen
         .get_queue()
         .submit(std::iter::once(command_encoder.finish()));
     surface_tex.present();
-    drop(surface_tex_view)
+    drop(surface_tex_view);
+    make_result()
 }
 
 #[no_mangle]
@@ -384,7 +383,24 @@ fn make_box_result<T>(value: Box<T>, on_value_drop: Option<fn(Box<T>)>) -> ApiBo
 #[inline]
 fn error_box_result<T>(err: impl std::fmt::Display) -> ApiBoxResult<T> {
     dispatch_err(err);
-    return ApiBoxResult::err(reset_tls_err_count().try_into().unwrap());
+    let err_count = reset_tls_err_count().try_into().unwrap();
+    ApiBoxResult::err(err_count)
+}
+
+#[inline]
+fn make_value_result<T: Default + 'static>(value: T) -> ApiValueResult<T> {
+    let err_count = reset_tls_err_count();
+    match NonZeroUsize::new(err_count) {
+        Some(err_count) => ApiValueResult::err(err_count),
+        None => ApiValueResult::ok(value),
+    }
+}
+
+#[inline]
+fn error_value_result<T: Default + 'static>(err: impl std::fmt::Display) -> ApiValueResult<T> {
+    dispatch_err(err);
+    let err_count = reset_tls_err_count().try_into().unwrap();
+    ApiValueResult::err(err_count)
 }
 
 #[inline]

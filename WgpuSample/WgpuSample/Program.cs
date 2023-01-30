@@ -68,7 +68,9 @@ internal class Program
         var screenRef = state.Screen.AsRef();
 
         {
-            screenRef.BeginCommand(out var commandEncoder, out var surfaceTexture, out var surfaceTextureView);
+            if(screenRef.ScreenBeginCommand(out var commandEncoder, out var surfaceTexture, out var surfaceTextureView) == false) {
+                return;
+            }
             {
                 RenderPassDescriptor desc;
                 {
@@ -116,13 +118,12 @@ internal class Program
                     renderPass.DestroyRenderPass();
                 }
             }
-            screenRef.FinishCommand(commandEncoder, surfaceTexture, surfaceTextureView);
+            screenRef.ScreenFinishCommand(commandEncoder, surfaceTexture, surfaceTextureView);
         }
     }
 
     private static unsafe void OnStart(Box<Elffycore.HostScreen> screen, in HostScreenInfo info, Elffycore.HostScreenId id)
     {
-        Console.WriteLine($"screen: {screen.AsPtr()}");
         var screenRef = screen.AsRef();
         screenRef.ScreenSetTitle("sample"u8);
 
@@ -408,10 +409,11 @@ internal class Program
 
         //var depth = _state.Depth;
         ref readonly var depth = ref state.GetDepth();
-        if(width == depth.Width && height == depth.Height) { return; }
+        //if(width == depth.Width && height == depth.Height) { return; }
 
         Debug.WriteLine((width, height));
-        state.SetDepth(CreateDepthTexture(screen, width, height));
+        var newDepth = CreateDepthTexture(screen, width, height);
+        state.SetDepth(newDepth);
     }
 
     ////[StructLayout(LayoutKind.Sequential, Size = 4)]

@@ -55,7 +55,10 @@ pub(crate) fn engine_start(
     };
     let screen_id = HostScreenId::new(&screen);
     let screen_info = &screen.get_info();
-    (engine_config.on_screen_init)(screen, screen_info, screen_id);
+    {
+        let on_screen_init = engine_config.on_screen_init;
+        on_screen_init(screen, screen_info, screen_id);
+    }
     event_loop.run(move |event, _event_loop, control_flow| {
         handle_event(&screen_id, &event, control_flow);
     });

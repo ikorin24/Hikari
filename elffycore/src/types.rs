@@ -1286,6 +1286,43 @@ impl<'a> VertexBufferLayout<'a> {
     }
 }
 
+#[repr(C)]
+pub(crate) struct BeginCommandData {
+    success: bool,
+    command_encoder: Option<Box<wgpu::CommandEncoder>>,
+    surface_texture: Option<Box<wgpu::SurfaceTexture>>,
+    surface_texture_view: Option<Box<wgpu::TextureView>>,
+}
+
+impl BeginCommandData {
+    pub const fn new(
+        command_encoder: Box<wgpu::CommandEncoder>,
+        surface_texture: Box<wgpu::SurfaceTexture>,
+        surface_texture_view: Box<wgpu::TextureView>,
+    ) -> Self {
+        Self {
+            success: true,
+            command_encoder: Some(command_encoder),
+            surface_texture: Some(surface_texture),
+            surface_texture_view: Some(surface_texture_view),
+        }
+    }
+    pub const fn failed() -> Self {
+        Self {
+            success: false,
+            command_encoder: None,
+            surface_texture: None,
+            surface_texture_view: None,
+        }
+    }
+}
+
+impl Default for BeginCommandData {
+    fn default() -> Self {
+        Self::failed()
+    }
+}
+
 /// ffi-safe `Option<T>`
 /// (use `Option<T>` if T is reference)
 #[repr(C)]
