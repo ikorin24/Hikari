@@ -32,7 +32,7 @@ internal class Program
         };
         var screenConfig = new HostScreenConfig
         {
-            Backend = wgpu_Backends.ALL,
+            Backend = wgpu_Backends.DX12,
             Width = 1280,
             Height = 720,
             Style = WindowStyle.Default,
@@ -95,8 +95,8 @@ internal class Program
                             value = new RenderPassDepthStencilAttachment
                             {
                                 view = state.GetDepth().View,
-                                depth_clear = Opt.Some(1f),
-                                stencil_clear = Opt.None<uint>(),
+                                depth_clear = Opt<float>.Some(1f),
+                                stencil_clear = Opt<uint>.None,
                             }
                         }
                     };
@@ -121,7 +121,7 @@ internal class Program
         }
     }
 
-    private static unsafe void OnStart(Box<Elffycore.HostScreen> screen, in HostScreenInfo info, Elffycore.HostScreenId id)
+    private static unsafe void OnStart(Box<Elffycore.HostScreen> screen, HostScreenInfo info, Elffycore.HostScreenId id)
     {
         var screenRef = screen.AsRef();
         screenRef.ScreenSetTitle("sample"u8);
@@ -311,10 +311,10 @@ internal class Program
                         entry_point = Slice.FromFixedSpanUnsafe("fs_main"u8),
                         targets = Slice.FromFixedSpanUnsafe(stackalloc Opt<ColorTargetState>[]
                             {
-                            Opt.Some(new ColorTargetState
+                            Opt<ColorTargetState>.Some(new()
                             {
                                 format = surfaceFormat,
-                                blend = Opt.Some(wgpu_BlendState.REPLACE),
+                                blend = Opt<wgpu_BlendState>.Some(wgpu_BlendState.REPLACE),
                                 write_mask = wgpu_ColorWrites.ALL,
                             })
                         }),
@@ -323,13 +323,12 @@ internal class Program
                 primitive = new()
                 {
                     topology = wgpu_PrimitiveTopology.TriangleList,
-                    strip_index_format = Opt.None<wgpu_IndexFormat>(),
+                    strip_index_format = Opt<wgpu_IndexFormat>.None,
                     front_face = wgpu_FrontFace.Ccw,
-                    cull_mode = Opt.Some(wgpu_Face.Back),
+                    cull_mode = Opt<wgpu_Face>.Some(wgpu_Face.Back),
                     polygon_mode = wgpu_PolygonMode.Fill,
                 },
-                //depth_stencil = Opt.None<DepthStencilState>(),
-                depth_stencil = Opt.Some(new DepthStencilState
+                depth_stencil = Opt<DepthStencilState>.Some(new()
                 {
                     format = depthTextureData.Format,
                     depth_write_enabled = true,
@@ -447,7 +446,7 @@ internal class Program
             mag_filter = wgpu_FilterMode.Linear,
             min_filter = wgpu_FilterMode.Linear,
             mipmap_filter = wgpu_FilterMode.Nearest,
-            compare = Opt.Some(wgpu_CompareFunction.LessEqual),
+            compare = Opt<wgpu_CompareFunction>.Some(wgpu_CompareFunction.LessEqual),
             lod_min_clamp = 0f,
             lod_max_clamp = 100f,
         });
@@ -553,8 +552,8 @@ internal static class HostScreenInitializer
             anisotropy_clamp = 0,
             lod_max_clamp = 0,
             lod_min_clamp = 0,
-            border_color = Opt.None<SamplerBorderColor>(),
-            compare = Opt.None<wgpu_CompareFunction>(),
+            border_color = Opt<SamplerBorderColor>.None,
+            compare = Opt<wgpu_CompareFunction>.None,
         });
         return new TextureData
         {
@@ -798,9 +797,6 @@ internal sealed class State
     public required int IndexCount;
     public required wgpu_IndexFormat IndexFormat { get; init; }
 
-    //public required TextureHandle DiffuseTexture;
-    //public required TextureViewHandle TextureView;
-    //public required Box<Wgpu.Sampler> Sampler;
     public required TextureData DiffuseTextureData { get; init; }
 
 

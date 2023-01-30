@@ -71,7 +71,7 @@ namespace Elffy
                 // UnmanagedCallersOnly methods cannot have generic type args.
                 Box<Elffycore.HostScreen> screen = *(Box<Elffycore.HostScreen>*)(&screen_);
 
-                _config.OnStart(screen, in *info, id);
+                _config.OnStart(screen, *info, id);
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -533,7 +533,7 @@ namespace Elffy
 
     internal readonly struct EngineCoreConfig
     {
-        public required EngineCoreStartAction OnStart { get; init; }
+        public required Action<Box<Elffycore.HostScreen>, HostScreenInfo, Elffycore.HostScreenId> OnStart { get; init; }
         public required Action<Elffycore.HostScreenId> OnRedrawRequested { get; init; }
         public required Action<Elffycore.HostScreenId> OnCleared { get; init; }
 
@@ -548,7 +548,6 @@ namespace Elffy
         public required wgpu_Backends Backend { get; init; }
     }
 
-    internal delegate void EngineCoreStartAction(Box<Elffycore.HostScreen> screen, in HostScreenInfo info, Elffycore.HostScreenId id);
     internal delegate void EngineCoreRenderAction(Ref<Elffycore.HostScreen> screen, MutRef<Wgpu.RenderPass> renderPass);
     internal delegate void EngineCoreResizedAction(Ref<Elffycore.HostScreen> screen, uint width, uint height);
     internal delegate Box<Wgpu.RenderPass> OnCommandBeginFunc(
