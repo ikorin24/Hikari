@@ -29,7 +29,7 @@ internal static class RenderPassExtensions
         => EngineCore.SetVertexBuffer(self, slot, bufferSlice);
 
     [DebuggerHidden]
-    public static void SetIndexBuffer(this MutRef<Wgpu.RenderPass> self, BufferSlice bufferSlice, wgpu_IndexFormat indexFormat) => EngineCore.SetIndexBuffer(self, bufferSlice, indexFormat);
+    public static void SetIndexBuffer(this MutRef<Wgpu.RenderPass> self, BufferSlice bufferSlice, Wgpu.IndexFormat indexFormat) => EngineCore.SetIndexBuffer(self, bufferSlice, indexFormat);
 
     [DebuggerHidden]
     public static void DrawIndexed(this MutRef<Wgpu.RenderPass> self, RangeU32 indices, i32 base_vertex, RangeU32 instances) => EngineCore.DrawIndexed(self, indices, base_vertex, instances);

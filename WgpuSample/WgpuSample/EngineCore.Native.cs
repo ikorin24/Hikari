@@ -73,8 +73,8 @@ static unsafe partial class EngineCore
         Ref<Elffycore.HostScreen> screen,
         ImageCopyTexture* texture,
         Slice<u8> data,
-        wgpu_ImageDataLayout* data_layout,
-        wgpu_Extent3d* size);
+        Wgpu.ImageDataLayout* data_layout,
+        Wgpu.Extent3d* size);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.BindGroupLayout> elffy_create_bind_group_layout(
@@ -116,7 +116,7 @@ static unsafe partial class EngineCore
     private static partial ApiBoxResult<Wgpu.Buffer> elffy_create_buffer_init(
         Ref<Elffycore.HostScreen> screen,
         Slice<u8> contents,
-        wgpu_BufferUsages usage);
+        Wgpu.BufferUsages usage);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_buffer(
@@ -192,7 +192,7 @@ static unsafe partial class EngineCore
     private static partial ApiResult elffy_set_index_buffer(
         MutRef<Wgpu.RenderPass> render_pass,
         BufferSlice buffer_slice,
-        wgpu_IndexFormat index_format);
+        Wgpu.IndexFormat index_format);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_draw(

@@ -21,12 +21,12 @@ internal unsafe static class HostScreenExtensions
         this Ref<Self> self,
         in ImageCopyTexture texture,
         Slice<u8> data,
-        in wgpu_ImageDataLayout dataLayout,
-        in wgpu_Extent3d size)
+        in Wgpu.ImageDataLayout dataLayout,
+        in Wgpu.Extent3d size)
     {
         fixed(ImageCopyTexture* texturePtr = &texture)
-        fixed(wgpu_ImageDataLayout* dataLayoutPtr = &dataLayout)
-        fixed(wgpu_Extent3d* sizePtr = &size) {
+        fixed(Wgpu.ImageDataLayout* dataLayoutPtr = &dataLayout)
+        fixed(Wgpu.Extent3d* sizePtr = &size) {
             EngineCore.WriteTexture(self, texturePtr, data, dataLayoutPtr, sizePtr);
         }
     }
@@ -43,7 +43,7 @@ internal unsafe static class HostScreenExtensions
     public static Box<Wgpu.Buffer> CreateBufferInit(
         this Ref<Self> self,
         Slice<u8> contents,
-        wgpu_BufferUsages usage)
+        Wgpu.BufferUsages usage)
     {
         return EngineCore.CreateBufferInit(self, contents, usage);
     }

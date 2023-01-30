@@ -43,7 +43,7 @@ internal readonly record struct ErrMessageId(nuint Value);
 
 internal struct HostScreenInfo
 {
-    public required wgpu_Backend backend;
+    public required Wgpu.Backend backend;
     public required Opt<TextureFormat> surface_format;
 }
 
@@ -72,7 +72,7 @@ internal ref struct Opt_RenderPassColorAttachment
 internal ref struct RenderPassColorAttachment
 {
     public required Ref<Wgpu.TextureView> view;
-    public required wgpu_Color clear;
+    public required Wgpu.Color clear;
 }
 
 // Opt<RenderPassDepthStencilAttachment>
@@ -129,15 +129,15 @@ internal enum TextureAspect
 
 internal struct SamplerDescriptor
 {
-    public required wgpu_AddressMode address_mode_u;
-    public required wgpu_AddressMode address_mode_v;
-    public required wgpu_AddressMode address_mode_w;
-    public required wgpu_FilterMode mag_filter;
-    public required wgpu_FilterMode min_filter;
-    public required wgpu_FilterMode mipmap_filter;
+    public required Wgpu.AddressMode address_mode_u;
+    public required Wgpu.AddressMode address_mode_v;
+    public required Wgpu.AddressMode address_mode_w;
+    public required Wgpu.FilterMode mag_filter;
+    public required Wgpu.FilterMode min_filter;
+    public required Wgpu.FilterMode mipmap_filter;
     public required f32 lod_min_clamp;
     public required f32 lod_max_clamp;
-    public required Opt<wgpu_CompareFunction> compare;
+    public required Opt<Wgpu.CompareFunction> compare;
     public u8 anisotropy_clamp;
     public Opt<SamplerBorderColor> border_color;
 }
@@ -223,7 +223,7 @@ internal ref struct RenderPipelineDescriptor
     public required Opt_FragmentState fragment;
     public required PrimitiveState primitive;
     public required Opt<DepthStencilState> depth_stencil;
-    public required wgpu_MultisampleState multisample;
+    public required Wgpu.MultisampleState multisample;
     public required NonZeroU32OrNone multiview;
 }
 
@@ -231,78 +231,9 @@ internal struct DepthStencilState
 {
     public required TextureFormat format;
     public required bool depth_write_enabled;
-    public required wgpu_CompareFunction depth_compare;
-    public required wgpu_StencilState stencil;
-    public required wgpu_DepthBiasState bias;
-}
-
-internal struct wgpu_StencilState
-{
-    public required wgpu_StencilFaceState front;
-    public required wgpu_StencilFaceState back;
-    public required u32 read_mask;
-    public required u32 write_mask;
-
-    public static wgpu_StencilState Default => new()
-    {
-        front = wgpu_StencilFaceState.Default,
-        back = wgpu_StencilFaceState.Default,
-        read_mask = 0,
-        write_mask = 0,
-    };
-}
-
-internal struct wgpu_StencilFaceState
-{
-    public required wgpu_CompareFunction compare;
-    public required wgpu_StencilOperation fail_op;
-    public required wgpu_StencilOperation depth_fail_op;
-    public required wgpu_StencilOperation pass_op;
-
-    public static wgpu_StencilFaceState Default => Ignore;
-
-    public static wgpu_StencilFaceState Ignore => new()
-    {
-        compare = wgpu_CompareFunction.Always,
-        fail_op = wgpu_StencilOperation.Keep,
-        depth_fail_op = wgpu_StencilOperation.Keep,
-        pass_op = wgpu_StencilOperation.Keep,
-    };
-}
-
-internal enum wgpu_StencilOperation : u32
-{
-    Keep = 0,
-    Zero = 1,
-    Replace = 2,
-    Invert = 3,
-    IncrementClamp = 4,
-    DecrementClamp = 5,
-    IncrementWrap = 6,
-    DecrementWrap = 7,
-}
-
-internal struct wgpu_DepthBiasState
-{
-    public required i32 constant;
-    public required f32 slope_scale;
-    public required f32 clamp;
-
-    public static wgpu_DepthBiasState Default => default;
-}
-
-internal struct wgpu_MultisampleState
-{
-    public required u32 count;
-    public required u64 mask;
-    public required bool alpha_to_coverage_enabled;
-
-    public static wgpu_MultisampleState Default => new()
-    {
-        count = 1,
-        mask = 0xffff_ffff_ffff_ffff,
-        alpha_to_coverage_enabled = false,
-    };
+    public required Wgpu.CompareFunction depth_compare;
+    public required Wgpu.StencilState stencil;
+    public required Wgpu.DepthBiasState bias;
 }
 
 internal ref struct VertexState
@@ -329,276 +260,26 @@ internal ref struct Opt_FragmentState
 internal struct ColorTargetState
 {
     public required TextureFormat format;
-    public required Opt<wgpu_BlendState> blend;
-    public required wgpu_ColorWrites write_mask;
+    public required Opt<Wgpu.BlendState> blend;
+    public required Wgpu.ColorWrites write_mask;
 }
 
 internal struct PrimitiveState
 {
-    public required wgpu_PrimitiveTopology topology;
-    public required Opt<wgpu_IndexFormat> strip_index_format;
-    public required wgpu_FrontFace front_face;
-    public required Opt<wgpu_Face> cull_mode;
-    public required wgpu_PolygonMode polygon_mode;
+    public required Wgpu.PrimitiveTopology topology;
+    public required Opt<Wgpu.IndexFormat> strip_index_format;
+    public required Wgpu.FrontFace front_face;
+    public required Opt<Wgpu.Face> cull_mode;
+    public required Wgpu.PolygonMode polygon_mode;
 }
 
 internal struct BindGroupLayoutEntry
 {
     public required u32 binding;
-    public required wgpu_ShaderStages visibility;
+    public required Wgpu.ShaderStages visibility;
     public required BindingType ty;
     public required u32 count;
 }
-
-internal enum wgpu_Face
-{
-    Front = 0,
-    Back = 1,
-}
-
-internal enum wgpu_ShaderStages : u32
-{
-    NONE = 0,
-    VERTEX = 1 << 0,
-    FRAGMENT = 1 << 1,
-    COMPUTE = 1 << 2,
-    VERTEX_FRAGMENT = VERTEX | FRAGMENT,
-}
-
-internal enum wgpu_PolygonMode : u32
-{
-    Fill = 0,
-    Line = 1,
-    Point = 2,
-}
-
-internal enum wgpu_FrontFace : u32
-{
-    Ccw = 0,
-    Cw = 1,
-}
-
-internal enum wgpu_IndexFormat : u32
-{
-    Uint16 = 0,
-    Uint32 = 1,
-}
-
-internal enum wgpu_PrimitiveTopology : u32
-{
-    PointList = 0,
-    LineList = 1,
-    LineStrip = 2,
-    TriangleList = 3,
-    TriangleStrip = 4,
-}
-
-internal enum wgpu_BlendOperation : u32
-{
-    Add = 0,
-    Subtract = 1,
-    ReverseSubtract = 2,
-    Min = 3,
-    Max = 4,
-}
-
-internal enum wgpu_BlendFactor : u32
-{
-    Zero = 0,
-    One = 1,
-    Src = 2,
-    OneMinusSrc = 3,
-    SrcAlpha = 4,
-    OneMinusSrcAlpha = 5,
-    Dst = 6,
-    OneMinusDst = 7,
-    DstAlpha = 8,
-    OneMinusDstAlpha = 9,
-    SrcAlphaSaturated = 10,
-    Constant = 11,
-    OneMinusConstant = 12,
-}
-
-internal enum wgpu_AddressMode : u32
-{
-    ClampToEdge = 0,
-    Repeat = 1,
-    MirrorRepeat = 2,
-    ClampToBorder = 3,
-}
-
-internal enum wgpu_FilterMode : u32
-{
-    Nearest = 0,
-    Linear = 1,
-}
-
-internal enum wgpu_CompareFunction : u32
-{
-    Never = 1,
-    Less = 2,
-    Equal = 3,
-    LessEqual = 4,
-    Greater = 5,
-    NotEqual = 6,
-    GreaterEqual = 7,
-    Always = 8,
-}
-
-internal enum wgpu_ColorWrites : u32
-{
-    RED = 1 << 0,
-    GREEN = 1 << 1,
-    BLUE = 1 << 2,
-    ALPHA = 1 << 3,
-    COLOR = RED | GREEN | BLUE,
-    ALL = RED | GREEN | BLUE | ALPHA,
-}
-
-internal struct wgpu_BlendState
-{
-    public required wgpu_BlendComponent color;
-    public required wgpu_BlendComponent alpha;
-
-    public static wgpu_BlendState REPLACE => new()
-    {
-        color = wgpu_BlendComponent.REPLACE,
-        alpha = wgpu_BlendComponent.REPLACE,
-    };
-}
-
-internal struct wgpu_BlendComponent
-{
-    public required wgpu_BlendFactor src_factor;
-    public required wgpu_BlendFactor dst_factor;
-    public required wgpu_BlendOperation operation;
-
-    public static wgpu_BlendComponent REPLACE => new()
-    {
-        src_factor = wgpu_BlendFactor.One,
-        dst_factor = wgpu_BlendFactor.Zero,
-        operation = wgpu_BlendOperation.Add,
-    };
-}
-
-internal struct wgpu_Extent3d
-{
-    public required u32 width;
-    public required u32 height;
-    public required u32 depth_or_array_layers;
-}
-
-[Flags]
-internal enum wgpu_TextureUsages : u32
-{
-    COPY_SRC = 1 << 0,
-    COPY_DST = 1 << 1,
-    TEXTURE_BINDING = 1 << 2,
-    STORAGE_BINDING = 1 << 3,
-    RENDER_ATTACHMENT = 1 << 4,
-}
-
-internal struct wgpu_VertexAttribute
-{
-    public required wgpu_VertexFormat format;
-    public required u64 offset;
-    public required u32 shader_location;
-}
-
-internal enum wgpu_VertexFormat : u32
-{
-    Uint8x2 = 0,
-    Uint8x4 = 1,
-    Sint8x2 = 2,
-    Sint8x4 = 3,
-    Unorm8x2 = 4,
-    Unorm8x4 = 5,
-    Snorm8x2 = 6,
-    Snorm8x4 = 7,
-    Uint16x2 = 8,
-    Uint16x4 = 9,
-    Sint16x2 = 10,
-    Sint16x4 = 11,
-    Unorm16x2 = 12,
-    Unorm16x4 = 13,
-    Snorm16x2 = 14,
-    Snorm16x4 = 15,
-    Float16x2 = 16,
-    Float16x4 = 17,
-    Float32 = 18,
-    Float32x2 = 19,
-    Float32x3 = 20,
-    Float32x4 = 21,
-    Uint32 = 22,
-    Uint32x2 = 23,
-    Uint32x3 = 24,
-    Uint32x4 = 25,
-    Sint32 = 26,
-    Sint32x2 = 27,
-    Sint32x3 = 28,
-    Sint32x4 = 29,
-    Float64 = 30,
-    Float64x2 = 31,
-    Float64x3 = 32,
-    Float64x4 = 33,
-}
-
-
-[Flags]
-internal enum wgpu_BufferUsages : u32
-{
-    MAP_READ = 1 << 0,
-    MAP_WRITE = 1 << 1,
-    COPY_SRC = 1 << 2,
-    COPY_DST = 1 << 3,
-    INDEX = 1 << 4,
-    VERTEX = 1 << 5,
-    UNIFORM = 1 << 6,
-    STORAGE = 1 << 7,
-    INDIRECT = 1 << 8,
-}
-
-internal enum wgpu_Backend : u8
-{
-    Empty = 0,
-    Vulkan = 1,
-    Metal = 2,
-    Dx12 = 3,
-    Dx11 = 4,
-    Gl = 5,
-    BrowserWebGpu = 6,
-}
-
-[Flags]
-internal enum wgpu_Backends : u32
-{
-    VULKAN = 1 << wgpu_Backend.Vulkan,
-    GL = 1 << wgpu_Backend.Gl,
-    METAL = 1 << wgpu_Backend.Metal,
-    DX12 = 1 << wgpu_Backend.Dx12,
-    DX11 = 1 << wgpu_Backend.Dx11,
-    BROWSER_WEBGPU = 1 << wgpu_Backend.BrowserWebGpu,
-
-    PRIMARY = VULKAN | METAL | DX12 | BROWSER_WEBGPU,
-    SECONDARY = GL | DX11,
-    ALL = VULKAN | GL | METAL | DX12 | DX11 | BROWSER_WEBGPU,
-}
-
-internal struct wgpu_ImageDataLayout
-{
-    public required u64 offset;
-    public required u32 bytes_per_row;
-    public required u32 rows_per_image;
-}
-
-internal enum wgpu_VertexStepMode : u32
-{
-    Vertex = 0,
-    Instance = 1,
-}
-
-internal record struct wgpu_Color(f64 R, f64 G, f64 B, f64 A);
-
 
 internal unsafe readonly struct BindingType
 {
@@ -764,12 +445,12 @@ internal enum TextureFormat
 
 internal struct TextureDescriptor
 {
-    public required wgpu_Extent3d size;
+    public required Wgpu.Extent3d size;
     public required u32 mip_level_count;
     public required u32 sample_count;
     public required TextureDimension dimension;
     public required TextureFormat format;
-    public required wgpu_TextureUsages usage;
+    public required Wgpu.TextureUsages usage;
 }
 
 internal enum TextureDimension
@@ -782,8 +463,8 @@ internal enum TextureDimension
 internal struct VertexBufferLayout
 {
     public required u64 array_stride;
-    public required wgpu_VertexStepMode step_mode;
-    public required Slice<wgpu_VertexAttribute> attributes;
+    public required Wgpu.VertexStepMode step_mode;
+    public required Slice<Wgpu.VertexAttribute> attributes;
 }
 
 [StructLayout(LayoutKind.Sequential)]

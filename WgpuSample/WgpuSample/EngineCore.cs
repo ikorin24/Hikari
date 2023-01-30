@@ -196,8 +196,8 @@ namespace Elffy
             Ref<Elffycore.HostScreen> screen,
             ImageCopyTexture* texture,
             Slice<u8> data,
-            wgpu_ImageDataLayout* data_layout,
-            wgpu_Extent3d* size)
+            Wgpu.ImageDataLayout* data_layout,
+            Wgpu.Extent3d* size)
             => elffy_write_texture(screen, texture, data, data_layout, size).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -269,7 +269,7 @@ namespace Elffy
         public static Box<Wgpu.Buffer> CreateBufferInit(
             Ref<Elffycore.HostScreen> screen,
             Slice<u8> contents,
-            wgpu_BufferUsages usage)
+            Wgpu.BufferUsages usage)
             => elffy_create_buffer_init(screen, contents, usage).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -403,7 +403,7 @@ namespace Elffy
         public static void SetIndexBuffer(
             MutRef<Wgpu.RenderPass> render_pass,
             BufferSlice buffer_slice,
-            wgpu_IndexFormat index_format)
+            Wgpu.IndexFormat index_format)
         {
             buffer_slice.buffer.ThrowIfInvalid();
             elffy_set_index_buffer(render_pass, buffer_slice, index_format).Validate();
@@ -549,7 +549,7 @@ namespace Elffy
         public required WindowStyle Style { get; init; }
         public required u32 Width { get; init; }
         public required u32 Height { get; init; }
-        public required wgpu_Backends Backend { get; init; }
+        public required Wgpu.Backends Backend { get; init; }
     }
 
     internal delegate void EngineCoreRenderAction(Ref<Elffycore.HostScreen> screen, MutRef<Wgpu.RenderPass> renderPass);

@@ -32,7 +32,7 @@ internal class Program
         };
         var screenConfig = new HostScreenConfig
         {
-            Backend = wgpu_Backends.DX12,
+            Backend = Wgpu.Backends.DX12,
             Width = 1280,
             Height = 720,
             Style = WindowStyle.Default,
@@ -82,7 +82,7 @@ internal class Program
                             value = new RenderPassColorAttachment
                             {
                                 view = surfaceTextureView,
-                                clear = new wgpu_Color(0, 0, 0, 0),
+                                clear = new Wgpu.Color(0, 0, 0, 0),
                             }
                         },
                     };
@@ -158,7 +158,7 @@ internal class Program
 
         var cameraBuffer = screenRef.CreateBufferInit(
             new Slice<byte>((byte*)&cameraUniform, sizeof(CameraUniform)),
-            wgpu_BufferUsages.UNIFORM | wgpu_BufferUsages.COPY_DST);
+            Wgpu.BufferUsages.UNIFORM | Wgpu.BufferUsages.COPY_DST);
 
         //var instances = Enumerable
         //    .Range(0, NUM_INSTANCES_PER_ROW)
@@ -188,7 +188,7 @@ internal class Program
         fixed(InstanceData* instanceData = instances) {
             instanceBuffer = screenRef.CreateBufferInit(
                 new Slice<byte>((byte*)instanceData, sizeof(InstanceData) * instances.Length),
-                wgpu_BufferUsages.VERTEX | wgpu_BufferUsages.COPY_DST);
+                Wgpu.BufferUsages.VERTEX | Wgpu.BufferUsages.COPY_DST);
         }
 
         var cameraBindGroupLayout = screenRef.CreateBindGroupLayout(new()
@@ -198,7 +198,7 @@ internal class Program
                 new()
                 {
                     binding = 0,
-                    visibility = wgpu_ShaderStages.VERTEX,
+                    visibility = Wgpu.ShaderStages.VERTEX,
                     ty = BindingType.Buffer(UnsafeEx.StackPointer(new BufferBindingData
                     {
                         ty = BufferBindingType.Uniform,
@@ -259,32 +259,32 @@ internal class Program
             var vertexBufferLayout = new VertexBufferLayout
             {
                 array_stride = (ulong)sizeof(Vertex),
-                step_mode = wgpu_VertexStepMode.Vertex,
-                attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[2]
+                step_mode = Wgpu.VertexStepMode.Vertex,
+                attributes = Slice.FromFixedSpanUnsafe(stackalloc Wgpu.VertexAttribute[2]
                 {
-                    new() { offset = 0, shader_location = 0, format = wgpu_VertexFormat.Float32x3 },
-                    new() { offset = 12, shader_location = 1, format = wgpu_VertexFormat.Float32x2 },
+                    new() { offset = 0, shader_location = 0, format = Wgpu.VertexFormat.Float32x3 },
+                    new() { offset = 12, shader_location = 1, format = Wgpu.VertexFormat.Float32x2 },
                 }),
             };
             //var instanceBufferLayout = new VertexBufferLayout
             //{
             //    array_stride = (ulong)sizeof(InstanceRaw),
-            //    step_mode = wgpu_VertexStepMode.Instance,
-            //    attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[]
+            //    step_mode = Wgpu.VertexStepMode.Instance,
+            //    attributes = Slice.FromFixedSpanUnsafe(stackalloc Wgpu.VertexAttribute[]
             //    {
-            //        new() { offset = 4 * 0, shader_location = 5, format = wgpu_VertexFormat.Float32x4 },
-            //        new() { offset = 4 * 4, shader_location = 6, format = wgpu_VertexFormat.Float32x4 },
-            //        new() { offset = 4 * 8, shader_location = 7, format = wgpu_VertexFormat.Float32x4 },
-            //        new() { offset = 4 * 12, shader_location = 8, format = wgpu_VertexFormat.Float32x4 },
+            //        new() { offset = 4 * 0, shader_location = 5, format = Wgpu.VertexFormat.Float32x4 },
+            //        new() { offset = 4 * 4, shader_location = 6, format = Wgpu.VertexFormat.Float32x4 },
+            //        new() { offset = 4 * 8, shader_location = 7, format = Wgpu.VertexFormat.Float32x4 },
+            //        new() { offset = 4 * 12, shader_location = 8, format = Wgpu.VertexFormat.Float32x4 },
             //    }),
             //};
             var instanceBufferLayout = new VertexBufferLayout
             {
                 array_stride = (ulong)sizeof(InstanceData),
-                step_mode = wgpu_VertexStepMode.Instance,
-                attributes = Slice.FromFixedSpanUnsafe(stackalloc wgpu_VertexAttribute[]
+                step_mode = Wgpu.VertexStepMode.Instance,
+                attributes = Slice.FromFixedSpanUnsafe(stackalloc Wgpu.VertexAttribute[]
                 {
-                    new() { offset = 0, shader_location = 5, format = wgpu_VertexFormat.Float32x3 },
+                    new() { offset = 0, shader_location = 5, format = Wgpu.VertexFormat.Float32x3 },
                 }),
             };
 
@@ -314,29 +314,29 @@ internal class Program
                             Opt<ColorTargetState>.Some(new()
                             {
                                 format = surfaceFormat,
-                                blend = Opt<wgpu_BlendState>.Some(wgpu_BlendState.REPLACE),
-                                write_mask = wgpu_ColorWrites.ALL,
+                                blend = Opt<Wgpu.BlendState>.Some(Wgpu.BlendState.REPLACE),
+                                write_mask = Wgpu.ColorWrites.ALL,
                             })
                         }),
                     }
                 },
                 primitive = new()
                 {
-                    topology = wgpu_PrimitiveTopology.TriangleList,
-                    strip_index_format = Opt<wgpu_IndexFormat>.None,
-                    front_face = wgpu_FrontFace.Ccw,
-                    cull_mode = Opt<wgpu_Face>.Some(wgpu_Face.Back),
-                    polygon_mode = wgpu_PolygonMode.Fill,
+                    topology = Wgpu.PrimitiveTopology.TriangleList,
+                    strip_index_format = Opt<Wgpu.IndexFormat>.None,
+                    front_face = Wgpu.FrontFace.Ccw,
+                    cull_mode = Opt<Wgpu.Face>.Some(Wgpu.Face.Back),
+                    polygon_mode = Wgpu.PolygonMode.Fill,
                 },
                 depth_stencil = Opt<DepthStencilState>.Some(new()
                 {
                     format = depthTextureData.Format,
                     depth_write_enabled = true,
-                    depth_compare = wgpu_CompareFunction.Less,
-                    stencil = wgpu_StencilState.Default,
-                    bias = wgpu_DepthBiasState.Default,
+                    depth_compare = Wgpu.CompareFunction.Less,
+                    stencil = Wgpu.StencilState.Default,
+                    bias = Wgpu.DepthBiasState.Default,
                 }),
-                multisample = wgpu_MultisampleState.Default,
+                multisample = Wgpu.MultisampleState.Default,
                 multiview = NonZeroU32OrNone.None,
             });
         }
@@ -345,21 +345,21 @@ internal class Program
         Box<Wgpu.Buffer> vertexBuffer;
         Box<Wgpu.Buffer> indexBuffer;
         int indexCount;
-        wgpu_IndexFormat indexFormat;
+        Wgpu.IndexFormat indexFormat;
         {
             var (vertices, indices) = SamplePrimitives.SampleData();
             indexCount = indices.Length;
             fixed(Vertex* vData = vertices) {
                 vertexBuffer = screenRef.CreateBufferInit(
                     new Slice<byte>((byte*)vData, sizeof(Vertex) * vertices.Length),
-                    wgpu_BufferUsages.VERTEX);
+                    Wgpu.BufferUsages.VERTEX);
             }
             fixed(ushort* iData = indices) {
                 indexBuffer = screenRef.CreateBufferInit(
                     new Slice<byte>((byte*)iData, sizeof(ushort) * indices.Length),
-                    wgpu_BufferUsages.INDEX);
+                    Wgpu.BufferUsages.INDEX);
             }
-            indexFormat = wgpu_IndexFormat.Uint16;
+            indexFormat = Wgpu.IndexFormat.Uint16;
         }
 
 
@@ -425,7 +425,7 @@ internal class Program
         const TextureFormat DepthTextureFormat = TextureFormat.Depth32Float;
         var texture = screen.CreateTexture(new TextureDescriptor
         {
-            size = new wgpu_Extent3d
+            size = new Wgpu.Extent3d
             {
                 width = width,
                 height = height,
@@ -435,18 +435,18 @@ internal class Program
             sample_count = 1,
             dimension = TextureDimension.D2,
             format = DepthTextureFormat,
-            usage = wgpu_TextureUsages.RENDER_ATTACHMENT | wgpu_TextureUsages.TEXTURE_BINDING,
+            usage = Wgpu.TextureUsages.RENDER_ATTACHMENT | Wgpu.TextureUsages.TEXTURE_BINDING,
         });
         var view = texture.AsRef().CreateTextureView();
         var sampler = screen.CreateSampler(new SamplerDescriptor
         {
-            address_mode_u = wgpu_AddressMode.ClampToEdge,
-            address_mode_v = wgpu_AddressMode.ClampToEdge,
-            address_mode_w = wgpu_AddressMode.ClampToEdge,
-            mag_filter = wgpu_FilterMode.Linear,
-            min_filter = wgpu_FilterMode.Linear,
-            mipmap_filter = wgpu_FilterMode.Nearest,
-            compare = Opt<wgpu_CompareFunction>.Some(wgpu_CompareFunction.LessEqual),
+            address_mode_u = Wgpu.AddressMode.ClampToEdge,
+            address_mode_v = Wgpu.AddressMode.ClampToEdge,
+            address_mode_w = Wgpu.AddressMode.ClampToEdge,
+            mag_filter = Wgpu.FilterMode.Linear,
+            min_filter = Wgpu.FilterMode.Linear,
+            mipmap_filter = Wgpu.FilterMode.Nearest,
+            compare = Opt<Wgpu.CompareFunction>.Some(Wgpu.CompareFunction.LessEqual),
             lod_min_clamp = 0f,
             lod_max_clamp = 100f,
         });
@@ -504,7 +504,7 @@ internal static class HostScreenInitializer
     public unsafe static TextureData CreateTexture(Ref<Elffycore.HostScreen> screen, string filepath)
     {
         var (pixelBytes, width, height) = SamplePrimitives.LoadImagePixels(filepath);
-        var size = new wgpu_Extent3d
+        var size = new Wgpu.Extent3d
         {
             width = width,
             height = height,
@@ -517,7 +517,7 @@ internal static class HostScreenInitializer
             mip_level_count = 1,
             sample_count = 1,
             size = size,
-            usage = wgpu_TextureUsages.TEXTURE_BINDING | wgpu_TextureUsages.COPY_DST,
+            usage = Wgpu.TextureUsages.TEXTURE_BINDING | Wgpu.TextureUsages.COPY_DST,
         });
         fixed(byte* p = pixelBytes) {
             screen.WriteTexture(
@@ -531,7 +531,7 @@ internal static class HostScreenInitializer
                     origin_z = 0,
                 },
                 new Slice<byte>(p, pixelBytes.Length),
-                new wgpu_ImageDataLayout
+                new Wgpu.ImageDataLayout
                 {
                     offset = 0,
                     bytes_per_row = 4 * width,
@@ -543,17 +543,17 @@ internal static class HostScreenInitializer
         var textureView = texture.AsRef().CreateTextureView(TextureViewDescriptor.Default);
         var sampler = screen.CreateSampler(new SamplerDescriptor
         {
-            address_mode_u = wgpu_AddressMode.ClampToEdge,
-            address_mode_v = wgpu_AddressMode.ClampToEdge,
-            address_mode_w = wgpu_AddressMode.ClampToEdge,
-            mag_filter = wgpu_FilterMode.Linear,
-            min_filter = wgpu_FilterMode.Nearest,
-            mipmap_filter = wgpu_FilterMode.Nearest,
+            address_mode_u = Wgpu.AddressMode.ClampToEdge,
+            address_mode_v = Wgpu.AddressMode.ClampToEdge,
+            address_mode_w = Wgpu.AddressMode.ClampToEdge,
+            mag_filter = Wgpu.FilterMode.Linear,
+            min_filter = Wgpu.FilterMode.Nearest,
+            mipmap_filter = Wgpu.FilterMode.Nearest,
             anisotropy_clamp = 0,
             lod_max_clamp = 0,
             lod_min_clamp = 0,
             border_color = Opt<SamplerBorderColor>.None,
-            compare = Opt<wgpu_CompareFunction>.None,
+            compare = Opt<Wgpu.CompareFunction>.None,
         });
         return new TextureData
         {
@@ -570,17 +570,17 @@ internal static class HostScreenInitializer
     //    var textureView = texture.CreateTextureView(TextureViewDescriptor.Default);
     //    var sampler = screen.CreateSampler(new SamplerDescriptor
     //    {
-    //        address_mode_u = wgpu_AddressMode.ClampToEdge,
-    //        address_mode_v = wgpu_AddressMode.ClampToEdge,
-    //        address_mode_w = wgpu_AddressMode.ClampToEdge,
-    //        mag_filter = wgpu_FilterMode.Linear,
-    //        min_filter = wgpu_FilterMode.Nearest,
-    //        mipmap_filter = wgpu_FilterMode.Nearest,
+    //        address_mode_u = Wgpu.AddressMode.ClampToEdge,
+    //        address_mode_v = Wgpu.AddressMode.ClampToEdge,
+    //        address_mode_w = Wgpu.AddressMode.ClampToEdge,
+    //        mag_filter = Wgpu.FilterMode.Linear,
+    //        min_filter = Wgpu.FilterMode.Nearest,
+    //        mipmap_filter = Wgpu.FilterMode.Nearest,
     //        anisotropy_clamp = 0,
     //        lod_max_clamp = 0,
     //        lod_min_clamp = 0,
     //        border_color = Opt.None<SamplerBorderColor>(),
-    //        compare = Opt.None<wgpu_CompareFunction>(),
+    //        compare = Opt.None<Wgpu.CompareFunction>(),
     //    });
 
     //    return (TextureView: textureView, Sampler: sampler);
@@ -595,7 +595,7 @@ internal static class HostScreenInitializer
                 new()
                 {
                     binding = 0,
-                    visibility = wgpu_ShaderStages.FRAGMENT,
+                    visibility = Wgpu.ShaderStages.FRAGMENT,
                     ty = BindingType.Texture(UnsafeEx.StackPointer(new TextureBindingData
                     {
                         multisampled = false,
@@ -607,7 +607,7 @@ internal static class HostScreenInitializer
                 new()
                 {
                     binding = 1,
-                    visibility = wgpu_ShaderStages.FRAGMENT,
+                    visibility = Wgpu.ShaderStages.FRAGMENT,
                     ty = BindingType.Sampler(UnsafeEx.StackPointer(SamplerBindingType.Filtering)),
                     count = 0,
                 },
@@ -650,7 +650,7 @@ internal static class HostScreenInitializer
     {
         fixed(T* p = data) {
             var contents = new Slice<byte>((byte*)p, (nuint)data.Length * (nuint)sizeof(T));
-            var usage = wgpu_BufferUsages.UNIFORM | wgpu_BufferUsages.COPY_DST;
+            var usage = Wgpu.BufferUsages.UNIFORM | Wgpu.BufferUsages.COPY_DST;
             return screen.CreateBufferInit(contents, usage);
         }
     }
@@ -664,7 +664,7 @@ internal static class HostScreenInitializer
                 new()
                 {
                     binding = 0,
-                    visibility = wgpu_ShaderStages.VERTEX_FRAGMENT,
+                    visibility = Wgpu.ShaderStages.VERTEX_FRAGMENT,
                     ty = BindingType.Buffer(UnsafeEx.StackPointer(new BufferBindingData
                     {
                         ty = BufferBindingType.Uniform,
@@ -704,7 +704,7 @@ internal static class HostScreenInitializer
         uint VertexCount,
         Box<Wgpu.Buffer> IndexBuffer,
         uint IndexCount,
-        wgpu_IndexFormat IndexFormat
+        Wgpu.IndexFormat IndexFormat
     ) CreateVertexIndexBuffer<TVertex>(
             Ref<Elffycore.HostScreen> screen,
             ReadOnlySpan<TVertex> vertices,
@@ -715,17 +715,17 @@ internal static class HostScreenInitializer
         fixed(TVertex* v = vertices) {
             nuint bytelen = (nuint)sizeof(TVertex) * (nuint)vertices.Length;
             var contents = new Slice<byte>((byte*)v, bytelen);
-            vertexBuffer = screen.CreateBufferInit(contents, wgpu_BufferUsages.VERTEX);
+            vertexBuffer = screen.CreateBufferInit(contents, Wgpu.BufferUsages.VERTEX);
             vertexCount = (uint)vertices.Length;
         }
 
         Box<Wgpu.Buffer> indexBuffer;
         uint indexCount;
-        const wgpu_IndexFormat indexFormat = wgpu_IndexFormat.Uint32;
+        const Wgpu.IndexFormat indexFormat = Wgpu.IndexFormat.Uint32;
         fixed(uint* i = indices) {
             nuint bytelen = (nuint)sizeof(uint) * (nuint)indices.Length;
             var contents = new Slice<byte>((byte*)i, bytelen);
-            indexBuffer = screen.CreateBufferInit(contents, wgpu_BufferUsages.INDEX);
+            indexBuffer = screen.CreateBufferInit(contents, Wgpu.BufferUsages.INDEX);
             indexCount = (uint)indices.Length;
         }
 
@@ -795,7 +795,7 @@ internal sealed class State
     //public required uint VertexCount;
     public required Box<Wgpu.Buffer> IndexBuffer { get; init; }
     public required int IndexCount;
-    public required wgpu_IndexFormat IndexFormat { get; init; }
+    public required Wgpu.IndexFormat IndexFormat { get; init; }
 
     public required TextureData DiffuseTextureData { get; init; }
 

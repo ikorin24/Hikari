@@ -31,7 +31,7 @@ internal static class Elffycore
         public required WindowStyle style;
         public required u32 width;
         public required u32 height;
-        public required wgpu_Backends backend;
+        public required Wgpu.Backends backend;
     }
 
     internal unsafe readonly struct ClearedEventFn
