@@ -18,4 +18,5 @@ internal static class Wgpu
     internal sealed class TextureView : INativeTypeMarker { private TextureView() { } }
     internal sealed class CommandEncoder : INativeTypeMarker { private CommandEncoder() { } }
     internal sealed class RenderPass : INativeTypeMarker { private RenderPass() { } }
+    internal sealed class SurfaceTexture : INativeTypeMarker { private SurfaceTexture() { } }
 }

@@ -16,6 +16,68 @@ extern "cdecl" fn elffy_engine_start(
 }
 
 #[no_mangle]
+extern "cdecl" fn elffy_screen_resize_surface(
+    screen: &HostScreen,
+    width: u32,
+    height: u32,
+) -> ApiResult {
+    screen.resize_surface(width, height);
+    make_result()
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_screen_request_redraw(screen: &HostScreen) -> ApiResult {
+    screen.get_window().request_redraw();
+    make_result()
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_begin_command(
+    screen: &HostScreen,
+    command_encoder_out: &mut Box<wgpu::CommandEncoder>,
+    surface_tex_out: &mut Box<wgpu::SurfaceTexture>,
+    surface_tex_view_out: &mut Box<wgpu::TextureView>,
+) -> () {
+    match screen.get_surface().get_current_texture() {
+        Ok(surface_texture) => {
+            let view = surface_texture
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor::default());
+            let command_encoder = screen
+                .get_device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            *command_encoder_out = Box::new(command_encoder);
+            *surface_tex_out = Box::new(surface_texture);
+            *surface_tex_view_out = Box::new(view);
+            return;
+        }
+        // Err(wgpu::SurfaceError::Lost) => {
+        //     let size = screen.get_window().inner_size();
+        //     screen.resize_surface(size.width, size.height);
+        //     todo!();
+        // }
+        Err(err) => {
+            todo!();
+        }
+    }
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_finish_command(
+    screen: &HostScreen,
+    command_encoder: Box<wgpu::CommandEncoder>,
+    surface_tex: Box<wgpu::SurfaceTexture>,
+    surface_tex_view: Box<wgpu::TextureView>,
+) -> () {
+    let command_encoder = *command_encoder;
+    screen
+        .get_queue()
+        .submit(std::iter::once(command_encoder.finish()));
+    surface_tex.present();
+    drop(surface_tex_view)
+}
+
+#[no_mangle]
 extern "cdecl" fn elffy_screen_set_title(screen: &HostScreen, title: Slice<u8>) -> ApiResult {
     match title.as_str() {
         Ok(title) => {

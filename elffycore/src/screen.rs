@@ -15,8 +15,7 @@ use std::error::Error;
 use std::{iter, num};
 use wgpu::util::DeviceExt;
 use winit;
-use winit::event_loop::EventLoopWindowTarget;
-use winit::{dpi, event, event_loop, window};
+use winit::{dpi, event_loop, window};
 
 pub(crate) struct HostScreen {
     window: window::Window,
@@ -31,6 +30,18 @@ pub(crate) struct HostScreen {
 impl HostScreen {
     pub fn get_window(&self) -> &window::Window {
         &self.window
+    }
+
+    pub fn get_surface(&self) -> &wgpu::Surface {
+        &self.surface
+    }
+
+    pub fn get_device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
+    pub fn get_queue(&self) -> &wgpu::Queue {
+        &self.queue
     }
 
     pub fn new(
@@ -203,83 +214,111 @@ impl HostScreen {
         self.window.set_inner_size(size);
     }
 
-    pub fn handle_event(
-        &self,
-        event: &winit::event::Event<()>,
-        _event_loop: &EventLoopWindowTarget<()>,
-        control_flow: &mut winit::event_loop::ControlFlow,
-    ) {
-        use event::*;
+    // pub fn handle_event(
+    //     &self,
+    //     event: &winit::event::Event<()>,
+    //     _event_loop: &EventLoopWindowTarget<()>,
+    //     control_flow: &mut winit::event_loop::ControlFlow,
+    // ) {
+    //     use event::*;
 
-        match event {
-            Event::WindowEvent {
-                ref event,
-                window_id,
-            } if *window_id == self.window.id() => match event {
-                WindowEvent::CloseRequested
-                | WindowEvent::KeyboardInput {
-                    input:
-                        KeyboardInput {
-                            state: ElementState::Pressed,
-                            virtual_keycode: Some(VirtualKeyCode::Escape),
-                            ..
-                        },
-                    ..
-                } => *control_flow = winit::event_loop::ControlFlow::Exit,
-                WindowEvent::KeyboardInput {
-                    input:
-                        KeyboardInput {
-                            state: ElementState::Pressed,
-                            virtual_keycode: Some(VirtualKeyCode::Space),
-                            ..
-                        },
-                    ..
-                } => {}
-                WindowEvent::Resized(physical_size) => {
-                    self.resize_surface(physical_size.width, physical_size.height);
-                }
-                WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                    self.resize_surface(new_inner_size.width, new_inner_size.height);
-                }
-                _ => {}
-            },
-            Event::RedrawRequested(window_id) if *window_id == self.window.id() => {
-                // `get_current_texture` function will wait for the surface
-                // to provide a new SurfaceTexture that we will render to.
-                match self.surface.get_current_texture() {
-                    Ok(output) => {
-                        self.render(output);
-                    }
-                    Err(wgpu::SurfaceError::Lost) => {
-                        let size = self.window.inner_size();
-                        self.resize_surface(size.width, size.height);
-                    }
-                    Err(e) => {
-                        eprintln!("{:?}", e);
-                    }
-                }
-            }
-            Event::MainEventsCleared => {
-                self.window.request_redraw();
-            }
-            _ => {}
-        }
-    }
+    //     match event {
+    //         Event::WindowEvent {
+    //             ref event,
+    //             window_id,
+    //         } if *window_id == self.window.id() => match event {
+    //             WindowEvent::CloseRequested
+    //             | WindowEvent::KeyboardInput {
+    //                 input:
+    //                     KeyboardInput {
+    //                         state: ElementState::Pressed,
+    //                         virtual_keycode: Some(VirtualKeyCode::Escape),
+    //                         ..
+    //                     },
+    //                 ..
+    //             } => *control_flow = winit::event_loop::ControlFlow::Exit,
+    //             WindowEvent::KeyboardInput {
+    //                 input:
+    //                     KeyboardInput {
+    //                         state: ElementState::Pressed,
+    //                         virtual_keycode: Some(VirtualKeyCode::Space),
+    //                         ..
+    //                     },
+    //                 ..
+    //             } => {}
+    //             WindowEvent::Resized(physical_size) => {
+    //                 self.resize_surface(physical_size.width, physical_size.height);
+    //             }
+    //             WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+    //                 self.resize_surface(new_inner_size.width, new_inner_size.height);
+    //             }
+    //             _ => {}
+    //         },
+    //         Event::RedrawRequested(window_id) if *window_id == self.window.id() => {
+    //             // `get_current_texture` function will wait for the surface
+    //             // to provide a new SurfaceTexture that we will render to.
+    //             match self.surface.get_current_texture() {
+    //                 Ok(output) => {
+    //                     self.render(output);
+    //                 }
+    //                 Err(wgpu::SurfaceError::Lost) => {
+    //                     let size = self.window.inner_size();
+    //                     self.resize_surface(size.width, size.height);
+    //                 }
+    //                 Err(e) => {
+    //                     eprintln!("{:?}", e);
+    //                 }
+    //             }
+    //         }
+    //         Event::MainEventsCleared => {
+    //             self.window.request_redraw();
+    //         }
+    //         _ => {}
+    //     }
+    // }
 
-    fn render(&self, output: wgpu::SurfaceTexture) {
-        let on_command_begin = engine::get_callback_command_begin().unwrap();
-        let view = output
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-        let mut command_encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-        on_command_begin(self, &view, &mut command_encoder);
-        self.queue.submit(iter::once(command_encoder.finish()));
-        output.present();
-    }
+    // pub fn render(&self, output: wgpu::SurfaceTexture) {
+    //     let on_command_begin = engine::get_callback(|engine| engine.on_command_begin).unwrap();
+    //     let view = output
+    //         .texture
+    //         .create_view(&wgpu::TextureViewDescriptor::default());
+    //     let mut command_encoder = self
+    //         .device
+    //         .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+    //     on_command_begin(self, &view, &mut command_encoder);
+    //     self.queue.submit(iter::once(command_encoder.finish()));
+    //     output.present();
+    // }
 
-    fn resize_surface(&self, width: u32, height: u32) {
+    // pub fn render2(&self) {
+    //     // `get_current_texture` function will wait for the surface
+    //     // to provide a new SurfaceTexture that we will render to.
+    //     match self.surface.get_current_texture() {
+    //         Ok(output) => {
+    //             let on_command_begin =
+    //                 engine::get_callback(|engine| engine.on_command_begin).unwrap();
+    //             let view = output
+    //                 .texture
+    //                 .create_view(&wgpu::TextureViewDescriptor::default());
+    //             let mut command_encoder = self
+    //                 .device
+    //                 .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+    //             on_command_begin(self, &view, &mut command_encoder);
+    //             self.queue.submit(iter::once(command_encoder.finish()));
+    //             output.present();
+    //             // self.render(output);
+    //         }
+    //         Err(wgpu::SurfaceError::Lost) => {
+    //             let size = self.window.inner_size();
+    //             self.resize_surface(size.width, size.height);
+    //         }
+    //         Err(e) => {
+    //             eprintln!("{:?}", e);
+    //         }
+    //     }
+    // }
+
+    pub fn resize_surface(&self, width: u32, height: u32) {
         if let (Some(width), Some(height)) =
             (num::NonZeroU32::new(width), num::NonZeroU32::new(height))
         {
@@ -287,9 +326,36 @@ impl HostScreen {
             let config = self.surface_config_data.to_wgpu_type(width, height);
             self.surface.configure(&self.device, &config);
 
-            let on_resized = engine::get_callback_resized().unwrap();
-            on_resized(self, width.into(), height.into());
+            // let on_resized = engine::get_callback_resized().unwrap();
+            // on_resized(self, width.into(), height.into());
         }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct HostScreenId {
+    screen: usize,
+    window: usize,
+}
+
+impl HostScreenId {
+    pub fn new(screen: &Box<HostScreen>) -> HostScreenId {
+        let screen_ref: &HostScreen = screen.as_ref();
+        let screen_addr = screen_ref as *const HostScreen as usize;
+        let window_id = screen.get_window().id();
+        let window_id_value: usize = unsafe { std::mem::transmute(window_id) };
+        static_assertions::assert_eq_size!(window::WindowId, usize);
+        static_assertions::assert_eq_size_val!(window_id, window_id_value);
+        HostScreenId {
+            screen: screen_addr,
+            window: window_id_value,
+        }
+    }
+
+    pub fn window_id(&self) -> window::WindowId {
+        static_assertions::assert_eq_size!(window::WindowId, usize);
+        unsafe { std::mem::transmute(self.window) }
     }
 }
 

@@ -1,18 +1,20 @@
 use crate::error_handler::*;
-use crate::screen::HostScreen;
+use crate::screen::{HostScreen, HostScreenId};
 use smallvec::SmallVec;
 use static_assertions::assert_eq_size;
 use std;
 use std::error::Error;
 use std::ffi;
 use std::{marker, num, ops, str};
+use winit::window;
 
 #[repr(C)]
 pub(crate) struct EngineCoreConfig {
     pub err_dispatcher: DispatchErrFn,
     pub on_screen_init: HostScreenInitFn,
-    pub on_command_begin: OnCommandBeginFn,
-    pub on_resized: HostScreenResizedFn,
+    pub event_cleared: ClearedEventFn,
+    pub event_redraw_requested: RedrawRequestedEventFn,
+    pub event_resized: ResizedEventFn,
 }
 
 #[repr(C)]
@@ -1505,21 +1507,29 @@ pub(crate) struct HostScreenInfo {
     pub surface_format: Opt<TextureFormat>,
 }
 
-pub(crate) type HostScreenInitFn =
-    extern "cdecl" fn(screen: &HostScreen, screen_info: &HostScreenInfo) -> ();
+static_assertions::assert_eq_size!(window::WindowId, usize);
+
+pub(crate) type HostScreenInitFn = extern "cdecl" fn(
+    screen: Box<HostScreen>,
+    screen_info: &HostScreenInfo,
+    id: HostScreenId,
+) -> ();
+
+pub(crate) type ClearedEventFn = extern "cdecl" fn(id: HostScreenId) -> ();
+pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(id: HostScreenId) -> ();
+pub(crate) type ResizedEventFn = extern "cdecl" fn(id: HostScreenId, width: u32, height: u32) -> ();
+
 // pub(crate) type HostScreenRenderFn =
 //     extern "cdecl" fn(screen: &HostScreen, render_pass: &mut wgpu::RenderPass) -> ();
-pub(crate) type OnCommandBeginFn = extern "cdecl" fn(
-    screen: &HostScreen,
-    surface_texture_view: &wgpu::TextureView,
-    command_encoder: &mut wgpu::CommandEncoder,
-) -> ();
+// pub(crate) type OnCommandBeginFn = extern "cdecl" fn(
+//     screen: &HostScreen,
+//     surface_texture_view: &wgpu::TextureView,
+//     command_encoder: &mut wgpu::CommandEncoder,
+// ) -> ();
 // pub(crate) type GetRenderPassDescFn = extern "cdecl" fn(
 //     surface_texture_view: &wgpu::TextureView,
 //     desc_out: *mut RenderPassDescriptor,
 // ) -> ();
-pub(crate) type HostScreenResizedFn =
-    extern "cdecl" fn(screen: &HostScreen, width: u32, height: u32) -> ();
 
 // -------------------------
 

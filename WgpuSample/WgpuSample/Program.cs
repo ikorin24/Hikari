@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 using Elffy.Bind;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Elffy;
 
@@ -17,9 +19,16 @@ internal class Program
         var engineConfig = new EngineCoreConfig
         {
             OnStart = OnStart,
-            OnRender = OnRender,
+            OnRedrawRequested = OnRedrawRequested,
+            OnCleared = (id) =>
+            {
+                if(TryGetState(id, out var state) == false) {
+                    return;
+                }
+                var screen = state.Screen.AsRef();
+                screen.ScreenRequestRedraw();
+            },
             OnResized = OnResized,
-            OnCommandBegin = OnCommandBegin,
         };
         var screenConfig = new HostScreenConfig
         {
@@ -32,33 +41,108 @@ internal class Program
         EngineCore.EngineStart(engineConfig, screenConfig);
     }
 
-    private static State _state;
+    private static readonly List<State> _stateList = new List<State>();
+    private static bool TryGetState(Elffycore.HostScreenId id, [MaybeNullWhen(false)] out State state)
+    {
+        var list = (ReadOnlySpan<State>)CollectionsMarshal.AsSpan(_stateList);
+        foreach(var s in list) {
+            if(s.Id.Screen == id.Screen) {
+                state = s;
+                return true;
+            }
+        }
+        state = null;
+        return false;
+    }
+
     const int NUM_INSTANCES_PER_ROW = 10;
     private static readonly Vector3 INSTANCE_DISPLACEMENT = new(
         NUM_INSTANCES_PER_ROW * 0.5f, 0, NUM_INSTANCES_PER_ROW * 0.5f
         );
 
-    private static unsafe void OnStart(Ref<Elffycore.HostScreen> screen, in HostScreenInfo info)
+    private unsafe static void OnRedrawRequested(Elffycore.HostScreenId id)
     {
-        screen.ScreenSetTitle("sample"u8);
+        if(TryGetState(id, out var state) == false) {
+            return;
+        }
+        var screenRef = state.Screen.AsRef();
+
+        {
+            screenRef.BeginCommand(out var commandEncoder, out var surfaceTexture, out var surfaceTextureView);
+            {
+                RenderPassDescriptor desc;
+                {
+                    const int ColorAttachmentCount = 1;
+                    var colorAttachments = stackalloc Opt_RenderPassColorAttachment[ColorAttachmentCount]
+                    {
+                        new()
+                        {
+                            exists = true,
+                            value = new RenderPassColorAttachment
+                            {
+                                view = surfaceTextureView,
+                                clear = new wgpu_Color(0, 0, 0, 0),
+                            }
+                        },
+                    };
+                    desc = new RenderPassDescriptor
+                    {
+                        color_attachments_clear = new() { data = colorAttachments, len = ColorAttachmentCount },
+                        depth_stencil_attachment_clear = new()
+                        {
+                            exists = true,
+                            value = new RenderPassDepthStencilAttachment
+                            {
+                                view = state.GetDepth().View,
+                                depth_clear = Opt.Some(1f),
+                                stencil_clear = Opt.None<uint>(),
+                            }
+                        }
+                    };
+                }
+
+                var renderPass = commandEncoder.AsMut().CreateRenderPass(desc);
+                try {
+                    var r = renderPass.AsMut();
+                    r.SetPipeline(state.RenderPipeline);
+                    r.SetBindGroup(0, state.DiffuseBindGroup);
+                    r.SetBindGroup(1, state.CameraBindGroup);
+                    r.SetVertexBuffer(0, state.VertexBuffer.AsRef().AsSlice());
+                    r.SetVertexBuffer(1, state.InstanceBuffer.AsRef().AsSlice());
+                    r.SetIndexBuffer(state.IndexBuffer.AsRef().AsSlice(), state.IndexFormat);
+                    r.DrawIndexed(0..state.IndexCount, 0, 0..state.InstanceCount);
+                }
+                finally {
+                    renderPass.DestroyRenderPass();
+                }
+            }
+            screenRef.FinishCommand(commandEncoder, surfaceTexture, surfaceTextureView);
+        }
+    }
+
+    private static unsafe void OnStart(Box<Elffycore.HostScreen> screen, in HostScreenInfo info, Elffycore.HostScreenId id)
+    {
+        Console.WriteLine($"screen: {screen.AsPtr()}");
+        var screenRef = screen.AsRef();
+        screenRef.ScreenSetTitle("sample"u8);
 
         var surfaceFormat = info.surface_format.Unwrap();
         System.Diagnostics.Debug.WriteLine(info.backend);
 
 
         // Texture, TextureView, Sampler
-        var textureData = HostScreenInitializer.CreateTexture(screen, "happy-tree.png");
+        var textureData = HostScreenInitializer.CreateTexture(screenRef, "happy-tree.png");
 
         //// TextureView, Sampler
         //var (textureView, sampler) = HostScreenInitializer.CreateTextureViewSampler(screen, diffuseTexture);
 
         // BindGroupLayout
-        var textureBindGroupLayout = HostScreenInitializer.CreateTextureBindGroupLayout(screen);
+        var textureBindGroupLayout = HostScreenInitializer.CreateTextureBindGroupLayout(screenRef);
 
         // BindGroup
-        var diffuseBindGroup = HostScreenInitializer.CreateTextureBindGroup(screen, textureBindGroupLayout, textureData.View, textureData.Sampler);
+        var diffuseBindGroup = HostScreenInitializer.CreateTextureBindGroup(screenRef, textureBindGroupLayout, textureData.View, textureData.Sampler);
 
-        var screenSize = screen.GetInnerSize();
+        var screenSize = screenRef.GetInnerSize();
         var camera = new Camera
         {
             eye = new(0.0f, 5.0f, -10.0f),
@@ -72,7 +156,7 @@ internal class Program
         var cameraUniform = CameraUniform.Default;
         cameraUniform.UpdateViewProj(camera);
 
-        var cameraBuffer = screen.CreateBufferInit(
+        var cameraBuffer = screenRef.CreateBufferInit(
             new Slice<byte>((byte*)&cameraUniform, sizeof(CameraUniform)),
             wgpu_BufferUsages.UNIFORM | wgpu_BufferUsages.COPY_DST);
 
@@ -102,12 +186,12 @@ internal class Program
         Box<Wgpu.Buffer> instanceBuffer;
         int instanceCount = instances.Length;
         fixed(InstanceData* instanceData = instances) {
-            instanceBuffer = screen.CreateBufferInit(
+            instanceBuffer = screenRef.CreateBufferInit(
                 new Slice<byte>((byte*)instanceData, sizeof(InstanceData) * instances.Length),
                 wgpu_BufferUsages.VERTEX | wgpu_BufferUsages.COPY_DST);
         }
 
-        var cameraBindGroupLayout = screen.CreateBindGroupLayout(new()
+        var cameraBindGroupLayout = screenRef.CreateBindGroupLayout(new()
         {
             entries = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutEntry[1]
             {
@@ -134,14 +218,14 @@ internal class Program
             {
                 new() { binding = 0, resource = BindingResource.Buffer(&bufferBinding), }
             };
-            cameraBindGroup = screen.CreateBindGroup(new BindGroupDescriptor
+            cameraBindGroup = screenRef.CreateBindGroup(new BindGroupDescriptor
             {
                 layout = cameraBindGroupLayout,
                 entries = new() { data = entries, len = EntryCount },
             });
         }
 
-        var shader = screen.CreateShaderModule(ShaderSource);
+        var shader = screenRef.CreateShaderModule(ShaderSource);
 
         //// BindGroupLayout (uniform)
         //var uniformBindGroupLayout = HostScreenInitializer.CreateUniformBindGroupLayout(screen);
@@ -151,7 +235,7 @@ internal class Program
         {
             const int BindGroupLayoutCount = 2;
             var bindGroupLayouts = stackalloc Ref<Wgpu.BindGroupLayout>[BindGroupLayoutCount] { textureBindGroupLayout, cameraBindGroupLayout };
-            pipelineLayout = screen.CreatePipelineLayout(new PipelineLayoutDescriptor
+            pipelineLayout = screenRef.CreatePipelineLayout(new PipelineLayoutDescriptor
             {
                 bind_group_layouts = new()
                 {
@@ -167,7 +251,7 @@ internal class Program
         //// BindGroup (uniform)
         //var uniformBindGroup = HostScreenInitializer.CreateUniformBindGroup(screen, uniformBindGroupLayout, uniformBuffer);
 
-        var depthTextureData = CreateDepthTexture(screen, screenSize.Width, screenSize.Height);
+        var depthTextureData = CreateDepthTexture(screenRef, screenSize.Width, screenSize.Height);
 
         // RenderPipeline
         Box<Wgpu.RenderPipeline> renderPipeline;
@@ -205,7 +289,7 @@ internal class Program
             };
 
 
-            renderPipeline = screen.CreateRenderPipeline(new RenderPipelineDescriptor
+            renderPipeline = screenRef.CreateRenderPipeline(new RenderPipelineDescriptor
             {
                 layout = pipelineLayout,
                 vertex = new()
@@ -267,12 +351,12 @@ internal class Program
             var (vertices, indices) = SamplePrimitives.SampleData();
             indexCount = indices.Length;
             fixed(Vertex* vData = vertices) {
-                vertexBuffer = screen.CreateBufferInit(
+                vertexBuffer = screenRef.CreateBufferInit(
                     new Slice<byte>((byte*)vData, sizeof(Vertex) * vertices.Length),
                     wgpu_BufferUsages.VERTEX);
             }
             fixed(ushort* iData = indices) {
-                indexBuffer = screen.CreateBufferInit(
+                indexBuffer = screenRef.CreateBufferInit(
                     new Slice<byte>((byte*)iData, sizeof(ushort) * indices.Length),
                     wgpu_BufferUsages.INDEX);
             }
@@ -281,8 +365,10 @@ internal class Program
 
 
 
-        _state = new State
+        var state = new State
         {
+            Id = id,
+            Screen = screen,
             PipelineLayout = pipelineLayout,
             Shader = shader,
             RenderPipeline = renderPipeline,
@@ -305,54 +391,27 @@ internal class Program
             //UniformBindGroupLayout = uniformBindGroupLayout,
             //UniformBindGroup = uniformBindGroup,
         };
+        _stateList.Add(state);
     }
 
-    private unsafe static Box<Wgpu.RenderPass> OnCommandBegin(
-        Ref<Elffycore.HostScreen> screen,
-        Ref<Wgpu.TextureView> surfaceTextureView,
-        MutRef<Wgpu.CommandEncoder> commandEncoder,
-        CreateRenderPassFunc createRenderPass)
+    private static void OnResized(Elffycore.HostScreenId id, uint width, uint height)
     {
-        const int ColorAttachmentCount = 1;
-        var colorAttachments = stackalloc Opt_RenderPassColorAttachment[ColorAttachmentCount]
-        {
-            new()
-            {
-                exists = true,
-                value = new RenderPassColorAttachment
-                {
-                    view = surfaceTextureView,
-                    clear = new wgpu_Color(0, 0, 0, 0),
-                }
-            },
-        };
-        var desc = new RenderPassDescriptor
-        {
-            color_attachments_clear = new() { data = colorAttachments, len = ColorAttachmentCount },
-            depth_stencil_attachment_clear = new()
-            {
-                exists = true,
-                value = new RenderPassDepthStencilAttachment
-                {
-                    view = _state.Depth.View,
-                    depth_clear = Opt.Some(1f),
-                    stencil_clear = Opt.None<uint>(),
-                }
-            }
-        };
-        return createRenderPass(commandEncoder, desc);
-    }
+        if(TryGetState(id, out var state) == false) {
+            return;
+        }
+        var screen = state.Screen.AsRef();
+        screen.ScreenResizeSurface(width, height);
 
-    private static void OnResized(Ref<Elffycore.HostScreen> screen, uint width, uint height)
-    {
-        var depth = _state.Depth;
+
+
+        // Ref<Elffycore.HostScreen> screen
+
+        //var depth = _state.Depth;
+        ref readonly var depth = ref state.GetDepth();
         if(width == depth.Width && height == depth.Height) { return; }
+
         Debug.WriteLine((width, height));
-        EngineCore.DestroySampler(depth.Sampler);
-        EngineCore.DestroyTextureView(depth.View);
-        EngineCore.DestroyTexture(depth.Texture);
-        _state.Depth = default;
-        _state.Depth = CreateDepthTexture(screen, width, height);
+        state.SetDepth(CreateDepthTexture(screen, width, height));
     }
 
     ////[StructLayout(LayoutKind.Sequential, Size = 4)]
@@ -392,19 +451,6 @@ internal class Program
             lod_max_clamp = 100f,
         });
         return new DepthTextureData(width, height, texture, view, sampler, DepthTextureFormat);
-    }
-
-    private static unsafe void OnRender(Ref<Elffycore.HostScreen> screen, MutRef<Wgpu.RenderPass> renderPass)
-    {
-        renderPass.SetPipeline(_state.RenderPipeline);
-        renderPass.SetBindGroup(0, _state.DiffuseBindGroup);
-        renderPass.SetBindGroup(1, _state.CameraBindGroup);
-
-        renderPass.SetVertexBuffer(0, _state.VertexBuffer.AsRef().AsSlice());
-        renderPass.SetVertexBuffer(1, _state.InstanceBuffer.AsRef().AsSlice());
-        renderPass.SetIndexBuffer(_state.IndexBuffer.AsRef().AsSlice(), _state.IndexFormat);
-
-        renderPass.DrawIndexed(0.._state.IndexCount, 0, 0.._state.InstanceCount);
     }
 
     private unsafe static ReadOnlySpan<byte> ShaderSource => """
@@ -736,35 +782,47 @@ internal struct CameraUniform
 
 internal record struct InstanceData(Vector3 Offset);
 
-internal struct State
+internal sealed class State
 {
-    public required Box<Wgpu.PipelineLayout> PipelineLayout;
-    public required Box<Wgpu.ShaderModule> Shader;
-    public required Box<Wgpu.RenderPipeline> RenderPipeline;
+    public required Elffycore.HostScreenId Id { get; init; }
+    public required Box<Elffycore.HostScreen> Screen { get; init; }
 
-    public required Box<Wgpu.Buffer> VertexBuffer;
+    public required Box<Wgpu.PipelineLayout> PipelineLayout { get; init; }
+    public required Box<Wgpu.ShaderModule> Shader { get; init; }
+    public required Box<Wgpu.RenderPipeline> RenderPipeline { get; init; }
+
+    public required Box<Wgpu.Buffer> VertexBuffer { get; init; }
     //public required uint VertexCount;
-    public required Box<Wgpu.Buffer> IndexBuffer;
+    public required Box<Wgpu.Buffer> IndexBuffer { get; init; }
     public required int IndexCount;
-    public required wgpu_IndexFormat IndexFormat;
+    public required wgpu_IndexFormat IndexFormat { get; init; }
 
     //public required TextureHandle DiffuseTexture;
     //public required TextureViewHandle TextureView;
     //public required Box<Wgpu.Sampler> Sampler;
-    public required TextureData DiffuseTextureData;
+    public required TextureData DiffuseTextureData { get; init; }
 
 
-    public required Box<Wgpu.BindGroupLayout> TextureBindGroupLayout;
-    public required Box<Wgpu.BindGroup> DiffuseBindGroup;
+    public required Box<Wgpu.BindGroupLayout> TextureBindGroupLayout { get; init; }
+    public required Box<Wgpu.BindGroup> DiffuseBindGroup { get; init; }
 
-    public required Box<Wgpu.Buffer> CameraBuffer;
-    public required Box<Wgpu.BindGroupLayout> CameraBindGroupLayout;
-    public required Box<Wgpu.BindGroup> CameraBindGroup;
+    public required Box<Wgpu.Buffer> CameraBuffer { get; init; }
+    public required Box<Wgpu.BindGroupLayout> CameraBindGroupLayout { get; init; }
+    public required Box<Wgpu.BindGroup> CameraBindGroup { get; init; }
 
-    public required Box<Wgpu.Buffer> InstanceBuffer;
-    public required int InstanceCount;
+    public required Box<Wgpu.Buffer> InstanceBuffer { get; init; }
+    public required int InstanceCount { get; init; }
 
-    public required DepthTextureData Depth;
+    private DepthTextureData _depth;
+    public required DepthTextureData Depth { init => _depth = value; }
+    public ref readonly DepthTextureData GetDepth() => ref _depth;
+    public void SetDepth(in DepthTextureData depth)
+    {
+        EngineCore.DestroySampler(_depth.Sampler);
+        EngineCore.DestroyTextureView(_depth.View);
+        EngineCore.DestroyTexture(_depth.Texture);
+        _depth = depth;
+    }
 }
 
 internal record struct TextureData(

@@ -22,37 +22,37 @@ internal enum WindowStyle
 
 internal unsafe readonly struct HostScreenInitFn
 {
-    private readonly delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, HostScreenInfo*, void> _func;
+    private readonly delegate* unmanaged[Cdecl]<Box<Elffycore.HostScreen>, HostScreenInfo*, Elffycore.HostScreenId, void> _func;
 
     public bool IsNull => _func == null;
-    public HostScreenInitFn(delegate* unmanaged[Cdecl]<void*, void*, void> f)
+    public HostScreenInitFn(delegate* unmanaged[Cdecl]<void*, HostScreenInfo*, Elffycore.HostScreenId, void> f)
     {
-        _func = (delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, HostScreenInfo*, void>)f;
+        _func = (delegate* unmanaged[Cdecl]<Box<Elffycore.HostScreen>, HostScreenInfo*, Elffycore.HostScreenId, void>)f;
     }
 }
 
-internal unsafe readonly struct OnCommandBeginFn
-{
-    // `fn(&HostScreen, &wgpu::TextureView, &mut wgpu::CommandEncoder) -> ()` in Rust
-    private readonly delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, Ref<Wgpu.TextureView>, MutRef<Wgpu.CommandEncoder>, void> _func;
-    public bool IsNull => _func == null;
+//internal unsafe readonly struct OnCommandBeginFn
+//{
+//    // `fn(&HostScreen, &wgpu::TextureView, &mut wgpu::CommandEncoder) -> ()` in Rust
+//    private readonly delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, Ref<Wgpu.TextureView>, MutRef<Wgpu.CommandEncoder>, void> _func;
+//    public bool IsNull => _func == null;
 
-    public OnCommandBeginFn(delegate* unmanaged[Cdecl]<void*, void*, void*, void> f)
-    {
-        _func = (delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, Ref<Wgpu.TextureView>, MutRef<Wgpu.CommandEncoder>, void>)f;
-    }
-}
+//    public OnCommandBeginFn(delegate* unmanaged[Cdecl]<void*, void*, void*, void> f)
+//    {
+//        _func = (delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, Ref<Wgpu.TextureView>, MutRef<Wgpu.CommandEncoder>, void>)f;
+//    }
+//}
 
-internal unsafe readonly struct HostScreenResizedFn
-{
-    private readonly delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, u32, u32, void> _func;
-    public bool IsNull => _func == null;
+//internal unsafe readonly struct HostScreenResizedFn
+//{
+//    private readonly delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, u32, u32, void> _func;
+//    public bool IsNull => _func == null;
 
-    public HostScreenResizedFn(delegate* unmanaged[Cdecl]<void*, u32, u32, void> f)
-    {
-        _func = (delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, u32, u32, void>)f;
-    }
-}
+//    public HostScreenResizedFn(delegate* unmanaged[Cdecl]<void*, u32, u32, void> f)
+//    {
+//        _func = (delegate* unmanaged[Cdecl]<Ref<Elffycore.HostScreen>, u32, u32, void>)f;
+//    }
+//}
 
 internal unsafe readonly struct DispatchErrFn
 {

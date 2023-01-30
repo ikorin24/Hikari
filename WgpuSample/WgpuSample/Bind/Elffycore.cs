@@ -20,8 +20,9 @@ internal static class Elffycore
     {
         public required DispatchErrFn err_dispatcher;
         public required HostScreenInitFn on_screen_init;
-        public required OnCommandBeginFn on_command_begin;
-        public required HostScreenResizedFn on_resized;
+        public required ClearedEventFn event_cleared;
+        public required RedrawRequestedEventFn event_redraw_requested;
+        public required ResizedEventFn event_resized;
     }
 
     internal struct HostScreenConfig
@@ -31,5 +32,35 @@ internal static class Elffycore
         public required u32 width;
         public required u32 height;
         public required wgpu_Backends backend;
+    }
+
+    internal unsafe readonly struct ClearedEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<HostScreenId, void> _func;
+
+        public ClearedEventFn(delegate* unmanaged[Cdecl]<HostScreenId, void> f) => _func = f;
+    }
+
+    internal unsafe readonly struct RedrawRequestedEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<HostScreenId, void> _func;
+
+        public RedrawRequestedEventFn(delegate* unmanaged[Cdecl]<HostScreenId, void> f) => _func = f;
+    }
+
+    internal unsafe readonly struct ResizedEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<HostScreenId, u32, u32, void> _func;
+
+        public ResizedEventFn(delegate* unmanaged[Cdecl]<HostScreenId, u32, u32, void> f) => _func = f;
+    }
+
+    internal readonly struct HostScreenId
+    {
+        private readonly nuint screen;
+        private readonly nuint window;
+
+        public nuint Screen => screen;
+        public nuint Window => window;
     }
 }

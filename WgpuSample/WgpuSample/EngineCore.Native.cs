@@ -23,6 +23,30 @@ static unsafe partial class EngineCore
         Elffycore.HostScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_screen_resize_surface(
+        Ref<Elffycore.HostScreen> screen,
+        u32 width,
+        u32 height);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_screen_request_redraw(
+        Ref<Elffycore.HostScreen> screen);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial void elffy_begin_command(
+        Ref<Elffycore.HostScreen> screen,
+        Box<Wgpu.CommandEncoder>* command_encoder_out,
+        Box<Wgpu.SurfaceTexture>* surface_tex_out,
+        Box<Wgpu.TextureView>* surface_tex_view_out);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial void elffy_finish_command(
+        Ref<Elffycore.HostScreen> screen,
+        Box<Wgpu.CommandEncoder> command_encoder,
+        Box<Wgpu.SurfaceTexture> surface_tex,
+        Box<Wgpu.TextureView> surface_tex_view);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_set_title(
         Ref<Elffycore.HostScreen> screen,
         Slice<u8> title);
