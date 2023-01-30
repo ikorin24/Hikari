@@ -169,43 +169,22 @@ internal ref struct BindGroupEntry
     public required BindingResource resource;
 }
 
-internal ref struct BindingResource
+internal unsafe readonly ref struct BindingResource
 {
-    public required BindingResourceTag tag;
-    public required Pointer payload;
+    private readonly BindingResourceTag tag;
+    private readonly void* payload;
 
-    public unsafe static BindingResource Buffer(BufferBinding* payload) => new()
+    public BindingResource(BindingResourceTag tag, void* payload)
     {
-        tag = BindingResourceTag.Buffer,
-        payload = payload,
-    };
+        this.tag = tag;
+        this.payload = payload;
+    }
 
-    public unsafe static BindingResource TextureView(Ref<Wgpu.TextureView> textureView) => new()
-    {
-        tag = BindingResourceTag.TextureView,
-        payload = textureView.AsPtr(),
-    };
+    public unsafe static BindingResource Buffer(BufferBinding* payload) => new(BindingResourceTag.Buffer, payload);
 
-    public unsafe static BindingResource Sampler(Ref<Wgpu.Sampler> sampler) => new()
-    {
-        tag = BindingResourceTag.Sampler,
-        payload = sampler.AsPtr(),
-    };
-}
+    public unsafe static BindingResource TextureView(Ref<Wgpu.TextureView> textureView) => new(BindingResourceTag.TextureView, textureView.AsPtr());
 
-internal readonly struct Pointer : IEquatable<Pointer>
-{
-    private readonly IntPtr _ptr;
-
-    private unsafe Pointer(void* p) => _ptr = (IntPtr)p;
-
-    public unsafe static implicit operator Pointer(void* p) => new(p);
-    public unsafe static implicit operator Pointer(IntPtr p) => new((void*)p);
-    public unsafe static implicit operator Pointer(NativePointer p) => new(p);
-
-    public override bool Equals(object? obj) => obj is Pointer pointer && Equals(pointer);
-    public bool Equals(Pointer other) => _ptr.Equals(other._ptr);
-    public override int GetHashCode() => _ptr.GetHashCode();
+    public unsafe static BindingResource Sampler(Ref<Wgpu.Sampler> sampler) => new(BindingResourceTag.Sampler, sampler.AsPtr());
 }
 
 internal enum BindingResourceTag
