@@ -12,7 +12,7 @@ internal static class Engine
 {
     private static readonly List<HostScreen> _screens = new List<HostScreen>();
 
-    public static event Action<IHostScreen> Init;
+    public static event Action<IHostScreen>? Init;
 
     public static void Start()
     {

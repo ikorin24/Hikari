@@ -6,16 +6,6 @@ namespace Elffy.Bind;
 
 internal unsafe static class HostScreenExtensions
 {
-    public static (uint Width, uint Height) GetInnerSize(this Ref<Self> self)
-    {
-        return EngineCore.ScreenGetInnerSize(self);
-    }
-
-    public static void SetInnerSize(this Ref<Self> self, uint width, uint height)
-    {
-        EngineCore.ScreenSetInnerSize(self, width, height);
-    }
-
     public static void WriteTexture(
         this Ref<Self> self,
         in ImageCopyTexture texture,
