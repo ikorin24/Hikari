@@ -261,7 +261,7 @@ internal struct StorageTextureBindingData
     public required TextureViewDimension view_dimension;
 }
 
-internal enum StorageTextureAccess
+internal enum StorageTextureAccess : u32
 {
     WriteOnly = 0,
     ReadOnly = 1,

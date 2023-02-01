@@ -9,6 +9,7 @@ use smallvec::SmallVec;
 use static_assertions::assert_eq_size;
 use std;
 use std::error::Error;
+use std::mem;
 use std::{marker, num, ops, str};
 use winit::window;
 
@@ -50,10 +51,7 @@ impl<'tex, 'desc> Default for RenderPassDescriptor<'tex, 'desc> {
     fn default() -> Self {
         Self {
             color_attachments_clear: Default::default(),
-            depth_stencil_attachment_clear: Opt {
-                exists: false,
-                value: Default::default(),
-            },
+            depth_stencil_attachment_clear: Opt::none(),
         }
     }
 }
@@ -69,14 +67,7 @@ impl<'tex, 'desc> RenderPassDescriptor<'tex, 'desc> {
         let color_attachments: Vec<_> = self
             .color_attachments_clear
             .iter()
-            // .map(|opt| opt.map_to_option(|value| value.to_wgpu_type()))
-            .map(|opt| {
-                if opt.exists {
-                    Some(opt.value.to_wgpu_type())
-                } else {
-                    None
-                }
-            })
+            .map(|opt| opt.map_to_option(|value| value.to_wgpu_type()))
             .collect();
         let desc = wgpu::RenderPassDescriptor {
             label: None,
@@ -97,7 +88,7 @@ pub(crate) struct RenderPassColorAttachment<'tex> {
 }
 
 impl<'tex> RenderPassColorAttachment<'tex> {
-    pub fn to_wgpu_type(&self) -> wgpu::RenderPassColorAttachment<'tex> {
+    pub const fn to_wgpu_type(&self) -> wgpu::RenderPassColorAttachment<'tex> {
         wgpu::RenderPassColorAttachment {
             view: self.view,
             resolve_target: None,
@@ -120,14 +111,8 @@ impl<'tex> Default for RenderPassDepthStencilAttachment<'tex> {
     fn default() -> Self {
         Self {
             view: None,
-            depth_clear: Opt {
-                exists: false,
-                value: 0f32,
-            },
-            stencil_clear: Opt {
-                exists: false,
-                value: 0u32,
-            },
+            depth_clear: Opt::none(),
+            stencil_clear: Opt::none(),
         }
     }
 }
@@ -285,7 +270,7 @@ pub(crate) enum SamplerBorderColor {
 }
 
 impl SamplerBorderColor {
-    pub fn to_wgpu_type(&self) -> wgpu::SamplerBorderColor {
+    pub const fn to_wgpu_type(&self) -> wgpu::SamplerBorderColor {
         match self {
             Self::TransparentBlack => wgpu::SamplerBorderColor::TransparentBlack,
             Self::OpaqueBlack => wgpu::SamplerBorderColor::OpaqueBlack,
@@ -467,25 +452,21 @@ impl<'a> RenderPipelineDescription<'a> {
                 .collect::<SmallVec<[_; 4]>>(),
         };
 
-        let mut fragment_targets = vec![];
-        let fragment = match self.fragment {
-            Opt {
-                exists: true,
-                ref value,
-            } => {
-                fragment_targets.extend(
-                    value
-                        .targets
-                        .iter()
-                        .map(|x| x.map_to_option(|y| y.to_wgpu_type())),
-                );
+        let fragment_targets: Vec<_>;
+        let fragment = match self.fragment.to_ref_option() {
+            Some(fragment) => {
+                fragment_targets = fragment
+                    .targets
+                    .iter()
+                    .map(|x| x.map_to_option(|y| y.to_wgpu_type()))
+                    .collect();
                 Some(wgpu::FragmentState {
-                    module: value.module,
-                    entry_point: value.entry_point.as_str()?,
+                    module: fragment.module,
+                    entry_point: fragment.entry_point.as_str()?,
                     targets: &fragment_targets,
                 })
             }
-            _ => None,
+            None => None,
         };
 
         let pipeline_desc = wgpu::RenderPipelineDescriptor {
@@ -1061,7 +1042,7 @@ pub(crate) enum TextureFormat {
 }
 
 impl TextureFormat {
-    pub fn to_wgpu_type(&self) -> wgpu::TextureFormat {
+    pub const fn to_wgpu_type(&self) -> wgpu::TextureFormat {
         match self {
             Self::R8Unorm => wgpu::TextureFormat::R8Unorm,
             Self::R8Snorm => wgpu::TextureFormat::R8Snorm,
@@ -1237,7 +1218,7 @@ pub(crate) struct TextureDescriptor {
 }
 
 impl TextureDescriptor {
-    pub fn to_wgpu_type(&self) -> wgpu::TextureDescriptor<'static> {
+    pub const fn to_wgpu_type(&self) -> wgpu::TextureDescriptor<'static> {
         assert!(self.size.width > 0);
         assert!(self.size.height > 0);
         assert!(self.size.depth_or_array_layers > 0);
@@ -1264,7 +1245,7 @@ pub(crate) enum TextureDimension {
 }
 
 impl TextureDimension {
-    pub fn to_wgpu_type(&self) -> wgpu::TextureDimension {
+    pub const fn to_wgpu_type(&self) -> wgpu::TextureDimension {
         match self {
             Self::D1 => wgpu::TextureDimension::D1,
             Self::D2 => wgpu::TextureDimension::D2,
@@ -1348,41 +1329,64 @@ impl Default for BeginCommandData {
 #[repr(C)]
 #[derive(Debug)]
 pub(crate) struct Opt<T> {
-    pub exists: bool,
-    pub value: T,
+    exists: bool,
+    value: mem::MaybeUninit<T>,
+}
+
+impl<T> Default for Opt<T> {
+    fn default() -> Self {
+        Self::none()
+    }
 }
 
 impl<T> Opt<T> {
+    pub const fn some(value: T) -> Self {
+        Self {
+            exists: true,
+            value: mem::MaybeUninit::new(value),
+        }
+    }
+
+    pub const fn none() -> Self {
+        Self {
+            exists: false,
+            value: mem::MaybeUninit::uninit(),
+        }
+    }
+
     pub fn map_to_option<U, F>(&self, f: F) -> Option<U>
     where
         F: FnOnce(&T) -> U,
     {
         match self.exists {
-            true => Some(f(&self.value)),
+            true => Some(f(unsafe { self.value.assume_init_ref() })),
             false => None,
         }
     }
 }
 
-impl<T: Default> From<Option<T>> for Opt<T> {
+impl<T> From<Option<T>> for Opt<T> {
     fn from(o: Option<T>) -> Self {
         match o {
-            Some(x) => Opt {
-                exists: true,
-                value: x,
-            },
-            None => Opt {
-                exists: false,
-                value: T::default(),
-            },
+            Some(x) => Opt::some(x),
+            None => Opt::none(),
         }
     }
 }
 
-impl<T: Copy> Opt<T> {
+impl<T> Opt<T> {
+    pub const fn to_ref_option(&self) -> Option<&T> {
+        match self.exists {
+            true => Some(unsafe { self.value.assume_init_ref() }),
+            false => None,
+        }
+    }
+}
+
+impl<T: Clone> Opt<T> {
     pub fn to_option(&self) -> Option<T> {
         match self.exists {
-            true => Some(self.value),
+            true => Some(unsafe { self.value.assume_init_ref() }.clone()),
             false => None,
         }
     }
