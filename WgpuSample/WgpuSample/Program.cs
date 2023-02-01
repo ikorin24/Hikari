@@ -41,7 +41,7 @@ internal class Program
     }
 
     private static readonly List<State> _stateList = new List<State>();
-    private static bool TryGetState(Elffycore.HostScreenId id, [MaybeNullWhen(false)] out State state)
+    private static bool TryGetState(CoreElffy.HostScreenId id, [MaybeNullWhen(false)] out State state)
     {
         var list = (ReadOnlySpan<State>)CollectionsMarshal.AsSpan(_stateList);
         foreach(var s in list) {
@@ -59,7 +59,7 @@ internal class Program
         NUM_INSTANCES_PER_ROW * 0.5f, 0, NUM_INSTANCES_PER_ROW * 0.5f
         );
 
-    private unsafe static void OnRedrawRequested(Elffycore.HostScreenId id)
+    private unsafe static void OnRedrawRequested(CoreElffy.HostScreenId id)
     {
         if(TryGetState(id, out var state) == false) {
             return;
@@ -121,7 +121,7 @@ internal class Program
         }
     }
 
-    private static unsafe void OnStart(Box<Elffycore.HostScreen> screen, Elffycore.HostScreenInfo info, Elffycore.HostScreenId id)
+    private static unsafe void OnStart(Box<CoreElffy.HostScreen> screen, CoreElffy.HostScreenInfo info, CoreElffy.HostScreenId id)
     {
         var screenRef = screen.AsRef();
         screenRef.ScreenSetTitle("sample"u8);
@@ -393,7 +393,7 @@ internal class Program
         _stateList.Add(state);
     }
 
-    private static void OnResized(Elffycore.HostScreenId id, uint width, uint height)
+    private static void OnResized(CoreElffy.HostScreenId id, uint width, uint height)
     {
         if(TryGetState(id, out var state) == false) {
             return;
@@ -403,7 +403,7 @@ internal class Program
 
 
 
-        // Ref<Elffycore.HostScreen> screen
+        // Ref<CoreElffy.HostScreen> screen
 
         //var depth = _state.Depth;
         ref readonly var depth = ref state.GetDepth();
@@ -420,7 +420,7 @@ internal class Program
     //    public Vector3 Value;
     //}
 
-    private static DepthTextureData CreateDepthTexture(Ref<Elffycore.HostScreen> screen, uint width, uint height)
+    private static DepthTextureData CreateDepthTexture(Ref<CoreElffy.HostScreen> screen, uint width, uint height)
     {
         const TextureFormat DepthTextureFormat = TextureFormat.Depth32Float;
         var texture = screen.CreateTexture(new TextureDescriptor
@@ -501,7 +501,7 @@ internal class Program
 
 internal static class HostScreenInitializer
 {
-    public unsafe static TextureData CreateTexture(Ref<Elffycore.HostScreen> screen, string filepath)
+    public unsafe static TextureData CreateTexture(Ref<CoreElffy.HostScreen> screen, string filepath)
     {
         var (pixelBytes, width, height) = SamplePrimitives.LoadImagePixels(filepath);
         var size = new Wgpu.Extent3d
@@ -564,7 +564,7 @@ internal static class HostScreenInitializer
     }
 
     //public unsafe static (Box<Wgpu.TextureView> TextureView, Box<Wgpu.Sampler> Sampler) CreateTextureViewSampler(
-    //    Ref<Elffycore.HostScreen> screen,
+    //    Ref<CoreElffy.HostScreen> screen,
     //    Ref<Wgpu.Texture> texture)
     //{
     //    var textureView = texture.CreateTextureView(TextureViewDescriptor.Default);
@@ -586,7 +586,7 @@ internal static class HostScreenInitializer
     //    return (TextureView: textureView, Sampler: sampler);
     //}
 
-    public unsafe static Box<Wgpu.BindGroupLayout> CreateTextureBindGroupLayout(Ref<Elffycore.HostScreen> screen)
+    public unsafe static Box<Wgpu.BindGroupLayout> CreateTextureBindGroupLayout(Ref<CoreElffy.HostScreen> screen)
     {
         return screen.CreateBindGroupLayout(new()
         {
@@ -616,7 +616,7 @@ internal static class HostScreenInitializer
     }
 
     public unsafe static Box<Wgpu.BindGroup> CreateTextureBindGroup(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         Ref<Wgpu.BindGroupLayout> bindGroupLayout,
         Ref<Wgpu.TextureView> textureView,
         Ref<Wgpu.Sampler> sampler)
@@ -643,10 +643,10 @@ internal static class HostScreenInitializer
         });
     }
 
-    public unsafe static Box<Wgpu.Buffer> CreateUniformBuffer<T>(Ref<Elffycore.HostScreen> screen, Span<T> data) where T : unmanaged
+    public unsafe static Box<Wgpu.Buffer> CreateUniformBuffer<T>(Ref<CoreElffy.HostScreen> screen, Span<T> data) where T : unmanaged
         => CreateUniformBuffer(screen, (ReadOnlySpan<T>)data);
 
-    public unsafe static Box<Wgpu.Buffer> CreateUniformBuffer<T>(Ref<Elffycore.HostScreen> screen, ReadOnlySpan<T> data) where T : unmanaged
+    public unsafe static Box<Wgpu.Buffer> CreateUniformBuffer<T>(Ref<CoreElffy.HostScreen> screen, ReadOnlySpan<T> data) where T : unmanaged
     {
         fixed(T* p = data) {
             var contents = new Slice<byte>((byte*)p, (nuint)data.Length * (nuint)sizeof(T));
@@ -655,7 +655,7 @@ internal static class HostScreenInitializer
         }
     }
 
-    public unsafe static Box<Wgpu.BindGroupLayout> CreateUniformBindGroupLayout(Ref<Elffycore.HostScreen> screen)
+    public unsafe static Box<Wgpu.BindGroupLayout> CreateUniformBindGroupLayout(Ref<CoreElffy.HostScreen> screen)
     {
         return screen.CreateBindGroupLayout(new()
         {
@@ -706,7 +706,7 @@ internal static class HostScreenInitializer
         uint IndexCount,
         Wgpu.IndexFormat IndexFormat
     ) CreateVertexIndexBuffer<TVertex>(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             ReadOnlySpan<TVertex> vertices,
             ReadOnlySpan<uint> indices) where TVertex : unmanaged
     {
@@ -784,8 +784,8 @@ internal record struct InstanceData(Vector3 Offset);
 
 internal sealed class State
 {
-    public required Elffycore.HostScreenId Id { get; init; }
-    public required Box<Elffycore.HostScreen> Screen { get; init; }
+    public required CoreElffy.HostScreenId Id { get; init; }
+    public required Box<CoreElffy.HostScreen> Screen { get; init; }
 
     public required Box<Wgpu.PipelineLayout> PipelineLayout { get; init; }
     public required Box<Wgpu.ShaderModule> Shader { get; init; }

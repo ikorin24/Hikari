@@ -1,5 +1,5 @@
 #!/bin/sh
-bin_name="elffycore"
+bin_name="coreelffy"
 proj_dir="${bin_name}/"
 out_dir="${proj_dir}output/"
 declare -A bins

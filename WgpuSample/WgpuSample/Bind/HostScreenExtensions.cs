@@ -1,6 +1,6 @@
 ﻿#nullable enable
 using System;
-using Self = Elffy.Bind.Elffycore.HostScreen;
+using Self = Elffy.Bind.CoreElffy.HostScreen;
 
 namespace Elffy.Bind;
 

@@ -11,4 +11,4 @@ global using u128 = System.UInt128;
 global using i128 = System.Int128;
 global using f32 = System.Single;
 global using f64 = System.Double;
-
+global using CE = Elffy.Bind.CoreElffy;

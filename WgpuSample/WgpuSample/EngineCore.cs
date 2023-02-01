@@ -35,7 +35,7 @@ namespace Elffy
             }
 
             _config = config;
-            var engineCoreConfigRaw = new Elffycore.EngineCoreConfig
+            var engineCoreConfigRaw = new CoreElffy.EngineCoreConfig
             {
                 err_dispatcher = new(&DispatchError),
                 on_screen_init = new(&OnScreenInit),
@@ -44,7 +44,7 @@ namespace Elffy
                 event_resized = new(&EventResized),
             };
 
-            var screenConfigRaw = new Elffycore.HostScreenConfig
+            var screenConfigRaw = new CoreElffy.HostScreenConfig
             {
                 title = Slice<u8>.Empty,
                 style = screenConfig.Style,
@@ -62,37 +62,37 @@ namespace Elffy
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
             static void OnScreenInit(
-                void* screen_,  // Box<Elffycore.HostScreen> screen
-                Elffycore.HostScreenInfo* info,
-                Elffycore.HostScreenId id
+                void* screen_,  // Box<CoreElffy.HostScreen> screen
+                CoreElffy.HostScreenInfo* info,
+                CoreElffy.HostScreenId id
                 )
             {
                 // UnmanagedCallersOnly methods cannot have generic type args.
-                Box<Elffycore.HostScreen> screen = *(Box<Elffycore.HostScreen>*)(&screen_);
+                Box<CoreElffy.HostScreen> screen = *(Box<CoreElffy.HostScreen>*)(&screen_);
 
                 _config.OnStart(screen, *info, id);
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void EventCleared(Elffycore.HostScreenId id)
+            static void EventCleared(CoreElffy.HostScreenId id)
             {
                 _config.OnCleared(id);
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void EventRedrawRequested(Elffycore.HostScreenId id)
+            static void EventRedrawRequested(CoreElffy.HostScreenId id)
             {
                 _config.OnRedrawRequested(id);
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void EventResized(Elffycore.HostScreenId id, u32 width, u32 height)
+            static void EventResized(CoreElffy.HostScreenId id, u32 width, u32 height)
             {
                 _config.OnResized(id, width, height);
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void DispatchError(Elffycore.ErrMessageId id, byte* messagePtr, nuint messageByteLen)
+            static void DispatchError(CoreElffy.ErrMessageId id, byte* messagePtr, nuint messageByteLen)
             {
                 var len = (int)nuint.Min(messageByteLen, (nuint)int.MaxValue);
                 var message = Encoding.UTF8.GetString(messagePtr, len);
@@ -110,20 +110,20 @@ namespace Elffy
             };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ScreenResizeSurface(this Ref<Elffycore.HostScreen> screen, u32 width, u32 height)
+        public static void ScreenResizeSurface(this Ref<CoreElffy.HostScreen> screen, u32 width, u32 height)
         {
             elffy_screen_resize_surface(screen, width, height).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ScreenRequestRedraw(this Ref<Elffycore.HostScreen> screen)
+        public static void ScreenRequestRedraw(this Ref<CoreElffy.HostScreen> screen)
         {
             elffy_screen_request_redraw(screen).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool ScreenBeginCommand(
-            this Ref<Elffycore.HostScreen> screen,
+            this Ref<CoreElffy.HostScreen> screen,
             out Box<Wgpu.CommandEncoder> commandEncoder,
             out Box<Wgpu.SurfaceTexture> surfaceTexture,
             out Box<Wgpu.TextureView> surfaceTextureView)
@@ -137,7 +137,7 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ScreenFinishCommand(
-            this Ref<Elffycore.HostScreen> screen,
+            this Ref<CoreElffy.HostScreen> screen,
             Box<Wgpu.CommandEncoder> commandEncoder,
             Box<Wgpu.SurfaceTexture> surfaceTexture,
             Box<Wgpu.TextureView> surfaceTextureView)
@@ -146,7 +146,7 @@ namespace Elffy
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void ScreenSetTitle(this Ref<Elffycore.HostScreen> screen, ReadOnlySpan<byte> title)
+        public unsafe static void ScreenSetTitle(this Ref<CoreElffy.HostScreen> screen, ReadOnlySpan<byte> title)
         {
             fixed(byte* p = title) {
                 var titleRaw = new Slice<byte>(p, title.Length);
@@ -171,7 +171,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         //[DebuggerHidden]
         public static (u32 Width, u32 Height) ScreenGetInnerSize(
-            Ref<Elffycore.HostScreen> screen)
+            Ref<CoreElffy.HostScreen> screen)
         {
             var size = elffy_screen_get_inner_size(screen).Validate();
             return (size.width, size.height);
@@ -180,7 +180,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void ScreenSetInnerSize(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             u32 width,
             u32 height)
             => elffy_screen_set_inner_size(screen, width, height).Validate();
@@ -188,7 +188,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void WriteTexture(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             ImageCopyTexture* texture,
             Slice<u8> data,
             Wgpu.ImageDataLayout* data_layout,
@@ -198,7 +198,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             BindGroupLayoutDescriptor* desc)
             => elffy_create_bind_group_layout(screen, desc).Validate();
 
@@ -214,7 +214,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.BindGroup> CreateBindGroup(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             BindGroupDescriptor* desc)
             => elffy_create_bind_group(screen, desc).Validate();
 
@@ -230,7 +230,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.PipelineLayout> CreatePipelineLayout(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             PipelineLayoutDescriptor* desc)
             => elffy_create_pipeline_layout(screen, desc).Validate();
 
@@ -246,7 +246,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.RenderPipeline> CreateRenderPipeline(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             RenderPipelineDescriptor* desc)
             => elffy_create_render_pipeline(screen, desc).Validate();
 
@@ -262,7 +262,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.Buffer> CreateBufferInit(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             Slice<u8> contents,
             Wgpu.BufferUsages usage)
             => elffy_create_buffer_init(screen, contents, usage).Validate();
@@ -279,7 +279,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.Sampler> CreateSampler(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             SamplerDescriptor* desc)
             => elffy_create_sampler(screen, desc).Validate();
 
@@ -295,7 +295,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.ShaderModule> CreateShaderModule(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             Slice<u8> shader_source)
             => elffy_create_shader_module(screen, shader_source).Validate();
 
@@ -311,14 +311,14 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.Texture> CreateTexture(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             TextureDescriptor* desc)
             => elffy_create_texture(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.Texture> CreateTextureWithData(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             TextureDescriptor* desc,
             Slice<u8> data)
             => elffy_create_texture_with_data(screen, desc, data).Validate();
@@ -351,7 +351,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void WriteBuffer(
-            Ref<Elffycore.HostScreen> screen,
+            Ref<CoreElffy.HostScreen> screen,
             Ref<Wgpu.Buffer> buffer,
             u64 offset,
             Slice<u8> data)
@@ -497,7 +497,7 @@ namespace Elffy
         }
     }
 
-    internal record struct NativeError(Elffycore.ErrMessageId Id, string Message);
+    internal record struct NativeError(CoreElffy.ErrMessageId Id, string Message);
 
     internal sealed class EngineCoreException : Exception
     {
@@ -530,10 +530,10 @@ namespace Elffy
         }
     }
 
-    internal delegate void EngineCoreRenderAction(Ref<Elffycore.HostScreen> screen, MutRef<Wgpu.RenderPass> renderPass);
-    internal delegate void EngineCoreResizedAction(Ref<Elffycore.HostScreen> screen, uint width, uint height);
+    internal delegate void EngineCoreRenderAction(Ref<CoreElffy.HostScreen> screen, MutRef<Wgpu.RenderPass> renderPass);
+    internal delegate void EngineCoreResizedAction(Ref<CoreElffy.HostScreen> screen, uint width, uint height);
     internal delegate Box<Wgpu.RenderPass> OnCommandBeginFunc(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         Ref<Wgpu.TextureView> surfaceTextureView,
         MutRef<Wgpu.CommandEncoder> commandEncoder,
         CreateRenderPassFunc createRenderPass);

@@ -1,2 +1,2 @@
 #!/bin/sh
-cargo clean --manifest-path elffycore/Cargo.toml
+cargo clean --manifest-path coreelffy/Cargo.toml

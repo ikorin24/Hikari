@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using EC = Elffy.Bind.Elffycore;
 
 namespace Elffy;
 
@@ -34,8 +33,8 @@ internal static class Engine
         EngineCore.EngineStart(engineConfig, screenConfig);
     }
 
-    private static readonly Action<Box<EC.HostScreen>, EC.HostScreenInfo, EC.HostScreenId> _onStart =
-        (Box<EC.HostScreen> screenHandle, EC.HostScreenInfo info, EC.HostScreenId id) =>
+    private static readonly Action<Box<CE.HostScreen>, CE.HostScreenInfo, CE.HostScreenId> _onStart =
+        (Box<CE.HostScreen> screenHandle, CE.HostScreenInfo info, CE.HostScreenId id) =>
         {
             var screen = new HostScreen(screenHandle, id);
             _screens.Add(screen);
@@ -43,8 +42,8 @@ internal static class Engine
             Init?.Invoke(screen);
         };
 
-    private static readonly Action<EC.HostScreenId> _onRedrawRequested =
-        (EC.HostScreenId id) =>
+    private static readonly Action<CE.HostScreenId> _onRedrawRequested =
+        (CE.HostScreenId id) =>
         {
             if(TryFindScreen(id, out var screen) == false) {
                 Debug.Fail("HostScreen should be found");
@@ -52,8 +51,8 @@ internal static class Engine
             }
         };
 
-    private static readonly Action<EC.HostScreenId> _onCleared =
-        (EC.HostScreenId id) =>
+    private static readonly Action<CE.HostScreenId> _onCleared =
+        (CE.HostScreenId id) =>
         {
             if(TryFindScreen(id, out var screen) == false) {
                 Debug.Fail("HostScreen should be found");
@@ -62,8 +61,8 @@ internal static class Engine
             screen.OnCleared();
         };
 
-    private static readonly Action<EC.HostScreenId, uint, uint> _onResized =
-        (EC.HostScreenId id, uint width, uint height) =>
+    private static readonly Action<CE.HostScreenId, uint, uint> _onResized =
+        (CE.HostScreenId id, uint width, uint height) =>
         {
             if(TryFindScreen(id, out var screen) == false) {
                 Debug.Fail("HostScreen should be found");
@@ -72,7 +71,7 @@ internal static class Engine
             screen.OnResized(width, height);
         };
 
-    private static bool TryFindScreen(EC.HostScreenId id, [MaybeNullWhen(false)] out HostScreen screen)
+    private static bool TryFindScreen(CE.HostScreenId id, [MaybeNullWhen(false)] out HostScreen screen)
     {
         nuint idNum = id.AsNumber();
         var screens = (ReadOnlySpan<HostScreen>)CollectionsMarshal.AsSpan(_screens);
@@ -89,11 +88,11 @@ internal static class Engine
 
 internal readonly struct EngineCoreConfig
 {
-    public required Action<Box<EC.HostScreen>, EC.HostScreenInfo, EC.HostScreenId> OnStart { get; init; }
-    public required Action<EC.HostScreenId> OnRedrawRequested { get; init; }
-    public required Action<EC.HostScreenId> OnCleared { get; init; }
+    public required Action<Box<CE.HostScreen>, CE.HostScreenInfo, CE.HostScreenId> OnStart { get; init; }
+    public required Action<CE.HostScreenId> OnRedrawRequested { get; init; }
+    public required Action<CE.HostScreenId> OnCleared { get; init; }
 
-    public required Action<EC.HostScreenId, u32, u32> OnResized { get; init; }
+    public required Action<CE.HostScreenId, u32, u32> OnResized { get; init; }
 }
 
 internal readonly ref struct HostScreenConfig

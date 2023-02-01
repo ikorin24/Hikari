@@ -12,37 +12,37 @@ namespace Elffy;
 static unsafe partial class EngineCore
 {
     private const string DllDir = "native/x86_64-windows/";
-    private const string CoreDll = $"{DllDir}elffycore";
+    private const string CoreDll = $"{DllDir}coreelffy";
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial NonZeroUsize elffy_engine_start(
-        Elffycore.EngineCoreConfig* engine_config,
-        Elffycore.HostScreenConfig* screen_config);
+        CoreElffy.EngineCoreConfig* engine_config,
+        CoreElffy.HostScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_resize_surface(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         u32 width,
         u32 height);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_request_redraw(
-        Ref<Elffycore.HostScreen> screen);
+        Ref<CoreElffy.HostScreen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiValueResult<Elffycore.BeginCommandData> elffy_screen_begin_command(
-        Ref<Elffycore.HostScreen> screen);
+    private static partial ApiValueResult<CoreElffy.BeginCommandData> elffy_screen_begin_command(
+        Ref<CoreElffy.HostScreen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_finish_command(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         Box<Wgpu.CommandEncoder> command_encoder,
         Box<Wgpu.SurfaceTexture> surface_tex,
         Box<Wgpu.TextureView> surface_tex_view);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_set_title(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         Slice<u8> title);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -56,17 +56,17 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_set_inner_size(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         u32 width,
         u32 height);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiValueResult<Elffycore.SizeU32> elffy_screen_get_inner_size(
-        Ref<Elffycore.HostScreen> screen);
+    private static partial ApiValueResult<CoreElffy.SizeU32> elffy_screen_get_inner_size(
+        Ref<CoreElffy.HostScreen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_write_texture(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         ImageCopyTexture* texture,
         Slice<u8> data,
         Wgpu.ImageDataLayout* data_layout,
@@ -74,7 +74,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.BindGroupLayout> elffy_create_bind_group_layout(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         BindGroupLayoutDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -83,7 +83,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.BindGroup> elffy_create_bind_group(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         BindGroupDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -92,7 +92,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.PipelineLayout> elffy_create_pipeline_layout(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         PipelineLayoutDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -101,7 +101,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.RenderPipeline> elffy_create_render_pipeline(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         RenderPipelineDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -110,7 +110,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Buffer> elffy_create_buffer_init(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         Slice<u8> contents,
         Wgpu.BufferUsages usage);
 
@@ -120,7 +120,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Sampler> elffy_create_sampler(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         SamplerDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -129,7 +129,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.ShaderModule> elffy_create_shader_module(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         Slice<u8> shader_source);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -138,12 +138,12 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Texture> elffy_create_texture(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         TextureDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Texture> elffy_create_texture_with_data(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         TextureDescriptor* desc,
         Slice<u8> data);
 
@@ -162,7 +162,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_write_buffer(
-        Ref<Elffycore.HostScreen> screen,
+        Ref<CoreElffy.HostScreen> screen,
         Ref<Wgpu.Buffer> buffer,
         u64 offset,
         Slice<u8> data);
