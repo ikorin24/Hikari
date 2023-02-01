@@ -173,7 +173,7 @@ extern "cdecl" fn elffy_create_pipeline_layout(
     screen: &HostScreen,
     desc: &PipelineLayoutDescriptor,
 ) -> ApiBoxResult<wgpu::PipelineLayout> {
-    let value = screen.create_pipeline_layout(&desc.to_pipeline_descriptor());
+    let value = screen.create_pipeline_layout(&desc.to_wgpu_type());
     make_box_result(value, None)
 }
 

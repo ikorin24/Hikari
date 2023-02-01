@@ -11,7 +11,7 @@ use static_assertions::assert_eq_size;
 use std;
 use std::error::Error;
 use std::mem;
-use std::{marker, num, ops, str};
+use std::{num, ops, str};
 use winit::window;
 
 #[repr(C)]
@@ -291,11 +291,11 @@ impl<'a> BindGroupDescriptor<'a> {
     pub fn use_wgpu_type<T>(&self, consume: impl FnOnce(&wgpu::BindGroupDescriptor) -> T) -> T {
         use BindingResourceEnum as E;
 
-        let wgpu_buffer_bindings_vec = self
+        let wgpu_bindings_vec = self
             .entries
             .iter()
             .map(|entry| match entry.resource.to_enum() {
-                E::Type1(buffer_bindings) => buffer_bindings
+                E::Type1(bindings) => bindings
                     .iter()
                     .map(|x| x.to_wgpu_type())
                     .collect::<Vec<_>>(),
@@ -309,14 +309,12 @@ impl<'a> BindGroupDescriptor<'a> {
             .enumerate()
             .map(|(i, entry)| {
                 let resource = match entry.resource.to_enum() {
-                    E::Type0(buffer_binding) => {
-                        wgpu::BindingResource::Buffer(buffer_binding.to_wgpu_type())
-                    }
-                    E::Type1(_) => wgpu::BindingResource::BufferArray(&wgpu_buffer_bindings_vec[i]),
+                    E::Type0(binding) => wgpu::BindingResource::Buffer(binding.to_wgpu_type()),
+                    E::Type1(_) => wgpu::BindingResource::BufferArray(&wgpu_bindings_vec[i]),
                     E::Type2(sampler) => wgpu::BindingResource::Sampler(sampler),
                     E::Type3(samplers) => wgpu::BindingResource::SamplerArray(samplers),
-                    E::Type4(x) => wgpu::BindingResource::TextureView(x),
-                    E::Type5(x) => wgpu::BindingResource::TextureViewArray(x),
+                    E::Type4(tex_view) => wgpu::BindingResource::TextureView(tex_view),
+                    E::Type5(tex_views) => wgpu::BindingResource::TextureViewArray(tex_views),
                 };
                 wgpu::BindGroupEntry {
                     binding: entry.binding,
@@ -349,30 +347,6 @@ pub(crate) struct BindGroupEntry<'a> {
 )]
 pub(crate) struct BindingResource;
 
-#[repr(transparent)]
-pub(crate) struct PointerWrap<'a> {
-    ptr: *const std::ffi::c_void,
-    phantom: marker::PhantomData<&'a std::ffi::c_void>,
-}
-
-impl<'a> PointerWrap<'a> {
-    pub fn as_ref_unwrap<T>(&self) -> &'a T {
-        unsafe { (self.ptr as *const T).as_ref() }.unwrap()
-    }
-}
-
-// #[repr(u32)]
-// #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-// #[allow(dead_code)] // because values are from FFI
-// pub(crate) enum BindingResourceTag {
-//     Buffer = 0,
-//     BufferArray = 1,
-//     Sampler = 2,
-//     SamplerArray = 3,
-//     TextureView = 4,
-//     TextureViewArray = 5,
-// }
-
 #[repr(C)]
 pub(crate) struct BufferBinding<'a> {
     pub buffer: &'a wgpu::Buffer,
@@ -396,7 +370,7 @@ pub(crate) struct PipelineLayoutDescriptor<'a> {
 }
 
 impl<'a> PipelineLayoutDescriptor<'a> {
-    pub fn to_pipeline_descriptor(&self) -> wgpu::PipelineLayoutDescriptor {
+    pub fn to_wgpu_type(&self) -> wgpu::PipelineLayoutDescriptor {
         wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &self.bind_group_layouts,
@@ -566,58 +540,36 @@ impl<'a> BindGroupLayoutEntry<'a> {
     }
 }
 
-#[repr(C)]
-pub(crate) struct BindingType<'a> {
-    pub tag: BindingTypeTag,
-    /// `&BufferBindingData` or `&SamplerBindingType`
-    /// or `&TextureBindingData` or `&StorageTextureBindingData`
-    pub payload: PointerWrap<'a>,
-}
+#[tagged_ref_union(
+    "BufferBindingData",
+    "SamplerBindingType",
+    "TextureBindingData",
+    "StorageTextureBindingData"
+)]
+pub(crate) struct BindingType;
 
 impl<'a> BindingType<'a> {
     pub fn to_wgpu_type(&self) -> wgpu::BindingType {
-        match self.tag {
-            BindingTypeTag::Buffer => {
-                let payload = self.payload.as_ref_unwrap::<BufferBindingData>();
-                wgpu::BindingType::Buffer {
-                    ty: payload.ty.to_wgpu_type(),
-                    has_dynamic_offset: payload.has_dynamic_offset,
-                    min_binding_size: num::NonZeroU64::new(payload.min_binding_size),
-                }
-            }
-            BindingTypeTag::Sampler => wgpu::BindingType::Sampler(
-                self.payload
-                    .as_ref_unwrap::<SamplerBindingType>()
-                    .to_wgpu_type(),
-            ),
-            BindingTypeTag::Texture => {
-                let payload = self.payload.as_ref_unwrap::<TextureBindingData>();
-                wgpu::BindingType::Texture {
-                    sample_type: payload.sample_type.to_wgpu_type(),
-                    view_dimension: payload.view_dimension.to_wgpu_type(),
-                    multisampled: payload.multisampled,
-                }
-            }
-            BindingTypeTag::StorageTexture => {
-                let payload = self.payload.as_ref_unwrap::<StorageTextureBindingData>();
-                wgpu::BindingType::StorageTexture {
-                    access: payload.access.to_wgpu_type(),
-                    format: payload.format.to_wgpu_type(),
-                    view_dimension: payload.view_dimension.to_wgpu_type(),
-                }
-            }
+        use BindingTypeEnum as E;
+        match self.to_enum() {
+            E::Type0(x) => wgpu::BindingType::Buffer {
+                ty: x.ty.to_wgpu_type(),
+                has_dynamic_offset: x.has_dynamic_offset,
+                min_binding_size: num::NonZeroU64::new(x.min_binding_size),
+            },
+            E::Type1(x) => wgpu::BindingType::Sampler(x.to_wgpu_type()),
+            E::Type2(x) => wgpu::BindingType::Texture {
+                sample_type: x.sample_type.to_wgpu_type(),
+                view_dimension: x.view_dimension.to_wgpu_type(),
+                multisampled: x.multisampled,
+            },
+            E::Type3(x) => wgpu::BindingType::StorageTexture {
+                access: x.access.to_wgpu_type(),
+                format: x.format.to_wgpu_type(),
+                view_dimension: x.view_dimension.to_wgpu_type(),
+            },
         }
     }
-}
-
-#[repr(u32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-#[allow(dead_code)] // because values are from FFI
-pub(crate) enum BindingTypeTag {
-    Buffer = 0,
-    Sampler = 1,
-    Texture = 2,
-    StorageTexture = 3,
 }
 
 #[repr(C)]
