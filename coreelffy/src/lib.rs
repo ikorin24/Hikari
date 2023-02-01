@@ -5,6 +5,7 @@ mod screen;
 
 use crate::error_handler::*;
 use crate::screen::{HostScreen, HostScreenId};
+use coreelffy_macros::tagged_ref_union;
 use smallvec::SmallVec;
 use static_assertions::assert_eq_size;
 use std;
@@ -288,69 +289,47 @@ pub(crate) struct BindGroupDescriptor<'a> {
 
 impl<'a> BindGroupDescriptor<'a> {
     pub fn use_wgpu_type<T>(&self, consume: impl FnOnce(&wgpu::BindGroupDescriptor) -> T) -> T {
-        let mut wgpu_group_entries = vec![];
+        use BindingResourceEnum as E;
+
         let wgpu_buffer_bindings_vec = self
             .entries
             .iter()
-            .map(|entry| match entry.resource {
-                BindingResource {
-                    tag: BindingResourceTag::BufferArray,
-                    ref payload,
-                } => payload
-                    .as_ref_unwrap::<Slice<BufferBinding>>()
+            .map(|entry| match entry.resource.to_enum() {
+                E::Type1(buffer_bindings) => buffer_bindings
                     .iter()
-                    .map(|bb| bb.to_wgpu_type())
+                    .map(|x| x.to_wgpu_type())
                     .collect::<Vec<_>>(),
                 _ => vec![],
             })
             .collect::<Vec<_>>();
 
-        for (entry_index, entry) in self.entries.iter().enumerate() {
-            let wgpu_binding_resource = match entry.resource {
-                BindingResource {
-                    tag: BindingResourceTag::Buffer,
-                    ref payload,
-                } => wgpu::BindingResource::Buffer(
-                    payload.as_ref_unwrap::<BufferBinding>().to_wgpu_type(),
-                ),
-                BindingResource {
-                    tag: BindingResourceTag::BufferArray,
-                    ..
-                } => wgpu::BindingResource::BufferArray(&wgpu_buffer_bindings_vec[entry_index]),
-                BindingResource {
-                    tag: BindingResourceTag::Sampler,
-                    ref payload,
-                } => wgpu::BindingResource::Sampler(payload.as_ref_unwrap::<wgpu::Sampler>()),
-                BindingResource {
-                    tag: BindingResourceTag::SamplerArray,
-                    ref payload,
-                } => wgpu::BindingResource::SamplerArray(
-                    payload.as_ref_unwrap::<Slice<&wgpu::Sampler>>(),
-                ),
-                BindingResource {
-                    tag: BindingResourceTag::TextureView,
-                    ref payload,
-                } => {
-                    wgpu::BindingResource::TextureView(payload.as_ref_unwrap::<wgpu::TextureView>())
+        let wgpu_group_entries: Vec<_> = self
+            .entries
+            .iter()
+            .enumerate()
+            .map(|(i, entry)| {
+                let resource = match entry.resource.to_enum() {
+                    E::Type0(buffer_binding) => {
+                        wgpu::BindingResource::Buffer(buffer_binding.to_wgpu_type())
+                    }
+                    E::Type1(_) => wgpu::BindingResource::BufferArray(&wgpu_buffer_bindings_vec[i]),
+                    E::Type2(sampler) => wgpu::BindingResource::Sampler(sampler),
+                    E::Type3(samplers) => wgpu::BindingResource::SamplerArray(samplers),
+                    E::Type4(x) => wgpu::BindingResource::TextureView(x),
+                    E::Type5(x) => wgpu::BindingResource::TextureViewArray(x),
+                };
+                wgpu::BindGroupEntry {
+                    binding: entry.binding,
+                    resource,
                 }
-                BindingResource {
-                    tag: BindingResourceTag::TextureViewArray,
-                    ref payload,
-                } => wgpu::BindingResource::TextureViewArray(
-                    payload.as_ref_unwrap::<Slice<&wgpu::TextureView>>(),
-                ),
-            };
-            wgpu_group_entries.push(wgpu::BindGroupEntry {
-                binding: entry.binding,
-                resource: wgpu_binding_resource,
-            });
-        }
-        let wgpu_bind_group_desc = wgpu::BindGroupDescriptor {
+            })
+            .collect();
+        let desc = wgpu::BindGroupDescriptor {
             label: None,
             layout: self.layout,
             entries: &wgpu_group_entries,
         };
-        consume(&wgpu_bind_group_desc)
+        consume(&desc)
     }
 }
 
@@ -360,14 +339,15 @@ pub(crate) struct BindGroupEntry<'a> {
     pub resource: BindingResource<'a>,
 }
 
-#[repr(C)]
-pub(crate) struct BindingResource<'a> {
-    pub tag: BindingResourceTag,
-    /// `&BufferBinding` or `&Slice<BufferBinding>`
-    /// or `&wgpu::Sampler` or `&Slice<&wgpu::Sampler>`
-    /// or `&wgpu::TextureView` or `&Slice<&wgpu::TextureView>`
-    pub payload: PointerWrap<'a>,
-}
+#[tagged_ref_union(
+    "BufferBinding<'a>",
+    "Slice<'a, BufferBinding<'a>>",
+    "wgpu::Sampler",
+    "Slice<'a, &'a wgpu::Sampler>",
+    "wgpu::TextureView",
+    "Slice<'a, &'a wgpu::TextureView>"
+)]
+pub(crate) struct BindingResource;
 
 #[repr(transparent)]
 pub(crate) struct PointerWrap<'a> {
@@ -381,17 +361,17 @@ impl<'a> PointerWrap<'a> {
     }
 }
 
-#[repr(u32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-#[allow(dead_code)] // because values are from FFI
-pub(crate) enum BindingResourceTag {
-    Buffer = 0,
-    BufferArray = 1,
-    Sampler = 2,
-    SamplerArray = 3,
-    TextureView = 4,
-    TextureViewArray = 5,
-}
+// #[repr(u32)]
+// #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+// #[allow(dead_code)] // because values are from FFI
+// pub(crate) enum BindingResourceTag {
+//     Buffer = 0,
+//     BufferArray = 1,
+//     Sampler = 2,
+//     SamplerArray = 3,
+//     TextureView = 4,
+//     TextureViewArray = 5,
+// }
 
 #[repr(C)]
 pub(crate) struct BufferBinding<'a> {
