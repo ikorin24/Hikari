@@ -8,12 +8,12 @@ internal unsafe static class HostScreenExtensions
 {
     public static void WriteTexture(
         this Ref<Self> self,
-        in ImageCopyTexture texture,
+        in CE.ImageCopyTexture texture,
         Slice<u8> data,
         in Wgpu.ImageDataLayout dataLayout,
         in Wgpu.Extent3d size)
     {
-        fixed(ImageCopyTexture* texturePtr = &texture)
+        fixed(CE.ImageCopyTexture* texturePtr = &texture)
         fixed(Wgpu.ImageDataLayout* dataLayoutPtr = &dataLayout)
         fixed(Wgpu.Extent3d* sizePtr = &size) {
             EngineCore.WriteTexture(self, texturePtr, data, dataLayoutPtr, sizePtr);
@@ -39,9 +39,9 @@ internal unsafe static class HostScreenExtensions
 
     public static Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
         this Ref<Self> self,
-        in BindGroupLayoutDescriptor desc)
+        in CE.BindGroupLayoutDescriptor desc)
     {
-        fixed(BindGroupLayoutDescriptor* descPtr = &desc) {
+        fixed(CE.BindGroupLayoutDescriptor* descPtr = &desc) {
             return EngineCore.CreateBindGroupLayout(self, descPtr);
         }
     }
@@ -66,9 +66,9 @@ internal unsafe static class HostScreenExtensions
 
     public static Box<Wgpu.Sampler> CreateSampler(
         this Ref<Self> self,
-        in SamplerDescriptor desc)
+        in CE.SamplerDescriptor desc)
     {
-        fixed(SamplerDescriptor* descPtr = &desc) {
+        fixed(CE.SamplerDescriptor* descPtr = &desc) {
             return EngineCore.CreateSampler(self, descPtr);
         }
     }
@@ -96,13 +96,13 @@ internal unsafe static class HostScreenExtensions
 internal unsafe static class TextureExtensions
 {
     public static Box<Wgpu.TextureView> CreateTextureView(this Ref<Wgpu.Texture> self)
-        => CreateTextureView(self, TextureViewDescriptor.Default);
+        => CreateTextureView(self, CE.TextureViewDescriptor.Default);
 
     public static Box<Wgpu.TextureView> CreateTextureView(
         this Ref<Wgpu.Texture> self,
-        in TextureViewDescriptor desc)
+        in CE.TextureViewDescriptor desc)
     {
-        fixed(TextureViewDescriptor* descPtr = &desc) {
+        fixed(CE.TextureViewDescriptor* descPtr = &desc) {
             return EngineCore.CreateTextureView(self, descPtr);
         }
     }

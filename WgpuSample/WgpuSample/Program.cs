@@ -92,7 +92,7 @@ internal class Program
                         depth_stencil_attachment_clear = new()
                         {
                             exists = true,
-                            value = new RenderPassDepthStencilAttachment
+                            value = new CE.RenderPassDepthStencilAttachment
                             {
                                 view = state.GetDepth().View,
                                 depth_clear = Opt<float>.Some(1f),
@@ -438,7 +438,7 @@ internal class Program
             usage = Wgpu.TextureUsages.RENDER_ATTACHMENT | Wgpu.TextureUsages.TEXTURE_BINDING,
         });
         var view = texture.AsRef().CreateTextureView();
-        var sampler = screen.CreateSampler(new SamplerDescriptor
+        var sampler = screen.CreateSampler(new CE.SamplerDescriptor
         {
             address_mode_u = Wgpu.AddressMode.ClampToEdge,
             address_mode_v = Wgpu.AddressMode.ClampToEdge,
@@ -521,11 +521,11 @@ internal static class HostScreenInitializer
         });
         fixed(byte* p = pixelBytes) {
             screen.WriteTexture(
-                new ImageCopyTexture
+                new CE.ImageCopyTexture
                 {
                     texture = texture,
                     mip_level = 0,
-                    aspect = TextureAspect.All,
+                    aspect = CE.TextureAspect.All,
                     origin_x = 0,
                     origin_y = 0,
                     origin_z = 0,
@@ -540,8 +540,8 @@ internal static class HostScreenInitializer
                 size);
         }
 
-        var textureView = texture.AsRef().CreateTextureView(TextureViewDescriptor.Default);
-        var sampler = screen.CreateSampler(new SamplerDescriptor
+        var textureView = texture.AsRef().CreateTextureView();
+        var sampler = screen.CreateSampler(new CE.SamplerDescriptor
         {
             address_mode_u = Wgpu.AddressMode.ClampToEdge,
             address_mode_v = Wgpu.AddressMode.ClampToEdge,
@@ -552,7 +552,7 @@ internal static class HostScreenInitializer
             anisotropy_clamp = 0,
             lod_max_clamp = 0,
             lod_min_clamp = 0,
-            border_color = Opt<SamplerBorderColor>.None,
+            border_color = Opt<CE.SamplerBorderColor>.None,
             compare = Opt<Wgpu.CompareFunction>.None,
         });
         return new TextureData

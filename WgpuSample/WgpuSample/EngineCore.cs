@@ -15,8 +15,6 @@ namespace Elffy
     {
         [ThreadStatic]
         private static List<NativeError>? _nativeErrorStore;
-        [ThreadStatic]
-        private static Action<IntPtr, nuint>? _writeBufferWriterTemp;
         private static EngineCoreConfig _config;
         private static int _isStarted = 0;
 
@@ -92,9 +90,9 @@ namespace Elffy
             }
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-            static void DispatchError(CE.ErrMessageId id, byte* messagePtr, nuint messageByteLen)
+            static void DispatchError(CE.ErrMessageId id, u8* messagePtr, usize messageByteLen)
             {
-                var len = (int)nuint.Min(messageByteLen, (nuint)int.MaxValue);
+                var len = (int)usize.Min(messageByteLen, (usize)int.MaxValue);
                 var message = Encoding.UTF8.GetString(messagePtr, len);
                 _nativeErrorStore ??= new();
                 _nativeErrorStore.Add(new(id, message));
@@ -189,7 +187,7 @@ namespace Elffy
         [DebuggerHidden]
         public static void WriteTexture(
             Ref<CE.HostScreen> screen,
-            ImageCopyTexture* texture,
+            CE.ImageCopyTexture* texture,
             Slice<u8> data,
             Wgpu.ImageDataLayout* data_layout,
             Wgpu.Extent3d* size)
@@ -199,7 +197,7 @@ namespace Elffy
         [DebuggerHidden]
         public static Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
             Ref<CE.HostScreen> screen,
-            BindGroupLayoutDescriptor* desc)
+            CE.BindGroupLayoutDescriptor* desc)
             => elffy_create_bind_group_layout(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -280,7 +278,7 @@ namespace Elffy
         [DebuggerHidden]
         public static Box<Wgpu.Sampler> CreateSampler(
             Ref<CE.HostScreen> screen,
-            SamplerDescriptor* desc)
+            CE.SamplerDescriptor* desc)
             => elffy_create_sampler(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -336,7 +334,7 @@ namespace Elffy
         [DebuggerHidden]
         public static Box<Wgpu.TextureView> CreateTextureView(
             Ref<Wgpu.Texture> texture,
-            TextureViewDescriptor* desc)
+            CE.TextureViewDescriptor* desc)
             => elffy_create_texture_view(texture, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -427,14 +425,14 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerNonUserCode]
-        private static void ThrowNativeErrorIfNotZero(nuint errorCount)
+        private static void ThrowNativeErrorIfNotZero(usize errorCount)
         {
             if(errorCount != 0) {
                 ThrowNativeError(errorCount);
 
                 [DoesNotReturn]
                 [DebuggerNonUserCode]
-                static void ThrowNativeError(nuint errorCount)
+                static void ThrowNativeError(usize errorCount)
                 {
                     Debug.Assert(errorCount != 0);
                     var store = _nativeErrorStore;
@@ -456,7 +454,7 @@ namespace Elffy
 
         private readonly struct ApiResult
         {
-            private readonly nuint _errorCount;
+            private readonly usize _errorCount;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             [DebuggerHidden]
@@ -467,7 +465,7 @@ namespace Elffy
         {
             // (_errorCount, _nativePtr) is (0, not null) or (not 0, null)
 
-            private readonly nuint _errorCount;
+            private readonly usize _errorCount;
             private readonly void* _nativePtr;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -485,7 +483,7 @@ namespace Elffy
 
         private readonly struct ApiValueResult<T> where T : unmanaged
         {
-            private readonly nuint _errorCount;
+            private readonly usize _errorCount;
             private readonly T _value;
 
             [UnscopedRef]

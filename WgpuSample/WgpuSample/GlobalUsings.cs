@@ -1,4 +1,6 @@
 ﻿#nullable enable
+
+// aliases for name in Rust
 global using u8 = System.Byte;
 global using i8 = System.SByte;
 global using u16 = System.UInt16;
@@ -11,9 +13,8 @@ global using u128 = System.UInt128;
 global using i128 = System.Int128;
 global using f32 = System.Single;
 global using f64 = System.Double;
-
-#pragma warning disable CS8981 // lower-case ASCII-only aliases may conflict with reserved names in the future.
+#pragma warning disable CS8981 // lowercase ASCII-only aliases may conflict with reserved names in the future.
 global using usize = System.UIntPtr;
-#pragma warning restore CS8981 // lower-case ASCII-only aliases may conflict with reserved names in the future.
+#pragma warning restore CS8981 // lowercase ASCII-only aliases may conflict with reserved names in the future.
 
 global using CE = Elffy.Bind.CoreElffy;

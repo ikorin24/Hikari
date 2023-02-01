@@ -23,7 +23,7 @@ internal ref struct RenderPassDescriptor
 internal unsafe ref struct Slice_Opt_RenderPassColorAttachment
 {
     public required Opt_RenderPassColorAttachment* data;
-    public required nuint len;
+    public required usize len;
 }
 
 // Opt<RenderPassColorAttachment>
@@ -45,75 +45,9 @@ internal ref struct RenderPassColorAttachment
 internal ref struct Opt_RenderPassDepthStencilAttachment
 {
     public required bool exists;
-    public required RenderPassDepthStencilAttachment value;
+    public required CE.RenderPassDepthStencilAttachment value;
 
     public static Opt_RenderPassDepthStencilAttachment None => default;
-}
-
-internal ref struct RenderPassDepthStencilAttachment
-{
-    public required Ref<Wgpu.TextureView> view;
-    public required Opt<f32> depth_clear;
-    public required Opt<u32> stencil_clear;
-}
-
-internal struct BindGroupLayoutDescriptor
-{
-    public required Slice<BindGroupLayoutEntry> entries;
-}
-
-internal ref struct ImageCopyTexture
-{
-    public required Ref<Wgpu.Texture> texture;
-    public required u32 mip_level;
-    public required u32 origin_x;
-    public required u32 origin_y;
-    public required u32 origin_z;
-    public required TextureAspect aspect;
-}
-
-internal struct TextureViewDescriptor
-{
-    public required Opt<TextureFormat> format;
-    public required Opt<TextureViewDimension> dimension;
-    public required TextureAspect aspect;
-    public required u32 base_mip_level;
-    public required u32 mip_level_count;
-    public required u32 base_array_layer;
-    public required u32 array_layer_count;
-
-    public static TextureViewDescriptor Default => default;
-}
-
-
-internal enum TextureAspect
-{
-    All = 0,
-    StencilOnly = 1,
-    DepthOnly = 2,
-}
-
-internal struct SamplerDescriptor
-{
-    public required Wgpu.AddressMode address_mode_u;
-    public required Wgpu.AddressMode address_mode_v;
-    public required Wgpu.AddressMode address_mode_w;
-    public required Wgpu.FilterMode mag_filter;
-    public required Wgpu.FilterMode min_filter;
-    public required Wgpu.FilterMode mipmap_filter;
-    public required f32 lod_min_clamp;
-    public required f32 lod_max_clamp;
-    public required Opt<Wgpu.CompareFunction> compare;
-    public u8 anisotropy_clamp;
-    public Opt<SamplerBorderColor> border_color;
-}
-
-internal enum SamplerBorderColor
-{
-    TransparentBlack = 0,
-    OpaqueBlack = 1,
-    OpaqueWhite = 2,
-    Zero = 3,
 }
 
 internal ref struct BindGroupDescriptor
@@ -126,7 +60,7 @@ internal ref struct BindGroupDescriptor
 internal unsafe ref struct Slice_BindGroupEntry
 {
     public required BindGroupEntry* data;
-    public required nuint len;
+    public required usize len;
 }
 
 internal ref struct BindGroupEntry
@@ -179,7 +113,7 @@ internal ref struct PipelineLayoutDescriptor
 internal unsafe ref struct Slice_Ref_WgpuBindGroupLayout
 {
     public required Ref<Wgpu.BindGroupLayout>* data;
-    public required nuint len;
+    public required usize len;
 }
 
 internal ref struct RenderPipelineDescriptor
@@ -475,12 +409,12 @@ internal ref struct BufferSlice
 internal struct Slice<T> where T : unmanaged
 {
     public unsafe required T* data; // allow null
-    public required nuint len;
+    public required usize len;
 
     public static Slice<T> Empty => default;
 
     [SetsRequiredMembers]
-    public unsafe Slice(T* data, nuint len)
+    public unsafe Slice(T* data, usize len)
     {
         this.data = data;
         this.len = len;
@@ -490,7 +424,7 @@ internal struct Slice<T> where T : unmanaged
     public unsafe Slice(T* data, int len)
     {
         this.data = data;
-        this.len = checked((nuint)len);
+        this.len = checked((usize)len);
     }
 }
 
@@ -510,7 +444,7 @@ internal static class Slice
 internal unsafe ref struct Slice_SlotBufSlice
 {
     public required SlotBufSlice* data;
-    public required nuint len;
+    public required usize len;
 }
 
 internal ref struct SlotBufSlice
