@@ -14,3 +14,4 @@ smallvec = "1.10.0"
 static_assertions = "1.1.0"
 wgpu = "0.13.1"
 winit = "0.26.1"
+coreelffy_macros = { path = "../coreelffy_macros" }

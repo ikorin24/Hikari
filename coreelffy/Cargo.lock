@@ -269,6 +269,7 @@ dependencies = [
 name = "coreelffy"
 version = "0.1.0"
 dependencies = [
+ "coreelffy_macros",
  "env_logger",
  "log",
  "pollster",
@@ -276,6 +277,15 @@ dependencies = [
  "static_assertions",
  "wgpu",
  "winit",
+]
+
+[[package]]
+name = "coreelffy_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -894,9 +904,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.49"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57a8eca9f9c4ffde41714334dee777596264c7825420f521abc92b5b5deb63a5"
+checksum = "6ef7d57beacfaf2d8aee5937dab7b7f28de3cb8b1828479bb5de2a7106f2bae2"
 dependencies = [
  "unicode-ident",
 ]
