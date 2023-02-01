@@ -1,6 +1,4 @@
 ﻿#nullable enable
-using u32 = System.UInt32;
-using i32 = System.Int32;
 using Elffy.Bind;
 using System.Diagnostics;
 

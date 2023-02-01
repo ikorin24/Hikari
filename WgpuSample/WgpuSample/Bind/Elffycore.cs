@@ -1,11 +1,4 @@
 ﻿#nullable enable
-using u8 = System.Byte;
-using u16 = System.UInt16;
-using u32 = System.UInt32;
-using i32 = System.Int32;
-using u64 = System.UInt64;
-using f32 = System.Single;
-using f64 = System.Double;
 using System;
 
 namespace Elffy.Bind;
@@ -84,6 +77,8 @@ internal static class Elffycore
     internal readonly struct HostScreenId : IEquatable<HostScreenId>
     {
         private readonly nuint _id;
+
+        public nuint AsNumber() => _id;
 
         public override bool Equals(object? obj) => obj is HostScreenId id && Equals(id);
 

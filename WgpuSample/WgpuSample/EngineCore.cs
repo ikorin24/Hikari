@@ -1,9 +1,4 @@
 ﻿#nullable enable
-using u8 = System.Byte;
-using u32 = System.UInt32;
-using i32 = System.Int32;
-using f32 = System.Single;
-using u64 = System.UInt64;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -533,23 +528,6 @@ namespace Elffy
                 return sb.ToString();
             }
         }
-    }
-
-    internal readonly struct EngineCoreConfig
-    {
-        public required Action<Box<Elffycore.HostScreen>, Elffycore.HostScreenInfo, Elffycore.HostScreenId> OnStart { get; init; }
-        public required Action<Elffycore.HostScreenId> OnRedrawRequested { get; init; }
-        public required Action<Elffycore.HostScreenId> OnCleared { get; init; }
-
-        public required Action<Elffycore.HostScreenId, u32, u32> OnResized { get; init; }
-    }
-
-    internal readonly ref struct HostScreenConfig
-    {
-        public required WindowStyle Style { get; init; }
-        public required u32 Width { get; init; }
-        public required u32 Height { get; init; }
-        public required Wgpu.Backends Backend { get; init; }
     }
 
     internal delegate void EngineCoreRenderAction(Ref<Elffycore.HostScreen> screen, MutRef<Wgpu.RenderPass> renderPass);

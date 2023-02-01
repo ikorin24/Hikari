@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System;
-using u8 = System.Byte;
 using Self = Elffy.Bind.Elffycore.HostScreen;
 
 namespace Elffy.Bind;

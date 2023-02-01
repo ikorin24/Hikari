@@ -1,8 +1,4 @@
 ﻿#nullable enable
-using u8 = System.Byte;
-using u32 = System.UInt32;
-using i32 = System.Int32;
-using u64 = System.UInt64;
 using NonZeroUsize = System.UIntPtr;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;

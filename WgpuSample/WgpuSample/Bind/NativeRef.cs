@@ -16,13 +16,6 @@ internal readonly struct OptionBox<T> where T : INativeTypeNonReprC
     public unsafe bool IsNone => (void*)_p == null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool AsBox(out Box<T> box)
-    {
-        box = Unsafe.As<OptionBox<T>, Box<T>>(ref Unsafe.AsRef(in this));
-        return IsNone;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Box<T> Unwrap()
     {
         if(IsNone) {

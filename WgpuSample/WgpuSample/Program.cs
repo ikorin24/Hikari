@@ -310,7 +310,7 @@ internal class Program
                         module = shader,
                         entry_point = Slice.FromFixedSpanUnsafe("fs_main"u8),
                         targets = Slice.FromFixedSpanUnsafe(stackalloc Opt<ColorTargetState>[]
-                            {
+                        {
                             Opt<ColorTargetState>.Some(new()
                             {
                                 format = surfaceFormat,
