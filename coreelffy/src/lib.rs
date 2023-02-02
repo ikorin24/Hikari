@@ -295,7 +295,7 @@ impl<'a> BindGroupDescriptor<'a> {
             .entries
             .iter()
             .map(|entry| match entry.resource.to_enum() {
-                E::Type1(bindings) => bindings
+                E::BufferArray(bindings) => bindings
                     .iter()
                     .map(|x| x.to_wgpu_type())
                     .collect::<Vec<_>>(),
@@ -309,12 +309,14 @@ impl<'a> BindGroupDescriptor<'a> {
             .enumerate()
             .map(|(i, entry)| {
                 let resource = match entry.resource.to_enum() {
-                    E::Type0(binding) => wgpu::BindingResource::Buffer(binding.to_wgpu_type()),
-                    E::Type1(_) => wgpu::BindingResource::BufferArray(&wgpu_bindings_vec[i]),
-                    E::Type2(sampler) => wgpu::BindingResource::Sampler(sampler),
-                    E::Type3(samplers) => wgpu::BindingResource::SamplerArray(samplers),
-                    E::Type4(tex_view) => wgpu::BindingResource::TextureView(tex_view),
-                    E::Type5(tex_views) => wgpu::BindingResource::TextureViewArray(tex_views),
+                    E::Buffer(binding) => wgpu::BindingResource::Buffer(binding.to_wgpu_type()),
+                    E::BufferArray(_) => wgpu::BindingResource::BufferArray(&wgpu_bindings_vec[i]),
+                    E::Sampler(sampler) => wgpu::BindingResource::Sampler(sampler),
+                    E::SamplerArray(samplers) => wgpu::BindingResource::SamplerArray(samplers),
+                    E::TextureView(tex_view) => wgpu::BindingResource::TextureView(tex_view),
+                    E::TextureViewArray(tex_views) => {
+                        wgpu::BindingResource::TextureViewArray(tex_views)
+                    }
                 };
                 wgpu::BindGroupEntry {
                     binding: entry.binding,
@@ -338,14 +340,14 @@ pub(crate) struct BindGroupEntry<'a> {
 }
 
 #[tagged_ref_union(
-    "BufferBinding<'a>",
-    "Slice<'a, BufferBinding<'a>>",
-    "wgpu::Sampler",
-    "Slice<'a, &'a wgpu::Sampler>",
-    "wgpu::TextureView",
-    "Slice<'a, &'a wgpu::TextureView>"
+    "Buffer@BufferBinding<'a>",
+    "BufferArray@Slice<'a, BufferBinding<'a>>",
+    "Sampler@wgpu::Sampler",
+    "SamplerArray@Slice<'a, &'a wgpu::Sampler>",
+    "TextureView@wgpu::TextureView",
+    "TextureViewArray@Slice<'a, &'a wgpu::TextureView>"
 )]
-pub(crate) struct BindingResource;
+pub(crate) struct BindingResource {}
 
 #[repr(C)]
 pub(crate) struct BufferBinding<'a> {
@@ -541,10 +543,10 @@ impl<'a> BindGroupLayoutEntry<'a> {
 }
 
 #[tagged_ref_union(
-    "BufferBindingData",
-    "SamplerBindingType",
-    "TextureBindingData",
-    "StorageTextureBindingData"
+    "Buffer@BufferBindingData",
+    "Sampler@SamplerBindingType",
+    "Texture@TextureBindingData",
+    "StorageTexture@StorageTextureBindingData"
 )]
 pub(crate) struct BindingType;
 
@@ -552,18 +554,18 @@ impl<'a> BindingType<'a> {
     pub fn to_wgpu_type(&self) -> wgpu::BindingType {
         use BindingTypeEnum as E;
         match self.to_enum() {
-            E::Type0(x) => wgpu::BindingType::Buffer {
+            E::Buffer(x) => wgpu::BindingType::Buffer {
                 ty: x.ty.to_wgpu_type(),
                 has_dynamic_offset: x.has_dynamic_offset,
                 min_binding_size: num::NonZeroU64::new(x.min_binding_size),
             },
-            E::Type1(x) => wgpu::BindingType::Sampler(x.to_wgpu_type()),
-            E::Type2(x) => wgpu::BindingType::Texture {
+            E::Sampler(x) => wgpu::BindingType::Sampler(x.to_wgpu_type()),
+            E::Texture(x) => wgpu::BindingType::Texture {
                 sample_type: x.sample_type.to_wgpu_type(),
                 view_dimension: x.view_dimension.to_wgpu_type(),
                 multisampled: x.multisampled,
             },
-            E::Type3(x) => wgpu::BindingType::StorageTexture {
+            E::StorageTexture(x) => wgpu::BindingType::StorageTexture {
                 access: x.access.to_wgpu_type(),
                 format: x.format.to_wgpu_type(),
                 view_dimension: x.view_dimension.to_wgpu_type(),
