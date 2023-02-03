@@ -122,6 +122,7 @@ namespace EnumMapping;
 
 internal static partial class EnumMapper
 {
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public static bool TryMapTo<TFrom, TTo>(this TFrom source, out TTo to)
         where TFrom : unmanaged, global::System.Enum
         where TTo : unmanaged, global::System.Enum
