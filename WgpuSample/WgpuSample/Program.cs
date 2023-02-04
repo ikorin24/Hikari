@@ -16,20 +16,29 @@ internal class Program
     private static void Main(string[] args)
     {
         Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1");
-        var engineConfig = new EngineCoreConfig
-        {
-            OnStart = OnStart,
-            OnRedrawRequested = OnRedrawRequested,
-            OnCleared = (id) =>
-            {
-                if(TryGetState(id, out var state) == false) {
-                    return;
-                }
-                var screen = state.Screen.AsRef();
-                screen.ScreenRequestRedraw();
-            },
-            OnResized = OnResized,
-        };
+        //var engineConfig = new EngineCoreConfig
+        //{
+        //    OnStart = OnStart,
+        //    OnRedrawRequested = OnRedrawRequested,
+        //    OnCleared = (id) =>
+        //    {
+        //        if(TryGetState(id, out var state) == false) {
+        //            return;
+        //        }
+        //        var screen = state.Screen.AsRef();
+        //        screen.ScreenRequestRedraw();
+        //    },
+        //    OnResized = OnResized,
+        //};
+        //var screenConfig = new HostScreenConfig
+        //{
+        //    Backend = GraphicsBackend.Dx12,
+        //    Width = 1280,
+        //    Height = 720,
+        //    Style = WindowStyle.Default,
+        //};
+        //EngineCore.EngineStart(engineConfig, screenConfig);
+
         var screenConfig = new HostScreenConfig
         {
             Backend = GraphicsBackend.Dx12,
@@ -37,7 +46,20 @@ internal class Program
             Height = 720,
             Style = WindowStyle.Default,
         };
-        EngineCore.EngineStart(engineConfig, screenConfig);
+        Engine.Start(OnInitialized, screenConfig);
+    }
+
+    private static void OnInitialized(IHostScreen screen)
+    {
+        screen.RedrawRequested += (screen) =>
+        {
+
+        };
+        screen.Resized += (screen, w, h) =>
+        {
+
+        };
+        screen.Title = "sample"u8;
     }
 
     private static readonly List<State> _stateList = new List<State>();

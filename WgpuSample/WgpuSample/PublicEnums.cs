@@ -15,24 +15,27 @@ public enum WindowStyle : byte
 
 public enum GraphicsBackend : byte
 {
+    /// <summary>Empty, Don't use this value</summary>
+    [EnumMapTo(Wgpu.Backends.NONE)]
+    None = 0,
     /// <summary>Vulkan</summary>
     [EnumMapTo(Wgpu.Backends.VULKAN)]
-    Vulkan = 0,
+    Vulkan = 1,
     /// <summary>OpenGL</summary>
     [EnumMapTo(Wgpu.Backends.GL)]
-    Gl = 1,
+    Gl = 2,
     /// <summary>Metal</summary>
     [EnumMapTo(Wgpu.Backends.METAL)]
-    Metal = 2,
+    Metal = 3,
     /// <summary>Direct3D 12</summary>
     [EnumMapTo(Wgpu.Backends.DX12)]
-    Dx12 = 3,
+    Dx12 = 4,
     /// <summary>Direct3D 11</summary>
     [EnumMapTo(Wgpu.Backends.DX11)]
-    Dx11 = 4,
+    Dx11 = 5,
     /// <summary>Browser WebGPU</summary>
     [EnumMapTo(Wgpu.Backends.BROWSER_WEBGPU)]
-    BrowserWebGpu = 5,
+    BrowserWebGpu = 6,
 
     /// <summary>
     /// Automatically selected one of the following that is available;

@@ -1,7 +1,6 @@
 ﻿#nullable enable
 using Elffy.Bind;
 using System;
-using EnumMapping;
 using System.Runtime.CompilerServices;
 
 namespace Elffy;
@@ -38,6 +37,15 @@ internal sealed class HostScreen : IHostScreen
         }
     }
 
+    public ReadOnlySpan<byte> Title
+    {
+        set
+        {
+            ThrowIfNotInit();
+            EngineCore.ScreenSetTitle(_screen, value);
+        }
+    }
+
     internal HostScreen(Box<CE.HostScreen> screen, CE.HostScreenId id)
     {
         _screen = screen;
@@ -55,6 +63,7 @@ internal sealed class HostScreen : IHostScreen
             .TryMapTo(out GraphicsBackend backend)
             .WithDebugAssertTrue();
         _backend = backend;
+        _initialized = true;
     }
 
     internal void OnCleared()
@@ -84,8 +93,11 @@ internal sealed class HostScreen : IHostScreen
 
 public interface IHostScreen
 {
+    event Action<IHostScreen>? RedrawRequested;
     event Action<IHostScreen, uint, uint>? Resized;
+
     nuint Id { get; }
+    ReadOnlySpan<byte> Title { set; }   // TODO: get, string
     TextureFormat SurfaceFormat { get; }
     GraphicsBackend Backend { get; }
 }

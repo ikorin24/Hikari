@@ -306,18 +306,20 @@ internal static class Wgpu
 
     internal enum Backend : u8
     {
-        Empty = 0,
-        Vulkan = 1,
-        Metal = 2,
-        Dx12 = 3,
-        Dx11 = 4,
-        Gl = 5,
-        BrowserWebGpu = 6,
+        [EnumMapTo(GraphicsBackend.None)] Empty = 0,
+        [EnumMapTo(GraphicsBackend.Vulkan)] Vulkan = 1,
+        [EnumMapTo(GraphicsBackend.Metal)] Metal = 2,
+        [EnumMapTo(GraphicsBackend.Dx12)] Dx12 = 3,
+        [EnumMapTo(GraphicsBackend.Dx11)] Dx11 = 4,
+        [EnumMapTo(GraphicsBackend.Gl)] Gl = 5,
+        [EnumMapTo(GraphicsBackend.BrowserWebGpu)] BrowserWebGpu = 6,
     }
 
     [Flags]
     internal enum Backends : u32
     {
+        NONE = 1 << Backend.Empty,
+
         VULKAN = 1 << Backend.Vulkan,
         GL = 1 << Backend.Gl,
         METAL = 1 << Backend.Metal,

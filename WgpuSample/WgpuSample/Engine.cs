@@ -11,11 +11,12 @@ namespace Elffy;
 public static class Engine
 {
     private static readonly List<HostScreen> _screens = new List<HostScreen>();
+    private static Action<IHostScreen>? _onInitialized;
 
-    public static event Action<IHostScreen>? Init;
-
-    public static void Start(in HostScreenConfig screenConfig)
+    public static void Start(Action<IHostScreen> onInitialized, in HostScreenConfig screenConfig)
     {
+        ArgumentNullException.ThrowIfNull(onInitialized);
+        _onInitialized = onInitialized;
         var engineConfig = new EngineCoreConfig
         {
             OnStart = _onStart,
@@ -32,7 +33,7 @@ public static class Engine
             var screen = new HostScreen(screenHandle, id);
             _screens.Add(screen);
             screen.OnInitialize(info);
-            Init?.Invoke(screen);
+            _onInitialized?.Invoke(screen);
         };
 
     private static readonly Action<CE.HostScreenId> _onRedrawRequested =
