@@ -8,13 +8,13 @@ using System.Runtime.InteropServices;
 
 namespace Elffy;
 
-internal static class Engine
+public static class Engine
 {
     private static readonly List<HostScreen> _screens = new List<HostScreen>();
 
     public static event Action<IHostScreen>? Init;
 
-    public static void Start()
+    public static void Start(in HostScreenConfig screenConfig)
     {
         var engineConfig = new EngineCoreConfig
         {
@@ -22,13 +22,6 @@ internal static class Engine
             OnRedrawRequested = _onRedrawRequested,
             OnCleared = _onCleared,
             OnResized = _onResized,
-        };
-        var screenConfig = new HostScreenConfig
-        {
-            Backend = Wgpu.Backends.DX12,
-            Width = 1280,
-            Height = 720,
-            Style = WindowStyle.Default,
         };
         EngineCore.EngineStart(engineConfig, screenConfig);
     }
@@ -38,7 +31,7 @@ internal static class Engine
         {
             var screen = new HostScreen(screenHandle, id);
             _screens.Add(screen);
-            screen.OnInitialize();
+            screen.OnInitialize(info);
             Init?.Invoke(screen);
         };
 
@@ -49,6 +42,7 @@ internal static class Engine
                 Debug.Fail("HostScreen should be found");
                 return;
             }
+            screen.OnRedrawRequested();
         };
 
     private static readonly Action<CE.HostScreenId> _onCleared =
@@ -93,12 +87,4 @@ internal readonly struct EngineCoreConfig
     public required Action<CE.HostScreenId> OnCleared { get; init; }
 
     public required Action<CE.HostScreenId, u32, u32> OnResized { get; init; }
-}
-
-internal readonly ref struct HostScreenConfig
-{
-    public required WindowStyle Style { get; init; }
-    public required u32 Width { get; init; }
-    public required u32 Height { get; init; }
-    public required Wgpu.Backends Backend { get; init; }
 }

@@ -15,7 +15,7 @@ internal class Program
     [STAThread]
     private static void Main(string[] args)
     {
-        Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1", EnvironmentVariableTarget.Process);
+        Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1");
         var engineConfig = new EngineCoreConfig
         {
             OnStart = OnStart,
@@ -32,7 +32,7 @@ internal class Program
         };
         var screenConfig = new HostScreenConfig
         {
-            Backend = Wgpu.Backends.DX12,
+            Backend = GraphicsBackend.Dx12,
             Width = 1280,
             Height = 720,
             Style = WindowStyle.Default,
@@ -422,7 +422,7 @@ internal class Program
 
     private static DepthTextureData CreateDepthTexture(Ref<CE.HostScreen> screen, uint width, uint height)
     {
-        const TextureFormat DepthTextureFormat = TextureFormat.Depth32Float;
+        const Wgpu.TextureFormat DepthTextureFormat = Wgpu.TextureFormat.Depth32Float;
         var texture = screen.CreateTexture(new TextureDescriptor
         {
             size = new Wgpu.Extent3d
@@ -513,7 +513,7 @@ internal static class HostScreenInitializer
         var texture = screen.CreateTexture(new()
         {
             dimension = TextureDimension.D2,
-            format = TextureFormat.Rgba8UnormSrgb,
+            format = Wgpu.TextureFormat.Rgba8UnormSrgb,
             mip_level_count = 1,
             sample_count = 1,
             size = size,
@@ -833,7 +833,7 @@ internal record struct DepthTextureData(
     Box<Wgpu.Texture> Texture,
     Box<Wgpu.TextureView> View,
     Box<Wgpu.Sampler> Sampler,
-    TextureFormat Format);
+    Wgpu.TextureFormat Format);
 
 
 internal unsafe static class UnsafeEx

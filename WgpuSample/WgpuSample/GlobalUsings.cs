@@ -18,3 +18,5 @@ global using usize = System.UIntPtr;
 #pragma warning restore CS8981 // lowercase ASCII-only aliases may conflict with reserved names in the future.
 
 global using CE = Elffy.Bind.CoreElffy;
+
+global using EnumMapping;

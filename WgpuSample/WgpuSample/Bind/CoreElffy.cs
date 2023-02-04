@@ -10,6 +10,13 @@ internal static class CoreElffy
 {
     internal sealed class HostScreen : INativeTypeNonReprC { private HostScreen() { } }
 
+    internal enum WindowStyle
+    {
+        Default = 0,
+        Fixed = 1,
+        Fullscreen = 2,
+    }
+
     internal unsafe struct EngineCoreConfig
     {
         public required DispatchErrFn err_dispatcher;
@@ -33,7 +40,7 @@ internal static class CoreElffy
     internal struct HostScreenInfo
     {
         public required Wgpu.Backend backend;
-        public required Opt<TextureFormat> surface_format;
+        public required Opt<Wgpu.TextureFormat> surface_format;
     }
 
     internal unsafe readonly struct HostScreenInitFn
@@ -129,7 +136,7 @@ internal static class CoreElffy
 
     internal struct TextureViewDescriptor
     {
-        public required Opt<TextureFormat> format;
+        public required Opt<Wgpu.TextureFormat> format;
         public required Opt<TextureViewDimension> dimension;
         public required TextureAspect aspect;
         public required u32 base_mip_level;

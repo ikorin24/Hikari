@@ -6,13 +6,6 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Elffy.Bind;
 
-internal enum WindowStyle
-{
-    Default = 0,
-    Fixed = 1,
-    Fullscreen = 2,
-}
-
 internal ref struct RenderPassDescriptor
 {
     public required Slice_Opt_RenderPassColorAttachment color_attachments_clear;
@@ -129,7 +122,7 @@ internal ref struct RenderPipelineDescriptor
 
 internal struct DepthStencilState
 {
-    public required TextureFormat format;
+    public required Wgpu.TextureFormat format;
     public required bool depth_write_enabled;
     public required Wgpu.CompareFunction depth_compare;
     public required Wgpu.StencilState stencil;
@@ -159,7 +152,7 @@ internal ref struct Opt_FragmentState
 
 internal struct ColorTargetState
 {
-    public required TextureFormat format;
+    public required Wgpu.TextureFormat format;
     public required Opt<Wgpu.BlendState> blend;
     public required Wgpu.ColorWrites write_mask;
 }
@@ -257,7 +250,7 @@ internal enum TextureViewDimension
 internal struct StorageTextureBindingData
 {
     public required StorageTextureAccess access;
-    public required TextureFormat format;
+    public required Wgpu.TextureFormat format;
     public required TextureViewDimension view_dimension;
 }
 
@@ -268,88 +261,13 @@ internal enum StorageTextureAccess : u32
     ReadWrite = 2,
 }
 
-internal enum TextureFormat
-{
-    R8Unorm = 0,
-    R8Snorm = 1,
-    R8Uint = 2,
-    R8Sint = 3,
-    R16Uint = 4,
-    R16Sint = 5,
-    R16Unorm = 6,
-    R16Snorm = 7,
-    R16Float = 8,
-    Rg8Unorm = 9,
-    Rg8Snorm = 10,
-    Rg8Uint = 11,
-    Rg8Sint = 12,
-    R32Uint = 13,
-    R32Sint = 14,
-    R32Float = 15,
-    Rg16Uint = 16,
-    Rg16Sint = 17,
-    Rg16Unorm = 18,
-    Rg16Snorm = 19,
-    Rg16Float = 20,
-    Rgba8Unorm = 21,
-    Rgba8UnormSrgb = 22,
-    Rgba8Snorm = 23,
-    Rgba8Uint = 24,
-    Rgba8Sint = 25,
-    Bgra8Unorm = 26,
-    Bgra8UnormSrgb = 27,
-    Rgb10a2Unorm = 28,
-    Rg11b10Float = 29,
-    Rg32Uint = 30,
-    Rg32Sint = 31,
-    Rg32Float = 32,
-    Rgba16Uint = 33,
-    Rgba16Sint = 34,
-    Rgba16Unorm = 35,
-    Rgba16Snorm = 36,
-    Rgba16Float = 37,
-    Rgba32Uint = 38,
-    Rgba32Sint = 39,
-    Rgba32Float = 40,
-    Depth32Float = 41,
-    Depth32FloatStencil8 = 42,
-    Depth24Plus = 43,
-    Depth24PlusStencil8 = 44,
-    Depth24UnormStencil8 = 45,
-    Rgb9e5Ufloat = 46,
-    Bc1RgbaUnorm = 47,
-    Bc1RgbaUnormSrgb = 48,
-    Bc2RgbaUnorm = 49,
-    Bc2RgbaUnormSrgb = 50,
-    Bc3RgbaUnorm = 51,
-    Bc3RgbaUnormSrgb = 52,
-    Bc4RUnorm = 53,
-    Bc4RSnorm = 54,
-    Bc5RgUnorm = 55,
-    Bc5RgSnorm = 56,
-    Bc6hRgbUfloat = 57,
-    Bc6hRgbSfloat = 58,
-    Bc7RgbaUnorm = 59,
-    Bc7RgbaUnormSrgb = 60,
-    Etc2Rgb8Unorm = 61,
-    Etc2Rgb8UnormSrgb = 62,
-    Etc2Rgb8A1Unorm = 63,
-    Etc2Rgb8A1UnormSrgb = 64,
-    Etc2Rgba8Unorm = 65,
-    Etc2Rgba8UnormSrgb = 66,
-    EacR11Unorm = 67,
-    EacR11Snorm = 68,
-    EacRg11Unorm = 69,
-    EacRg11Snorm = 70,
-}
-
 internal struct TextureDescriptor
 {
     public required Wgpu.Extent3d size;
     public required u32 mip_level_count;
     public required u32 sample_count;
     public required TextureDimension dimension;
-    public required TextureFormat format;
+    public required Wgpu.TextureFormat format;
     public required Wgpu.TextureUsages usage;
 }
 

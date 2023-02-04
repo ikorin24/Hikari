@@ -42,14 +42,7 @@ namespace Elffy
                 event_resized = new(&EventResized),
             };
 
-            var screenConfigNative = new CE.HostScreenConfig
-            {
-                title = Slice<u8>.Empty,
-                style = screenConfig.Style,
-                width = screenConfig.Width,
-                height = screenConfig.Height,
-                backend = screenConfig.Backend,
-            };
+            var screenConfigNative = screenConfig.ToCoreType();
 
             var errorCount = elffy_engine_start(&engineConfigNative, &screenConfigNative);
             Debug.Assert(errorCount > 0);
