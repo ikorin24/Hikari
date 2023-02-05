@@ -112,11 +112,23 @@ internal static class CoreElffy
         public u32 height;
     }
 
-    internal ref struct RenderPassDepthStencilAttachment
+    internal readonly struct RenderPassDepthStencilAttachment
     {
-        public required Ref<Wgpu.TextureView> view;
-        public required Opt<f32> depth_clear;
-        public required Opt<u32> stencil_clear;
+        private readonly NativePointer _view;
+        private readonly Opt<f32> _depth_clear;
+        private readonly Opt<u32> _stencil_clear;
+
+        public unsafe required Ref<Wgpu.TextureView> view
+        {
+            get
+            {
+                var view = _view;
+                return *(Ref<Wgpu.TextureView>*)(&view);
+            }
+            init => _view = value.AsPtr();
+        }
+        public required Opt<f32> depth_clear { get => _depth_clear; init => _depth_clear = value; }
+        public required Opt<u32> stencil_clear { get => _stencil_clear; init => _stencil_clear = value; }
     }
 
     internal struct BindGroupLayoutDescriptor

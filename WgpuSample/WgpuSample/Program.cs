@@ -96,7 +96,7 @@ internal class Program
                 RenderPassDescriptor desc;
                 {
                     const int ColorAttachmentCount = 1;
-                    var colorAttachments = stackalloc Opt_RenderPassColorAttachment[ColorAttachmentCount]
+                    var colorAttachments = stackalloc Opt<RenderPassColorAttachment>[ColorAttachmentCount]
                     {
                         new()
                         {
@@ -257,14 +257,15 @@ internal class Program
         {
             const int BindGroupLayoutCount = 2;
             var bindGroupLayouts = stackalloc Ref<Wgpu.BindGroupLayout>[BindGroupLayoutCount] { textureBindGroupLayout, cameraBindGroupLayout };
-            pipelineLayout = screenRef.CreatePipelineLayout(new PipelineLayoutDescriptor
-            {
-                bind_group_layouts = new()
-                {
-                    data = bindGroupLayouts,
-                    len = BindGroupLayoutCount,
-                },
-            });
+            var desc = new PipelineLayoutDescriptor(bindGroupLayouts, BindGroupLayoutCount);
+            //{
+            //    bind_group_layouts = new()
+            //    {
+            //        data = bindGroupLayouts,
+            //        len = BindGroupLayoutCount,
+            //    },
+            //};
+            pipelineLayout = screenRef.CreatePipelineLayout(desc);
         }
 
         //// Buffer (uniform)

@@ -6,71 +6,78 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Elffy.Bind;
 
-internal ref struct RenderPassDescriptor
+internal readonly struct RenderPassDescriptor
 {
-    public required Slice_Opt_RenderPassColorAttachment color_attachments_clear;
-    public required Opt_RenderPassDepthStencilAttachment depth_stencil_attachment_clear;
-}
+    private readonly Slice<Opt<RenderPassColorAttachment>> _color_attachments_clear;
+    private readonly Opt<CE.RenderPassDepthStencilAttachment> _depth_stencil_attachment_clear;
 
-// Slice<Opt<RenderPassColorAttachment>>
-internal unsafe ref struct Slice_Opt_RenderPassColorAttachment
-{
-    public required Opt_RenderPassColorAttachment* data;
-    public required usize len;
-}
-
-// Opt<RenderPassColorAttachment>
-internal ref struct Opt_RenderPassColorAttachment
-{
-    public required bool exists;
-    public required RenderPassColorAttachment value;
-
-    public static Opt_RenderPassColorAttachment None => default;
-}
-
-internal ref struct RenderPassColorAttachment
-{
-    public required Ref<Wgpu.TextureView> view;
-    public required Wgpu.Color clear;
-}
-
-// Opt<RenderPassDepthStencilAttachment>
-internal ref struct Opt_RenderPassDepthStencilAttachment
-{
-    public required bool exists;
-    public required CE.RenderPassDepthStencilAttachment value;
-
-    public static Opt_RenderPassDepthStencilAttachment None => default;
-}
-
-internal ref struct BindGroupDescriptor
-{
-    public required Ref<Wgpu.BindGroupLayout> layout;
-    public required Slice_BindGroupEntry entries;
-}
-
-// Slice<BindGroupEntry>
-internal unsafe ref struct Slice_BindGroupEntry
-{
-    public required BindGroupEntry* data;
-    public required usize len;
-}
-
-internal ref struct BindGroupEntry
-{
-    public required u32 binding;
-    public required BindingResource resource;
-}
-
-internal unsafe readonly ref struct BindingResource
-{
-    private readonly BindingResourceTag tag;
-    private readonly void* payload;
-
-    public BindingResource(BindingResourceTag tag, void* payload)
+    public required Slice<Opt<RenderPassColorAttachment>> color_attachments_clear
     {
-        this.tag = tag;
-        this.payload = payload;
+        get => _color_attachments_clear; init => _color_attachments_clear = value;
+    }
+    public required Opt<CE.RenderPassDepthStencilAttachment> depth_stencil_attachment_clear
+    {
+        get => _depth_stencil_attachment_clear; init => _depth_stencil_attachment_clear = value;
+    }
+}
+
+internal readonly struct RenderPassColorAttachment
+{
+    private readonly NativePointer _view;   // Ref<Wgpu.TextureView>
+    private readonly Wgpu.Color _clear;
+
+    public unsafe required Ref<Wgpu.TextureView> view
+    {
+        get
+        {
+            var view = _view;
+            return *(Ref<Wgpu.TextureView>*)(&view);
+        }
+        init => _view = value.AsPtr();
+    }
+
+    public required Wgpu.Color clear { get => _clear; init => _clear = value; }
+}
+
+internal readonly struct BindGroupDescriptor
+{
+    private readonly NativePointer _layout;
+    private readonly Slice<BindGroupEntry> _entries;
+
+    public unsafe required Ref<Wgpu.BindGroupLayout> layout
+    {
+        get
+        {
+            var layout = _layout;
+            return *(Ref<Wgpu.BindGroupLayout>*)(&layout);
+        }
+        init => _layout = value.AsPtr();
+    }
+    public required Slice<BindGroupEntry> entries
+    {
+        get => _entries;
+        init => _entries = value;
+    }
+}
+
+internal readonly struct BindGroupEntry
+{
+    private readonly u32 _binding;
+    private readonly BindingResource _resource;
+
+    public required u32 binding { get => _binding; init => _binding = value; }
+    public required BindingResource resource { get => _resource; init => _resource = value; }
+}
+
+internal unsafe readonly struct BindingResource
+{
+    private readonly BindingResourceTag _tag;
+    private readonly void* _payload;
+
+    private BindingResource(BindingResourceTag tag, void* payload)
+    {
+        _tag = tag;
+        _payload = payload;
     }
 
     public unsafe static BindingResource Buffer(BufferBinding* payload) => new(BindingResourceTag.Buffer, payload);
@@ -78,46 +85,80 @@ internal unsafe readonly ref struct BindingResource
     public unsafe static BindingResource TextureView(Ref<Wgpu.TextureView> textureView) => new(BindingResourceTag.TextureView, textureView.AsPtr());
 
     public unsafe static BindingResource Sampler(Ref<Wgpu.Sampler> sampler) => new(BindingResourceTag.Sampler, sampler.AsPtr());
+
+    private enum BindingResourceTag : u32
+    {
+        Buffer = 0,
+        BufferArray = 1,
+        Sampler = 2,
+        SamplerArray = 3,
+        TextureView = 4,
+        TextureViewArray = 5,
+    }
 }
 
-internal enum BindingResourceTag
+internal readonly struct BufferBinding
 {
-    Buffer = 0,
-    BufferArray = 1,
-    Sampler = 2,
-    SamplerArray = 3,
-    TextureView = 4,
-    TextureViewArray = 5,
+    private readonly NativePointer _buffer;
+    private readonly u64 _offset;
+    private readonly u64 _size;
+
+    public unsafe required Ref<Wgpu.Buffer> buffer
+    {
+        get
+        {
+            var buffer = _buffer;
+            return *(Ref<Wgpu.Buffer>*)(&buffer);
+        }
+        init => _buffer = value.AsPtr();
+    }
+    public required u64 offset
+    {
+        get => _offset;
+        init => _offset = value;
+    }
+    public required u64 size
+    {
+        get => _size;
+        init => _size = value;
+    }
 }
 
-internal ref struct BufferBinding
+internal readonly struct PipelineLayoutDescriptor
 {
-    public required Ref<Wgpu.Buffer> buffer;
-    public required u64 offset;
-    public required u64 size;
+    private readonly Slice<NativePointer> _bind_group_layouts;
+
+    public unsafe PipelineLayoutDescriptor(Ref<Wgpu.BindGroupLayout>* bind_group_layouts, nuint count)
+    {
+        _bind_group_layouts = new Slice<NativePointer>((NativePointer*)bind_group_layouts, count);
+    }
 }
 
-internal ref struct PipelineLayoutDescriptor
+internal readonly struct RenderPipelineDescriptor
 {
-    public required Slice_Ref_WgpuBindGroupLayout bind_group_layouts;
-}
+    private readonly NativePointer _layout;
+    private readonly VertexState _vertex;
+    private readonly Opt<FragmentState> _fragment;
+    private readonly PrimitiveState _primitive;
+    private readonly Opt<DepthStencilState> _depth_stencil;
+    private readonly Wgpu.MultisampleState _multisample;
+    private readonly NonZeroU32OrNone _multiview;
 
-// Slice<Ref<Wgpu.BindGroupLayout>>
-internal unsafe ref struct Slice_Ref_WgpuBindGroupLayout
-{
-    public required Ref<Wgpu.BindGroupLayout>* data;
-    public required usize len;
-}
-
-internal ref struct RenderPipelineDescriptor
-{
-    public required Ref<Wgpu.PipelineLayout> layout;
-    public required VertexState vertex;
-    public required Opt_FragmentState fragment;
-    public required PrimitiveState primitive;
-    public required Opt<DepthStencilState> depth_stencil;
-    public required Wgpu.MultisampleState multisample;
-    public required NonZeroU32OrNone multiview;
+    public unsafe required Ref<Wgpu.PipelineLayout> layout
+    {
+        get
+        {
+            var layout = _layout;
+            return *(Ref<Wgpu.PipelineLayout>*)(&layout);
+        }
+        init => _layout = value.AsPtr();
+    }
+    public required VertexState vertex { get => _vertex; init => _vertex = value; }
+    public required Opt<FragmentState> fragment { get => _fragment; init => _fragment = value; }
+    public required PrimitiveState primitive { get => _primitive; init => _primitive = value; }
+    public required Opt<DepthStencilState> depth_stencil { get => _depth_stencil; init => _depth_stencil = value; }
+    public required Wgpu.MultisampleState multisample { get => _multisample; init => _multisample = value; }
+    public required NonZeroU32OrNone multiview { get => _multiview; init => _multiview = value; }
 }
 
 internal struct DepthStencilState
@@ -129,25 +170,42 @@ internal struct DepthStencilState
     public required Wgpu.DepthBiasState bias;
 }
 
-internal ref struct VertexState
+internal readonly struct VertexState
 {
-    public required Ref<Wgpu.ShaderModule> module;
-    public required Slice<u8> entry_point;
-    public required Slice<VertexBufferLayout> buffers;
+    private readonly NativePointer _module;
+    private readonly Slice<u8> _entry_point;
+    private readonly Slice<VertexBufferLayout> _buffers;
+
+    public unsafe required Ref<Wgpu.ShaderModule> module
+    {
+        get
+        {
+            var module = _module;
+            return *(Ref<Wgpu.ShaderModule>*)(&module);
+        }
+        init => _module = value.AsPtr();
+    }
+    public required Slice<u8> entry_point { get => _entry_point; init => _entry_point = value; }
+    public required Slice<VertexBufferLayout> buffers { get => _buffers; init => _buffers = value; }
 }
 
-internal ref struct FragmentState
+internal readonly struct FragmentState
 {
-    public required Ref<Wgpu.ShaderModule> module;
-    public required Slice<u8> entry_point;
-    public required Slice<Opt<ColorTargetState>> targets;
-}
+    private readonly NativePointer _module;
+    private readonly Slice<u8> _entry_point;
+    private readonly Slice<Opt<ColorTargetState>> _targets;
 
-// Opt<FragmentState>
-internal ref struct Opt_FragmentState
-{
-    public required bool exists;
-    public required FragmentState value;
+    public unsafe required Ref<Wgpu.ShaderModule> module
+    {
+        get
+        {
+            var module = _module;
+            return *(Ref<Wgpu.ShaderModule>*)(&module);
+        }
+        init => _module = value.AsPtr();
+    }
+    public required Slice<u8> entry_point { get => _entry_point; init => _entry_point = value; }
+    public required Slice<Opt<ColorTargetState>> targets { get => _targets; init => _targets = value; }
 }
 
 internal struct ColorTargetState
@@ -190,14 +248,14 @@ internal unsafe readonly struct BindingType
     public unsafe static BindingType Texture(TextureBindingData* payload) => new(BindingTypeTag.Texture, payload);
 
     public unsafe static BindingType Sampler(SamplerBindingType* payload) => new(BindingTypeTag.Sampler, payload);
-}
 
-internal enum BindingTypeTag
-{
-    Buffer = 0,
-    Sampler = 1,
-    Texture = 2,
-    StorageTexture = 3,
+    private enum BindingTypeTag
+    {
+        Buffer = 0,
+        Sampler = 1,
+        Texture = 2,
+        StorageTexture = 3,
+    }
 }
 
 internal struct BufferBindingData
@@ -358,19 +416,6 @@ internal static class Slice
     }
 }
 
-// Slice<SlotBufSlice>
-internal unsafe ref struct Slice_SlotBufSlice
-{
-    public required SlotBufSlice* data;
-    public required usize len;
-}
-
-internal ref struct SlotBufSlice
-{
-    public required BufferSlice buffer_slice;
-    public required u32 slot;
-}
-
 internal struct RangeU32
 {
     public required u32 start;
@@ -435,6 +480,9 @@ internal struct RangeBoundsU64
     };
 }
 
+/// <summary>
+/// `Option&lt;NonZeroU32&gt;` in Rust
+/// </summary>
 internal readonly struct NonZeroU32OrNone : IEquatable<NonZeroU32OrNone>
 {
     private readonly u32 _value;
