@@ -59,7 +59,7 @@ internal class Program
         {
 
         };
-        screen.Title = "sample"u8;
+        screen.Title = "sample";
     }
 
     private static readonly List<State> _stateList = new List<State>();

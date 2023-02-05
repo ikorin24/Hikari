@@ -1,7 +1,9 @@
 ﻿#nullable enable
 using Elffy.Bind;
 using System;
+using System.Buffers;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Elffy;
 
@@ -12,6 +14,7 @@ internal sealed class HostScreen : IHostScreen
     private TextureFormat _surfaceFormat;
     private GraphicsBackend _backend;
     private bool _initialized;
+    private string _title = "";
 
     public event Action<IHostScreen, uint, uint>? Resized;
     public event Action<IHostScreen>? RedrawRequested;
@@ -37,12 +40,29 @@ internal sealed class HostScreen : IHostScreen
         }
     }
 
-    public ReadOnlySpan<byte> Title
+    public string Title
     {
+        get => _title;
         set
         {
+            ArgumentNullException.ThrowIfNull(value);
             ThrowIfNotInit();
-            EngineCore.ScreenSetTitle(_screen, value);
+
+            if(value.Length != 0) {
+                var utf8 = Encoding.UTF8;
+
+                var byteLen = utf8.GetByteCount(value);
+                var array = ArrayPool<byte>.Shared.Rent(byteLen);
+                try {
+                    var buf = array.AsSpan(0, byteLen);
+                    utf8.GetBytes(value.AsSpan(), buf);
+                    EngineCore.ScreenSetTitle(_screen, buf);
+                }
+                finally {
+                    ArrayPool<byte>.Shared.Return(array);
+                }
+            }
+            _title = value;
         }
     }
 
@@ -73,7 +93,7 @@ internal sealed class HostScreen : IHostScreen
 
     internal void OnRedrawRequested()
     {
-        // TODO:
+        RedrawRequested?.Invoke(this);
     }
 
     internal void OnResized(uint width, uint height)
@@ -97,7 +117,7 @@ public interface IHostScreen
     event Action<IHostScreen, uint, uint>? Resized;
 
     nuint Id { get; }
-    ReadOnlySpan<byte> Title { set; }   // TODO: get, string
+    string Title { get; set; }
     TextureFormat SurfaceFormat { get; }
     GraphicsBackend Backend { get; }
 }
