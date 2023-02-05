@@ -253,7 +253,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.Buffer> CreateBufferInit(
-            Ref<CE.HostScreen> screen,
+            this Ref<CE.HostScreen> screen,
             Slice<u8> contents,
             Wgpu.BufferUsages usage)
             => elffy_create_buffer_init(screen, contents, usage).Validate();
@@ -261,7 +261,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyBuffer(
-            Box<Wgpu.Buffer> handle)
+            this Box<Wgpu.Buffer> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_buffer(handle);
@@ -277,7 +277,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroySampler(
-            Box<Wgpu.Sampler> handle)
+            this Box<Wgpu.Sampler> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_sampler(handle);
@@ -286,14 +286,14 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.ShaderModule> CreateShaderModule(
-            Ref<CE.HostScreen> screen,
+            this Ref<CE.HostScreen> screen,
             Slice<u8> shader_source)
             => elffy_create_shader_module(screen, shader_source).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyShaderModule(
-            Box<Wgpu.ShaderModule> handle)
+            this Box<Wgpu.ShaderModule> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_shader_module(handle);
@@ -317,7 +317,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyTexture(
-            Box<Wgpu.Texture> handle)
+            this Box<Wgpu.Texture> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_texture(handle);
@@ -333,7 +333,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyTextureView(
-            Box<Wgpu.TextureView> handle)
+            this Box<Wgpu.TextureView> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_texture_view(handle);

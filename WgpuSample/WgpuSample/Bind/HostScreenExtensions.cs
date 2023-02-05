@@ -31,10 +31,13 @@ internal unsafe static class HostScreenExtensions
 
     public static Box<Wgpu.Buffer> CreateBufferInit(
         this Ref<Self> self,
-        Slice<u8> contents,
+        ReadOnlySpan<u8> contents,
         Wgpu.BufferUsages usage)
     {
-        return EngineCore.CreateBufferInit(self, contents, usage);
+        fixed(u8* p = contents) {
+            var slice = new Slice<byte>(p, contents.Length);
+            return EngineCore.CreateBufferInit(self, slice, usage);
+        }
     }
 
     public static Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(

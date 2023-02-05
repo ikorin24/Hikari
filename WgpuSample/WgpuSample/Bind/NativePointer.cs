@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
-using System.Runtime.InteropServices;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace Elffy.Bind;
 
@@ -11,7 +12,18 @@ internal unsafe readonly struct NativePointer : IEquatable<NativePointer>
 
     internal static NativePointer Null => default;
 
+    public bool IsNull => _ptr == null;
+
     private NativePointer(void* p) => _ptr = p;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void ThrowIfNull()
+    {
+        if(_ptr == null) {
+            Throw();
+            [DoesNotReturn] static void Throw() => throw new ArgumentNullException(nameof(NativePointer));
+        }
+    }
 
     public override bool Equals(object? obj) => obj is NativePointer handle && Equals(handle);
 

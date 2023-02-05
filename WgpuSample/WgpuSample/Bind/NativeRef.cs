@@ -54,13 +54,38 @@ internal readonly struct Box<T> where T : INativeTypeNonReprC
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public unsafe Ref<T> AsRefChecked()
+    {
+        var self = this;
+        var r = *(Ref<T>*)&self;
+        r.ThrowIfInvalid();
+        return r;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe MutRef<T> AsMut()
     {
         var self = this;
         return *(MutRef<T>*)&self;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public unsafe MutRef<T> AsMutChecked()
+    {
+        var self = this;
+        var r = *(MutRef<T>*)&self;
+        r.AsRef().ThrowIfInvalid();
+        return r;
+    }
+
     public NativePointer AsPtr() => _p;
+
+    public NativePointer AsPtrChecked()
+    {
+        var p = _p;
+
+        return p;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]

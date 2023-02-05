@@ -2,6 +2,7 @@
 using Elffy.Bind;
 using System;
 using System.Buffers;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -19,7 +20,8 @@ internal sealed class HostScreen : IHostScreen
     public event Action<IHostScreen, uint, uint>? Resized;
     public event Action<IHostScreen>? RedrawRequested;
 
-    public Ref<CE.HostScreen> Screen => _screen;
+    public HostScreenRef Ref => new HostScreenRef(_screen);
+
     public nuint Id => _id.AsNumber();
 
     public TextureFormat SurfaceFormat
@@ -111,15 +113,39 @@ internal sealed class HostScreen : IHostScreen
     }
 }
 
+public readonly ref struct HostScreenRef
+{
+    private readonly Ref<CE.HostScreen> _ref;
+
+    [Obsolete("Don't use default constructor.", true)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public HostScreenRef() => throw new NotSupportedException("Don't use default constructor.");
+
+    internal HostScreenRef(Ref<CE.HostScreen> screen) => _ref = screen;
+
+    internal Ref<CE.HostScreen> AsRef() => _ref;
+}
+
 public interface IHostScreen
 {
     event Action<IHostScreen>? RedrawRequested;
     event Action<IHostScreen, uint, uint>? Resized;
 
+    HostScreenRef Ref { get; }
+
     nuint Id { get; }
     string Title { get; set; }
     TextureFormat SurfaceFormat { get; }
     GraphicsBackend Backend { get; }
+}
+
+internal static class HostScreenExtensions
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Ref<CE.HostScreen> AsRef(this IHostScreen screen)
+    {
+        return screen.Ref.AsRef();
+    }
 }
 
 public readonly ref struct HostScreenConfig

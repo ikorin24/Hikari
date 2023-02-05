@@ -24,4 +24,16 @@ internal static class AssertExtensions
         }
         return condition;
     }
+
+    [DebuggerHidden]
+    public static bool WithDebugAssertFalse(
+        this bool condition,
+        string? message = "The condition is asserted to be `false`, but in fact it is `true`.",
+        [CallerArgumentExpression(nameof(condition))] string? callerExpr = null)
+    {
+        if(IsDebug) {
+            Debug.Assert(condition == false, message, callerExpr);
+        }
+        return condition;
+    }
 }
