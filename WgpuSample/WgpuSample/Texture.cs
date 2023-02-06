@@ -104,6 +104,8 @@ public sealed class TextureView : IEngineManaged, IDisposable
 
     public IHostScreen? Screen => _screen;
 
+    internal Ref<Wgpu.TextureView> NativeRef => _native;
+
     public TextureView(Texture texture)
     {
         ArgumentNullException.ThrowIfNull(texture);
@@ -132,6 +134,8 @@ public sealed class Sampler : IEngineManaged, IDisposable
     private Box<Wgpu.Sampler> _native;
 
     public IHostScreen? Screen => _screen;
+
+    internal Ref<Wgpu.Sampler> NativeRef => _native;
 
     public Sampler(IHostScreen screen)
     {
@@ -202,6 +206,8 @@ public sealed class Buffer : IEngineManaged, IDisposable
 
     public BufferUsages Usage => _usage;
 
+    internal Ref<Wgpu.Buffer> NativeRef => _native;
+
     private Buffer(IHostScreen screen, Box<Wgpu.Buffer> native, BufferUsages usage)
     {
         _screen = screen;
@@ -271,19 +277,25 @@ public sealed class BindGroupLayout : IEngineManaged, IDisposable
 {
     private IHostScreen? _screen;
     private Box<Wgpu.BindGroupLayout> _native;
+    private int _entryCount;
 
     public IHostScreen? Screen => _screen;
 
-    private BindGroupLayout(IHostScreen screen, Box<Wgpu.BindGroupLayout> native)
+    internal Ref<Wgpu.BindGroupLayout> NativeRef => _native;
+
+    public int EntryCount => _entryCount;
+
+    private BindGroupLayout(IHostScreen screen, Box<Wgpu.BindGroupLayout> native, int entryCount)
     {
         _screen = screen;
         _native = native;
+        _entryCount = entryCount;
     }
 
-    public unsafe static BindGroupLayout Create(IHostScreen screen, int entryCount, BuildAction action)
+    public unsafe static BindGroupLayout Create(IHostScreen screen, int entryCount, BuildFunc func)
     {
         ArgumentNullException.ThrowIfNull(screen);
-        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(func);
         if(entryCount <= 0) {
             throw new ArgumentOutOfRangeException(nameof(entryCount));
         }
@@ -292,7 +304,7 @@ public sealed class BindGroupLayout : IEngineManaged, IDisposable
         if(entryCount <= 16) {
             Span<CE.BindGroupLayoutEntry> entries = stackalloc CE.BindGroupLayoutEntry[entryCount];
             var builder = new Builder(screen, entries);
-            bindGroupLayout = action.Invoke(ref builder);
+            bindGroupLayout = func.Invoke(ref builder);
         }
         else {
             var bytelen = entryCount * sizeof(CE.BindGroupLayoutEntry);
@@ -300,7 +312,7 @@ public sealed class BindGroupLayout : IEngineManaged, IDisposable
             try {
                 var entries = MemoryMarshal.Cast<byte, CE.BindGroupLayoutEntry>(array.AsSpan(0, bytelen));
                 var builder = new Builder(screen, entries);
-                bindGroupLayout = action.Invoke(ref builder);
+                bindGroupLayout = func.Invoke(ref builder);
             }
             finally {
                 ArrayPool<byte>.Shared.Return(array);
@@ -317,9 +329,10 @@ public sealed class BindGroupLayout : IEngineManaged, IDisposable
         _native.DestroyBindGroupLayout();
         _native = Box<Wgpu.BindGroupLayout>.Invalid;
         _screen = null;
+        _entryCount = 0;
     }
 
-    public delegate BindGroupLayout BuildAction(ref Builder builder);
+    public delegate BindGroupLayout BuildFunc(ref Builder builder);
 
     public unsafe ref struct Builder
     {
@@ -345,11 +358,11 @@ public sealed class BindGroupLayout : IEngineManaged, IDisposable
                     entries = new Slice<CE.BindGroupLayoutEntry>(ptr, entryCount),
                 };
                 var bindGroupLayout = screen.AsRef().CreateBindGroupLayout(desc);
-                return new BindGroupLayout(screen, bindGroupLayout);
+                return new BindGroupLayout(screen, bindGroupLayout, entryCount);
             }
         }
 
-        public void SetTextureEntry(
+        public Builder SetTextureEntry(
             u32 binding,
             ShaderStages visibility,
             bool multisampled = false,
@@ -370,13 +383,14 @@ public sealed class BindGroupLayout : IEngineManaged, IDisposable
             {
                 binding = binding,
                 visibility = visibilityNative,
-                ty = CE.BindingType.Texture(&bindingData),
+                ty = CE.BindingType.Texture(&bindingData),  // TODO: だめ
                 count = 0,
             };
             _index++;
+            return this;
         }
 
-        public void SetSamplerEntry(
+        public Builder SetSamplerEntry(
             u32 binding,
             ShaderStages visibility,
             SamplerBindingType samplerBindingType)
@@ -387,13 +401,14 @@ public sealed class BindGroupLayout : IEngineManaged, IDisposable
             {
                 binding = binding,
                 visibility = visibilityNative,
-                ty = CE.BindingType.Sampler(&samplerBindingTypeNative),
+                ty = CE.BindingType.Sampler(&samplerBindingTypeNative), // TODO: だめ
                 count = 0,
             };
             _index++;
+            return this;
         }
 
-        public void SetBufferEntry(
+        public Builder SetBufferEntry(
             u32 binding,
             ShaderStages visibility,
             BufferBindingType bufferBindingType,
@@ -412,13 +427,16 @@ public sealed class BindGroupLayout : IEngineManaged, IDisposable
             {
                 binding = binding,
                 visibility = visibilityNative,
-                ty = CE.BindingType.Buffer(&bindingData),
+                ty = CE.BindingType.Buffer(&bindingData),   // TODO: だめ
                 count = 0,
             };
             _index++;
+            return this;
         }
     }
 }
+
+
 
 [Flags]
 public enum BufferUsages : u32

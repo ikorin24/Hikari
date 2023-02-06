@@ -205,14 +205,14 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.BindGroup> CreateBindGroup(
-            Ref<CE.HostScreen> screen,
+            this Ref<CE.HostScreen> screen,
             CE.BindGroupDescriptor* desc)
             => elffy_create_bind_group(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyBindGroup(
-            Box<Wgpu.BindGroup> handle)
+            this Box<Wgpu.BindGroup> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_bind_group(handle);
