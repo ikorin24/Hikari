@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Elffy.Bind;
 using System;
+using System.Buffers;
 using System.Runtime.InteropServices;
 
 namespace Elffy;
@@ -266,6 +267,159 @@ public sealed class Buffer : IEngineManaged, IDisposable
     }
 }
 
+public sealed class BindGroupLayout : IEngineManaged, IDisposable
+{
+    private IHostScreen? _screen;
+    private Box<Wgpu.BindGroupLayout> _native;
+
+    public IHostScreen? Screen => _screen;
+
+    private BindGroupLayout(IHostScreen screen, Box<Wgpu.BindGroupLayout> native)
+    {
+        _screen = screen;
+        _native = native;
+    }
+
+    public unsafe static BindGroupLayout Create(IHostScreen screen, int entryCount, BuildAction action)
+    {
+        ArgumentNullException.ThrowIfNull(screen);
+        ArgumentNullException.ThrowIfNull(action);
+        if(entryCount <= 0) {
+            throw new ArgumentOutOfRangeException(nameof(entryCount));
+        }
+
+        BindGroupLayout bindGroupLayout;
+        if(entryCount <= 16) {
+            Span<CE.BindGroupLayoutEntry> entries = stackalloc CE.BindGroupLayoutEntry[entryCount];
+            var builder = new Builder(screen, entries);
+            bindGroupLayout = action.Invoke(ref builder);
+        }
+        else {
+            var bytelen = entryCount * sizeof(CE.BindGroupLayoutEntry);
+            var array = ArrayPool<byte>.Shared.Rent(bytelen);
+            try {
+                var entries = MemoryMarshal.Cast<byte, CE.BindGroupLayoutEntry>(array.AsSpan(0, bytelen));
+                var builder = new Builder(screen, entries);
+                bindGroupLayout = action.Invoke(ref builder);
+            }
+            finally {
+                ArrayPool<byte>.Shared.Return(array);
+            }
+        }
+        return bindGroupLayout ?? throw new ArgumentException("the builder returns null");
+    }
+
+    public void Dispose()
+    {
+        if(_native.IsInvalid) {
+            return;
+        }
+        _native.DestroyBindGroupLayout();
+        _native = Box<Wgpu.BindGroupLayout>.Invalid;
+        _screen = null;
+    }
+
+    public delegate BindGroupLayout BuildAction(ref Builder builder);
+
+    public unsafe ref struct Builder
+    {
+        private readonly IHostScreen _screen;
+        private Span<CE.BindGroupLayoutEntry> _entries;
+        private int _index;
+
+        internal Builder(IHostScreen screen, Span<CE.BindGroupLayoutEntry> entries)
+        {
+            _screen = screen;
+            _entries = entries;
+            _index = 0;
+        }
+
+        public BindGroupLayout Build()
+        {
+            var screen = _screen;
+            var entryCount = _entries.Length;
+            fixed(CE.BindGroupLayoutEntry* ptr = _entries) {
+                var entries = new Slice<CE.BindGroupLayoutEntry>(ptr, entryCount);
+                var desc = new CE.BindGroupLayoutDescriptor
+                {
+                    entries = new Slice<CE.BindGroupLayoutEntry>(ptr, entryCount),
+                };
+                var bindGroupLayout = screen.AsRef().CreateBindGroupLayout(desc);
+                return new BindGroupLayout(screen, bindGroupLayout);
+            }
+        }
+
+        public void SetTextureEntry(
+            u32 binding,
+            ShaderStages visibility,
+            bool multisampled = false,
+            TextureViewDimension viewDimension = TextureViewDimension.D2,
+            TextureSampleType sampleType = TextureSampleType.FloatFilterable)
+        {
+            visibility.TryMapTo(out Wgpu.ShaderStages visibilityNative).WithDebugAssertTrue();
+            viewDimension.TryMapTo(out CE.TextureViewDimension viewDimensionNative).WithDebugAssertTrue();
+            sampleType.TryMapTo(out CE.TextureSampleType sampleTypeNative).WithDebugAssertTrue();
+
+            var bindingData = new CE.TextureBindingData
+            {
+                multisampled = multisampled,
+                view_dimension = viewDimensionNative,
+                sample_type = sampleTypeNative,
+            };
+            _entries[_index] = new CE.BindGroupLayoutEntry
+            {
+                binding = binding,
+                visibility = visibilityNative,
+                ty = CE.BindingType.Texture(&bindingData),
+                count = 0,
+            };
+            _index++;
+        }
+
+        public void SetSamplerEntry(
+            u32 binding,
+            ShaderStages visibility,
+            SamplerBindingType samplerBindingType)
+        {
+            visibility.TryMapTo(out Wgpu.ShaderStages visibilityNative).WithDebugAssertTrue();
+            samplerBindingType.TryMapTo(out CE.SamplerBindingType samplerBindingTypeNative).WithDebugAssertTrue();
+            _entries[_index] = new CE.BindGroupLayoutEntry
+            {
+                binding = binding,
+                visibility = visibilityNative,
+                ty = CE.BindingType.Sampler(&samplerBindingTypeNative),
+                count = 0,
+            };
+            _index++;
+        }
+
+        public void SetBufferEntry(
+            u32 binding,
+            ShaderStages visibility,
+            BufferBindingType bufferBindingType,
+            bool hasDynamicOffset = false,
+            u64 minBindingSize = 0)
+        {
+            visibility.TryMapTo(out Wgpu.ShaderStages visibilityNative).WithDebugAssertTrue();
+            bufferBindingType.TryMapTo(out CE.BufferBindingType bufferBindingTypeNative).WithDebugAssertTrue();
+            var bindingData = new CE.BufferBindingData
+            {
+                ty = bufferBindingTypeNative,
+                has_dynamic_offset = hasDynamicOffset,
+                min_binding_size = minBindingSize,
+            };
+            _entries[_index] = new CE.BindGroupLayoutEntry
+            {
+                binding = binding,
+                visibility = visibilityNative,
+                ty = CE.BindingType.Buffer(&bindingData),
+                count = 0,
+            };
+            _index++;
+        }
+    }
+}
+
 [Flags]
 public enum BufferUsages : u32
 {
@@ -278,4 +432,46 @@ public enum BufferUsages : u32
     [EnumMapTo(Wgpu.BufferUsages.UNIFORM)] Uniform = 1 << 6,
     [EnumMapTo(Wgpu.BufferUsages.STORAGE)] Storage = 1 << 7,
     [EnumMapTo(Wgpu.BufferUsages.INDIRECT)] Indirect = 1 << 8,
+}
+
+[Flags]
+public enum ShaderStages : u32
+{
+    [EnumMapTo(Wgpu.ShaderStages.NONE)] None = 0,
+    [EnumMapTo(Wgpu.ShaderStages.VERTEX)] Vertex = 1 << 0,
+    [EnumMapTo(Wgpu.ShaderStages.FRAGMENT)] Fragment = 1 << 1,
+    [EnumMapTo(Wgpu.ShaderStages.COMPUTE)] Compute = 1 << 2,
+}
+
+public enum TextureSampleType
+{
+    [EnumMapTo(CE.TextureSampleType.FloatFilterable)] FloatFilterable = 0,
+    [EnumMapTo(CE.TextureSampleType.FloatNotFilterable)] FloatNotFilterable = 1,
+    [EnumMapTo(CE.TextureSampleType.Depth)] Depth = 2,
+    [EnumMapTo(CE.TextureSampleType.Sint)] Sint = 3,
+    [EnumMapTo(CE.TextureSampleType.Uint)] Uint = 4,
+}
+
+public enum TextureViewDimension
+{
+    [EnumMapTo(CE.TextureViewDimension.D1)] D1 = 0,
+    [EnumMapTo(CE.TextureViewDimension.D2)] D2 = 1,
+    [EnumMapTo(CE.TextureViewDimension.D2Array)] D2Array = 2,
+    [EnumMapTo(CE.TextureViewDimension.Cube)] Cube = 3,
+    [EnumMapTo(CE.TextureViewDimension.CubeArray)] CubeArray = 4,
+    [EnumMapTo(CE.TextureViewDimension.D3)] D3 = 5,
+}
+
+public enum SamplerBindingType
+{
+    [EnumMapTo(CE.SamplerBindingType.Filtering)] Filtering = 0,
+    [EnumMapTo(CE.SamplerBindingType.NonFiltering)] NonFiltering = 1,
+    [EnumMapTo(CE.SamplerBindingType.Comparison)] Comparison = 2,
+}
+
+public enum BufferBindingType
+{
+    [EnumMapTo(CE.BufferBindingType.Uniform)] Uniform = 0,
+    [EnumMapTo(CE.BufferBindingType.Storate)] Storate = 1,
+    [EnumMapTo(CE.BufferBindingType.StorateReadOnly)] StorateReadOnly = 2,
 }

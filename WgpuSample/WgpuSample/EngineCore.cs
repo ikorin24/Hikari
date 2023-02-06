@@ -196,7 +196,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyBindGroupLayout(
-            Box<Wgpu.BindGroupLayout> handle)
+            this Box<Wgpu.BindGroupLayout> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_bind_group_layout(handle);
