@@ -48,7 +48,7 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.RenderPass> elffy_create_render_pass(
         MutRef<Wgpu.CommandEncoder> command_encoder,
-        RenderPassDescriptor* desc);
+        CE.RenderPassDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_render_pass(
@@ -84,7 +84,7 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.BindGroup> elffy_create_bind_group(
         Ref<CE.HostScreen> screen,
-        BindGroupDescriptor* desc);
+        CE.BindGroupDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_bind_group(
@@ -93,7 +93,7 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.PipelineLayout> elffy_create_pipeline_layout(
         Ref<CE.HostScreen> screen,
-        PipelineLayoutDescriptor* desc);
+        CE.PipelineLayoutDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_pipeline_layout(
@@ -102,7 +102,7 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.RenderPipeline> elffy_create_render_pipeline(
         Ref<CE.HostScreen> screen,
-        RenderPipelineDescriptor* desc);
+        CE.RenderPipelineDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_render_pipeline(
@@ -139,12 +139,12 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Texture> elffy_create_texture(
         Ref<CE.HostScreen> screen,
-        TextureDescriptor* desc);
+        CE.TextureDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Texture> elffy_create_texture_with_data(
         Ref<CE.HostScreen> screen,
-        TextureDescriptor* desc,
+        CE.TextureDescriptor* desc,
         Slice<u8> data);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -182,12 +182,12 @@ static unsafe partial class EngineCore
     private static partial ApiResult elffy_set_vertex_buffer(
         MutRef<Wgpu.RenderPass> render_pass,
         u32 slot,
-        BufferSlice buffer_slice);
+        CE.BufferSlice buffer_slice);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_set_index_buffer(
         MutRef<Wgpu.RenderPass> render_pass,
-        BufferSlice buffer_slice,
+        CE.BufferSlice buffer_slice,
         Wgpu.IndexFormat index_format);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]

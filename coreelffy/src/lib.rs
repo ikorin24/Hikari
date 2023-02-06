@@ -347,7 +347,7 @@ pub(crate) struct BindGroupEntry<'a> {
     "TextureView@wgpu::TextureView",
     "TextureViewArray@Slice<'a, &'a wgpu::TextureView>"
 )]
-pub(crate) struct BindingResource {}
+pub(crate) struct BindingResource;
 
 #[repr(C)]
 pub(crate) struct BufferBinding<'a> {
@@ -382,7 +382,7 @@ impl<'a> PipelineLayoutDescriptor<'a> {
 }
 
 #[repr(C)]
-pub(crate) struct RenderPipelineDescription<'a> {
+pub(crate) struct RenderPipelineDescriptor<'a> {
     pub layout: &'a wgpu::PipelineLayout,
     pub vertex: VertexState<'a>,
     pub fragment: Opt<FragmentState<'a>>,
@@ -392,7 +392,7 @@ pub(crate) struct RenderPipelineDescription<'a> {
     pub multiview: Option<num::NonZeroU32>,
 }
 
-impl<'a> RenderPipelineDescription<'a> {
+impl<'a> RenderPipelineDescriptor<'a> {
     pub fn use_wgpu_type<T>(
         &self,
         consume: impl FnOnce(&wgpu::RenderPipelineDescriptor) -> Result<T, Box<dyn Error>>,

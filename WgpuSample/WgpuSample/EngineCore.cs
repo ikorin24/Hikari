@@ -93,9 +93,9 @@ namespace Elffy
         }
 
         private static readonly CreateRenderPassFunc _createRenderPassFunc =
-            (MutRef<Wgpu.CommandEncoder> command_encoder, in RenderPassDescriptor desc) =>
+            (MutRef<Wgpu.CommandEncoder> command_encoder, in CE.RenderPassDescriptor desc) =>
             {
-                fixed(RenderPassDescriptor* descPtr = &desc) {
+                fixed(CE.RenderPassDescriptor* descPtr = &desc) {
                     return elffy_create_render_pass(command_encoder, descPtr).Validate();
                 }
             };
@@ -146,9 +146,9 @@ namespace Elffy
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Box<Wgpu.RenderPass> CreateRenderPass(this MutRef<Wgpu.CommandEncoder> commandEncoder, in RenderPassDescriptor desc)
+        public static Box<Wgpu.RenderPass> CreateRenderPass(this MutRef<Wgpu.CommandEncoder> commandEncoder, in CE.RenderPassDescriptor desc)
         {
-            fixed(RenderPassDescriptor* descPtr = &desc) {
+            fixed(CE.RenderPassDescriptor* descPtr = &desc) {
                 return elffy_create_render_pass(commandEncoder, descPtr).Validate();
             }
         }
@@ -206,7 +206,7 @@ namespace Elffy
         [DebuggerHidden]
         public static Box<Wgpu.BindGroup> CreateBindGroup(
             Ref<CE.HostScreen> screen,
-            BindGroupDescriptor* desc)
+            CE.BindGroupDescriptor* desc)
             => elffy_create_bind_group(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -222,7 +222,7 @@ namespace Elffy
         [DebuggerHidden]
         public static Box<Wgpu.PipelineLayout> CreatePipelineLayout(
             Ref<CE.HostScreen> screen,
-            PipelineLayoutDescriptor* desc)
+            CE.PipelineLayoutDescriptor* desc)
             => elffy_create_pipeline_layout(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -238,7 +238,7 @@ namespace Elffy
         [DebuggerHidden]
         public static Box<Wgpu.RenderPipeline> CreateRenderPipeline(
             Ref<CE.HostScreen> screen,
-            RenderPipelineDescriptor* desc)
+            CE.RenderPipelineDescriptor* desc)
             => elffy_create_render_pipeline(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -303,14 +303,14 @@ namespace Elffy
         [DebuggerHidden]
         public static Box<Wgpu.Texture> CreateTexture(
             Ref<CE.HostScreen> screen,
-            TextureDescriptor* desc)
+            CE.TextureDescriptor* desc)
             => elffy_create_texture(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Box<Wgpu.Texture> CreateTextureWithData(
             Ref<CE.HostScreen> screen,
-            TextureDescriptor* desc,
+            CE.TextureDescriptor* desc,
             Slice<u8> data)
             => elffy_create_texture_with_data(screen, desc, data).Validate();
 
@@ -378,7 +378,7 @@ namespace Elffy
         public static void SetVertexBuffer(
             this MutRef<Wgpu.RenderPass> render_pass,
             u32 slot,
-            BufferSlice buffer_slice)
+            CE.BufferSlice buffer_slice)
         {
             buffer_slice.buffer.ThrowIfInvalid();
             elffy_set_vertex_buffer(render_pass, slot, buffer_slice).Validate();
@@ -388,7 +388,7 @@ namespace Elffy
         [DebuggerHidden]
         public static void SetIndexBuffer(
             this MutRef<Wgpu.RenderPass> render_pass,
-            BufferSlice buffer_slice,
+            CE.BufferSlice buffer_slice,
             Wgpu.IndexFormat index_format)
         {
             buffer_slice.buffer.ThrowIfInvalid();
@@ -529,7 +529,7 @@ namespace Elffy
         MutRef<Wgpu.CommandEncoder> commandEncoder,
         CreateRenderPassFunc createRenderPass);
 
-    internal delegate Box<Wgpu.RenderPass> CreateRenderPassFunc(MutRef<Wgpu.CommandEncoder> commandEncoder, in RenderPassDescriptor desc);
+    internal delegate Box<Wgpu.RenderPass> CreateRenderPassFunc(MutRef<Wgpu.CommandEncoder> commandEncoder, in CE.RenderPassDescriptor desc);
 
 
     public sealed class Never

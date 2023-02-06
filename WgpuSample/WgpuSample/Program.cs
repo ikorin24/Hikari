@@ -93,34 +93,26 @@ internal class Program
                 return;
             }
             {
-                RenderPassDescriptor desc;
+                CE.RenderPassDescriptor desc;
                 {
                     const int ColorAttachmentCount = 1;
-                    var colorAttachments = stackalloc Opt<RenderPassColorAttachment>[ColorAttachmentCount]
+                    var colorAttachments = stackalloc Opt<CE.RenderPassColorAttachment>[ColorAttachmentCount]
                     {
-                        new()
+                        new(new CE.RenderPassColorAttachment
                         {
-                            exists = true,
-                            value = new RenderPassColorAttachment
-                            {
-                                view = surfaceTextureView,
-                                clear = new Wgpu.Color(0, 0, 0, 0),
-                            }
-                        },
+                            view = surfaceTextureView,
+                            clear = new Wgpu.Color(0, 0, 0, 0),
+                        }),
                     };
-                    desc = new RenderPassDescriptor
+                    desc = new CE.RenderPassDescriptor
                     {
                         color_attachments_clear = new() { data = colorAttachments, len = ColorAttachmentCount },
-                        depth_stencil_attachment_clear = new()
+                        depth_stencil_attachment_clear = new(new CE.RenderPassDepthStencilAttachment
                         {
-                            exists = true,
-                            value = new CE.RenderPassDepthStencilAttachment
-                            {
-                                view = state.GetDepth().View,
-                                depth_clear = Opt<float>.Some(1f),
-                                stencil_clear = Opt<uint>.None,
-                            }
-                        }
+                            view = state.GetDepth().View,
+                            depth_clear = Opt<float>.Some(1f),
+                            stencil_clear = Opt<uint>.None,
+                        }),
                     };
                 }
 
@@ -215,15 +207,15 @@ internal class Program
 
         var cameraBindGroupLayout = screenRef.CreateBindGroupLayout(new()
         {
-            entries = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutEntry[1]
+            entries = Slice.FromFixedSpanUnsafe(stackalloc CE.BindGroupLayoutEntry[1]
             {
                 new()
                 {
                     binding = 0,
                     visibility = Wgpu.ShaderStages.VERTEX,
-                    ty = BindingType.Buffer(UnsafeEx.StackPointer(new BufferBindingData
+                    ty = CE.BindingType.Buffer(UnsafeEx.StackPointer(new CE.BufferBindingData
                     {
-                        ty = BufferBindingType.Uniform,
+                        ty = CE.BufferBindingType.Uniform,
                         has_dynamic_offset = false,
                         min_binding_size = 0,
                     })),
@@ -236,11 +228,11 @@ internal class Program
         {
             var bufferBinding = cameraBuffer.AsRef().AsEntireBufferBinding();
             const int EntryCount = 1;
-            var entries = stackalloc BindGroupEntry[EntryCount]
+            var entries = stackalloc CE.BindGroupEntry[EntryCount]
             {
-                new() { binding = 0, resource = BindingResource.Buffer(&bufferBinding), }
+                new() { binding = 0, resource = CE.BindingResource.Buffer(&bufferBinding), }
             };
-            cameraBindGroup = screenRef.CreateBindGroup(new BindGroupDescriptor
+            cameraBindGroup = screenRef.CreateBindGroup(new CE.BindGroupDescriptor
             {
                 layout = cameraBindGroupLayout,
                 entries = new() { data = entries, len = EntryCount },
@@ -257,7 +249,7 @@ internal class Program
         {
             const int BindGroupLayoutCount = 2;
             var bindGroupLayouts = stackalloc Ref<Wgpu.BindGroupLayout>[BindGroupLayoutCount] { textureBindGroupLayout, cameraBindGroupLayout };
-            var desc = new PipelineLayoutDescriptor(bindGroupLayouts, BindGroupLayoutCount);
+            var desc = new CE.PipelineLayoutDescriptor(bindGroupLayouts, BindGroupLayoutCount);
             //{
             //    bind_group_layouts = new()
             //    {
@@ -279,7 +271,7 @@ internal class Program
         // RenderPipeline
         Box<Wgpu.RenderPipeline> renderPipeline;
         {
-            var vertexBufferLayout = new VertexBufferLayout
+            var vertexBufferLayout = new CE.VertexBufferLayout
             {
                 array_stride = (ulong)sizeof(Vertex),
                 step_mode = Wgpu.VertexStepMode.Vertex,
@@ -301,7 +293,7 @@ internal class Program
             //        new() { offset = 4 * 12, shader_location = 8, format = Wgpu.VertexFormat.Float32x4 },
             //    }),
             //};
-            var instanceBufferLayout = new VertexBufferLayout
+            var instanceBufferLayout = new CE.VertexBufferLayout
             {
                 array_stride = (ulong)sizeof(InstanceData),
                 step_mode = Wgpu.VertexStepMode.Instance,
@@ -312,37 +304,33 @@ internal class Program
             };
 
 
-            renderPipeline = screenRef.CreateRenderPipeline(new RenderPipelineDescriptor
+            renderPipeline = screenRef.CreateRenderPipeline(new CE.RenderPipelineDescriptor
             {
                 layout = pipelineLayout,
                 vertex = new()
                 {
                     module = shader,
                     entry_point = Slice.FromFixedSpanUnsafe("vs_main"u8),
-                    buffers = Slice.FromFixedSpanUnsafe(stackalloc VertexBufferLayout[]
+                    buffers = Slice.FromFixedSpanUnsafe(stackalloc CE.VertexBufferLayout[]
                     {
                         vertexBufferLayout,
                         instanceBufferLayout,
                     }),
                 },
-                fragment = new()
+                fragment = new Opt<CE.FragmentState>(new CE.FragmentState()
                 {
-                    exists = true,
-                    value = new FragmentState()
-                    {
-                        module = shader,
-                        entry_point = Slice.FromFixedSpanUnsafe("fs_main"u8),
-                        targets = Slice.FromFixedSpanUnsafe(stackalloc Opt<ColorTargetState>[]
+                    module = shader,
+                    entry_point = Slice.FromFixedSpanUnsafe("fs_main"u8),
+                    targets = Slice.FromFixedSpanUnsafe(stackalloc Opt<CE.ColorTargetState>[]
                         {
-                            Opt<ColorTargetState>.Some(new()
-                            {
-                                format = surfaceFormat,
-                                blend = Opt<Wgpu.BlendState>.Some(Wgpu.BlendState.REPLACE),
-                                write_mask = Wgpu.ColorWrites.ALL,
-                            })
-                        }),
-                    }
-                },
+                        Opt<CE.ColorTargetState>.Some(new()
+                        {
+                            format = surfaceFormat,
+                            blend = Opt<Wgpu.BlendState>.Some(Wgpu.BlendState.REPLACE),
+                            write_mask = Wgpu.ColorWrites.ALL,
+                        })
+                    }),
+                }),
                 primitive = new()
                 {
                     topology = Wgpu.PrimitiveTopology.TriangleList,
@@ -351,7 +339,7 @@ internal class Program
                     cull_mode = Opt<Wgpu.Face>.Some(Wgpu.Face.Back),
                     polygon_mode = Wgpu.PolygonMode.Fill,
                 },
-                depth_stencil = Opt<DepthStencilState>.Some(new()
+                depth_stencil = Opt<CE.DepthStencilState>.Some(new()
                 {
                     format = depthTextureData.Format,
                     depth_write_enabled = true,
@@ -446,7 +434,7 @@ internal class Program
     private static DepthTextureData CreateDepthTexture(Ref<CE.HostScreen> screen, uint width, uint height)
     {
         const Wgpu.TextureFormat DepthTextureFormat = Wgpu.TextureFormat.Depth32Float;
-        var texture = screen.CreateTexture(new TextureDescriptor
+        var texture = screen.CreateTexture(new CE.TextureDescriptor
         {
             size = new Wgpu.Extent3d
             {
@@ -456,7 +444,7 @@ internal class Program
             },
             mip_level_count = 1,
             sample_count = 1,
-            dimension = TextureDimension.D2,
+            dimension = CE.TextureDimension.D2,
             format = DepthTextureFormat,
             usage = Wgpu.TextureUsages.RENDER_ATTACHMENT | Wgpu.TextureUsages.TEXTURE_BINDING,
         });
@@ -535,7 +523,7 @@ internal static class HostScreenInitializer
         }; ;
         var texture = screen.CreateTexture(new()
         {
-            dimension = TextureDimension.D2,
+            dimension = CE.TextureDimension.D2,
             format = Wgpu.TextureFormat.Rgba8UnormSrgb,
             mip_level_count = 1,
             sample_count = 1,
@@ -613,17 +601,17 @@ internal static class HostScreenInitializer
     {
         return screen.CreateBindGroupLayout(new()
         {
-            entries = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutEntry[2]
+            entries = Slice.FromFixedSpanUnsafe(stackalloc CE.BindGroupLayoutEntry[2]
             {
                 new()
                 {
                     binding = 0,
                     visibility = Wgpu.ShaderStages.FRAGMENT,
-                    ty = BindingType.Texture(UnsafeEx.StackPointer(new TextureBindingData
+                    ty = CE.BindingType.Texture(UnsafeEx.StackPointer(new CE.TextureBindingData
                     {
                         multisampled = false,
-                        view_dimension = TextureViewDimension.D2,
-                        sample_type = TextureSampleType.FloatFilterable,
+                        view_dimension = CE.TextureViewDimension.D2,
+                        sample_type = CE.TextureSampleType.FloatFilterable,
                     })),
                     count = 0,
                 },
@@ -631,7 +619,7 @@ internal static class HostScreenInitializer
                 {
                     binding = 1,
                     visibility = Wgpu.ShaderStages.FRAGMENT,
-                    ty = BindingType.Sampler(UnsafeEx.StackPointer(SamplerBindingType.Filtering)),
+                    ty = CE.BindingType.Sampler(UnsafeEx.StackPointer(CE.SamplerBindingType.Filtering)),
                     count = 0,
                 },
             }),
@@ -645,21 +633,21 @@ internal static class HostScreenInitializer
         Ref<Wgpu.Sampler> sampler)
     {
         const int EntryCount = 2;
-        var entries = stackalloc BindGroupEntry[EntryCount]
+        var entries = stackalloc CE.BindGroupEntry[EntryCount]
         {
             new()
             {
                 binding = 0,
-                resource = BindingResource.TextureView(textureView),
+                resource = CE.BindingResource.TextureView(textureView),
             },
             new()
             {
                 binding = 1,
-                resource = BindingResource.Sampler(sampler),
+                resource = CE.BindingResource.Sampler(sampler),
             },
         };
 
-        return screen.CreateBindGroup(new BindGroupDescriptor
+        return screen.CreateBindGroup(new CE.BindGroupDescriptor
         {
             layout = bindGroupLayout,
             entries = new() { data = entries, len = EntryCount }
@@ -682,15 +670,15 @@ internal static class HostScreenInitializer
     {
         return screen.CreateBindGroupLayout(new()
         {
-            entries = Slice.FromFixedSpanUnsafe(stackalloc BindGroupLayoutEntry[1]
+            entries = Slice.FromFixedSpanUnsafe(stackalloc CE.BindGroupLayoutEntry[1]
                 {
                 new()
                 {
                     binding = 0,
                     visibility = Wgpu.ShaderStages.VERTEX_FRAGMENT,
-                    ty = BindingType.Buffer(UnsafeEx.StackPointer(new BufferBindingData
+                    ty = CE.BindingType.Buffer(UnsafeEx.StackPointer(new CE.BufferBindingData
                     {
-                        ty = BufferBindingType.Uniform,
+                        ty = CE.BufferBindingType.Uniform,
                         has_dynamic_offset = false,
                         min_binding_size = 0,
                     })),

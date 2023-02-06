@@ -9,7 +9,7 @@ public sealed class Texture : IEngineManaged, IDisposable
 {
     private IHostScreen? _screen;
     private Box<Wgpu.Texture> _native;
-    private TextureDescriptor _desc;
+    private CE.TextureDescriptor _desc;
     private Wgpu.Extent3d _size;
 
     public IHostScreen? Screen => _screen;
@@ -47,9 +47,9 @@ public sealed class Texture : IEngineManaged, IDisposable
             height = height,
             depth_or_array_layers = 1,
         };
-        var desc = new TextureDescriptor()
+        var desc = new CE.TextureDescriptor()
         {
-            dimension = TextureDimension.D2,
+            dimension = CE.TextureDimension.D2,
             format = Wgpu.TextureFormat.Rgba8UnormSrgb,
             mip_level_count = 1,
             sample_count = 1,

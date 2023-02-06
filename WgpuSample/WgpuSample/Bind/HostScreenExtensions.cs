@@ -22,9 +22,9 @@ internal unsafe static class HostScreenExtensions
 
     public static Box<Wgpu.Texture> CreateTexture(
         this Ref<Self> self,
-        in TextureDescriptor desc)
+        in CE.TextureDescriptor desc)
     {
-        fixed(TextureDescriptor* descPtr = &desc) {
+        fixed(CE.TextureDescriptor* descPtr = &desc) {
             return EngineCore.CreateTexture(self, descPtr);
         }
     }
@@ -51,9 +51,9 @@ internal unsafe static class HostScreenExtensions
 
     public static Box<Wgpu.BindGroup> CreateBindGroup(
         this Ref<Self> self,
-        in BindGroupDescriptor desc)
+        in CE.BindGroupDescriptor desc)
     {
-        fixed(BindGroupDescriptor* descPtr = &desc) {
+        fixed(CE.BindGroupDescriptor* descPtr = &desc) {
             return EngineCore.CreateBindGroup(self, descPtr);
         }
     }
@@ -78,18 +78,18 @@ internal unsafe static class HostScreenExtensions
 
     public static Box<Wgpu.PipelineLayout> CreatePipelineLayout(
         this Ref<Self> self,
-        in PipelineLayoutDescriptor desc)
+        in CE.PipelineLayoutDescriptor desc)
     {
-        fixed(PipelineLayoutDescriptor* descPtr = &desc) {
+        fixed(CE.PipelineLayoutDescriptor* descPtr = &desc) {
             return EngineCore.CreatePipelineLayout(self, descPtr);
         }
     }
 
     public static Box<Wgpu.RenderPipeline> CreateRenderPipeline(
         this Ref<Self> self,
-        in RenderPipelineDescriptor desc)
+        in CE.RenderPipelineDescriptor desc)
     {
-        fixed(RenderPipelineDescriptor* descPtr = &desc) {
+        fixed(CE.RenderPipelineDescriptor* descPtr = &desc) {
             return EngineCore.CreateRenderPipeline(self, descPtr);
         }
     }
@@ -113,10 +113,10 @@ internal unsafe static class TextureExtensions
 
 internal unsafe static class BufferExtensions
 {
-    public static BufferBinding AsEntireBufferBinding(
+    public static CE.BufferBinding AsEntireBufferBinding(
         this Ref<Wgpu.Buffer> self)
     {
-        return new BufferBinding
+        return new CE.BufferBinding
         {
             buffer = self,
             offset = 0,
@@ -124,7 +124,7 @@ internal unsafe static class BufferExtensions
         };
     }
 
-    public static BufferSlice AsSlice(this Ref<Wgpu.Buffer> self) => new BufferSlice(self, RangeBoundsU64.RangeFull);
+    public static CE.BufferSlice AsSlice(this Ref<Wgpu.Buffer> self) => new CE.BufferSlice(self, RangeBoundsU64.RangeFull);
 
-    public static BufferSlice AsSlice(this Ref<Wgpu.Buffer> self, RangeBoundsU64 range) => new BufferSlice(self, range);
+    public static CE.BufferSlice AsSlice(this Ref<Wgpu.Buffer> self, RangeBoundsU64 range) => new CE.BufferSlice(self, range);
 }

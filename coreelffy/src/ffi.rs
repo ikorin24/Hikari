@@ -185,7 +185,7 @@ extern "cdecl" fn elffy_destroy_pipeline_layout(layout: Box<wgpu::PipelineLayout
 #[no_mangle]
 extern "cdecl" fn elffy_create_render_pipeline(
     screen: &HostScreen,
-    desc: &RenderPipelineDescription,
+    desc: &RenderPipelineDescriptor,
 ) -> ApiBoxResult<wgpu::RenderPipeline> {
     let value = match desc.use_wgpu_type(|x| Ok(screen.create_render_pipeline(x))) {
         Ok(value) => value,
