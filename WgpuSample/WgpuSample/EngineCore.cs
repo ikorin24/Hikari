@@ -228,7 +228,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyPipelineLayout(
-            Box<Wgpu.PipelineLayout> handle)
+            this Box<Wgpu.PipelineLayout> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_pipeline_layout(handle);
@@ -244,7 +244,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyRenderPipeline(
-            Box<Wgpu.RenderPipeline> handle)
+            this Box<Wgpu.RenderPipeline> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_render_pipeline(handle);

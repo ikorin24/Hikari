@@ -174,6 +174,7 @@ public sealed class Shader : IEngineManaged, IDisposable
     private Box<Wgpu.ShaderModule> _native;
 
     public IHostScreen? Screen => _screen;
+    internal Ref<Wgpu.ShaderModule> NativeRef => _native;
 
     public Shader(IHostScreen screen, ReadOnlySpan<byte> shaderSource)
     {

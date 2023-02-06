@@ -30,6 +30,7 @@ public sealed class BindGroup : IEngineManaged, IDisposable
         _native.DestroyBindGroup();
         _native = Box<Wgpu.BindGroup>.Invalid;
         _screen = null;
+        _entries = null;
     }
 
     public static unsafe BindGroup Create(IHostScreen screen, BindGroupLayout layout, ReadOnlySpan<BindGroupEntry> entries)
@@ -154,13 +155,3 @@ public unsafe sealed class BindGroupEntry
         }
     }
 }
-
-//public enum BindResourceType
-//{
-//    [EnumMapTo(CE.BindingResource.BindingResourceTag.Buffer)] Buffer = 0,
-//    [EnumMapTo(CE.BindingResource.BindingResourceTag.BufferArray)] BufferArray = 1,
-//    [EnumMapTo(CE.BindingResource.BindingResourceTag.Sampler)] Sampler = 2,
-//    [EnumMapTo(CE.BindingResource.BindingResourceTag.SamplerArray)] SamplerArray = 3,
-//    [EnumMapTo(CE.BindingResource.BindingResourceTag.TextureView)] TextureView = 4,
-//    [EnumMapTo(CE.BindingResource.BindingResourceTag.TextureViewArray)] TextureViewArray = 5,
-//}
