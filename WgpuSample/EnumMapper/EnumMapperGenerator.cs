@@ -179,6 +179,46 @@ partial class EnumMapper
         sb.AppendLine("""
 }
 """);
+
+        sb.AppendLine("""
+partial class EnumMapper
+{
+    [global::System.Diagnostics.CodeAnalysis.DoesNotReturn]
+    private static void ThrowCannotMap<TFrom, TTo>(TFrom source)
+    {
+        throw new global::System.InvalidOperationException($"failed to map {source} of {typeof(TFrom).FullName} to {typeof(TFrom).FullName}");
+    }
+}
+""");
+
+        foreach(var defList in data) {
+            var tFrom = defList.Type;
+            sb.AppendLine($$"""
+partial class EnumMapper
+{
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static TTo MapOrDefault<TTo>(this global::{{tFrom}} self) where TTo : unmanaged, global::System.Enum
+    {
+        return self.TryMapTo(out TTo value) ? value : default;
+    }
+
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static TTo MapOr<TTo>(this global::{{tFrom}} self, TTo defaultValue) where TTo : unmanaged, global::System.Enum
+    {
+        return self.TryMapTo(out TTo value) ? value : defaultValue;
+    }
+
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static TTo MapOrThrow<TTo>(this global::{{tFrom}} self) where TTo : unmanaged, global::System.Enum
+    {
+        if(self.TryMapTo(out TTo value) == false) {
+            ThrowCannotMap<global::{{tFrom}}, TTo>(self);
+        }
+        return value;
+    }
+}
+""");
+        }
         return sb.ToString();
     }
 
