@@ -193,7 +193,39 @@ partial class EnumMapper
 
         foreach(var defList in data) {
             var tFrom = defList.Type;
-            sb.AppendLine($$"""
+            if(defList.ContainsOnlySingleMappedType(out var tTo)) {
+
+                // If defList contains only single mapped type,
+                // strong typed methods are provided.
+
+                sb.AppendLine($$"""
+partial class EnumMapper
+{
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static global::{{tTo}} MapOrDefault(this global::{{tFrom}} self)
+    {
+        return self.TryMapTo(out global::{{tTo}} value) ? value : default;
+    }
+
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static global::{{tTo}} MapOr(this global::{{tFrom}} self, global::{{tTo}} defaultValue)
+    {
+        return self.TryMapTo(out global::{{tTo}} value) ? value : defaultValue;
+    }
+
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static global::{{tTo}} MapOrThrow(this global::{{tFrom}} self)
+    {
+        if(self.TryMapTo(out global::{{tTo}} value) == false) {
+            ThrowCannotMap<global::{{tFrom}}, {{tTo}}>(self);
+        }
+        return value;
+    }
+}
+""");
+            }
+            else {
+                sb.AppendLine($$"""
 partial class EnumMapper
 {
     [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -218,6 +250,7 @@ partial class EnumMapper
     }
 }
 """);
+            }
         }
         return sb.ToString();
     }
@@ -255,6 +288,23 @@ partial class EnumMapper
         public MapDefList(string type)
         {
             Type = type;
+        }
+
+        public bool ContainsOnlySingleMappedType(out string mappedType)
+        {
+            if(Defs.Count == 0) {
+                mappedType = null!;
+                return false;
+            }
+            var t = Defs[0].MappedType;
+            for(int i = 1; i < Defs.Count; i++) {
+                if(Defs[i].MappedType != t) {
+                    mappedType = null!;
+                    return false;
+                }
+            }
+            mappedType = t;
+            return true;
         }
 
         public void Add(string mappedType, string fromValue, string toValue)

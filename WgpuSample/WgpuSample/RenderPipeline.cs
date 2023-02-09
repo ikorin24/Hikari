@@ -161,11 +161,11 @@ public readonly struct PrimitiveState
     {
         return new CE.PrimitiveState
         {
-            topology = Topology.MapOrThrow<Wgpu.PrimitiveTopology>(),
-            strip_index_format = StripIndexFormat.ToNative(x => x.MapOrThrow<Wgpu.IndexFormat>()),
-            front_face = FrontFace.MapOrThrow<Wgpu.FrontFace>(),
-            cull_mode = CullMode.ToNative(x => x.MapOrThrow<Wgpu.Face>()),
-            polygon_mode = PolygonMode.MapOrThrow<Wgpu.PolygonMode>(),
+            topology = Topology.MapOrThrow(),
+            strip_index_format = StripIndexFormat.ToNative(x => x.MapOrThrow()),
+            front_face = FrontFace.MapOrThrow(),
+            cull_mode = CullMode.ToNative(x => x.MapOrThrow()),
+            polygon_mode = PolygonMode.MapOrThrow(),
         };
     }
 }
@@ -182,9 +182,9 @@ public readonly struct DepthStencilState
     {
         return new CE.DepthStencilState
         {
-            format = Format.MapOrThrow<Wgpu.TextureFormat>(),
+            format = Format.MapOrThrow(),
             depth_write_enabled = DepthWriteEnabled,
-            depth_compare = DepthCompare.MapOrThrow<Wgpu.CompareFunction>(),
+            depth_compare = DepthCompare.MapOrThrow(),
             stencil = Stencil.ToNative(),
             bias = Bias.ToNative(),
         };
@@ -241,10 +241,10 @@ public readonly struct StencilFaceState
     {
         return new Wgpu.StencilFaceState
         {
-            compare = Compare.MapOrThrow<Wgpu.CompareFunction>(),
-            fail_op = FailOp.MapOrThrow<Wgpu.StencilOperation>(),
-            depth_fail_op = DepthFailOp.MapOrThrow<Wgpu.StencilOperation>(),
-            pass_op = PassOp.MapOrThrow<Wgpu.StencilOperation>(),
+            compare = Compare.MapOrThrow(),
+            fail_op = FailOp.MapOrThrow(),
+            depth_fail_op = DepthFailOp.MapOrThrow(),
+            pass_op = PassOp.MapOrThrow(),
         };
     }
 }
@@ -363,7 +363,7 @@ public readonly struct ColorTargetState
     {
         return new CE.ColorTargetState
         {
-            format = Format.MapOrThrow<Wgpu.TextureFormat>(),
+            format = Format.MapOrThrow(),
             blend = Blend.ToNative(blend => blend.ToNative()),
             write_mask = (Wgpu.ColorWrites)WriteMask,
         };
@@ -381,7 +381,7 @@ public readonly struct VertexBufferLayout
         return new CE.VertexBufferLayout
         {
             array_stride = ArrayStride,
-            step_mode = StepMode.MapOrThrow<Wgpu.VertexStepMode>(),
+            step_mode = StepMode.MapOrThrow(),
             attributes = Attributes.SelectToArray(x => x.ToNative()).AsFixedSlice(pins),
         };
     }
@@ -445,9 +445,9 @@ public readonly struct BlendComponent
     {
         return new()
         {
-            src_factor = SrcFactor.MapOrThrow<Wgpu.BlendFactor>(),
-            dst_factor = DstFactor.MapOrThrow<Wgpu.BlendFactor>(),
-            operation = Operation.MapOrThrow<Wgpu.BlendOperation>(),
+            src_factor = SrcFactor.MapOrThrow(),
+            dst_factor = DstFactor.MapOrThrow(),
+            operation = Operation.MapOrThrow(),
         };
     }
 }
@@ -489,7 +489,7 @@ public readonly struct VertexAttribute
     {
         return new Wgpu.VertexAttribute
         {
-            format = Format.MapOrThrow<Wgpu.VertexFormat>(),
+            format = Format.MapOrThrow(),
             offset = Offset,
             shader_location = ShaderLocation,
         };
