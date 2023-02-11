@@ -8,8 +8,7 @@ public sealed class Texture : IEngineManaged, IDisposable
 {
     private IHostScreen? _screen;
     private Box<Wgpu.Texture> _native;
-    private CE.TextureDescriptor _desc;
-    private Wgpu.Extent3d _size;
+    private Vector3i _size;
 
     public IHostScreen? Screen => _screen;
 
@@ -18,45 +17,48 @@ public sealed class Texture : IEngineManaged, IDisposable
 
     public bool IsEmpty => _native.IsInvalid;
 
-    public int Width => (int)_size.width;
+    public int Width => _size.X;
+    public int Height => _size.Y;
+    public int Depth => _size.Z;
 
-    public int Height => (int)_size.height;
+    public Vector2i Size => new Vector2i(_size.X, _size.Y);
 
-    public Vector2i Size => new Vector2i(Width, Height);
-
-    public Texture()
+    private Texture(IHostScreen screen, Box<Wgpu.Texture> native, Vector3i size)
     {
+        _screen = screen;
+        _native = native;
+        _size = size;
     }
 
-    public TextureView CreateTextureView()
-    {
-        _native.ThrowIfInvalid();
-        return new TextureView(this);
-    }
-
-    public unsafe void LoadFile(IHostScreen screen, string filepath)  // TODO: remove
+    public static Texture Create(IHostScreen screen, in TextureDescriptor desc)
     {
         ArgumentNullException.ThrowIfNull(screen);
-        var screenRef = screen.Ref.AsRef();
+        var descNative = desc.ToNative();
+        var texture = screen.AsRefChecked().CreateTexture(descNative);
+        var size = desc.Size;
+        return new Texture(screen, texture, size);
+    }
 
-        var (pixelBytes, width, height) = SamplePrimitives.LoadImagePixels(filepath);
-        var size = new Wgpu.Extent3d
-        {
-            width = width,
-            height = height,
-            depth_or_array_layers = 1,
-        };
-        var desc = new CE.TextureDescriptor()
-        {
-            dimension = CE.TextureDimension.D2,
-            format = Wgpu.TextureFormat.Rgba8UnormSrgb,
-            mip_level_count = 1,
-            sample_count = 1,
-            size = size,
-            usage = Wgpu.TextureUsages.TEXTURE_BINDING | Wgpu.TextureUsages.COPY_DST,
-        };
-        var texture = screenRef.CreateTexture(desc);
-        fixed(byte* p = pixelBytes) {
+    public static Texture CreateLoad(IHostScreen screen, ReadOnlySpan<byte> pixelData, in TextureDescriptor desc)
+    {
+        var texture = Create(screen, desc);
+        try {
+            texture.Load(pixelData);
+        }
+        catch {
+            texture.Dispose();
+            throw;
+        }
+        return texture;
+    }
+
+    public unsafe void Load(ReadOnlySpan<byte> pixelData)
+    {
+        var screenRef = this.GetScreen().AsRefChecked();
+        var texture = _native.AsRefChecked();
+        var size = new Wgpu.Extent3d((u32)_size.X, (u32)_size.Y, (u32)_size.Z);
+
+        fixed(byte* p = pixelData) {
             screenRef.WriteTexture(
                 new CE.ImageCopyTexture
                 {
@@ -67,20 +69,15 @@ public sealed class Texture : IEngineManaged, IDisposable
                     origin_y = 0,
                     origin_z = 0,
                 },
-                new Slice<byte>(p, pixelBytes.Length),
+                new Slice<byte>(p, pixelData.Length),
                 new Wgpu.ImageDataLayout
                 {
                     offset = 0,
-                    bytes_per_row = 4 * width,
-                    rows_per_image = height,
+                    bytes_per_row = 4 * size.width,
+                    rows_per_image = size.height,
                 },
                 size);
         }
-
-        _screen = screen;
-        _size = size;
-        _desc = desc;
-        _native = texture;
     }
 
     public void Dispose()
@@ -94,195 +91,50 @@ public sealed class Texture : IEngineManaged, IDisposable
     }
 }
 
-public sealed class TextureView : IEngineManaged, IDisposable
+public readonly struct TextureDescriptor
 {
-    private IHostScreen? _screen;
-    private Box<Wgpu.TextureView> _native;
-    private Texture? _texture;
+    public required Vector3i Size { get; init; }
+    public required u32 MipLevelCount { get; init; }
+    public required u32 SampleCount { get; init; }
+    public required TextureDimension Dimension { get; init; }
+    public required TextureFormat Format { get; init; }
+    public required TextureUsages Usage { get; init; }
 
-    public IHostScreen? Screen => _screen;
-
-    internal Ref<Wgpu.TextureView> NativeRef => _native;
-
-    public TextureView(Texture texture)
+    internal CE.TextureDescriptor ToNative()
     {
-        ArgumentNullException.ThrowIfNull(texture);
-        texture.ThrowIfNotEngineManaged();
-
-        _texture = texture;
-        _native = texture.NativeRef.CreateTextureView();
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _texture = null;
-        _native.DestroyTextureView();
-        _native = Box<Wgpu.TextureView>.Invalid;
-        _screen = null;
-    }
-}
-
-
-public sealed class Sampler : IEngineManaged, IDisposable
-{
-    private IHostScreen? _screen;
-    private Box<Wgpu.Sampler> _native;
-
-    public IHostScreen? Screen => _screen;
-
-    internal Ref<Wgpu.Sampler> NativeRef => _native;
-
-    private Sampler(IHostScreen screen, Box<Wgpu.Sampler> native)
-    {
-        _screen = screen;
-        _native = native;
-    }
-
-    public static Sampler Create(IHostScreen screen)
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        var screenRef = screen.AsRef();
-        var desc = new CE.SamplerDescriptor
+        return new CE.TextureDescriptor
         {
-            address_mode_u = Wgpu.AddressMode.ClampToEdge,
-            address_mode_v = Wgpu.AddressMode.ClampToEdge,
-            address_mode_w = Wgpu.AddressMode.ClampToEdge,
-            mag_filter = Wgpu.FilterMode.Linear,
-            min_filter = Wgpu.FilterMode.Nearest,
-            mipmap_filter = Wgpu.FilterMode.Nearest,
-            anisotropy_clamp = 0,
-            lod_max_clamp = 0,
-            lod_min_clamp = 0,
-            border_color = Opt<CE.SamplerBorderColor>.None,
-            compare = Opt<Wgpu.CompareFunction>.None,
+            size = new Wgpu.Extent3d
+            {
+                width = checked((u32)Size.X),
+                height = checked((u32)Size.Y),
+                depth_or_array_layers = checked((u32)Size.Z),
+            },
+            mip_level_count = MipLevelCount,
+            sample_count = SampleCount,
+            dimension = Dimension.MapOrThrow(),
+            format = Format.MapOrThrow(),
+            usage = (Wgpu.TextureUsages)Usage,  // MapByCast()
         };
-        var sampler = screenRef.CreateSampler(desc);
-        return new Sampler(screen, sampler);
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _native.DestroySampler();
-        _native = Box<Wgpu.Sampler>.Invalid;
-        _screen = null;
     }
 }
 
-public sealed class Shader : IEngineManaged, IDisposable
+[Flags]
+public enum TextureUsages : u32
 {
-    private IHostScreen? _screen;
-    private Box<Wgpu.ShaderModule> _native;
-
-    public IHostScreen? Screen => _screen;
-    internal Ref<Wgpu.ShaderModule> NativeRef => _native;
-
-    private Shader(IHostScreen screen, Box<Wgpu.ShaderModule> native)
-    {
-        _screen = screen;
-        _native = native;
-    }
-
-    public static Shader Create(IHostScreen screen, ReadOnlySpan<byte> shaderSource)
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        var shader = screen.AsRef().CreateShaderModule(shaderSource);
-        return new Shader(screen, shader);
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _native.DestroyShaderModule();
-        _native = Box<Wgpu.ShaderModule>.Invalid;
-        _screen = null;
-    }
+    CopySrc = Wgpu.TextureUsages.COPY_SRC,
+    CopyDst = Wgpu.TextureUsages.COPY_DST,
+    TextureBinding = Wgpu.TextureUsages.TEXTURE_BINDING,
+    StorageBinding = Wgpu.TextureUsages.STORAGE_BINDING,
+    RenderAttachment = Wgpu.TextureUsages.RENDER_ATTACHMENT,
 }
 
-public sealed class Buffer : IEngineManaged, IDisposable
+public enum TextureDimension
 {
-    private IHostScreen? _screen;
-    private Box<Wgpu.Buffer> _native;
-    private BufferUsages _usage;
-
-    public IHostScreen? Screen => _screen;
-
-    public BufferUsages Usage => _usage;
-
-    internal Ref<Wgpu.Buffer> NativeRef => _native;
-
-    private Buffer(IHostScreen screen, Box<Wgpu.Buffer> native, BufferUsages usage)
-    {
-        _screen = screen;
-        _native = native;
-        _usage = usage;
-    }
-
-    public static Buffer CreateUniformBuffer<T>(IHostScreen screen, ReadOnlySpan<T> data) where T : unmanaged
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        return CreateFromSpan(screen, data, BufferUsages.Uniform | BufferUsages.CopyDst);
-    }
-
-    public static Buffer CreateVertexBuffer<T>(IHostScreen screen, ReadOnlySpan<T> data) where T : unmanaged
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        return CreateFromSpan(screen, data, BufferUsages.Vertex | BufferUsages.CopyDst);
-    }
-
-    public static Buffer CreateIndexBuffer<T>(IHostScreen screen, ReadOnlySpan<T> data) where T : unmanaged
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        return CreateFromSpan(screen, data, BufferUsages.Index | BufferUsages.CopyDst);
-    }
-
-    public unsafe static Buffer Create<T>(IHostScreen screen, ReadOnlySpan<byte> data, BufferUsages usage) where T : unmanaged
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        return CreateFromSpan(screen, data, usage);
-    }
-
-    public unsafe static Buffer Create(IHostScreen screen, byte* ptr, nuint byteLength, BufferUsages usage)
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        return CreateFromPtr(screen, ptr, byteLength, usage);
-    }
-
-    private unsafe static Buffer CreateFromSpan<T>(IHostScreen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
-    {
-        fixed(T* ptr = data) {
-            var bytelen = (nuint)data.Length * (nuint)sizeof(T);
-            return CreateFromPtr(screen, (byte*)ptr, bytelen, usage);
-        }
-    }
-
-    private unsafe static Buffer CreateFromPtr(IHostScreen screen, byte* ptr, nuint byteLength, BufferUsages usage)
-    {
-        var screenRef = screen.AsRef();
-        usage.TryMapTo(out Wgpu.BufferUsages nativeUsage).WithDebugAssertTrue();
-        var data = new Slice<u8>(ptr, byteLength);
-        var buffer = screenRef.CreateBufferInit(data, nativeUsage);
-        return new Buffer(screen, buffer, usage);
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _native.DestroyBuffer();
-        _native = Box<Wgpu.Buffer>.Invalid;
-        _screen = null;
-    }
+    [EnumMapTo(CE.TextureDimension.D1)] D1 = 0,
+    [EnumMapTo(CE.TextureDimension.D2)] D2 = 1,
+    [EnumMapTo(CE.TextureDimension.D3)] D3 = 2,
 }
-
 
 [Flags]
 public enum BufferUsages : u32

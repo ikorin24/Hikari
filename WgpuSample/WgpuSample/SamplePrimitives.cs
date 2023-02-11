@@ -53,12 +53,12 @@ public static class SamplePrimitives
         return (Vertices: vertices, Indices: indices);
     }
 
-    public static (byte[] PixelData, uint Width, uint Height) LoadImagePixels(string filepath)
+    public static (byte[] PixelData, int Width, int Height) LoadImagePixels(string filepath)
     {
         using var stream = File.OpenRead(filepath);
         using var skBitmap = ParseToSKBitmap(stream);
-        var width = (uint)skBitmap.Width;
-        var height = (uint)skBitmap.Height;
+        var width = skBitmap.Width;
+        var height = skBitmap.Height;
         var pixelData = skBitmap.GetPixelSpan().ToArray();
         return (PixelData: pixelData, Width: width, Height: height);
 

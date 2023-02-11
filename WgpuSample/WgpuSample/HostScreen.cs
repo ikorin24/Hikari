@@ -123,7 +123,11 @@ public readonly ref struct HostScreenRef
 
     internal HostScreenRef(Ref<CE.HostScreen> screen) => _ref = screen;
 
-    internal Ref<CE.HostScreen> AsRef() => _ref;
+    internal Ref<CE.HostScreen> AsRefChecked()
+    {
+        _ref.ThrowIfInvalid();
+        return _ref;
+    }
 }
 
 public interface IHostScreen
@@ -142,9 +146,9 @@ public interface IHostScreen
 internal static class HostScreenExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Ref<CE.HostScreen> AsRef(this IHostScreen screen)
+    public static Ref<CE.HostScreen> AsRefChecked(this IHostScreen screen)
     {
-        return screen.Ref.AsRef();
+        return screen.Ref.AsRefChecked();
     }
 }
 

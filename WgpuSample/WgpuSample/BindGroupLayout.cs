@@ -27,7 +27,7 @@ public sealed class BindGroupLayout : IEngineManaged, IDisposable
     {
         using var pins = new PinHandleHolder();
         var descNative = desc.ToNative(pins);
-        var bindGroupLayout = screen.AsRef().CreateBindGroupLayout(descNative);
+        var bindGroupLayout = screen.AsRefChecked().CreateBindGroupLayout(descNative);
         return new BindGroupLayout(screen, bindGroupLayout);
     }
 

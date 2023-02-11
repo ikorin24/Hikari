@@ -57,7 +57,7 @@ public sealed class RenderPipeline : IEngineManaged, IDisposable
         var pins = new PinHandleHolder();
         try {
             var descNative = desc.ToNative(pins);
-            var renderPipeline = screen.AsRef().CreateRenderPipeline(descNative);
+            var renderPipeline = screen.AsRefChecked().CreateRenderPipeline(descNative);
             return new RenderPipeline(screen, renderPipeline);
         }
         finally {

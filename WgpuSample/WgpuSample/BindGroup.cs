@@ -33,7 +33,7 @@ public sealed class BindGroup : IEngineManaged, IDisposable
     public static unsafe BindGroup Create(IHostScreen screen, in BindGroupDescriptor desc)
     {
         using var pins = new PinHandleHolder();
-        var bindGroup = screen.AsRef().CreateBindGroup(desc.ToNative(pins));
+        var bindGroup = screen.AsRefChecked().CreateBindGroup(desc.ToNative(pins));
         return new BindGroup(screen, bindGroup);
     }
 }

@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Elffy.Bind;
 
@@ -232,6 +233,18 @@ internal static class Wgpu
         public required u32 width;
         public required u32 height;
         public required u32 depth_or_array_layers;
+
+        public Extent3d()
+        {
+        }
+
+        [SetsRequiredMembers]
+        public Extent3d(u32 width, u32 height, u32 depth_or_array_layers)
+        {
+            this.width = width;
+            this.height = height;
+            this.depth_or_array_layers = depth_or_array_layers;
+        }
     }
 
     [Flags]

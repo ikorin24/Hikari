@@ -30,7 +30,7 @@ public sealed class PipelineLayout : IEngineManaged, IDisposable
         }
 
         var descNative = new CE.PipelineLayoutDescriptor(bindGroupLayoutsNative, (nuint)bindGroupLayouts.Length);
-        var pipelineLayout = screen.AsRef().CreatePipelineLayout(descNative);
+        var pipelineLayout = screen.AsRefChecked().CreatePipelineLayout(descNative);
         return new PipelineLayout(screen, pipelineLayout);
 
     }

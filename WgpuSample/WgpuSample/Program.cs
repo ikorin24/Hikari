@@ -62,10 +62,34 @@ internal class Program
 
         var format = screen.SurfaceFormat;
         Debug.WriteLine($"backend: {screen.Backend}");
-        using var texture = new Texture();
-        texture.LoadFile(screen, "happy-tree.png");
-        using var view = texture.CreateTextureView();
-        using var sampler = Sampler.Create(screen);
+        var (pixelData, width, height) = SamplePrimitives.LoadImagePixels("happy-tree.png");
+        using var texture = Texture.CreateLoad(
+            screen,
+            pixelData,
+            new TextureDescriptor
+            {
+                Size = new Vector3i(width, height, 1),
+                MipLevelCount = 1,
+                SampleCount = 1,
+                Dimension = TextureDimension.D2,
+                Format = TextureFormat.Rgba8UnormSrgb,
+                Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
+            });
+        using var view = TextureView.Create(texture);
+        using var sampler = Sampler.Create(screen, new SamplerDescriptor
+        {
+            AddressModeU = AddressMode.ClampToEdge,
+            AddressModeV = AddressMode.ClampToEdge,
+            AddressModeW = AddressMode.ClampToEdge,
+            MagFilter = FilterMode.Linear,
+            MinFilter = FilterMode.Nearest,
+            MipmapFilter = FilterMode.Nearest,
+            AnisotropyClamp = 0,
+            LodMaxClamp = 0,
+            LodMinClamp = 0,
+            BorderColor = null,
+            Compare = null,
+        });
 
         using var bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
         {
@@ -676,8 +700,8 @@ internal static class HostScreenInitializer
         var (pixelBytes, width, height) = SamplePrimitives.LoadImagePixels(filepath);
         var size = new Wgpu.Extent3d
         {
-            width = width,
-            height = height,
+            width = (uint)width,
+            height = (uint)height,
             depth_or_array_layers = 1,
         }; ;
         var texture = screen.CreateTexture(new()
@@ -704,8 +728,8 @@ internal static class HostScreenInitializer
                 new Wgpu.ImageDataLayout
                 {
                     offset = 0,
-                    bytes_per_row = 4 * width,
-                    rows_per_image = height,
+                    bytes_per_row = 4 * (uint)width,
+                    rows_per_image = (uint)height,
                 },
                 size);
         }

@@ -513,7 +513,7 @@ internal static class CoreElffy
         public required Wgpu.TextureUsages usage;
     }
 
-    internal enum TextureDimension
+    internal enum TextureDimension : u32
     {
         D1 = 0,
         D2 = 1,
