@@ -135,7 +135,13 @@ public sealed class Sampler : IEngineManaged, IDisposable
 
     internal Ref<Wgpu.Sampler> NativeRef => _native;
 
-    public Sampler(IHostScreen screen)
+    private Sampler(IHostScreen screen, Box<Wgpu.Sampler> native)
+    {
+        _screen = screen;
+        _native = native;
+    }
+
+    public static Sampler Create(IHostScreen screen)
     {
         ArgumentNullException.ThrowIfNull(screen);
         var screenRef = screen.AsRef();
@@ -153,8 +159,8 @@ public sealed class Sampler : IEngineManaged, IDisposable
             border_color = Opt<CE.SamplerBorderColor>.None,
             compare = Opt<Wgpu.CompareFunction>.None,
         };
-        _native = screenRef.CreateSampler(desc);
-        _screen = screen;
+        var sampler = screenRef.CreateSampler(desc);
+        return new Sampler(screen, sampler);
     }
 
     public void Dispose()
@@ -176,12 +182,17 @@ public sealed class Shader : IEngineManaged, IDisposable
     public IHostScreen? Screen => _screen;
     internal Ref<Wgpu.ShaderModule> NativeRef => _native;
 
-    public Shader(IHostScreen screen, ReadOnlySpan<byte> shaderSource)
+    private Shader(IHostScreen screen, Box<Wgpu.ShaderModule> native)
+    {
+        _screen = screen;
+        _native = native;
+    }
+
+    public static Shader Create(IHostScreen screen, ReadOnlySpan<byte> shaderSource)
     {
         ArgumentNullException.ThrowIfNull(screen);
         var shader = screen.AsRef().CreateShaderModule(shaderSource);
-        _screen = screen;
-        _native = shader;
+        return new Shader(screen, shader);
     }
 
     public void Dispose()

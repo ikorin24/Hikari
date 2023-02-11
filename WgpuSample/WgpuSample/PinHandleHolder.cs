@@ -51,7 +51,9 @@ internal readonly struct PinHandleHolder : IDisposable
 
         public void Dispose()
         {
-            _gcHandle.Free();
+            if(_gcHandle.IsAllocated) {
+                _gcHandle.Free();
+            }
             _memHandle.Dispose();
         }
     }

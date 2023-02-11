@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Elffy.Bind;
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Elffy;
@@ -20,23 +21,18 @@ public sealed class PipelineLayout : IEngineManaged, IDisposable
         _native = native;
     }
 
-    public unsafe static PipelineLayout Create(IHostScreen screen, ReadOnlySpan<BindGroupLayout> layouts)
+    public unsafe static PipelineLayout Create(IHostScreen screen, in PipelineLayoutDescriptor desc)
     {
-        ArgumentNullException.ThrowIfNull(screen);
-        var screenRef = screen.AsRef();
+        var bindGroupLayouts = desc.BindGroupLayouts.Span;
+        var bindGroupLayoutsNative = stackalloc Ref<Wgpu.BindGroupLayout>[bindGroupLayouts.Length];
+        for(int i = 0; i < bindGroupLayouts.Length; i++) {
+            bindGroupLayoutsNative[i] = bindGroupLayouts[i].NativeRef;
+        }
 
-        var layoutsNative = (Ref<Wgpu.BindGroupLayout>*)NativeMemory.Alloc((usize)layouts.Length * (usize)sizeof(Ref<Wgpu.BindGroupLayout>));
-        try {
-            for(int i = 0; i < layouts.Length; i++) {
-                layoutsNative[i] = layouts[i].NativeRef;
-            }
-            var desc = new CE.PipelineLayoutDescriptor(layoutsNative, (usize)layouts.Length);
-            var pipelineLayout = screenRef.CreatePipelineLayout(desc);
-            return new PipelineLayout(screen, pipelineLayout);
-        }
-        finally {
-            NativeMemory.Free(layoutsNative);
-        }
+        var descNative = new CE.PipelineLayoutDescriptor(bindGroupLayoutsNative, (nuint)bindGroupLayouts.Length);
+        var pipelineLayout = screen.AsRef().CreatePipelineLayout(descNative);
+        return new PipelineLayout(screen, pipelineLayout);
+
     }
 
     public void Dispose()
@@ -48,4 +44,9 @@ public sealed class PipelineLayout : IEngineManaged, IDisposable
         _native = Box<Wgpu.PipelineLayout>.Invalid;
         _screen = null;
     }
+}
+
+public readonly struct PipelineLayoutDescriptor
+{
+    public required ReadOnlyMemory<BindGroupLayout> BindGroupLayouts { get; init; }
 }

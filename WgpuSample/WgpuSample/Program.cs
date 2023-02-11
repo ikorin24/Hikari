@@ -65,11 +65,11 @@ internal class Program
         using var texture = new Texture();
         texture.LoadFile(screen, "happy-tree.png");
         using var view = texture.CreateTextureView();
-        using var sampler = new Sampler(screen);
+        using var sampler = Sampler.Create(screen);
 
         using var bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
         {
-            Entries = new BindGroupLayoutEntry[]
+            Entries = new[]
             {
                 BindGroupLayoutEntry.Texture(
                     binding: 0,
@@ -88,6 +88,106 @@ internal class Program
                     count: 0),
             },
         });
+        using var bindGroup = BindGroup.Create(screen, new BindGroupDescriptor
+        {
+            Layout = bindGroupLayout,
+            Entries = new[]
+            {
+                BindGroupEntry.TextureView(0, view),
+                BindGroupEntry.Sampler(1, sampler),
+            },
+        });
+
+        using var shader = Shader.Create(screen, ShaderSource2);
+
+        using var pipelineLayout = PipelineLayout.Create(screen, new PipelineLayoutDescriptor
+        {
+            BindGroupLayouts = new[]
+            {
+                bindGroupLayout,
+            },
+        });
+
+
+        //using var renderPipeline = RenderPipeline.Create(screen, new RenderPipelineDescriptor
+        //{
+        //    Layout = pipelineLayout,
+        //    Vertex = new VertexState
+        //    {
+        //        Module = shader,
+        //        EntryPoint = "vs_main"u8.ToArray(),
+        //        Buffers = new VertexBufferLayout[]
+        //        {
+        //            new VertexBufferLayout
+        //            {
+        //                ArrayStride = (u64)Unsafe.SizeOf<Vertex>(),
+        //                StepMode = VertexStepMode.Vertex,
+        //                Attributes = new[]
+        //                {
+        //                    new VertexAttribute
+        //                    {
+        //                        Offset = 0,
+        //                        ShaderLocation = 0,
+        //                        Format = VertexFormat.Float32x3,
+        //                    },
+        //                    new VertexAttribute
+        //                    {
+        //                        Offset = 12,
+        //                        ShaderLocation = 1,
+        //                        Format = VertexFormat.Float32x2,
+        //                    },
+        //                },
+        //            },
+        //            new VertexBufferLayout
+        //            {
+        //                ArrayStride = (u64)Unsafe.SizeOf<InstanceData>(),
+        //                StepMode = VertexStepMode.Instance,
+        //                Attributes = new[]
+        //                {
+        //                    new VertexAttribute
+        //                    {
+        //                        Offset = 0,
+        //                        ShaderLocation = 5,
+        //                        Format = VertexFormat.Float32x3,
+        //                    }
+        //                },
+        //            },
+        //        },
+        //    },
+        //    Fragment = new FragmentState
+        //    {
+        //        Module = shader,
+        //        EntryPoint = "fs_main"u8.ToArray(),
+        //        Targets = new ColorTargetState?[]
+        //        {
+        //            new ColorTargetState
+        //            {
+        //                Format = format,
+        //                Blend = BlendState.Replace,
+        //                WriteMask = ColorWrites.All,
+        //            },
+        //        },
+        //    },
+        //    Primitive = new PrimitiveState
+        //    {
+        //        Topology = PrimitiveTopology.TriangleList,
+        //        StripIndexFormat = null,
+        //        FrontFace = FrontFace.Ccw,
+        //        CullMode = Face.Back,
+        //        PolygonMode = PolygonMode.Fill,
+        //    },
+        //    DepthStencil = new DepthStencilState
+        //    {
+        //        Format = ,
+        //        DepthWriteEnabled = true,
+        //        DepthCompare = CompareFunction.Less,
+        //        Stencil = StencilState.Default,
+        //        Bias = DepthBiasState.Default,
+        //    },
+        //    Multisample = MultisampleState.Default,
+        //    Multiview = 0,
+        //});
+
     }
 
     private static readonly List<State> _stateList = new List<State>();
@@ -535,6 +635,37 @@ internal class Program
             return textureSample(t_diffuse, s_diffuse, in.tex_coords);
         }
             
+        """u8;
+
+    private unsafe static ReadOnlySpan<byte> ShaderSource2 => """
+        struct Vertex {
+            @location(0) position: vec3<f32>,
+            @location(1) tex_coords: vec2<f32>,
+        }
+        struct InstanceData {
+            @location(5) offset: vec3<f32>,
+        }
+
+        struct VertexOutput {
+            @builtin(position) clip_position: vec4<f32>,
+            @location(0) tex_coords: vec2<f32>,
+        }
+
+        @vertex fn vs_main(
+            v: Vertex,
+            instance: InstanceData,
+        ) -> VertexOutput {
+            var out: VertexOutput;
+            out.clip_position = vec4<f32>(v.position + instance.offset, 1.0);
+            return out;
+        }
+
+        @group(0) @binding(0) var t_diffuse: texture_2d<f32>;
+        @group(0)@binding(1) var s_diffuse: sampler;
+
+        @fragment fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+            return textureSample(t_diffuse, s_diffuse, in.tex_coords);
+        }            
         """u8;
 }
 
