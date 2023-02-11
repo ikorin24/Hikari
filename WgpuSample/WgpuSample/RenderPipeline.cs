@@ -361,7 +361,7 @@ public readonly struct ColorTargetState
         {
             format = Format.MapOrThrow(),
             blend = Blend.ToNative(blend => blend.ToNative()),
-            write_mask = (Wgpu.ColorWrites)WriteMask,
+            write_mask = WriteMask.FlagsMap(),
         };
     }
 }
@@ -383,14 +383,15 @@ public readonly struct VertexBufferLayout
     }
 }
 
+[Flags]
 public enum ColorWrites : u32
 {
-    Red = Wgpu.ColorWrites.RED,
-    Green = Wgpu.ColorWrites.GREEN,
-    Blue = Wgpu.ColorWrites.BLUE,
-    Alpha = Wgpu.ColorWrites.ALPHA,
-    Color = Wgpu.ColorWrites.COLOR,
-    All = Wgpu.ColorWrites.ALL,
+    [EnumMapTo(Wgpu.ColorWrites.RED)] Red = 1 << 0,
+    [EnumMapTo(Wgpu.ColorWrites.GREEN)] Green = 1 << 1,
+    [EnumMapTo(Wgpu.ColorWrites.BLUE)] Blue = 1 << 2,
+    [EnumMapTo(Wgpu.ColorWrites.ALPHA)] Alpha = 1 << 3,
+    [EnumMapTo(Wgpu.ColorWrites.COLOR)] Color = Red | Green | Blue,
+    [EnumMapTo(Wgpu.ColorWrites.ALL)] All = Red | Green | Blue | Alpha,
 }
 
 public readonly struct BlendState

@@ -20,6 +20,21 @@ public sealed class EnumMapperGenerator : IIncrementalGenerator
 
 namespace EnumMapping;
 
+/// <summary>
+/// Provides mapping to another enum values.<para/>
+/// The followings are available when the enum is NOT marked as <see cref="global::System.FlagsAttribute"/>.
+/// <code>
+/// SourceEnum.MapOrThrow();
+/// SourceEnum.MapOr(DestEnum.Value1);
+/// SourceEnum.MapOrDefault();
+/// SourceEnum.TryMapTo(out DestEnum mapped);
+/// </code>
+/// The followings are available when marked as <see cref="global::System.FlagsAttribute"/>.
+/// <code>
+/// SourceEnum.FlagsMap();
+/// SourceEnum.TryMapTo(out DestEnum mapped);   // Always returns false
+/// </code>
+/// </summary>
 [global::System.Diagnostics.Conditional("COMPILE_TIME_ONLY")]
 [global::System.AttributeUsage(global::System.AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
 internal sealed class EnumMapToAttribute : global::System.Attribute
@@ -42,6 +57,12 @@ internal sealed class EnumMapToAttribute : global::System.Attribute
             return compilation.GetTypeByMetadataName("EnumMapping.EnumMapToAttribute") ?? throw new Exception("EnumMapToAttribute is not found.");
         }).WithComparer(SymbolEqualityComparer.Default);
 
+        var flagsAttrSymbol = context.CompilationProvider.Select(static (compilation, ct) =>
+        {
+            ct.ThrowIfCancellationRequested();
+            return compilation.GetTypeByMetadataName("System.FlagsAttribute") ?? throw new Exception("FlagsAttribute is not found.");
+        }).WithComparer(SymbolEqualityComparer.Default);
+
         var data = context
             .SyntaxProvider
             .CreateSyntaxProvider(
@@ -57,11 +78,11 @@ internal sealed class EnumMapToAttribute : global::System.Attribute
                 var enumSymbol = semantics.GetDeclaredSymbol((context.Node as EnumDeclarationSyntax)!, ct);
                 return (enumSymbol, semantics);
             })
-            .Combine(enumMapToAttrSymbol)
+            .Combine(enumMapToAttrSymbol.Combine(flagsAttrSymbol))
             .Select((x, ct) =>
             {
                 ct.ThrowIfCancellationRequested();
-                var ((enumSymbol, semantics), enumMapToAttrSymbol) = x;
+                var ((enumSymbol, semantics), (enumMapToAttrSymbol, flagsAttrSymbol)) = x;
                 if(enumSymbol is null) { return default; }
 
                 var comparer = SymbolEqualityComparer.Default;
@@ -69,6 +90,9 @@ internal sealed class EnumMapToAttribute : global::System.Attribute
                 List<Diagnostic>? diagnostics = null;
 
                 var enumTypeName = enumSymbol.ToString();
+                var isFlags = enumSymbol
+                    .GetAttributes()
+                    .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, flagsAttrSymbol)) is not null;
                 foreach(var enumField in enumSymbol.GetMembers().OfType<IFieldSymbol>()) {
                     ct.ThrowIfCancellationRequested();
                     var enumMapToAttr = enumField
@@ -84,9 +108,15 @@ internal sealed class EnumMapToAttribute : global::System.Attribute
                     }
                     var mappedType = arg0.Type!.ToString();
                     var toValue = arg0.Value!.ToString();
-                    (mapDefList ??= new(enumTypeName)).Add(mappedType, enumField.Name, toValue);
+                    (mapDefList ??= new MapDefList(enumTypeName, isFlags)).Add(mappedType, enumField.Name, toValue);
                 }
                 if(mapDefList != null) {
+                    if(isFlags && mapDefList.Value.ContainsOnlySingleMappedType(out _) == false) {
+                        var location = enumSymbol.Locations.FirstOrDefault();
+                        var diag = DiagnosticHelper.FlagsMultipleMappedType(location);
+                        (diagnostics ??= new()).Add(diag);
+                    }
+
                     SelectedData? ret = new SelectedData(mapDefList.Value, diagnostics?.ToImmutableArray() ?? ImmutableArray<Diagnostic>.Empty);
                     return ret;
                 }
@@ -131,6 +161,9 @@ internal static partial class EnumMapper
 """);
 
         foreach(var defList in data) {
+            if(defList.IsFlags) {
+                continue;
+            }
             var tFrom = defList.Type;
             foreach(var def in defList.Defs) {
                 var tTo = def.MappedType;
@@ -154,6 +187,9 @@ partial class EnumMapper
 {
 """);
         foreach(var defList in data) {
+            if(defList.IsFlags) {
+                continue;
+            }
             var tFrom = defList.Type;
             foreach(var def in defList.Defs) {
                 var tTo = def.MappedType;
@@ -192,6 +228,9 @@ partial class EnumMapper
 """);
 
         foreach(var defList in data) {
+            if(defList.IsFlags) {
+                continue;
+            }
             var tFrom = defList.Type;
             if(defList.ContainsOnlySingleMappedType(out var tTo)) {
 
@@ -252,6 +291,39 @@ partial class EnumMapper
 """);
             }
         }
+
+        foreach(var defList in data) {
+            if(defList.IsFlags == false) {
+                continue;
+            }
+            if(defList.ContainsOnlySingleMappedType(out var tTo) == false) {
+                continue;
+            }
+            var tFrom = defList.Type;
+
+            sb.AppendLine($$"""
+partial class EnumMapper
+{
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static global::{{tTo}} FlagsMap(this global::{{tFrom}} self)
+    {
+        global::{{tTo}} flags = 0;
+""");
+
+            foreach(var def in defList.Defs) {
+                foreach(var (vFrom, vTo) in def.Values) {
+                    sb.AppendLine($$"""
+        if(self.HasFlag(global::{{tFrom}}.{{vFrom}})) { flags |= ((global::{{tTo}}){{vTo}}); }
+""");
+                }
+            }
+
+            sb.AppendLine($$"""
+        return flags;
+    }
+}
+""");
+        }
         return sb.ToString();
     }
 
@@ -281,13 +353,15 @@ partial class EnumMapper
     private readonly struct MapDefList : IEquatable<MapDefList>
     {
         public string Type { get; }
+        public bool IsFlags { get; }
         public List<MapDef> Defs { get; } = new List<MapDef>();
 
         public static EqualityComparer<MapDefList> DefaultComparer = EqualityComparer<MapDefList>.Default;
 
-        public MapDefList(string type)
+        public MapDefList(string type, bool isFlags)
         {
             Type = type;
+            IsFlags = isFlags;
         }
 
         public bool ContainsOnlySingleMappedType(out string mappedType)
@@ -375,12 +449,15 @@ partial class EnumMapper
 
 internal static class DiagnosticHelper
 {
-    public static DiagnosticDescriptor _descInvalidTypeOfMappedValue { get; } =
+    private static DiagnosticDescriptor _descInvalidTypeOfMappedValue { get; } =
         new("EMG000", "invalid type of mapped value", "the value must be enum value, but found '{0}'", "EnumMapper", DiagnosticSeverity.Error, true);
 
-
     public static Diagnostic InvalidTypeOfMappedValue(Location? location, object? foundValue)
-    {
-        return Diagnostic.Create(_descInvalidTypeOfMappedValue, location, foundValue);
-    }
+        => Diagnostic.Create(_descInvalidTypeOfMappedValue, location, foundValue);
+
+    private static DiagnosticDescriptor _descFlagsMultipleMappedType { get; } =
+        new("EMG001", "multiple mapped type in flags enum ", "flags enum should only have one mapped type", "EnumMapper", DiagnosticSeverity.Error, true);
+
+    public static Diagnostic FlagsMultipleMappedType(Location? location)
+        => Diagnostic.Create(_descFlagsMultipleMappedType, location);
 }

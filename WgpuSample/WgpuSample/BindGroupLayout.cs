@@ -116,7 +116,7 @@ public readonly struct BindGroupLayoutEntry
         return new CE.BindGroupLayoutEntry
         {
             binding = _binding,
-            visibility = _visibility.MapOrThrow(),
+            visibility = _visibility.FlagsMap(),
             ty = _resource.ToNative(holder),
             count = _count
         };

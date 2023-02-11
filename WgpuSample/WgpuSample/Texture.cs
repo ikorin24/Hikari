@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Elffy.Bind;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
@@ -114,7 +115,7 @@ public readonly struct TextureDescriptor
             sample_count = SampleCount,
             dimension = Dimension.MapOrThrow(),
             format = Format.MapOrThrow(),
-            usage = (Wgpu.TextureUsages)Usage,  // MapByCast()
+            usage = Usage.FlagsMap(),
         };
     }
 }
@@ -122,11 +123,11 @@ public readonly struct TextureDescriptor
 [Flags]
 public enum TextureUsages : u32
 {
-    CopySrc = Wgpu.TextureUsages.COPY_SRC,
-    CopyDst = Wgpu.TextureUsages.COPY_DST,
-    TextureBinding = Wgpu.TextureUsages.TEXTURE_BINDING,
-    StorageBinding = Wgpu.TextureUsages.STORAGE_BINDING,
-    RenderAttachment = Wgpu.TextureUsages.RENDER_ATTACHMENT,
+    [EnumMapTo(Wgpu.TextureUsages.COPY_SRC)] CopySrc = 1 << 0,
+    [EnumMapTo(Wgpu.TextureUsages.COPY_DST)] CopyDst = 1 << 1,
+    [EnumMapTo(Wgpu.TextureUsages.TEXTURE_BINDING)] TextureBinding = 1 << 2,
+    [EnumMapTo(Wgpu.TextureUsages.STORAGE_BINDING)] StorageBinding = 1 << 3,
+    [EnumMapTo(Wgpu.TextureUsages.RENDER_ATTACHMENT)] RenderAttachment = 1 << 4,
 }
 
 public enum TextureDimension

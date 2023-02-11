@@ -28,6 +28,7 @@ internal static class Wgpu
         Back = 1,
     }
 
+    [Flags]
     internal enum ShaderStages : u32
     {
         NONE = 0,
@@ -117,6 +118,7 @@ internal static class Wgpu
         Always = 8,
     }
 
+    [Flags]
     internal enum ColorWrites : u32
     {
         RED = 1 << 0,
