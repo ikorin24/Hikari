@@ -37,12 +37,23 @@ internal static class InternalExtensions
     {
         return self == null ? Opt<TResult>.None : Opt<TResult>.Some(mapper(self.Value));
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static T GetOrThrow<T>(this T? self) where T : struct
+    {
+        if(self.HasValue == false) {
+            Throw();
+            [DoesNotReturn] static void Throw() => throw new InvalidOperationException("cannot get value");
+        }
+        return self.Value;
+    }
 }
 
 public sealed class RenderPipeline : IEngineManaged, IDisposable
 {
     private IHostScreen? _screen;
     private Box<Wgpu.RenderPipeline> _native;
+    internal Ref<Wgpu.RenderPipeline> NativeRef => _native;
 
     public IHostScreen? Screen => _screen;
 

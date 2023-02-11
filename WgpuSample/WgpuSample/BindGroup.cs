@@ -10,6 +10,7 @@ public sealed class BindGroup : IEngineManaged, IDisposable
 {
     private IHostScreen? _screen;
     private Box<Wgpu.BindGroup> _native;
+    internal Ref<Wgpu.BindGroup> NativeRef => _native;
 
     public IHostScreen? Screen => _screen;
 

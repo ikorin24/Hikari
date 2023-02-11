@@ -49,21 +49,83 @@ internal class Program
         Engine.Start(screenConfig, OnInitialized);
     }
 
+    private static State2? _state2;
+
+    private unsafe static void OnRedrawRequested(Ref<CE.HostScreen> screenRef)
+    {
+        if(screenRef.ScreenBeginCommand(out var commandEncoder, out var surfaceTexture, out var surfaceTextureView) == false) {
+            return;
+        }
+        var state = _state2;
+        if(state == null) { return; }
+        {
+            CE.RenderPassDescriptor desc;
+            {
+                const int ColorAttachmentCount = 1;
+                var colorAttachments = stackalloc Opt<CE.RenderPassColorAttachment>[ColorAttachmentCount]
+                {
+                    new(new CE.RenderPassColorAttachment
+                    {
+                        view = surfaceTextureView,
+                        clear = new Wgpu.Color(0, 0, 0, 0),
+                    }),
+                };
+                desc = new CE.RenderPassDescriptor
+                {
+                    color_attachments_clear = new() { data = colorAttachments, len = ColorAttachmentCount },
+                    depth_stencil_attachment_clear = new(new CE.RenderPassDepthStencilAttachment
+                    {
+                        view = state.DepthTextureView.NativeRef,
+                        depth_clear = Opt<float>.Some(1f),
+                        stencil_clear = Opt<uint>.None,
+                    }),
+                };
+            }
+
+            var renderPass = commandEncoder.AsMut().CreateRenderPass(desc);
+            try {
+                var r = renderPass.AsMut();
+                r.SetPipeline(state.RenderPipeline.NativeRef);
+                r.SetBindGroup(0, state.BindGroup.NativeRef);
+                r.SetVertexBuffer(0, state.VertexBuffer.NativeRef.AsSlice());
+                r.SetVertexBuffer(1, state.InstanceBuffer.NativeRef.AsSlice());
+                r.SetIndexBuffer(state.IndexBuffer.NativeRef.AsSlice(), state.IndexFormat.MapOrThrow());
+                r.DrawIndexed(0..state.IndexCount, 0, 0..state.InstanceCount);
+            }
+            finally {
+                renderPass.DestroyRenderPass();
+            }
+        }
+        screenRef.ScreenFinishCommand(commandEncoder, surfaceTexture, surfaceTextureView);
+
+    }
+
     private static void OnInitialized(IHostScreen screen)
     {
         screen.RedrawRequested += (screen) =>
         {
+            OnRedrawRequested(screen.AsRefChecked());
         };
         screen.Resized += (screen, w, h) =>
         {
-
+            var state = _state2;
+            if(state == null) {
+                return;
+            }
+            var (depthTexture, depthView, depthSampler) = CreateDepth(screen);
+            state.DepthTexture.Dispose();
+            state.DepthTextureView.Dispose();
+            state.DepthSampler.Dispose();
+            state.DepthTexture = depthTexture;
+            state.DepthTextureView = depthView;
+            state.DepthSampler = depthSampler;
         };
         screen.Title = "sample";
 
-        var format = screen.SurfaceFormat;
+        var surfaceFormat = screen.SurfaceFormat;
         Debug.WriteLine($"backend: {screen.Backend}");
         var (pixelData, width, height) = SamplePrimitives.LoadImagePixels("happy-tree.png");
-        using var texture = Texture.Create(screen, new TextureDescriptor
+        var texture = Texture.Create(screen, new TextureDescriptor
         {
             Size = new Vector3i(width, height, 1),
             MipLevelCount = 1,
@@ -73,8 +135,8 @@ internal class Program
             Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
         });
         texture.Write(0, 4, pixelData);
-        using var view = TextureView.Create(texture);
-        using var sampler = Sampler.Create(screen, new SamplerDescriptor
+        var view = TextureView.Create(texture);
+        var sampler = Sampler.Create(screen, new SamplerDescriptor
         {
             AddressModeU = AddressMode.ClampToEdge,
             AddressModeV = AddressMode.ClampToEdge,
@@ -89,7 +151,7 @@ internal class Program
             Compare = null,
         });
 
-        using var bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
+        var bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
         {
             Entries = new[]
             {
@@ -110,7 +172,7 @@ internal class Program
                     count: 0),
             },
         });
-        using var bindGroup = BindGroup.Create(screen, new BindGroupDescriptor
+        var bindGroup = BindGroup.Create(screen, new BindGroupDescriptor
         {
             Layout = bindGroupLayout,
             Entries = new[]
@@ -120,9 +182,9 @@ internal class Program
             },
         });
 
-        using var shader = Shader.Create(screen, ShaderSource2);
+        var shader = Shader.Create(screen, ShaderSource2);
 
-        using var pipelineLayout = PipelineLayout.Create(screen, new PipelineLayoutDescriptor
+        var pipelineLayout = PipelineLayout.Create(screen, new PipelineLayoutDescriptor
         {
             BindGroupLayouts = new[]
             {
@@ -131,33 +193,9 @@ internal class Program
         });
 
         var screenSize = screen.Size;
-        using var depthTexture = Texture.Create(screen, new TextureDescriptor
-        {
-            Size = new Vector3i(screenSize.X, screenSize.Y, 1),
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = TextureDimension.D2,
-            Format = TextureFormat.Depth32Float,
-            Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
-        });
-        using var depthView = TextureView.Create(depthTexture);
-        using var depthSampler = Sampler.Create(screen, new SamplerDescriptor
-        {
-            AddressModeU = AddressMode.ClampToEdge,
-            AddressModeV = AddressMode.ClampToEdge,
-            AddressModeW = AddressMode.ClampToEdge,
-            MagFilter = FilterMode.Linear,
-            MinFilter = FilterMode.Linear,
-            MipmapFilter = FilterMode.Nearest,
-            Compare = CompareFunction.LessEqual,
-            LodMinClamp = 0,
-            LodMaxClamp = 100,
-            AnisotropyClamp = 0,
-            BorderColor = null,
-        });
+        var (depthTexture, depthView, depthSampler) = CreateDepth(screen);
 
-
-        using var renderPipeline = RenderPipeline.Create(screen, new RenderPipelineDescriptor
+        var renderPipeline = RenderPipeline.Create(screen, new RenderPipelineDescriptor
         {
             Layout = pipelineLayout,
             Vertex = new VertexState
@@ -210,7 +248,7 @@ internal class Program
                 {
                     new ColorTargetState
                     {
-                        Format = format,
+                        Format = surfaceFormat,
                         Blend = BlendState.Replace,
                         WriteMask = ColorWrites.All,
                     },
@@ -236,6 +274,68 @@ internal class Program
             Multiview = 0,
         });
 
+        var (vertices, indices) = SamplePrimitives.SampleData();
+        var vb = Buffer.CreateVertexBuffer<Vertex>(screen, vertices);
+        var ib = Buffer.CreateIndexBuffer<u16>(screen, indices);
+        var indexFormat = IndexFormat.Uint16;
+
+        ReadOnlySpan<InstanceData> instances = stackalloc InstanceData[2]
+        {
+            new InstanceData(new Vector3(0.5f, 0, 0)),
+            new InstanceData(new Vector3(-0.5f, 0, 0)),
+        };
+        var instanceBuffer = Buffer.CreateVertexBuffer(screen, instances);
+
+        _state2 = new State2
+        {
+            Texture = texture,
+            TextureView = view,
+            Sampler = sampler,
+            BindGroupLayout = bindGroupLayout,
+            BindGroup = bindGroup,
+            Shader = shader,
+            DepthTexture = depthTexture,
+            DepthTextureView = depthView,
+            DepthSampler = depthSampler,
+            PipelineLayout = pipelineLayout,
+            RenderPipeline = renderPipeline,
+            VertexBuffer = vb,
+            InstanceBuffer = instanceBuffer,
+            InstanceCount = instances.Length,
+            IndexBuffer = ib,
+            IndexCount = indices.Length,
+            IndexFormat = indexFormat,
+        };
+    }
+
+    private static (Texture Depth, TextureView DepthView, Sampler DepthSampler) CreateDepth(IHostScreen screen)
+    {
+        var screenSize = screen.Size;
+        var depth = Texture.Create(screen, new TextureDescriptor
+        {
+            Size = new Vector3i(screenSize.X, screenSize.Y, 1),
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Dimension = TextureDimension.D2,
+            Format = TextureFormat.Depth32Float,
+            Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
+        });
+        var depthView = TextureView.Create(depth);
+        var depthSampler = Sampler.Create(screen, new SamplerDescriptor
+        {
+            AddressModeU = AddressMode.ClampToEdge,
+            AddressModeV = AddressMode.ClampToEdge,
+            AddressModeW = AddressMode.ClampToEdge,
+            MagFilter = FilterMode.Linear,
+            MinFilter = FilterMode.Linear,
+            MipmapFilter = FilterMode.Nearest,
+            Compare = CompareFunction.LessEqual,
+            LodMinClamp = 0,
+            LodMaxClamp = 100,
+            AnisotropyClamp = 0,
+            BorderColor = null,
+        });
+        return (depth, depthView, depthSampler);
     }
 
     private static readonly List<State> _stateList = new List<State>();
@@ -999,6 +1099,35 @@ internal struct CameraUniform
 }
 
 internal record struct InstanceData(Vector3 Offset);
+
+internal sealed class State2 : IDisposable
+{
+    public required Texture Texture { get; init; }
+    public required TextureView TextureView { get; init; }
+    public required Sampler Sampler { get; init; }
+    public required BindGroupLayout BindGroupLayout { get; init; }
+    public required BindGroup BindGroup { get; init; }
+    public required Shader Shader { get; init; }
+    public required PipelineLayout PipelineLayout { get; init; }
+    public required RenderPipeline RenderPipeline { get; init; }
+
+    public required Buffer VertexBuffer { get; init; }
+    public required Buffer InstanceBuffer { get; init; }
+    public required int InstanceCount { get; init; }
+    public required Buffer IndexBuffer { get; init; }
+    public required int IndexCount { get; init; }
+    public required IndexFormat IndexFormat { get; init; }
+
+
+    public required Texture DepthTexture { get; set; }
+    public required TextureView DepthTextureView { get; set; }
+    public required Sampler DepthSampler { get; set; }
+
+    public void Dispose()
+    {
+        throw new NotImplementedException();
+    }
+}
 
 internal sealed class State
 {

@@ -16,31 +16,22 @@ public sealed class Texture : IEngineManaged, IDisposable
     internal Ref<Wgpu.Texture> NativeRef => _native.AsRefChecked();
     internal MutRef<Wgpu.Texture> NativeMut => _native.AsMutChecked();
 
-    public int Width => GetDescriptor().Size.X;
-    public int Height => GetDescriptor().Size.Y;
-    public int Depth => GetDescriptor().Size.Z;
-    public u32 MipLevelCount => GetDescriptor().MipLevelCount;
-    public u32 SampleCount => GetDescriptor().SampleCount;
-    public TextureFormat Format => GetDescriptor().Format;
-    public TextureUsages Usage => GetDescriptor().Usage;
-    public TextureDimension Dimension => GetDescriptor().Dimension;
+    public int Width => _desc.GetOrThrow().Size.X;
+    public int Height => _desc.GetOrThrow().Size.Y;
+    public int Depth => _desc.GetOrThrow().Size.Z;
+    public u32 MipLevelCount => _desc.GetOrThrow().MipLevelCount;
+    public u32 SampleCount => _desc.GetOrThrow().SampleCount;
+    public TextureFormat Format => _desc.GetOrThrow().Format;
+    public TextureUsages Usage => _desc.GetOrThrow().Usage;
+    public TextureDimension Dimension => _desc.GetOrThrow().Dimension;
 
     public Vector2i Size
     {
         get
         {
-            var size3d = GetDescriptor().Size;
+            var size3d = _desc.GetOrThrow().Size;
             return new Vector2i(size3d.X, size3d.Y);
         }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private TextureDescriptor GetDescriptor()
-    {
-        if(_desc == null) {
-            throw new InvalidOperationException("Cannot get the value");
-        }
-        return _desc.Value;
     }
 
     private Texture(IHostScreen screen, Box<Wgpu.Texture> native, in TextureDescriptor desc)
