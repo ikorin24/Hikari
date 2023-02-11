@@ -3,14 +3,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33103.184
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WgpuSample", "WgpuSample\WgpuSample.csproj", "{2A0AD572-9BC3-4D8E-AB53-09AAABFFAE88}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elffy.Core", "Elffy.Core\Elffy.Core.csproj", "{2A0AD572-9BC3-4D8E-AB53-09AAABFFAE88}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ソリューション項目", "ソリューション項目", "{6BEA2C75-7D0C-4177-B3B2-772A7132610E}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnumMapper", "EnumMapper\EnumMapper.csproj", "{54CC16C9-2E05-48B9-BC76-59C43C3F177C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EnumMapper", "EnumMapper\EnumMapper.csproj", "{54CC16C9-2E05-48B9-BC76-59C43C3F177C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleApp", "SampleApp\SampleApp.csproj", "{ACB3CAE4-4F6F-49C9-BBE3-3691805C3555}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,6 +28,10 @@ Global
 		{54CC16C9-2E05-48B9-BC76-59C43C3F177C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{54CC16C9-2E05-48B9-BC76-59C43C3F177C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{54CC16C9-2E05-48B9-BC76-59C43C3F177C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ACB3CAE4-4F6F-49C9-BBE3-3691805C3555}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACB3CAE4-4F6F-49C9-BBE3-3691805C3555}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ACB3CAE4-4F6F-49C9-BBE3-3691805C3555}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ACB3CAE4-4F6F-49C9-BBE3-3691805C3555}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
