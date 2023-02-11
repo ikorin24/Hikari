@@ -42,7 +42,7 @@ internal sealed class HostScreen : IHostScreen
         }
     }
 
-    public Vector2i Size
+    public Vector2i ClientSize
     {
         get
         {
@@ -156,7 +156,7 @@ public interface IHostScreen
     HostScreenRef Ref { get; }
 
     nuint Id { get; }
-    Vector2i Size { get; set; }
+    Vector2i ClientSize { get; set; }
     string Title { get; set; }
     TextureFormat SurfaceFormat { get; }
     GraphicsBackend Backend { get; }

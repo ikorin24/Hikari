@@ -171,7 +171,7 @@ internal class Program
             },
         });
 
-        var screenSize = screen.Size;
+        var screenSize = screen.ClientSize;
         var (depthTexture, depthView, depthSampler) = CreateDepth(screen, screenSize);
 
         var renderPipeline = RenderPipeline.Create(screen, new RenderPipelineDescriptor
