@@ -96,15 +96,8 @@ internal sealed class HostScreen : IHostScreen
 
     internal void OnInitialize(in CE.HostScreenInfo info)
     {
-        info.surface_format
-            .Unwrap()
-            .TryMapTo(out TextureFormat surfaceFormat)
-            .WithDebugAssertTrue();
-        _surfaceFormat = surfaceFormat;
-        info.backend
-            .TryMapTo(out GraphicsBackend backend)
-            .WithDebugAssertTrue();
-        _backend = backend;
+        _surfaceFormat = info.surface_format.Unwrap().MapOrThrow();
+        _backend = info.backend.MapOrThrow();
         _initialized = true;
     }
 
@@ -193,15 +186,13 @@ public readonly ref struct HostScreenConfig
 
     internal CE.HostScreenConfig ToCoreType()
     {
-        Style.TryMapTo(out CE.WindowStyle style).WithDebugAssertTrue();
-        Backend.TryMapTo(out Wgpu.Backends backend).WithDebugAssertTrue();
         return new CE.HostScreenConfig
         {
             title = Slice<u8>.Empty,
-            style = style,
+            style = Style.MapOrThrow(),
             width = Width,
             height = Height,
-            backend = backend,
+            backend = Backend.MapOrThrow(),
         };
     }
 }
