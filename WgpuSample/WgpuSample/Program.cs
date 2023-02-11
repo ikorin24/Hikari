@@ -63,18 +63,16 @@ internal class Program
         var format = screen.SurfaceFormat;
         Debug.WriteLine($"backend: {screen.Backend}");
         var (pixelData, width, height) = SamplePrimitives.LoadImagePixels("happy-tree.png");
-        using var texture = Texture.CreateLoad(
-            screen,
-            pixelData,
-            new TextureDescriptor
-            {
-                Size = new Vector3i(width, height, 1),
-                MipLevelCount = 1,
-                SampleCount = 1,
-                Dimension = TextureDimension.D2,
-                Format = TextureFormat.Rgba8UnormSrgb,
-                Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
-            });
+        using var texture = Texture.Create(screen, new TextureDescriptor
+        {
+            Size = new Vector3i(width, height, 1),
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Dimension = TextureDimension.D2,
+            Format = TextureFormat.Rgba8UnormSrgb,
+            Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
+        });
+        texture.Write(0, 4, pixelData);
         using var view = TextureView.Create(texture);
         using var sampler = Sampler.Create(screen, new SamplerDescriptor
         {
@@ -132,85 +130,111 @@ internal class Program
             },
         });
 
+        var screenSize = screen.Size;
+        using var depthTexture = Texture.Create(screen, new TextureDescriptor
+        {
+            Size = new Vector3i(screenSize.X, screenSize.Y, 1),
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Dimension = TextureDimension.D2,
+            Format = TextureFormat.Depth32Float,
+            Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
+        });
+        using var depthView = TextureView.Create(depthTexture);
+        using var depthSampler = Sampler.Create(screen, new SamplerDescriptor
+        {
+            AddressModeU = AddressMode.ClampToEdge,
+            AddressModeV = AddressMode.ClampToEdge,
+            AddressModeW = AddressMode.ClampToEdge,
+            MagFilter = FilterMode.Linear,
+            MinFilter = FilterMode.Linear,
+            MipmapFilter = FilterMode.Nearest,
+            Compare = CompareFunction.LessEqual,
+            LodMinClamp = 0,
+            LodMaxClamp = 100,
+            AnisotropyClamp = 0,
+            BorderColor = null,
+        });
 
-        //using var renderPipeline = RenderPipeline.Create(screen, new RenderPipelineDescriptor
-        //{
-        //    Layout = pipelineLayout,
-        //    Vertex = new VertexState
-        //    {
-        //        Module = shader,
-        //        EntryPoint = "vs_main"u8.ToArray(),
-        //        Buffers = new VertexBufferLayout[]
-        //        {
-        //            new VertexBufferLayout
-        //            {
-        //                ArrayStride = (u64)Unsafe.SizeOf<Vertex>(),
-        //                StepMode = VertexStepMode.Vertex,
-        //                Attributes = new[]
-        //                {
-        //                    new VertexAttribute
-        //                    {
-        //                        Offset = 0,
-        //                        ShaderLocation = 0,
-        //                        Format = VertexFormat.Float32x3,
-        //                    },
-        //                    new VertexAttribute
-        //                    {
-        //                        Offset = 12,
-        //                        ShaderLocation = 1,
-        //                        Format = VertexFormat.Float32x2,
-        //                    },
-        //                },
-        //            },
-        //            new VertexBufferLayout
-        //            {
-        //                ArrayStride = (u64)Unsafe.SizeOf<InstanceData>(),
-        //                StepMode = VertexStepMode.Instance,
-        //                Attributes = new[]
-        //                {
-        //                    new VertexAttribute
-        //                    {
-        //                        Offset = 0,
-        //                        ShaderLocation = 5,
-        //                        Format = VertexFormat.Float32x3,
-        //                    }
-        //                },
-        //            },
-        //        },
-        //    },
-        //    Fragment = new FragmentState
-        //    {
-        //        Module = shader,
-        //        EntryPoint = "fs_main"u8.ToArray(),
-        //        Targets = new ColorTargetState?[]
-        //        {
-        //            new ColorTargetState
-        //            {
-        //                Format = format,
-        //                Blend = BlendState.Replace,
-        //                WriteMask = ColorWrites.All,
-        //            },
-        //        },
-        //    },
-        //    Primitive = new PrimitiveState
-        //    {
-        //        Topology = PrimitiveTopology.TriangleList,
-        //        StripIndexFormat = null,
-        //        FrontFace = FrontFace.Ccw,
-        //        CullMode = Face.Back,
-        //        PolygonMode = PolygonMode.Fill,
-        //    },
-        //    DepthStencil = new DepthStencilState
-        //    {
-        //        Format = ,
-        //        DepthWriteEnabled = true,
-        //        DepthCompare = CompareFunction.Less,
-        //        Stencil = StencilState.Default,
-        //        Bias = DepthBiasState.Default,
-        //    },
-        //    Multisample = MultisampleState.Default,
-        //    Multiview = 0,
-        //});
+
+        using var renderPipeline = RenderPipeline.Create(screen, new RenderPipelineDescriptor
+        {
+            Layout = pipelineLayout,
+            Vertex = new VertexState
+            {
+                Module = shader,
+                EntryPoint = "vs_main"u8.ToArray(),
+                Buffers = new VertexBufferLayout[]
+                {
+                    new VertexBufferLayout
+                    {
+                        ArrayStride = (u64)Unsafe.SizeOf<Vertex>(),
+                        StepMode = VertexStepMode.Vertex,
+                        Attributes = new[]
+                        {
+                            new VertexAttribute
+                            {
+                                Offset = 0,
+                                ShaderLocation = 0,
+                                Format = VertexFormat.Float32x3,
+                            },
+                            new VertexAttribute
+                            {
+                                Offset = 12,
+                                ShaderLocation = 1,
+                                Format = VertexFormat.Float32x2,
+                            },
+                        },
+                    },
+                    new VertexBufferLayout
+                    {
+                        ArrayStride = (u64)Unsafe.SizeOf<InstanceData>(),
+                        StepMode = VertexStepMode.Instance,
+                        Attributes = new[]
+                        {
+                            new VertexAttribute
+                            {
+                                Offset = 0,
+                                ShaderLocation = 5,
+                                Format = VertexFormat.Float32x3,
+                            }
+                        },
+                    },
+                },
+            },
+            Fragment = new FragmentState
+            {
+                Module = shader,
+                EntryPoint = "fs_main"u8.ToArray(),
+                Targets = new ColorTargetState?[]
+                {
+                    new ColorTargetState
+                    {
+                        Format = format,
+                        Blend = BlendState.Replace,
+                        WriteMask = ColorWrites.All,
+                    },
+                },
+            },
+            Primitive = new PrimitiveState
+            {
+                Topology = PrimitiveTopology.TriangleList,
+                StripIndexFormat = null,
+                FrontFace = FrontFace.Ccw,
+                CullMode = Face.Back,
+                PolygonMode = PolygonMode.Fill,
+            },
+            DepthStencil = new DepthStencilState
+            {
+                Format = depthTexture.Format,
+                DepthWriteEnabled = true,
+                DepthCompare = CompareFunction.Less,
+                Stencil = StencilState.Default,
+                Bias = DepthBiasState.Default,
+            },
+            Multisample = MultisampleState.Default,
+            Multiview = 0,
+        });
 
     }
 

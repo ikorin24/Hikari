@@ -42,6 +42,26 @@ internal sealed class HostScreen : IHostScreen
         }
     }
 
+    public Vector2i Size
+    {
+        get
+        {
+            var screenRef = Ref.AsRefUnchecked();
+            if(screenRef.IsInvalid) {
+                return Vector2i.Zero;
+            }
+            var (width, height) = screenRef.ScreenGetInnerSize();
+            return new Vector2i(checked((int)width), checked((int)height));
+        }
+        set
+        {
+            var screenRef = Ref.AsRefChecked();
+            var width = checked((uint)value.X);
+            var height = checked((uint)value.Y);
+            screenRef.ScreenSetInnerSize(width, height);
+        }
+    }
+
     public string Title
     {
         get => _title;
@@ -128,6 +148,11 @@ public readonly ref struct HostScreenRef
         _ref.ThrowIfInvalid();
         return _ref;
     }
+
+    internal Ref<CE.HostScreen> AsRefUnchecked()
+    {
+        return _ref;
+    }
 }
 
 public interface IHostScreen
@@ -138,6 +163,7 @@ public interface IHostScreen
     HostScreenRef Ref { get; }
 
     nuint Id { get; }
+    Vector2i Size { get; set; }
     string Title { get; set; }
     TextureFormat SurfaceFormat { get; }
     GraphicsBackend Backend { get; }

@@ -9,26 +9,45 @@ public sealed class Texture : IEngineManaged, IDisposable
 {
     private IHostScreen? _screen;
     private Box<Wgpu.Texture> _native;
-    private Vector3i _size;
+    private TextureDescriptor? _desc;
 
     public IHostScreen? Screen => _screen;
 
     internal Ref<Wgpu.Texture> NativeRef => _native.AsRefChecked();
     internal MutRef<Wgpu.Texture> NativeMut => _native.AsMutChecked();
 
-    public bool IsEmpty => _native.IsInvalid;
+    public int Width => GetDescriptor().Size.X;
+    public int Height => GetDescriptor().Size.Y;
+    public int Depth => GetDescriptor().Size.Z;
+    public u32 MipLevelCount => GetDescriptor().MipLevelCount;
+    public u32 SampleCount => GetDescriptor().SampleCount;
+    public TextureFormat Format => GetDescriptor().Format;
+    public TextureUsages Usage => GetDescriptor().Usage;
+    public TextureDimension Dimension => GetDescriptor().Dimension;
 
-    public int Width => _size.X;
-    public int Height => _size.Y;
-    public int Depth => _size.Z;
+    public Vector2i Size
+    {
+        get
+        {
+            var size3d = GetDescriptor().Size;
+            return new Vector2i(size3d.X, size3d.Y);
+        }
+    }
 
-    public Vector2i Size => new Vector2i(_size.X, _size.Y);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private TextureDescriptor GetDescriptor()
+    {
+        if(_desc == null) {
+            throw new InvalidOperationException("Cannot get the value");
+        }
+        return _desc.Value;
+    }
 
-    private Texture(IHostScreen screen, Box<Wgpu.Texture> native, Vector3i size)
+    private Texture(IHostScreen screen, Box<Wgpu.Texture> native, in TextureDescriptor desc)
     {
         _screen = screen;
         _native = native;
-        _size = size;
+        _desc = desc;
     }
 
     public static Texture Create(IHostScreen screen, in TextureDescriptor desc)
@@ -36,28 +55,14 @@ public sealed class Texture : IEngineManaged, IDisposable
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
         var texture = screen.AsRefChecked().CreateTexture(descNative);
-        var size = desc.Size;
-        return new Texture(screen, texture, size);
+        return new Texture(screen, texture, desc);
     }
 
-    public static Texture CreateLoad(IHostScreen screen, ReadOnlySpan<byte> pixelData, in TextureDescriptor desc)
-    {
-        var texture = Create(screen, desc);
-        try {
-            texture.Load(pixelData);
-        }
-        catch {
-            texture.Dispose();
-            throw;
-        }
-        return texture;
-    }
-
-    public unsafe void Load(ReadOnlySpan<byte> pixelData)
+    public unsafe void Write(u32 mipLevel, u32 bytesPerPixel, ReadOnlySpan<byte> pixelData)
     {
         var screenRef = this.GetScreen().AsRefChecked();
         var texture = _native.AsRefChecked();
-        var size = new Wgpu.Extent3d((u32)_size.X, (u32)_size.Y, (u32)_size.Z);
+        var size = new Wgpu.Extent3d((u32)Width, (u32)Height, (u32)Depth);
 
         fixed(byte* p = pixelData) {
             screenRef.WriteTexture(
@@ -74,7 +79,7 @@ public sealed class Texture : IEngineManaged, IDisposable
                 new Wgpu.ImageDataLayout
                 {
                     offset = 0,
-                    bytes_per_row = 4 * size.width,
+                    bytes_per_row = bytesPerPixel * size.width,
                     rows_per_image = size.height,
                 },
                 size);
@@ -89,6 +94,7 @@ public sealed class Texture : IEngineManaged, IDisposable
         _native.DestroyTexture();
         _native = Box<Wgpu.Texture>.Invalid;
         _screen = null;
+        _desc = null;
     }
 }
 
