@@ -100,6 +100,9 @@ public readonly struct TextureDescriptor
 
     internal CE.TextureDescriptor ToNative()
     {
+        if(Size.X == 0) { throw new ArgumentOutOfRangeException("Size.X is 0"); }
+        if(Size.Y == 0) { throw new ArgumentOutOfRangeException("Size.Y is 0"); }
+        if(Size.Z == 0) { throw new ArgumentOutOfRangeException("Size.Z is 0"); }
         return new CE.TextureDescriptor
         {
             size = new Wgpu.Extent3d

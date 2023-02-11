@@ -17,7 +17,7 @@ internal sealed class HostScreen : IHostScreen
     private bool _initialized;
     private string _title = "";
 
-    public event Action<IHostScreen, uint, uint>? Resized;
+    public event Action<IHostScreen, Vector2i>? Resized;
     public event Action<IHostScreen>? RedrawRequested;
 
     public HostScreenRef Ref => new HostScreenRef(_screen);
@@ -120,7 +120,7 @@ internal sealed class HostScreen : IHostScreen
 
     internal void OnResized(uint width, uint height)
     {
-        Resized?.Invoke(this, width, height);
+        Resized?.Invoke(this, checked(new Vector2i((int)width, (int)height)));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -158,7 +158,7 @@ public readonly ref struct HostScreenRef
 public interface IHostScreen
 {
     event Action<IHostScreen>? RedrawRequested;
-    event Action<IHostScreen, uint, uint>? Resized;
+    event Action<IHostScreen, Vector2i>? Resized;
 
     HostScreenRef Ref { get; }
 
@@ -175,6 +175,12 @@ internal static class HostScreenExtensions
     public static Ref<CE.HostScreen> AsRefChecked(this IHostScreen screen)
     {
         return screen.Ref.AsRefChecked();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Ref<CE.HostScreen> AsRefUnchecked(this IHostScreen screen)
+    {
+        return screen.Ref.AsRefUnchecked();
     }
 }
 
