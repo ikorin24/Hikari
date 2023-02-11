@@ -46,20 +46,48 @@ internal class Program
             Height = 720,
             Style = WindowStyle.Default,
         };
-        Engine.Start(OnInitialized, screenConfig);
+        Engine.Start(screenConfig, OnInitialized);
     }
 
     private static void OnInitialized(IHostScreen screen)
     {
         screen.RedrawRequested += (screen) =>
         {
-
         };
         screen.Resized += (screen, w, h) =>
         {
 
         };
         screen.Title = "sample";
+
+        var format = screen.SurfaceFormat;
+        Debug.WriteLine($"backend: {screen.Backend}");
+        using var texture = new Texture();
+        texture.LoadFile(screen, "happy-tree.png");
+        using var view = texture.CreateTextureView();
+        using var sampler = new Sampler(screen);
+
+        using var bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
+        {
+            Entries = new BindGroupLayoutEntry[]
+            {
+                BindGroupLayoutEntry.Texture(
+                    binding: 0,
+                    visibility: ShaderStages.Fragment,
+                    type: new TextureBindingData
+                    {
+                        Multisampled = false,
+                        ViewDimension = TextureViewDimension.D2,
+                        SampleType = TextureSampleType.FloatFilterable,
+                    },
+                    count: 0),
+                BindGroupLayoutEntry.Sampler(
+                    binding: 1,
+                    visibility: ShaderStages.Fragment,
+                    type: SamplerBindingType.Filtering,
+                    count: 0),
+            },
+        });
     }
 
     private static readonly List<State> _stateList = new List<State>();

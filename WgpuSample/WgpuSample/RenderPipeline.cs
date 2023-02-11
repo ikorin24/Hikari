@@ -1,8 +1,6 @@
 ﻿#nullable enable
 using Elffy.Bind;
 using System;
-using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -11,13 +9,13 @@ namespace Elffy;
 internal static class InternalExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public unsafe static Slice<T> AsFixedSlice<T>(this T[] array, IList<MemoryHandle> pins) where T : unmanaged
+    public unsafe static Slice<T> AsFixedSlice<T>(this T[] array, PinHandleHolder pins) where T : unmanaged
     {
         return ((ReadOnlyMemory<T>)array).AsFixedSlice(pins);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public unsafe static Slice<T> AsFixedSlice<T>(this ReadOnlyMemory<T> memory, IList<MemoryHandle> pins) where T : unmanaged
+    public unsafe static Slice<T> AsFixedSlice<T>(this ReadOnlyMemory<T> memory, PinHandleHolder pins) where T : unmanaged
     {
         var handle = memory.Pin();
         pins.Add(handle);
@@ -56,16 +54,14 @@ public sealed class RenderPipeline : IEngineManaged, IDisposable
 
     public unsafe static RenderPipeline Create(IHostScreen screen, in RenderPipelineDescriptor desc)
     {
-        var pins = new List<MemoryHandle>();
+        var pins = new PinHandleHolder();
         try {
             var descNative = desc.ToNative(pins);
             var renderPipeline = screen.AsRef().CreateRenderPipeline(descNative);
             return new RenderPipeline(screen, renderPipeline);
         }
         finally {
-            foreach(var handle in pins) {
-                handle.Dispose();
-            }
+            pins.Dispose();
         }
     }
 
@@ -100,13 +96,13 @@ public readonly struct RenderPipelineDescriptor
     public required MultisampleState Multisample { get; init; }
     public required u32 Multiview { get; init; }
 
-    internal CE.RenderPipelineDescriptor ToNative(IList<MemoryHandle> pins)
+    internal CE.RenderPipelineDescriptor ToNative(PinHandleHolder pins)
     {
         return new CE.RenderPipelineDescriptor
         {
             layout = Layout.NativeRef,
             vertex = Vertex.ToNative(pins),
-            fragment = Fragment.ToNative(x => x.ToNative(pins)),
+            fragment = Fragment.ToNative(fragment => fragment.ToNative(pins)),
             primitive = Primitive.ToNative(),
             depth_stencil = DepthStencil.ToNative(x => x.ToNative()),
             multisample = Multisample.ToNative(),
@@ -121,7 +117,7 @@ public readonly struct VertexState
     public required ReadOnlyMemory<byte> EntryPoint { get; init; }
     public required ReadOnlyMemory<VertexBufferLayout> Buffers { get; init; }
 
-    internal CE.VertexState ToNative(IList<MemoryHandle> pins)
+    internal CE.VertexState ToNative(PinHandleHolder pins)
     {
         return new CE.VertexState
         {
@@ -138,7 +134,7 @@ public readonly struct FragmentState
     public required ReadOnlyMemory<byte> EntryPoint { get; init; }
     public required ReadOnlyMemory<ColorTargetState?> Targets { get; init; }
 
-    internal CE.FragmentState ToNative(IList<MemoryHandle> pins)
+    internal CE.FragmentState ToNative(PinHandleHolder pins)
     {
         return new CE.FragmentState
         {
@@ -376,7 +372,7 @@ public readonly struct VertexBufferLayout
     public required VertexStepMode StepMode { get; init; }
     public required ReadOnlyMemory<VertexAttribute> Attributes { get; init; }
 
-    internal CE.VertexBufferLayout ToNative(IList<MemoryHandle> pins)
+    internal CE.VertexBufferLayout ToNative(PinHandleHolder pins)
     {
         return new CE.VertexBufferLayout
         {

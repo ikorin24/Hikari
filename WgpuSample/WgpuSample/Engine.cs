@@ -13,7 +13,7 @@ public static class Engine
     private static readonly List<HostScreen> _screens = new List<HostScreen>();
     private static Action<IHostScreen>? _onInitialized;
 
-    public static void Start(Action<IHostScreen> onInitialized, in HostScreenConfig screenConfig)
+    public static void Start(in HostScreenConfig screenConfig, Action<IHostScreen> onInitialized)
     {
         ArgumentNullException.ThrowIfNull(onInitialized);
         _onInitialized = onInitialized;
