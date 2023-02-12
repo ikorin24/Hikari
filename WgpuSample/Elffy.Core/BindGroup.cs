@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Elffy.Bind;
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -21,14 +22,24 @@ public sealed class BindGroup : IEngineManaged, IDisposable
         _screen = screen;
     }
 
+    ~BindGroup() => Dispose(false);
+
     public void Dispose()
     {
-        if(_native.IsInvalid) {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        var native = Box.SwapClear(ref _native);
+        if(native.IsInvalid) {
             return;
         }
-        _native.DestroyBindGroup();
-        _native = Box<Wgpu.BindGroup>.Invalid;
-        _screen = null;
+        native.DestroyBindGroup();
+        if(disposing) {
+            _screen = null;
+        }
     }
 
     public static unsafe BindGroup Create(IHostScreen screen, in BindGroupDescriptor desc)
@@ -54,19 +65,18 @@ public readonly struct BindGroupDescriptor
     }
 }
 
-public unsafe sealed class BindGroupEntry
+public readonly struct BindGroupEntry
 {
     private readonly u32 _binding;
     private readonly object _resource;
-    private readonly delegate*<object, PinHandleHolder, CE.BindingResource> _resourceToNative;
 
     public u32 Binding => _binding;
 
-    private BindGroupEntry(u32 binding, object resource, delegate*<object, PinHandleHolder, CE.BindingResource> resourceToNative)
+    private BindGroupEntry(u32 binding, object resource)
     {
+        Debug.Assert(resource is BufferBinding or Elffy.TextureView or Elffy.Sampler);
         _binding = binding;
         _resource = resource;
-        _resourceToNative = resourceToNative;
     }
 
     internal CE.BindGroupEntry ToNative(PinHandleHolder pins)
@@ -74,7 +84,13 @@ public unsafe sealed class BindGroupEntry
         return new CE.BindGroupEntry
         {
             binding = _binding,
-            resource = _resourceToNative(_resource, pins),
+            resource = _resource switch
+            {
+                BufferBinding bufferBinding => bufferBinding.ToNative(pins),
+                TextureView textureView => CE.BindingResource.TextureView(textureView.NativeRef),
+                Sampler sampler => CE.BindingResource.Sampler(sampler.NativeRef),
+                _ => throw new UnreachableException(),
+            },
         };
     }
 
@@ -82,34 +98,19 @@ public unsafe sealed class BindGroupEntry
     {
         ArgumentNullException.ThrowIfNull(buffer);
         var resource = new BufferBinding(buffer, offset, size);
-        return new BindGroupEntry(binding, resource, &ResourceToNative);
-
-        static CE.BindingResource ResourceToNative(object resource, PinHandleHolder pins)
-        {
-            return ((BufferBinding)resource).ToNative(pins);
-        }
+        return new BindGroupEntry(binding, resource);
     }
 
     public static BindGroupEntry TextureView(u32 binding, TextureView textureView)
     {
         ArgumentNullException.ThrowIfNull(textureView);
-        return new BindGroupEntry(binding, textureView, &ResourceToNative);
-
-        static CE.BindingResource ResourceToNative(object resource, PinHandleHolder pins)
-        {
-            return CE.BindingResource.TextureView(((TextureView)resource).NativeRef);
-        }
+        return new BindGroupEntry(binding, textureView);
     }
 
     public static BindGroupEntry Sampler(u32 binding, Sampler sampler)
     {
         ArgumentNullException.ThrowIfNull(sampler);
-        return new BindGroupEntry(binding, sampler, &ResourceToNative);
-
-        static CE.BindingResource ResourceToNative(object resource, PinHandleHolder pins)
-        {
-            return CE.BindingResource.Sampler(((Sampler)resource).NativeRef);
-        }
+        return new BindGroupEntry(binding, sampler);
     }
 
     internal sealed class BufferBinding
@@ -126,7 +127,7 @@ public unsafe sealed class BindGroupEntry
             };
         }
 
-        internal CE.BindingResource ToNative(PinHandleHolder pins)
+        internal unsafe CE.BindingResource ToNative(PinHandleHolder pins)
         {
             pins.Add(GCHandle.Alloc(this, GCHandleType.Pinned));
             var payload = (CE.BufferBinding*)Unsafe.AsPointer(ref _native);

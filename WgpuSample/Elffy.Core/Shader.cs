@@ -18,20 +18,30 @@ public sealed class Shader : IEngineManaged, IDisposable
         _native = native;
     }
 
+    ~Shader() => Dispose(false);
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        var native = Box.SwapClear(ref _native);
+        if(native.IsInvalid) {
+            return;
+        }
+        native.DestroyShaderModule();
+        if(disposing) {
+            _screen = null;
+        }
+    }
+
     public static Shader Create(IHostScreen screen, ReadOnlySpan<byte> shaderSource)
     {
         ArgumentNullException.ThrowIfNull(screen);
         var shader = screen.AsRefChecked().CreateShaderModule(shaderSource);
         return new Shader(screen, shader);
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _native.DestroyShaderModule();
-        _native = Box<Wgpu.ShaderModule>.Invalid;
-        _screen = null;
     }
 }

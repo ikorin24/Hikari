@@ -2,6 +2,8 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Elffy.Bind;
 
 namespace Elffy;
@@ -99,7 +101,15 @@ internal class Program
 
     private static void OnSetup(IHostScreen screen)
     {
-        screen.Title = "sample";
+        var v = Buffer.Create<byte>(screen, stackalloc byte[10], BufferUsages.Uniform);
+        v.Dispose();
+
+
+        Task.Run(() =>
+        {
+            Thread.Sleep(1000);
+            screen.Title = "sample";
+        });
 
         var surfaceFormat = screen.SurfaceFormat;
         Debug.WriteLine($"backend: {screen.Backend}");

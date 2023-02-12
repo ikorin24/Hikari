@@ -6,49 +6,6 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-internal static class InternalExtensions
-{
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public unsafe static Slice<T> AsFixedSlice<T>(this T[] array, PinHandleHolder pins) where T : unmanaged
-    {
-        return ((ReadOnlyMemory<T>)array).AsFixedSlice(pins);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public unsafe static Slice<T> AsFixedSlice<T>(this ReadOnlyMemory<T> memory, PinHandleHolder pins) where T : unmanaged
-    {
-        var handle = memory.Pin();
-        pins.Add(handle);
-        return new Slice<T>((T*)handle.Pointer, memory.Length);
-    }
-
-    public static TResult[] SelectToArray<T, TResult>(this ReadOnlyMemory<T> self, Func<T, TResult> selector)
-    {
-        var span = self.Span;
-        var result = new TResult[span.Length];
-        for(int i = 0; i < span.Length; i++) {
-            result[i] = selector(span[i]);
-        }
-        return result;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Opt<TResult> ToNative<T, TResult>(this T? self, Func<T, TResult> mapper) where T : struct where TResult : unmanaged
-    {
-        return self == null ? Opt<TResult>.None : Opt<TResult>.Some(mapper(self.Value));
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T GetOrThrow<T>(this T? self) where T : struct
-    {
-        if(self.HasValue == false) {
-            Throw();
-            [DoesNotReturn] static void Throw() => throw new InvalidOperationException("cannot get value");
-        }
-        return self.Value;
-    }
-}
-
 public sealed class RenderPipeline : IEngineManaged, IDisposable
 {
     private IHostScreen? _screen;
@@ -63,6 +20,26 @@ public sealed class RenderPipeline : IEngineManaged, IDisposable
         _native = native;
     }
 
+    ~RenderPipeline() => Dispose(false);
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        var native = Box.SwapClear(ref _native);
+        if(native.IsInvalid) {
+            return;
+        }
+        native.DestroyRenderPipeline();
+        if(disposing) {
+            _screen = null;
+        }
+    }
+
     public unsafe static RenderPipeline Create(IHostScreen screen, in RenderPipelineDescriptor desc)
     {
         var pins = new PinHandleHolder();
@@ -74,16 +51,6 @@ public sealed class RenderPipeline : IEngineManaged, IDisposable
         finally {
             pins.Dispose();
         }
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _native.DestroyRenderPipeline();
-        _native = Box<Wgpu.RenderPipeline>.Invalid;
-        _screen = null;
     }
 }
 
@@ -510,33 +477,6 @@ public enum VertexStepMode
     [EnumMapTo(Wgpu.VertexStepMode.Instance)] Instance = 1,
 }
 
-//internal static class EnumMapperExtensions
-//{
-//    public static Wgpu.VertexStepMode MapOrDefault(this VertexStepMode self)
-//    {
-//        return self.TryMapTo(out Wgpu.VertexStepMode value) ? value : default;
-//    }
-
-//    public static Wgpu.VertexStepMode MapOr(this VertexStepMode self, Wgpu.VertexStepMode defaultValue)
-//    {
-//        return self.TryMapTo(out Wgpu.VertexStepMode value) ? value : defaultValue;
-//    }
-
-//    public static Wgpu.VertexStepMode MapOrThrow(this VertexStepMode self)
-//    {
-//        if(self.TryMapTo(out Wgpu.VertexStepMode value) == false) {
-//            ThrowCannotMap<VertexStepMode, Wgpu.VertexStepMode>(self);
-//        }
-//        return value;
-//    }
-
-//    [global::System.Diagnostics.CodeAnalysis.DoesNotReturn]
-//    private static void ThrowCannotMap<TFrom, TTo>(TFrom source)
-//    {
-//        throw new global::System.InvalidOperationException($"failed to map {source} of {typeof(TFrom).FullName} to {typeof(TFrom).FullName}");
-//    }
-//}
-
 public enum VertexFormat
 {
     [EnumMapTo(Wgpu.VertexFormat.Uint8x2)] Uint8x2 = 0,
@@ -574,9 +514,3 @@ public enum VertexFormat
     [EnumMapTo(Wgpu.VertexFormat.Float64x3)] Float64x3 = 32,
     [EnumMapTo(Wgpu.VertexFormat.Float64x4)] Float64x4 = 33,
 }
-
-//pub(crate) struct VertexState<'a> {
-//    pub module: &'a wgpu::ShaderModule,
-//    pub entry_point: Slice<'a, u8>,
-//    pub buffers: Slice<'a, VertexBufferLayout<'a>>,
-//}

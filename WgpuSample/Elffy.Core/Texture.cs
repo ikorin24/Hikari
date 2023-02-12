@@ -1,7 +1,6 @@
 ﻿#nullable enable
 using Elffy.Bind;
 using System;
-using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
@@ -41,6 +40,27 @@ public sealed class Texture : IEngineManaged, IDisposable
         _desc = desc;
     }
 
+    ~Texture() => Dispose(false);
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        var native = Box.SwapClear(ref _native);
+        if(native.IsInvalid) {
+            return;
+        }
+        native.DestroyTexture();
+        if(disposing) {
+            _screen = null;
+            _desc = null;
+        }
+    }
+
     public static Texture Create(IHostScreen screen, in TextureDescriptor desc)
     {
         ArgumentNullException.ThrowIfNull(screen);
@@ -75,17 +95,6 @@ public sealed class Texture : IEngineManaged, IDisposable
                 },
                 size);
         }
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _native.DestroyTexture();
-        _native = Box<Wgpu.Texture>.Invalid;
-        _screen = null;
-        _desc = null;
     }
 }
 

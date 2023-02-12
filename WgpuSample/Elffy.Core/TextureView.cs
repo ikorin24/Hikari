@@ -21,6 +21,27 @@ public sealed class TextureView : IEngineManaged, IDisposable
         _native = native;
     }
 
+    ~TextureView() => Dispose(false);
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        var native = Box.SwapClear(ref _native);
+        if(native.IsInvalid) {
+            return;
+        }
+        native.DestroyTextureView();
+        if(disposing) {
+            _screen = null;
+            _texture = null;
+        }
+    }
+
     public static TextureView Create(Texture texture)
     {
         ArgumentNullException.ThrowIfNull(texture);
@@ -28,16 +49,5 @@ public sealed class TextureView : IEngineManaged, IDisposable
         var screen = texture.GetScreen();
         var view = texture.NativeRef.CreateTextureView();
         return new TextureView(screen, view, texture);
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _texture = null;
-        _native.DestroyTextureView();
-        _native = Box<Wgpu.TextureView>.Invalid;
-        _screen = null;
     }
 }

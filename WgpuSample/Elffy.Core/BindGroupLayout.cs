@@ -1,7 +1,6 @@
 ﻿#nullable enable
 using Elffy.Bind;
 using System;
-using System.Buffers;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -23,22 +22,32 @@ public sealed class BindGroupLayout : IEngineManaged, IDisposable
         _native = native;
     }
 
+    ~BindGroupLayout() => Dispose(false);
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        var native = Box.SwapClear(ref _native);
+        if(native.IsInvalid) {
+            return;
+        }
+        native.DestroyBindGroupLayout();
+        if(disposing) {
+            _screen = null;
+        }
+    }
+
     public unsafe static BindGroupLayout Create(IHostScreen screen, in BindGroupLayoutDescriptor desc)
     {
         using var pins = new PinHandleHolder();
         var descNative = desc.ToNative(pins);
         var bindGroupLayout = screen.AsRefChecked().CreateBindGroupLayout(descNative);
         return new BindGroupLayout(screen, bindGroupLayout);
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _native.DestroyBindGroupLayout();
-        _native = Box<Wgpu.BindGroupLayout>.Invalid;
-        _screen = null;
     }
 }
 

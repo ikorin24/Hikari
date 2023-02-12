@@ -1,8 +1,6 @@
 ﻿#nullable enable
 using Elffy.Bind;
 using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace Elffy;
 
@@ -21,6 +19,26 @@ public sealed class PipelineLayout : IEngineManaged, IDisposable
         _native = native;
     }
 
+    ~PipelineLayout() => Dispose(false);
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        var native = Box.SwapClear(ref _native);
+        if(native.IsInvalid) {
+            return;
+        }
+        native.DestroyPipelineLayout();
+        if(disposing) {
+            _screen = null;
+        }
+    }
+
     public unsafe static PipelineLayout Create(IHostScreen screen, in PipelineLayoutDescriptor desc)
     {
         var bindGroupLayouts = desc.BindGroupLayouts.Span;
@@ -33,16 +51,6 @@ public sealed class PipelineLayout : IEngineManaged, IDisposable
         var pipelineLayout = screen.AsRefChecked().CreatePipelineLayout(descNative);
         return new PipelineLayout(screen, pipelineLayout);
 
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _native.DestroyPipelineLayout();
-        _native = Box<Wgpu.PipelineLayout>.Invalid;
-        _screen = null;
     }
 }
 

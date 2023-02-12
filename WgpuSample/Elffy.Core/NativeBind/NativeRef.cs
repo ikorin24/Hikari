@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Elffy.Bind;
 
@@ -29,6 +30,16 @@ internal readonly struct OptionBox<T> where T : INativeTypeNonReprC
     public Box<T> UnwrapUnchecked()
     {
         return Unsafe.As<OptionBox<T>, Box<T>>(ref Unsafe.AsRef(in this));
+    }
+}
+
+internal static class Box
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Box<T> SwapClear<T>(ref Box<T> box) where T : INativeTypeNonReprC
+    {
+        var value = Interlocked.Exchange(ref Unsafe.As<Box<T>, usize>(ref box), 0);
+        return Unsafe.As<usize, Box<T>>(ref value);
     }
 }
 

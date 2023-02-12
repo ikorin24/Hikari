@@ -27,6 +27,28 @@ public sealed class Buffer : IEngineManaged, IDisposable
         _byteLen = byteLen;
     }
 
+    ~Buffer() => Dispose(false);
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        var native = Box.SwapClear(ref _native);
+        if(native.IsInvalid) {
+            return;
+        }
+        native.DestroyBuffer();
+        if(disposing) {
+            _screen = null;
+            _usage = null;
+            _byteLen = 0;
+        }
+    }
+
     public static Buffer CreateUniformBuffer<T>(IHostScreen screen, ReadOnlySpan<T> data) where T : unmanaged
     {
         ArgumentNullException.ThrowIfNull(screen);
@@ -45,7 +67,7 @@ public sealed class Buffer : IEngineManaged, IDisposable
         return CreateFromSpan(screen, data, BufferUsages.Index | BufferUsages.CopyDst);
     }
 
-    public unsafe static Buffer Create<T>(IHostScreen screen, ReadOnlySpan<byte> data, BufferUsages usage) where T : unmanaged
+    public unsafe static Buffer Create<T>(IHostScreen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
     {
         ArgumentNullException.ThrowIfNull(screen);
         return CreateFromSpan(screen, data, usage);
@@ -71,17 +93,5 @@ public sealed class Buffer : IEngineManaged, IDisposable
         var data = new Slice<u8>(ptr, byteLength);
         var buffer = screenRef.CreateBufferInit(data, usage.FlagsMap());
         return new Buffer(screen, buffer, usage, byteLength);
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _native.DestroyBuffer();
-        _native = Box<Wgpu.Buffer>.Invalid;
-        _screen = null;
-        _usage = null;
-        _byteLen = 0;
     }
 }

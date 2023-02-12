@@ -19,22 +19,32 @@ public sealed class Sampler : IEngineManaged, IDisposable
         _native = native;
     }
 
+    ~Sampler() => Dispose(false);
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        var native = Box.SwapClear(ref _native);
+        if(native.IsInvalid) {
+            return;
+        }
+        native.DestroySampler();
+        if(disposing) {
+            _screen = null;
+        }
+    }
+
     public static Sampler Create(IHostScreen screen, in SamplerDescriptor desc)
     {
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
         var sampler = screen.AsRefChecked().CreateSampler(descNative);
         return new Sampler(screen, sampler);
-    }
-
-    public void Dispose()
-    {
-        if(_native.IsInvalid) {
-            return;
-        }
-        _native.DestroySampler();
-        _native = Box<Wgpu.Sampler>.Invalid;
-        _screen = null;
     }
 }
 
