@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -9,23 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-     <None Include="..\..\coreelffy\output\x86_64-pc-windows-msvc\coreelffy.dll" Link="native\x86_64-windows\coreelffy.dll">
+    <None Include="..\..\coreelffy\output\x86_64-pc-windows-msvc\coreelffy.dll" Link="native\x86_64-windows\coreelffy.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None> 
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="SkiaSharp" Version="2.88.3" />
+    </None>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\EnumMapper\EnumMapper.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="happy-tree.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>
