@@ -93,10 +93,42 @@ internal sealed class HostScreen : IHostScreen
         }
     }
 
-    internal HostScreen(Box<CE.HostScreen> screen, CE.HostScreenId id)
+    private HostScreen(Box<CE.HostScreen> screen, CE.HostScreenId id)
     {
         _native = screen;
         _id = id;
+    }
+
+    ~HostScreen() => Release(false);
+
+    private static readonly Action<HostScreen> _release = static self =>
+    {
+        self.Release(true);
+        GC.SuppressFinalize(self);
+    };
+
+    private void Release(bool manualRelease)
+    {
+        var native = Box.SwapClear(ref _native);
+        if(native.IsInvalid) {
+            return;
+        }
+        // TODO: Destroy HostScreen
+        //native.
+        _depthTexture.Dispose();
+        _depthTextureView.Dispose();
+        _depthTexture = Own.None<Texture>();
+        _depthTextureView = Own.None<TextureView>();
+        _id = CE.HostScreenId.None;
+        if(manualRelease) {
+            Resized = null;
+            RedrawRequested = null;
+        }
+    }
+
+    internal static Own<HostScreen> Create(Box<CE.HostScreen> screen, CE.HostScreenId id)
+    {
+        return Own.New(new HostScreen(screen, id), _release);
     }
 
     private void UpdateDepthTexture(Vector2i size)

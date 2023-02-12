@@ -10,7 +10,7 @@ namespace Elffy;
 
 public static class Engine
 {
-    private static readonly List<HostScreen> _screens = new List<HostScreen>();
+    private static readonly List<Own<HostScreen>> _screens = new List<Own<HostScreen>>();
     private static Action<IHostScreen>? _onInitialized;
 
     public static void Start(in HostScreenConfig screenConfig, Action<IHostScreen> onInitialized)
@@ -30,8 +30,9 @@ public static class Engine
     private static readonly Action<Box<CE.HostScreen>, CE.HostScreenInfo, CE.HostScreenId> _onStart =
         (Box<CE.HostScreen> screenHandle, CE.HostScreenInfo info, CE.HostScreenId id) =>
         {
-            var screen = new HostScreen(screenHandle, id);
-            _screens.Add(screen);
+            var screenOwn = HostScreen.Create(screenHandle, id);
+            var screen = screenOwn.AsValue();
+            _screens.Add(screenOwn);
             screen.OnInitialize(info);
             _onInitialized?.Invoke(screen);
         };
@@ -69,8 +70,9 @@ public static class Engine
     private static bool TryFindScreen(CE.HostScreenId id, [MaybeNullWhen(false)] out HostScreen screen)
     {
         nuint idNum = id.AsNumber();
-        var screens = (ReadOnlySpan<HostScreen>)CollectionsMarshal.AsSpan(_screens);
-        foreach(var s in screens) {
+        var screens = (ReadOnlySpan<Own<HostScreen>>)CollectionsMarshal.AsSpan(_screens);
+        foreach(var screenOwn in screens) {
+            var s = screenOwn.AsValue();
             if(s.Id == idNum) {
                 screen = s;
                 return true;

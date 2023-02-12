@@ -73,4 +73,6 @@ public static class Own
     {
         return new Own<T>(value, release);
     }
+
+    public static Own<T> None<T>() => Own<T>.None;
 }

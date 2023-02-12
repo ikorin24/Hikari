@@ -86,6 +86,8 @@ internal static class CoreElffy
     {
         private readonly nuint _id;
 
+        public static HostScreenId None => default;
+
         public nuint AsNumber() => _id;
 
         public override bool Equals(object? obj) => obj is HostScreenId id && Equals(id);
