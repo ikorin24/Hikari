@@ -61,9 +61,9 @@ internal class Program
             Dimension = TextureDimension.D2,
             Format = TextureFormat.Rgba8UnormSrgb,
             Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
-        });
+        }).AsRef(out var textureOwn);
         texture.Write(0, 4, pixelData);
-        var view = TextureView.Create(texture);
+        var view = TextureView.Create(texture).AsRef(out var viewOwn);
         var sampler = Sampler.Create(screen, new SamplerDescriptor
         {
             AddressModeU = AddressMode.ClampToEdge,
@@ -189,7 +189,7 @@ internal class Program
             },
             DepthStencil = new DepthStencilState
             {
-                Format = TextureFormat.Depth32Float,        // TODO: get from depth texture
+                Format = screen.DepthTexture.Format,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Less,
                 Stencil = StencilState.Default,
@@ -213,8 +213,8 @@ internal class Program
 
         _state = new State
         {
-            Texture = texture,
-            TextureView = view,
+            Texture = textureOwn,
+            TextureView = viewOwn,
             Sampler = sampler,
             BindGroupLayout = bindGroupLayout,
             BindGroup = bindGroup,
@@ -265,8 +265,8 @@ internal record struct InstanceData(Vector3 Offset);
 
 internal sealed class State : IDisposable
 {
-    public required Texture Texture { get; init; }
-    public required TextureView TextureView { get; init; }
+    public required Own<Texture> Texture { get; init; }
+    public required Own<TextureView> TextureView { get; init; }
     public required Sampler Sampler { get; init; }
     public required BindGroupLayout BindGroupLayout { get; init; }
     public required BindGroup BindGroup { get; init; }

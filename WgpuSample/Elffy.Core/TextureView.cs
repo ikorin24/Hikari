@@ -4,7 +4,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class TextureView : IEngineManaged, IDisposable
+public sealed class TextureView : IEngineManaged
 {
     private IHostScreen? _screen;
     private Box<Wgpu.TextureView> _native;
@@ -21,33 +21,33 @@ public sealed class TextureView : IEngineManaged, IDisposable
         _native = native;
     }
 
-    ~TextureView() => Dispose(false);
+    ~TextureView() => Release(false);
 
-    public void Dispose()
+    private static readonly Action<TextureView> _release = static self =>
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+        self.Release(true);
+        GC.SuppressFinalize(self);
+    };
 
-    private void Dispose(bool disposing)
+    private void Release(bool manualRelease)
     {
         var native = Box.SwapClear(ref _native);
         if(native.IsInvalid) {
             return;
         }
         native.DestroyTextureView();
-        if(disposing) {
+        if(manualRelease) {
             _screen = null;
             _texture = null;
         }
     }
 
-    public static TextureView Create(Texture texture)
+    public static Own<TextureView> Create(Texture texture)
     {
         ArgumentNullException.ThrowIfNull(texture);
         texture.ThrowIfNotEngineManaged();
         var screen = texture.GetScreen();
         var view = texture.NativeRef.CreateTextureView();
-        return new TextureView(screen, view, texture);
+        return Own.New(new TextureView(screen, view, texture), _release);
     }
 }

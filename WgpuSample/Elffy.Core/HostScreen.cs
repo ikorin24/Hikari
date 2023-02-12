@@ -10,21 +10,24 @@ namespace Elffy;
 
 internal sealed class HostScreen : IHostScreen
 {
-    private Box<CE.HostScreen> _screen;
+    private Box<CE.HostScreen> _native;
     private CE.HostScreenId _id;
     private TextureFormat _surfaceFormat;
     private GraphicsBackend _backend;
     private bool _initialized;
     private string _title = "";
-    private Texture? _depthTexture;
-    private TextureView? _depthTextureView;
+    private Own<Texture> _depthTexture;
+    private Own<TextureView> _depthTextureView;
 
     public event Action<IHostScreen, Vector2i>? Resized;
     public event Action<IHostScreen, RenderPass>? RedrawRequested;
 
-    public HostScreenRef Ref => new HostScreenRef(_screen);
+    public HostScreenRef Ref => new HostScreenRef(_native);
 
     public nuint Id => _id.AsNumber();
+
+    public Texture DepthTexture => _depthTexture.AsRef();
+    public TextureView DepthTextureView => _depthTextureView.AsRef();
 
     public TextureFormat SurfaceFormat
     {
@@ -80,7 +83,7 @@ internal sealed class HostScreen : IHostScreen
                 try {
                     var buf = array.AsSpan(0, byteLen);
                     utf8.GetBytes(value.AsSpan(), buf);
-                    EngineCore.ScreenSetTitle(_screen, buf);
+                    EngineCore.ScreenSetTitle(_native, buf);
                 }
                 finally {
                     ArrayPool<byte>.Shared.Return(array);
@@ -92,7 +95,7 @@ internal sealed class HostScreen : IHostScreen
 
     internal HostScreen(Box<CE.HostScreen> screen, CE.HostScreenId id)
     {
-        _screen = screen;
+        _native = screen;
         _id = id;
     }
 
@@ -106,12 +109,12 @@ internal sealed class HostScreen : IHostScreen
             Dimension = TextureDimension.D2,
             Format = TextureFormat.Depth32Float,
             Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
-        });
+        }).AsRef(out var depthOwn);
         var view = TextureView.Create(depth);
 
-        _depthTextureView?.Dispose();
-        _depthTexture?.Dispose();
-        _depthTexture = depth;
+        _depthTextureView.Dispose();
+        _depthTexture.Dispose();
+        _depthTexture = depthOwn;
         _depthTextureView = view;
     }
 
@@ -127,17 +130,17 @@ internal sealed class HostScreen : IHostScreen
 
     internal void OnCleared()
     {
-        _screen.AsRef().ScreenRequestRedraw();
+        _native.AsRef().ScreenRequestRedraw();
     }
 
     internal unsafe void OnRedrawRequested()
     {
         var depthTextureView = _depthTextureView;
-        if(depthTextureView == null) {
+        if(depthTextureView.IsNone) {
             return;
         }
 
-        var screenRef = _screen.AsRef();
+        var screenRef = _native.AsRef();
         if(screenRef.ScreenBeginCommand(out var encoder, out var surfaceTex, out var surfaceView) == false) {
             return;
         }
@@ -154,7 +157,7 @@ internal sealed class HostScreen : IHostScreen
                     color_attachments_clear = new() { data = &colorAttachment, len = 1 },
                     depth_stencil_attachment_clear = new Opt<CE.RenderPassDepthStencilAttachment>(new()
                     {
-                        view = depthTextureView.NativeRef,
+                        view = depthTextureView.AsRef().NativeRef,
                         depth_clear = Opt<float>.Some(1f),
                         stencil_clear = Opt<uint>.None,
                     }),
@@ -178,7 +181,7 @@ internal sealed class HostScreen : IHostScreen
     internal void OnResized(uint width, uint height)
     {
         if(width != 0 && height != 0) {
-            _screen.AsRef().ScreenResizeSurface(width, height);
+            _native.AsRef().ScreenResizeSurface(width, height);
             UpdateDepthTexture(new Vector2i((i32)width, (i32)height));
         }
 
@@ -229,6 +232,8 @@ public interface IHostScreen
     string Title { get; set; }
     TextureFormat SurfaceFormat { get; }
     GraphicsBackend Backend { get; }
+    Texture DepthTexture { get; }
+    TextureView DepthTextureView { get; }
 }
 
 internal static class HostScreenExtensions
