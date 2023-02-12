@@ -4,6 +4,12 @@ use crate::screen::*;
 use crate::*;
 use std::num::{NonZeroU32, NonZeroUsize};
 
+/// # Thread Safety
+/// Only from main thread.
+/// (I do not know if it is thread safe or not. But that's good enough for me.)
+/// ## NG
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_engine_start(
     engine_config: &EngineCoreConfig,
@@ -15,6 +21,13 @@ extern "cdecl" fn elffy_engine_start(
     NonZeroUsize::new(err_count).unwrap()
 }
 
+static_assertions::assert_impl_all!(HostScreen: Send, Sync);
+static_assertions::assert_impl_all!(Slice<u8>: Send, Sync);
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_screen_resize_surface(
     screen: &HostScreen,
@@ -25,12 +38,23 @@ extern "cdecl" fn elffy_screen_resize_surface(
     make_result()
 }
 
+/// # Thread Safety
+/// Only from main thread. (iOS requires that.)
+/// ## NG
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_screen_request_redraw(screen: &HostScreen) -> ApiResult {
     screen.get_window().request_redraw();
     make_result()
 }
 
+/// # Thread Safety
+/// Only from main thread.
+/// (I do not know if it is thread safe or not. But that's good enough for me.)
+/// ## NG
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_screen_begin_command(
     screen: &HostScreen,
@@ -60,6 +84,12 @@ extern "cdecl" fn elffy_screen_begin_command(
     }
 }
 
+/// # Thread Safety
+/// Only from main thread.
+/// (I do not know if it is thread safe or not. But that's good enough for me.)
+/// ## NG
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_screen_finish_command(
     screen: &HostScreen,
@@ -76,6 +106,10 @@ extern "cdecl" fn elffy_screen_finish_command(
     make_result()
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_screen_set_title(screen: &HostScreen, title: Slice<u8>) -> ApiResult {
     match title.as_str() {
@@ -89,6 +123,12 @@ extern "cdecl" fn elffy_screen_set_title(screen: &HostScreen, title: Slice<u8>) 
     make_result()
 }
 
+/// # Thread Safety
+/// Only from main thread.
+/// (I do not know if it is thread safe or not. But that's good enough for me.)
+/// ## NG
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_render_pass<'tex, 'desc, 'cmd_enc>(
     command_encoder: &'cmd_enc mut wgpu::CommandEncoder,
@@ -103,6 +143,16 @@ where
     make_box_result(Box::new(render_pass), None)
 }
 
+static_assertions::assert_impl_all!(Box<wgpu::RenderPass>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
+
+/// Destroy [`Box<wgpu::RenderPass>`].
+///
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_render_pass<'cmd_enc>(
     render_pass: Box<wgpu::RenderPass<'cmd_enc>>,
@@ -110,6 +160,10 @@ extern "cdecl" fn elffy_destroy_render_pass<'cmd_enc>(
     drop(render_pass)
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_screen_set_inner_size(
     screen: &HostScreen,
@@ -122,12 +176,20 @@ extern "cdecl" fn elffy_screen_set_inner_size(
     make_result()
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_screen_get_inner_size(screen: &HostScreen) -> ApiValueResult<SizeU32> {
     let size = screen.get_inner_size().into();
     make_value_result(size)
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_write_texture(
     screen: &HostScreen,
@@ -140,6 +202,10 @@ extern "cdecl" fn elffy_write_texture(
     make_result()
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_bind_group_layout(
     screen: &HostScreen,
@@ -149,11 +215,25 @@ extern "cdecl" fn elffy_create_bind_group_layout(
     make_box_result(value, None)
 }
 
+static_assertions::assert_impl_all!(Box<wgpu::BindGroupLayout>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::BindGroupLayout: Send, Sync);
+
+/// Destroy [`Box<wgpu::BindGroupLayout>`].
+///
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_bind_group_layout(layout: Box<wgpu::BindGroupLayout>) {
     drop(layout)
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_bind_group(
     screen: &HostScreen,
@@ -163,11 +243,25 @@ extern "cdecl" fn elffy_create_bind_group(
     make_box_result(value, None)
 }
 
+static_assertions::assert_impl_all!(Box<wgpu::BindGroup>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::BindGroup: Send, Sync);
+
+/// Destroy [`Box<wgpu::BindGroup>`].
+///
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_bind_group(bind_group: Box<wgpu::BindGroup>) {
     drop(bind_group)
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_pipeline_layout(
     screen: &HostScreen,
@@ -177,11 +271,25 @@ extern "cdecl" fn elffy_create_pipeline_layout(
     make_box_result(value, None)
 }
 
+static_assertions::assert_impl_all!(Box<wgpu::PipelineLayout>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::PipelineLayout: Send, Sync);
+
+/// Destroy [`Box<wgpu::PipelineLayout>`].
+///
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_pipeline_layout(layout: Box<wgpu::PipelineLayout>) {
     drop(layout)
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_render_pipeline(
     screen: &HostScreen,
@@ -196,11 +304,25 @@ extern "cdecl" fn elffy_create_render_pipeline(
     make_box_result(value, None)
 }
 
+static_assertions::assert_impl_all!(Box<wgpu::RenderPipeline>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::RenderPipeline: Send, Sync);
+
+/// Destroy [`Box<wgpu::RenderPipeline>`].
+///
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_render_pipeline(pipeline: Box<wgpu::RenderPipeline>) {
     drop(pipeline)
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_buffer_init(
     screen: &HostScreen,
@@ -211,12 +333,28 @@ extern "cdecl" fn elffy_create_buffer_init(
     make_box_result(value, Some(|value| value.destroy()))
 }
 
+static_assertions::assert_impl_all!(Box<wgpu::Buffer>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::Buffer: Send, Sync);
+
+/// Destroy [`Box<wgpu::Buffer>`].
+///
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_buffer(buffer: Box<wgpu::Buffer>) {
     buffer.destroy();
     drop(buffer)
 }
 
+static_assertions::assert_impl_all!(SamplerDescriptor: Send, Sync);
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_sampler(
     screen: &HostScreen,
@@ -226,11 +364,25 @@ extern "cdecl" fn elffy_create_sampler(
     make_box_result(value, None)
 }
 
+static_assertions::assert_impl_all!(Box<wgpu::Sampler>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::Sampler: Send, Sync);
+
+/// Destroy [`Box<wgpu::Sampler>`].
+///
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_sampler(sampler: Box<wgpu::Sampler>) {
     drop(sampler)
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_shader_module(
     screen: &HostScreen,
@@ -246,11 +398,25 @@ extern "cdecl" fn elffy_create_shader_module(
     make_box_result(value, None)
 }
 
+static_assertions::assert_impl_all!(Box<wgpu::ShaderModule>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::ShaderModule: Send, Sync);
+
+/// Destroy [`Box<wgpu::ShaderModule>`].
+///
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_shader_module(shader: Box<wgpu::ShaderModule>) {
     drop(shader)
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_texture(
     screen: &HostScreen,
@@ -260,6 +426,10 @@ extern "cdecl" fn elffy_create_texture(
     make_box_result(value, Some(|value| value.destroy()))
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_texture_with_data(
     screen: &HostScreen,
@@ -270,12 +440,26 @@ extern "cdecl" fn elffy_create_texture_with_data(
     make_box_result(value, Some(|value| value.destroy()))
 }
 
+static_assertions::assert_impl_all!(Box<wgpu::Texture>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::Texture: Send, Sync);
+
+/// Destroy [`Box<wgpu::Texture>`].
+///
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_texture(texture: Box<wgpu::Texture>) {
     texture.destroy();
     drop(texture)
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_texture_view(
     texture: &wgpu::Texture,
@@ -286,11 +470,25 @@ extern "cdecl" fn elffy_create_texture_view(
     make_box_result(value, None)
 }
 
+static_assertions::assert_impl_all!(Box<wgpu::TextureView>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::TextureView: Send, Sync);
+
+/// Destroy [`Box<wgpu::TextureView>`].
+///
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_texture_view(texture_view: Box<wgpu::TextureView>) {
     drop(texture_view)
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_write_buffer(
     screen: &HostScreen,
@@ -302,6 +500,16 @@ extern "cdecl" fn elffy_write_buffer(
     make_result()
 }
 
+static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::RenderPipeline: Send, Sync);
+
+/// # Thread Safety
+/// It cannot be called at the same time as other functions that use same `&mut wgpu::RenderPass`.
+/// Multiple mutable references cannot exist simultaneously.
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_set_pipeline<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
@@ -311,6 +519,16 @@ extern "cdecl" fn elffy_set_pipeline<'a>(
     make_result()
 }
 
+static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::BindGroup: Send, Sync);
+
+/// # Thread Safety
+/// It cannot be called at the same time as other functions that use same `&mut wgpu::RenderPass`.
+/// Multiple mutable references cannot exist simultaneously.
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_set_bind_group<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
@@ -321,6 +539,16 @@ extern "cdecl" fn elffy_set_bind_group<'a>(
     make_result()
 }
 
+static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
+static_assertions::assert_impl_all!(BufferSlice: Send, Sync);
+
+/// # Thread Safety
+/// It cannot be called at the same time as other functions that use same `&mut wgpu::RenderPass`.
+/// Multiple mutable references cannot exist simultaneously.
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_set_vertex_buffer<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
@@ -331,6 +559,17 @@ extern "cdecl" fn elffy_set_vertex_buffer<'a>(
     make_result()
 }
 
+static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
+static_assertions::assert_impl_all!(BufferSlice: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::IndexFormat: Send, Sync);
+
+/// # Thread Safety
+/// It cannot be called at the same time as other functions that use same `&mut wgpu::RenderPass`.
+/// Multiple mutable references cannot exist simultaneously.
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_set_index_buffer<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
@@ -341,6 +580,16 @@ extern "cdecl" fn elffy_set_index_buffer<'a>(
     make_result()
 }
 
+static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
+static_assertions::assert_impl_all!(RangeU32: Send, Sync);
+
+/// # Thread Safety
+/// It cannot be called at the same time as other functions that use same `&mut wgpu::RenderPass`.
+/// Multiple mutable references cannot exist simultaneously.
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same argss
 #[no_mangle]
 extern "cdecl" fn elffy_draw<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
@@ -351,6 +600,17 @@ extern "cdecl" fn elffy_draw<'a>(
     make_result()
 }
 
+static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
+static_assertions::assert_impl_all!(RangeU32: Send, Sync);
+static_assertions::assert_impl_all!(i32: Send, Sync);
+
+/// # Thread Safety
+/// It cannot be called at the same time as other functions that use same `&mut wgpu::RenderPass`.
+/// Multiple mutable references cannot exist simultaneously.
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same argss
 #[no_mangle]
 extern "cdecl" fn elffy_draw_indexed<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
