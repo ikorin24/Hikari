@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace Elffy.Bind;
+namespace Elffy.NativeBind;
 
 /// <summary>`Option&lt;Box&lt;T&gt;&gt;` in Rust</summary>
 /// <typeparam name="T">native type in Box</typeparam>

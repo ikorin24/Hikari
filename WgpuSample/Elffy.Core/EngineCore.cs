@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
-using Elffy.Bind;
+using Elffy.NativeBind;
 using System.Text;
 using System.Collections.Generic;
 

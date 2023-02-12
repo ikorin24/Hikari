@@ -1,8 +1,8 @@
 ﻿#nullable enable
 using System;
-using Self = Elffy.Bind.CoreElffy.HostScreen;
+using Self = Elffy.NativeBind.CoreElffy.HostScreen;
 
-namespace Elffy.Bind;
+namespace Elffy.NativeBind;
 
 internal unsafe static class HostScreenExtensions
 {

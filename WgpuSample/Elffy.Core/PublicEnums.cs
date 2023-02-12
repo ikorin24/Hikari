@@ -1,5 +1,5 @@
 ﻿#nullable enable
-using Elffy.Bind;
+using Elffy.NativeBind;
 
 namespace Elffy;
 

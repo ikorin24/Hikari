@@ -2,7 +2,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy.Bind;
+namespace Elffy.NativeBind;
 
 /// <summary>
 /// `wgpu` crate in Rust

@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy.Bind;
+namespace Elffy.NativeBind;
 
 [StructLayout(LayoutKind.Sequential)]
 internal readonly struct Opt<T> where T : unmanaged

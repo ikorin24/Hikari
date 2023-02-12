@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.Bind;
+namespace Elffy.NativeBind;
 
 /// <summary>Opaque wrapper of a native pointer</summary>
 internal unsafe readonly struct NativePointer : IEquatable<NativePointer>

@@ -1,5 +1,5 @@
 ﻿#nullable enable
-using Elffy.Bind;
+using Elffy.NativeBind;
 using System;
 using System.Buffers;
 using System.ComponentModel;

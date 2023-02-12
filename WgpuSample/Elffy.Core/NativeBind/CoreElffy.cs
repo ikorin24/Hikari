@@ -2,7 +2,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy.Bind;
+namespace Elffy.NativeBind;
 
 /// <summary>
 /// `coreelffy` crate in Rust

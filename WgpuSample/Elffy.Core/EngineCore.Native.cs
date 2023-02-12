@@ -3,7 +3,7 @@ using NonZeroUsize = System.UIntPtr;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using Elffy.Bind;
+using Elffy.NativeBind;
 
 [assembly: DisableRuntimeMarshalling]
 
