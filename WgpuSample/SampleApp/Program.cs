@@ -61,9 +61,9 @@ internal class Program
             Dimension = TextureDimension.D2,
             Format = TextureFormat.Rgba8UnormSrgb,
             Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
-        }).AsRef(out var textureOwn);
+        }).AsValue(out var textureOwn);
         texture.Write(0, 4, pixelData);
-        var view = TextureView.Create(texture).AsRef(out var viewOwn);
+        var view = TextureView.Create(texture).AsValue(out var viewOwn);
         var sampler = Sampler.Create(screen, new SamplerDescriptor
         {
             AddressModeU = AddressMode.ClampToEdge,

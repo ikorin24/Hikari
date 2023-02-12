@@ -26,8 +26,8 @@ internal sealed class HostScreen : IHostScreen
 
     public nuint Id => _id.AsNumber();
 
-    public Texture DepthTexture => _depthTexture.AsRef();
-    public TextureView DepthTextureView => _depthTextureView.AsRef();
+    public Texture DepthTexture => _depthTexture.AsValue();
+    public TextureView DepthTextureView => _depthTextureView.AsValue();
 
     public TextureFormat SurfaceFormat
     {
@@ -109,7 +109,7 @@ internal sealed class HostScreen : IHostScreen
             Dimension = TextureDimension.D2,
             Format = TextureFormat.Depth32Float,
             Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
-        }).AsRef(out var depthOwn);
+        }).AsValue(out var depthOwn);
         var view = TextureView.Create(depth);
 
         _depthTextureView.Dispose();
@@ -157,7 +157,7 @@ internal sealed class HostScreen : IHostScreen
                     color_attachments_clear = new() { data = &colorAttachment, len = 1 },
                     depth_stencil_attachment_clear = new Opt<CE.RenderPassDepthStencilAttachment>(new()
                     {
-                        view = depthTextureView.AsRef().NativeRef,
+                        view = depthTextureView.AsValue().NativeRef,
                         depth_clear = Opt<float>.Some(1f),
                         stencil_clear = Opt<uint>.None,
                     }),

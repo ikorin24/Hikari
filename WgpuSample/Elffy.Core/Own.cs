@@ -5,9 +5,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Elffy;
 
-public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T : class
+public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
 {
-    private readonly T? _value;
+    private readonly T _value;
     private readonly Action<T>? _release;
 
     [MemberNotNullWhen(false, nameof(_value))]
@@ -30,13 +30,7 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T :
         _release.Invoke(_value);
     }
 
-    public bool TryGetRef([MaybeNullWhen(false)] out T value)
-    {
-        value = _value;
-        return value != null;
-    }
-
-    public T AsRef()
+    public T AsValue()
     {
         if(IsNone) {
             ThrowNoValue();
@@ -44,7 +38,7 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T :
         return _value;
     }
 
-    public T AsRef(out Own<T> self)
+    public T AsValue(out Own<T> self)
     {
         if(IsNone) {
             ThrowNoValue();
@@ -53,7 +47,7 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T :
         return _value;
     }
 
-    public static explicit operator T(Own<T> own) => own.AsRef();
+    public static explicit operator T(Own<T> own) => own.AsValue();
 
     [DoesNotReturn]
     private static void ThrowNoValue() => throw new InvalidOperationException("no value exists");
