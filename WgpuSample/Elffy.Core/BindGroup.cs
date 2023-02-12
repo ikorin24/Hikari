@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Elffy;
 
-public sealed class BindGroup : IEngineManaged, IDisposable
+public sealed class BindGroup : IEngineManaged
 {
     private IHostScreen? _screen;
     private Box<Wgpu.BindGroup> _native;
@@ -22,15 +22,15 @@ public sealed class BindGroup : IEngineManaged, IDisposable
         _screen = screen;
     }
 
-    ~BindGroup() => Dispose(false);
+    ~BindGroup() => Release(false);
 
-    public void Dispose()
+    private static readonly Action<BindGroup> _release = static self =>
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+        self.Release(true);
+        GC.SuppressFinalize(self);
+    };
 
-    private void Dispose(bool disposing)
+    private void Release(bool disposing)
     {
         var native = Box.SwapClear(ref _native);
         if(native.IsInvalid) {
@@ -42,11 +42,11 @@ public sealed class BindGroup : IEngineManaged, IDisposable
         }
     }
 
-    public static unsafe BindGroup Create(IHostScreen screen, in BindGroupDescriptor desc)
+    public static unsafe Own<BindGroup> Create(IHostScreen screen, in BindGroupDescriptor desc)
     {
         using var pins = new PinHandleHolder();
         var bindGroup = screen.AsRefChecked().CreateBindGroup(desc.ToNative(pins));
-        return new BindGroup(screen, bindGroup);
+        return Own.New(new BindGroup(screen, bindGroup), _release);
     }
 }
 

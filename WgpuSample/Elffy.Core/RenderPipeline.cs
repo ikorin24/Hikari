@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-public sealed class RenderPipeline : IEngineManaged, IDisposable
+public sealed class RenderPipeline : IEngineManaged
 {
     private IHostScreen? _screen;
     private Box<Wgpu.RenderPipeline> _native;
@@ -20,15 +20,15 @@ public sealed class RenderPipeline : IEngineManaged, IDisposable
         _native = native;
     }
 
-    ~RenderPipeline() => Dispose(false);
+    ~RenderPipeline() => Release(false);
 
-    public void Dispose()
+    private static readonly Action<RenderPipeline> _release = static self =>
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+        self.Release(true);
+        GC.SuppressFinalize(self);
+    };
 
-    private void Dispose(bool disposing)
+    private void Release(bool disposing)
     {
         var native = Box.SwapClear(ref _native);
         if(native.IsInvalid) {
@@ -40,13 +40,13 @@ public sealed class RenderPipeline : IEngineManaged, IDisposable
         }
     }
 
-    public unsafe static RenderPipeline Create(IHostScreen screen, in RenderPipelineDescriptor desc)
+    public unsafe static Own<RenderPipeline> Create(IHostScreen screen, in RenderPipelineDescriptor desc)
     {
         var pins = new PinHandleHolder();
         try {
             var descNative = desc.ToNative(pins);
             var renderPipeline = screen.AsRefChecked().CreateRenderPipeline(descNative);
-            return new RenderPipeline(screen, renderPipeline);
+            return Own.New(new RenderPipeline(screen, renderPipeline), _release);
         }
         finally {
             pins.Dispose();

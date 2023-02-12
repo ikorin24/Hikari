@@ -34,11 +34,11 @@ internal class Program
     {
         var state = _state;
         if(state == null) { return; }
-        renderPass.SetPipeline(state.RenderPipeline);
-        renderPass.SetBindGroup(0, state.BindGroup);
-        renderPass.SetVertexBuffer(0, state.VertexBuffer);
-        renderPass.SetVertexBuffer(1, state.InstanceBuffer);
-        renderPass.SetIndexBuffer(state.IndexBuffer, state.IndexFormat);
+        renderPass.SetPipeline(state.RenderPipeline.AsValue());
+        renderPass.SetBindGroup(0, state.BindGroup.AsValue());
+        renderPass.SetVertexBuffer(0, state.VertexBuffer.AsValue());
+        renderPass.SetVertexBuffer(1, state.InstanceBuffer.AsValue());
+        renderPass.SetIndexBuffer(state.IndexBuffer.AsValue(), state.IndexFormat);
         renderPass.DrawIndexed(0, state.IndexCount, 0, 0, state.InstanceCount);
     }
 
@@ -77,7 +77,7 @@ internal class Program
             LodMinClamp = 0,
             BorderColor = null,
             Compare = null,
-        });
+        }).AsValue(out var samplerOwn);
 
         var bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
         {
@@ -99,8 +99,8 @@ internal class Program
                     type: SamplerBindingType.Filtering,
                     count: 0),
             },
-        });
-        var bindGroup = BindGroup.Create(screen, new BindGroupDescriptor
+        }).AsValue(out var bindGroupLayoutOwn);
+        var bindGroupOwn = BindGroup.Create(screen, new BindGroupDescriptor
         {
             Layout = bindGroupLayout,
             Entries = new[]
@@ -110,7 +110,7 @@ internal class Program
             },
         });
 
-        var shader = Shader.Create(screen, ShaderSource);
+        var shader = Shader.Create(screen, ShaderSource).AsValue(out var shaderOwn);
 
         var pipelineLayout = PipelineLayout.Create(screen, new PipelineLayoutDescriptor
         {
@@ -118,9 +118,9 @@ internal class Program
             {
                 bindGroupLayout,
             },
-        });
+        }).AsValue(out var pipelineLayoutOwn);
 
-        var renderPipeline = RenderPipeline.Create(screen, new RenderPipelineDescriptor
+        var renderPipelineOwn = RenderPipeline.Create(screen, new RenderPipelineDescriptor
         {
             Layout = pipelineLayout,
             Vertex = new VertexState
@@ -200,8 +200,8 @@ internal class Program
         });
 
         var (vertices, indices) = SamplePrimitives.SampleData();
-        var vb = Buffer.CreateVertexBuffer<Vertex>(screen, vertices);
-        var ib = Buffer.CreateIndexBuffer<ushort>(screen, indices);
+        var vertexBufferOwn = Buffer.CreateVertexBuffer<Vertex>(screen, vertices);
+        var indexBufferOwn = Buffer.CreateIndexBuffer<ushort>(screen, indices);
         var indexFormat = IndexFormat.Uint16;
 
         ReadOnlySpan<InstanceData> instances = stackalloc InstanceData[2]
@@ -215,16 +215,16 @@ internal class Program
         {
             Texture = textureOwn,
             TextureView = viewOwn,
-            Sampler = sampler,
-            BindGroupLayout = bindGroupLayout,
-            BindGroup = bindGroup,
-            Shader = shader,
-            PipelineLayout = pipelineLayout,
-            RenderPipeline = renderPipeline,
-            VertexBuffer = vb,
+            Sampler = samplerOwn,
+            BindGroupLayout = bindGroupLayoutOwn,
+            BindGroup = bindGroupOwn,
+            Shader = shaderOwn,
+            PipelineLayout = pipelineLayoutOwn,
+            RenderPipeline = renderPipelineOwn,
+            VertexBuffer = vertexBufferOwn,
             InstanceBuffer = instanceBuffer,
             InstanceCount = (uint)instances.Length,
-            IndexBuffer = ib,
+            IndexBuffer = indexBufferOwn,
             IndexCount = (uint)indices.Length,
             IndexFormat = indexFormat,
         };
@@ -267,22 +267,32 @@ internal sealed class State : IDisposable
 {
     public required Own<Texture> Texture { get; init; }
     public required Own<TextureView> TextureView { get; init; }
-    public required Sampler Sampler { get; init; }
-    public required BindGroupLayout BindGroupLayout { get; init; }
-    public required BindGroup BindGroup { get; init; }
-    public required Shader Shader { get; init; }
-    public required PipelineLayout PipelineLayout { get; init; }
-    public required RenderPipeline RenderPipeline { get; init; }
+    public required Own<Sampler> Sampler { get; init; }
+    public required Own<BindGroupLayout> BindGroupLayout { get; init; }
+    public required Own<BindGroup> BindGroup { get; init; }
+    public required Own<Shader> Shader { get; init; }
+    public required Own<PipelineLayout> PipelineLayout { get; init; }
+    public required Own<RenderPipeline> RenderPipeline { get; init; }
 
-    public required Buffer VertexBuffer { get; init; }
-    public required Buffer InstanceBuffer { get; init; }
+    public required Own<Buffer> VertexBuffer { get; init; }
+    public required Own<Buffer> InstanceBuffer { get; init; }
     public required uint InstanceCount { get; init; }
-    public required Buffer IndexBuffer { get; init; }
+    public required Own<Buffer> IndexBuffer { get; init; }
     public required uint IndexCount { get; init; }
     public required IndexFormat IndexFormat { get; init; }
 
     public void Dispose()
     {
-        throw new NotImplementedException();
+        Texture.Dispose();
+        TextureView.Dispose();
+        Sampler.Dispose();
+        BindGroupLayout.Dispose();
+        BindGroup.Dispose();
+        Shader.Dispose();
+        PipelineLayout.Dispose();
+        RenderPipeline.Dispose();
+        VertexBuffer.Dispose();
+        InstanceBuffer.Dispose();
+        IndexBuffer.Dispose();
     }
 }

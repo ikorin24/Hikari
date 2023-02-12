@@ -4,7 +4,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class Sampler : IEngineManaged, IDisposable
+public sealed class Sampler : IEngineManaged
 {
     private IHostScreen? _screen;
     private Box<Wgpu.Sampler> _native;
@@ -19,15 +19,15 @@ public sealed class Sampler : IEngineManaged, IDisposable
         _native = native;
     }
 
-    ~Sampler() => Dispose(false);
+    ~Sampler() => Release(false);
 
-    public void Dispose()
+    private static readonly Action<Sampler> _release = static self =>
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+        self.Release(true);
+        GC.SuppressFinalize(self);
+    };
 
-    private void Dispose(bool disposing)
+    private void Release(bool disposing)
     {
         var native = Box.SwapClear(ref _native);
         if(native.IsInvalid) {
@@ -39,12 +39,12 @@ public sealed class Sampler : IEngineManaged, IDisposable
         }
     }
 
-    public static Sampler Create(IHostScreen screen, in SamplerDescriptor desc)
+    public static Own<Sampler> Create(IHostScreen screen, in SamplerDescriptor desc)
     {
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
         var sampler = screen.AsRefChecked().CreateSampler(descNative);
-        return new Sampler(screen, sampler);
+        return Own.New(new Sampler(screen, sampler), _release);
     }
 }
 

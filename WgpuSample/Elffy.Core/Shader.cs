@@ -4,7 +4,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class Shader : IEngineManaged, IDisposable
+public sealed class Shader : IEngineManaged
 {
     private IHostScreen? _screen;
     private Box<Wgpu.ShaderModule> _native;
@@ -18,15 +18,15 @@ public sealed class Shader : IEngineManaged, IDisposable
         _native = native;
     }
 
-    ~Shader() => Dispose(false);
+    ~Shader() => Release(false);
 
-    public void Dispose()
+    private static readonly Action<Shader> _release = static self =>
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+        self.Release(true);
+        GC.SuppressFinalize(self);
+    };
 
-    private void Dispose(bool disposing)
+    private void Release(bool disposing)
     {
         var native = Box.SwapClear(ref _native);
         if(native.IsInvalid) {
@@ -38,10 +38,10 @@ public sealed class Shader : IEngineManaged, IDisposable
         }
     }
 
-    public static Shader Create(IHostScreen screen, ReadOnlySpan<byte> shaderSource)
+    public static Own<Shader> Create(IHostScreen screen, ReadOnlySpan<byte> shaderSource)
     {
         ArgumentNullException.ThrowIfNull(screen);
         var shader = screen.AsRefChecked().CreateShaderModule(shaderSource);
-        return new Shader(screen, shader);
+        return Own.New(new Shader(screen, shader), _release);
     }
 }

@@ -4,7 +4,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class Buffer : IEngineManaged, IDisposable
+public sealed class Buffer : IEngineManaged
 {
     private IHostScreen? _screen;
     private Box<Wgpu.Buffer> _native;
@@ -27,15 +27,15 @@ public sealed class Buffer : IEngineManaged, IDisposable
         _byteLen = byteLen;
     }
 
-    ~Buffer() => Dispose(false);
+    ~Buffer() => Release(false);
 
-    public void Dispose()
+    private static readonly Action<Buffer> _release = static self =>
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+        self.Release(true);
+        GC.SuppressFinalize(self);
+    };
 
-    private void Dispose(bool disposing)
+    private void Release(bool disposing)
     {
         var native = Box.SwapClear(ref _native);
         if(native.IsInvalid) {
@@ -49,37 +49,37 @@ public sealed class Buffer : IEngineManaged, IDisposable
         }
     }
 
-    public static Buffer CreateUniformBuffer<T>(IHostScreen screen, ReadOnlySpan<T> data) where T : unmanaged
+    public static Own<Buffer> CreateUniformBuffer<T>(IHostScreen screen, ReadOnlySpan<T> data) where T : unmanaged
     {
         ArgumentNullException.ThrowIfNull(screen);
         return CreateFromSpan(screen, data, BufferUsages.Uniform | BufferUsages.CopyDst);
     }
 
-    public static Buffer CreateVertexBuffer<T>(IHostScreen screen, ReadOnlySpan<T> data) where T : unmanaged
+    public static Own<Buffer> CreateVertexBuffer<T>(IHostScreen screen, ReadOnlySpan<T> data) where T : unmanaged
     {
         ArgumentNullException.ThrowIfNull(screen);
         return CreateFromSpan(screen, data, BufferUsages.Vertex | BufferUsages.CopyDst);
     }
 
-    public static Buffer CreateIndexBuffer<T>(IHostScreen screen, ReadOnlySpan<T> data) where T : unmanaged
+    public static Own<Buffer> CreateIndexBuffer<T>(IHostScreen screen, ReadOnlySpan<T> data) where T : unmanaged
     {
         ArgumentNullException.ThrowIfNull(screen);
         return CreateFromSpan(screen, data, BufferUsages.Index | BufferUsages.CopyDst);
     }
 
-    public unsafe static Buffer Create<T>(IHostScreen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
+    public unsafe static Own<Buffer> Create<T>(IHostScreen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
     {
         ArgumentNullException.ThrowIfNull(screen);
         return CreateFromSpan(screen, data, usage);
     }
 
-    public unsafe static Buffer Create(IHostScreen screen, byte* ptr, usize byteLength, BufferUsages usage)
+    public unsafe static Own<Buffer> Create(IHostScreen screen, byte* ptr, usize byteLength, BufferUsages usage)
     {
         ArgumentNullException.ThrowIfNull(screen);
         return CreateFromPtr(screen, ptr, byteLength, usage);
     }
 
-    private unsafe static Buffer CreateFromSpan<T>(IHostScreen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
+    private unsafe static Own<Buffer> CreateFromSpan<T>(IHostScreen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
     {
         fixed(T* ptr = data) {
             var bytelen = (usize)data.Length * (usize)sizeof(T);
@@ -87,11 +87,11 @@ public sealed class Buffer : IEngineManaged, IDisposable
         }
     }
 
-    private unsafe static Buffer CreateFromPtr(IHostScreen screen, byte* ptr, usize byteLength, BufferUsages usage)
+    private unsafe static Own<Buffer> CreateFromPtr(IHostScreen screen, byte* ptr, usize byteLength, BufferUsages usage)
     {
         var screenRef = screen.AsRefChecked();
         var data = new Slice<u8>(ptr, byteLength);
         var buffer = screenRef.CreateBufferInit(data, usage.FlagsMap());
-        return new Buffer(screen, buffer, usage, byteLength);
+        return Own.New(new Buffer(screen, buffer, usage, byteLength), _release);
     }
 }
