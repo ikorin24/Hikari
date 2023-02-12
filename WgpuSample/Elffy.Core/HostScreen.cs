@@ -16,9 +16,11 @@ internal sealed class HostScreen : IHostScreen
     private GraphicsBackend _backend;
     private bool _initialized;
     private string _title = "";
+    private Texture? _depthTexture;
+    private TextureView? _depthTextureView;
 
     public event Action<IHostScreen, Vector2i>? Resized;
-    public event Action<IHostScreen>? RedrawRequested;
+    public event Action<IHostScreen, RenderPass>? RedrawRequested;
 
     public HostScreenRef Ref => new HostScreenRef(_screen);
 
@@ -94,10 +96,32 @@ internal sealed class HostScreen : IHostScreen
         _id = id;
     }
 
+    private void UpdateDepthTexture(Vector2i size)
+    {
+        var depth = Texture.Create(this, new TextureDescriptor
+        {
+            Size = new Vector3i(size.X, size.Y, 1),
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Dimension = TextureDimension.D2,
+            Format = TextureFormat.Depth32Float,
+            Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
+        });
+        var view = TextureView.Create(depth);
+
+        _depthTextureView?.Dispose();
+        _depthTexture?.Dispose();
+        _depthTexture = depth;
+        _depthTextureView = view;
+    }
+
     internal void OnInitialize(in CE.HostScreenInfo info)
     {
         _surfaceFormat = info.surface_format.Unwrap().MapOrThrow();
         _backend = info.backend.MapOrThrow();
+
+        var size = ClientSize;
+        UpdateDepthTexture(size);
         _initialized = true;
     }
 
@@ -106,13 +130,58 @@ internal sealed class HostScreen : IHostScreen
         _screen.AsRef().ScreenRequestRedraw();
     }
 
-    internal void OnRedrawRequested()
+    internal unsafe void OnRedrawRequested()
     {
-        RedrawRequested?.Invoke(this);
+        var depthTextureView = _depthTextureView;
+        if(depthTextureView == null) {
+            return;
+        }
+
+        var screenRef = _screen.AsRef();
+        if(screenRef.ScreenBeginCommand(out var encoder, out var surfaceTex, out var surfaceView) == false) {
+            return;
+        }
+        try {
+            CE.RenderPassDescriptor desc;
+            {
+                var colorAttachment = new Opt<CE.RenderPassColorAttachment>(new()
+                {
+                    view = surfaceView,
+                    clear = new Wgpu.Color(0, 0, 0, 0),
+                });
+                desc = new CE.RenderPassDescriptor
+                {
+                    color_attachments_clear = new() { data = &colorAttachment, len = 1 },
+                    depth_stencil_attachment_clear = new Opt<CE.RenderPassDepthStencilAttachment>(new()
+                    {
+                        view = depthTextureView.NativeRef,
+                        depth_clear = Opt<float>.Some(1f),
+                        stencil_clear = Opt<uint>.None,
+                    }),
+                };
+            }
+
+            var renderPassNative = encoder.AsMut().CreateRenderPass(desc);
+            try {
+                var renderPass = new RenderPass(renderPassNative);
+                RedrawRequested?.Invoke(this, renderPass);
+            }
+            finally {
+                renderPassNative.DestroyRenderPass();
+            }
+        }
+        finally {
+            screenRef.ScreenFinishCommand(encoder, surfaceTex, surfaceView);
+        }
     }
 
     internal void OnResized(uint width, uint height)
     {
+        if(width != 0 && height != 0) {
+            _screen.AsRef().ScreenResizeSurface(width, height);
+            UpdateDepthTexture(new Vector2i((i32)width, (i32)height));
+        }
+
         Resized?.Invoke(this, checked(new Vector2i((int)width, (int)height)));
     }
 
@@ -150,7 +219,7 @@ public readonly ref struct HostScreenRef
 
 public interface IHostScreen
 {
-    event Action<IHostScreen>? RedrawRequested;
+    event Action<IHostScreen, RenderPass>? RedrawRequested;
     event Action<IHostScreen, Vector2i>? Resized;
 
     HostScreenRef Ref { get; }

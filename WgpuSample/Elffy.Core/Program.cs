@@ -2,9 +2,6 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
-using Elffy.Bind;
 
 namespace Elffy;
 
@@ -24,92 +21,34 @@ internal class Program
         Engine.Start(screenConfig, OnInitialized);
     }
 
-    private static State2? _state2;
-
-    private unsafe static void OnRedrawRequested(Ref<CE.HostScreen> screenRef)
-    {
-        if(screenRef.ScreenBeginCommand(out var commandEncoder, out var surfaceTexture, out var surfaceTextureView) == false) {
-            return;
-        }
-        var state = _state2;
-        if(state == null) { return; }
-        {
-            CE.RenderPassDescriptor desc;
-            {
-                const int ColorAttachmentCount = 1;
-                var colorAttachments = stackalloc Opt<CE.RenderPassColorAttachment>[ColorAttachmentCount]
-                {
-                    new(new CE.RenderPassColorAttachment
-                    {
-                        view = surfaceTextureView,
-                        clear = new Wgpu.Color(0, 0, 0, 0),
-                    }),
-                };
-                desc = new CE.RenderPassDescriptor
-                {
-                    color_attachments_clear = new() { data = colorAttachments, len = ColorAttachmentCount },
-                    depth_stencil_attachment_clear = new(new CE.RenderPassDepthStencilAttachment
-                    {
-                        view = state.DepthTextureView.NativeRef,
-                        depth_clear = Opt<float>.Some(1f),
-                        stencil_clear = Opt<uint>.None,
-                    }),
-                };
-            }
-
-            var renderPass = commandEncoder.AsMut().CreateRenderPass(desc);
-            try {
-                var r = renderPass.AsMut();
-                r.SetPipeline(state.RenderPipeline.NativeRef);
-                r.SetBindGroup(0, state.BindGroup.NativeRef);
-                r.SetVertexBuffer(0, state.VertexBuffer.NativeRef.AsSlice());
-                r.SetVertexBuffer(1, state.InstanceBuffer.NativeRef.AsSlice());
-                r.SetIndexBuffer(state.IndexBuffer.NativeRef.AsSlice(), state.IndexFormat.MapOrThrow());
-                r.DrawIndexed(0..state.IndexCount, 0, 0..state.InstanceCount);
-            }
-            finally {
-                renderPass.DestroyRenderPass();
-            }
-        }
-        screenRef.ScreenFinishCommand(commandEncoder, surfaceTexture, surfaceTextureView);
-
-    }
+    private static State? _state;
 
     private static void OnInitialized(IHostScreen screen)
     {
-        screen.RedrawRequested += screen => OnRedrawRequested(screen.AsRefChecked());
-        screen.Resized += (screen, size) => OnResized(screen, size);
+        screen.RedrawRequested += OnRedrawRequested;
+        screen.Resized += OnResized;
         OnSetup(screen);
     }
 
-    private static void OnResized(IHostScreen screen, in Vector2i newSize)
+    private static void OnRedrawRequested(IHostScreen screen, RenderPass renderPass)
     {
-        var state = _state2;
+        var state = _state;
         if(state == null) { return; }
-        if(newSize.X == 0 || newSize.Y == 0) {
-            return;
-        }
-        screen.AsRefUnchecked().ScreenResizeSurface((u32)newSize.X, (u32)newSize.Y);
-        var (depthTexture, depthView, depthSampler) = CreateDepth(screen, newSize);
-        state.DepthTexture.Dispose();
-        state.DepthTextureView.Dispose();
-        state.DepthSampler.Dispose();
-        state.DepthTexture = depthTexture;
-        state.DepthTextureView = depthView;
-        state.DepthSampler = depthSampler;
+        renderPass.SetPipeline(state.RenderPipeline);
+        renderPass.SetBindGroup(0, state.BindGroup);
+        renderPass.SetVertexBuffer(0, state.VertexBuffer);
+        renderPass.SetVertexBuffer(1, state.InstanceBuffer);
+        renderPass.SetIndexBuffer(state.IndexBuffer, state.IndexFormat);
+        renderPass.DrawIndexed(0, state.IndexCount, 0, 0, state.InstanceCount);
+    }
+
+    private static void OnResized(IHostScreen screen, Vector2i newSize)
+    {
     }
 
     private static void OnSetup(IHostScreen screen)
     {
-        var v = Buffer.Create<byte>(screen, stackalloc byte[10], BufferUsages.Uniform);
-        v.Dispose();
-
-
-        Task.Run(() =>
-        {
-            Thread.Sleep(1000);
-            screen.Title = "sample";
-        });
+        screen.Title = "sample";
 
         var surfaceFormat = screen.SurfaceFormat;
         Debug.WriteLine($"backend: {screen.Backend}");
@@ -171,7 +110,7 @@ internal class Program
             },
         });
 
-        var shader = Shader.Create(screen, ShaderSource2);
+        var shader = Shader.Create(screen, ShaderSource);
 
         var pipelineLayout = PipelineLayout.Create(screen, new PipelineLayoutDescriptor
         {
@@ -180,9 +119,6 @@ internal class Program
                 bindGroupLayout,
             },
         });
-
-        var screenSize = screen.ClientSize;
-        var (depthTexture, depthView, depthSampler) = CreateDepth(screen, screenSize);
 
         var renderPipeline = RenderPipeline.Create(screen, new RenderPipelineDescriptor
         {
@@ -253,7 +189,7 @@ internal class Program
             },
             DepthStencil = new DepthStencilState
             {
-                Format = depthTexture.Format,
+                Format = TextureFormat.Depth32Float,        // TODO: get from depth texture
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Less,
                 Stencil = StencilState.Default,
@@ -275,7 +211,7 @@ internal class Program
         };
         var instanceBuffer = Buffer.CreateVertexBuffer(screen, instances);
 
-        _state2 = new State2
+        _state = new State
         {
             Texture = texture,
             TextureView = view,
@@ -283,50 +219,18 @@ internal class Program
             BindGroupLayout = bindGroupLayout,
             BindGroup = bindGroup,
             Shader = shader,
-            DepthTexture = depthTexture,
-            DepthTextureView = depthView,
-            DepthSampler = depthSampler,
             PipelineLayout = pipelineLayout,
             RenderPipeline = renderPipeline,
             VertexBuffer = vb,
             InstanceBuffer = instanceBuffer,
-            InstanceCount = instances.Length,
+            InstanceCount = (u32)instances.Length,
             IndexBuffer = ib,
-            IndexCount = indices.Length,
+            IndexCount = (u32)indices.Length,
             IndexFormat = indexFormat,
         };
     }
 
-    private static (Texture Depth, TextureView DepthView, Sampler DepthSampler) CreateDepth(IHostScreen screen, Vector2i size)
-    {
-        var depth = Texture.Create(screen, new TextureDescriptor
-        {
-            Size = new Vector3i(size.X, size.Y, 1),
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = TextureDimension.D2,
-            Format = TextureFormat.Depth32Float,
-            Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
-        });
-        var depthView = TextureView.Create(depth);
-        var depthSampler = Sampler.Create(screen, new SamplerDescriptor
-        {
-            AddressModeU = AddressMode.ClampToEdge,
-            AddressModeV = AddressMode.ClampToEdge,
-            AddressModeW = AddressMode.ClampToEdge,
-            MagFilter = FilterMode.Linear,
-            MinFilter = FilterMode.Linear,
-            MipmapFilter = FilterMode.Nearest,
-            Compare = CompareFunction.LessEqual,
-            LodMinClamp = 0,
-            LodMaxClamp = 100,
-            AnisotropyClamp = 0,
-            BorderColor = null,
-        });
-        return (depth, depthView, depthSampler);
-    }
-
-    private unsafe static ReadOnlySpan<byte> ShaderSource2 => """
+    private unsafe static ReadOnlySpan<byte> ShaderSource => """
         struct Vertex {
             @location(0) position: vec3<f32>,
             @location(1) tex_coords: vec2<f32>,
@@ -359,7 +263,7 @@ internal class Program
 }
 internal record struct InstanceData(Vector3 Offset);
 
-internal sealed class State2 : IDisposable
+internal sealed class State : IDisposable
 {
     public required Texture Texture { get; init; }
     public required TextureView TextureView { get; init; }
@@ -372,15 +276,10 @@ internal sealed class State2 : IDisposable
 
     public required Buffer VertexBuffer { get; init; }
     public required Buffer InstanceBuffer { get; init; }
-    public required int InstanceCount { get; init; }
+    public required u32 InstanceCount { get; init; }
     public required Buffer IndexBuffer { get; init; }
-    public required int IndexCount { get; init; }
+    public required u32 IndexCount { get; init; }
     public required IndexFormat IndexFormat { get; init; }
-
-
-    public required Texture DepthTexture { get; set; }
-    public required TextureView DepthTextureView { get; set; }
-    public required Sampler DepthSampler { get; set; }
 
     public void Dispose()
     {
