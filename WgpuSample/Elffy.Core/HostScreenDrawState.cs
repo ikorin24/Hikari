@@ -1,0 +1,95 @@
+﻿#nullable enable
+using Elffy.NativeBind;
+using System;
+using System.Runtime.CompilerServices;
+
+namespace Elffy;
+
+public readonly struct HostScreenDrawState
+{
+    private readonly IHostScreen _screen;
+    private readonly Box<Wgpu.CommandEncoder> _commandEncoder;
+    private readonly Box<Wgpu.SurfaceTexture> _surfaceTex;
+    private readonly Box<Wgpu.TextureView> _surfaceView;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal HostScreenDrawState(
+        IHostScreen screen,
+        Box<Wgpu.CommandEncoder> encoder,
+        Box<Wgpu.SurfaceTexture> surfaceTex,
+        Box<Wgpu.TextureView> surfaceView)
+    {
+        _screen = screen;
+        _commandEncoder = encoder;
+        _surfaceTex = surfaceTex;
+        _surfaceView = surfaceView;
+    }
+
+    private static readonly Action<HostScreenDrawState> _release = static self =>
+    {
+        self.Release();
+    };
+
+    private void Release()
+    {
+        _screen.AsRefChecked().ScreenFinishCommand(_commandEncoder, _surfaceTex, _surfaceView);
+    }
+
+    internal static bool TryCreate(IHostScreen screen, out Own<HostScreenDrawState> drawState)
+    {
+        var screenRef = screen.AsRefChecked();
+        if(screenRef.ScreenBeginCommand(out var encoder, out var surfaceTex, out var surfaceView) == false) {
+            drawState = Own<HostScreenDrawState>.None;
+            return false;
+        }
+        drawState = Own.New(new(screen, encoder, surfaceTex, surfaceView), _release);
+        return true;
+    }
+
+    public unsafe Own<RenderPass> CreateRenderPass()
+    {
+        CE.RenderPassDescriptor desc;
+        {
+            var colorAttachment = new Opt<CE.RenderPassColorAttachment>(new()
+            {
+                view = _surfaceView.AsRef(),
+                clear = new Wgpu.Color(0, 0, 0, 0),
+            });
+            desc = new CE.RenderPassDescriptor
+            {
+                color_attachments_clear = new() { data = &colorAttachment, len = 1 },
+                depth_stencil_attachment_clear = new Opt<CE.RenderPassDepthStencilAttachment>(new()
+                {
+                    view = _screen.DepthTextureView.NativeRef,
+                    depth_clear = Opt<float>.Some(1f),
+                    stencil_clear = Opt<uint>.None,
+                }),
+            };
+        }
+        new ReadOnlySpan<RenderPassColorAttachment?>(new RenderPassColorAttachment
+        {
+            View = _screen.DepthTextureView,
+            Clear = (0, 0, 0, 0),
+        });
+        return RenderPass.Create(_commandEncoder.AsMut(), desc);
+    }
+}
+
+public readonly ref struct RenderPassDescriptor
+{
+    public required ReadOnlySpan<RenderPassColorAttachment?> ColorAttachmentsClear { get; init; }
+    public required RenderPassDepthStencilAttachment? DepthStencilAttachmentClear { get; init; }
+}
+
+public readonly struct RenderPassColorAttachment
+{
+    public required TextureView View { get; init; }
+    public required (double R, double G, double B, double A) Clear { get; init; }
+}
+
+public readonly struct RenderPassDepthStencilAttachment
+{
+    public required TextureView View { get; init; }
+    public required f32? DepthClear { get; init; }
+    public required u32? StencilClear { get; init; }
+}

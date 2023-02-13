@@ -172,41 +172,29 @@ internal sealed class HostScreen : IHostScreen
             return;
         }
 
-        var screenRef = _native.AsRef();
-        if(screenRef.ScreenBeginCommand(out var encoder, out var surfaceTex, out var surfaceView) == false) {
+        if(HostScreenDrawState.TryCreate(this, out var drawStateOwn) == false) {
             return;
         }
         try {
-            CE.RenderPassDescriptor desc;
-            {
-                var colorAttachment = new Opt<CE.RenderPassColorAttachment>(new()
-                {
-                    view = surfaceView,
-                    clear = new Wgpu.Color(0, 0, 0, 0),
-                });
-                desc = new CE.RenderPassDescriptor
-                {
-                    color_attachments_clear = new() { data = &colorAttachment, len = 1 },
-                    depth_stencil_attachment_clear = new Opt<CE.RenderPassDepthStencilAttachment>(new()
-                    {
-                        view = depthTextureView.AsValue().NativeRef,
-                        depth_clear = Opt<float>.Some(1f),
-                        stencil_clear = Opt<uint>.None,
-                    }),
-                };
-            }
-
-            var renderPassNative = encoder.AsMut().CreateRenderPass(desc);
-            try {
-                var renderPass = new RenderPass(renderPassNative);
-                RedrawRequested?.Invoke(this, renderPass);
-            }
-            finally {
-                renderPassNative.DestroyRenderPass();
-            }
+            //var desc = new RenderPassDescriptor
+            //{
+            //    ColorAttachmentsClear = new ReadOnlySpan<RenderPassColorAttachment?>(new RenderPassColorAttachment
+            //    {
+            //        View = ,
+            //        Clear = (0, 0, 0, 0),
+            //    }),
+            //    DepthStencilAttachmentClear = new RenderPassDepthStencilAttachment
+            //    {
+            //        View = DepthTextureView,
+            //        DepthClear = 1f,
+            //        StencilClear = null,
+            //    },
+            //};
+            using var renderPassOwn = drawStateOwn.AsValue().CreateRenderPass();
+            RedrawRequested?.Invoke(this, renderPassOwn.AsValue());
         }
         finally {
-            screenRef.ScreenFinishCommand(encoder, surfaceTex, surfaceView);
+            drawStateOwn.Dispose();
         }
     }
 

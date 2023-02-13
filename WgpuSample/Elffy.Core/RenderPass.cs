@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Elffy.NativeBind;
+using System;
 
 namespace Elffy;
 
@@ -7,9 +8,20 @@ public readonly struct RenderPass
 {
     private readonly Box<Wgpu.RenderPass> _native;
 
-    internal RenderPass(Box<Wgpu.RenderPass> native)
+    private RenderPass(Box<Wgpu.RenderPass> native)
     {
         _native = native;
+    }
+
+    private static readonly Action<RenderPass> _release = static self =>
+    {
+        self._native.DestroyRenderPass();
+    };
+
+    internal static Own<RenderPass> Create(MutRef<Wgpu.CommandEncoder> encoder, in CE.RenderPassDescriptor desc)
+    {
+        var native = encoder.CreateRenderPass(desc);
+        return Own.New(new(native), _release);
     }
 
     public void SetPipeline(RenderPipeline renderPipeline)

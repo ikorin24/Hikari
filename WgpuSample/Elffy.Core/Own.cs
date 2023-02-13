@@ -69,7 +69,7 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
 
 public static class Own
 {
-    public static Own<T> New<T>(T value, Action<T> release) where T : class
+    public static Own<T> New<T>(T value, Action<T> release)
     {
         return new Own<T>(value, release);
     }
