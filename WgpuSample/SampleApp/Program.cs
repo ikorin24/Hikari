@@ -30,10 +30,13 @@ internal class Program
         OnSetup(screen);
     }
 
-    private static void OnRedrawRequested(IHostScreen screen, RenderPass renderPass)
+    private static void OnRedrawRequested(HostScreenDrawState drawState)
     {
         var state = _state;
         if(state == null) { return; }
+        using var renderPassOwn = drawState.CreateSurfaceRenderPass();
+        var renderPass = renderPassOwn.AsValue();
+
         renderPass.SetPipeline(state.RenderPipeline.AsValue());
         renderPass.SetBindGroup(0, state.BindGroup.AsValue());
         renderPass.SetVertexBuffer(0, state.VertexBuffer.AsValue());

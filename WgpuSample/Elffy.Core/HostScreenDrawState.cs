@@ -46,7 +46,7 @@ public readonly struct HostScreenDrawState
         return true;
     }
 
-    public unsafe Own<RenderPass> CreateRenderPass()
+    public unsafe Own<RenderPass> CreateSurfaceRenderPass()
     {
         CE.RenderPassDescriptor desc;
         {
@@ -66,12 +66,32 @@ public readonly struct HostScreenDrawState
                 }),
             };
         }
-        new ReadOnlySpan<RenderPassColorAttachment?>(new RenderPassColorAttachment
-        {
-            View = _screen.DepthTextureView,
-            Clear = (0, 0, 0, 0),
-        });
         return RenderPass.Create(_commandEncoder.AsMut(), desc);
+    }
+
+    public unsafe Own<RenderPass> CreateRenderPass(in RenderPassDescriptor desc)
+    {
+        var colorAttachmentsClearLen = desc.ColorAttachmentsClear.Length;
+        var colorAttachmentsClear = stackalloc Opt<CE.RenderPassColorAttachment>[colorAttachmentsClearLen];
+        for(int i = 0; i < colorAttachmentsClearLen; i++) {
+            colorAttachmentsClear[i] = desc.ColorAttachmentsClear[i] switch
+            {
+                RenderPassColorAttachment value => new(value.ToNative()),
+                null => Opt<CE.RenderPassColorAttachment>.None,
+            };
+        }
+
+        var descNative = new CE.RenderPassDescriptor
+        {
+            color_attachments_clear = new() { data = colorAttachmentsClear, len = (usize)colorAttachmentsClearLen },
+            depth_stencil_attachment_clear = desc.DepthStencilAttachmentClear switch
+            {
+                RenderPassDepthStencilAttachment value => new Opt<CE.RenderPassDepthStencilAttachment>(value.ToNative()),
+                null => Opt<CE.RenderPassDepthStencilAttachment>.None,
+            },
+        };
+
+        return RenderPass.Create(_commandEncoder.AsMut(), descNative);
     }
 }
 
@@ -85,6 +105,16 @@ public readonly struct RenderPassColorAttachment
 {
     public required TextureView View { get; init; }
     public required (double R, double G, double B, double A) Clear { get; init; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal CE.RenderPassColorAttachment ToNative()
+    {
+        return new CE.RenderPassColorAttachment
+        {
+            view = View.NativeRef,
+            clear = new Wgpu.Color(Clear.R, Clear.G, Clear.B, Clear.A),
+        };
+    }
 }
 
 public readonly struct RenderPassDepthStencilAttachment
@@ -92,4 +122,15 @@ public readonly struct RenderPassDepthStencilAttachment
     public required TextureView View { get; init; }
     public required f32? DepthClear { get; init; }
     public required u32? StencilClear { get; init; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal CE.RenderPassDepthStencilAttachment ToNative()
+    {
+        return new CE.RenderPassDepthStencilAttachment
+        {
+            view = View.NativeRef,
+            depth_clear = DepthClear.HasValue ? new Opt<f32>(DepthClear.Value) : Opt<f32>.None,
+            stencil_clear = StencilClear.HasValue ? new Opt<u32>(StencilClear.Value) : Opt<u32>.None,
+        };
+    }
 }

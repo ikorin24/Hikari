@@ -20,7 +20,7 @@ internal sealed class HostScreen : IHostScreen
     private Own<TextureView> _depthTextureView;
 
     public event Action<IHostScreen, Vector2i>? Resized;
-    public event Action<IHostScreen, RenderPass>? RedrawRequested;
+    public event Action<HostScreenDrawState>? RedrawRequested;
 
     public HostScreenRef Ref => new HostScreenRef(_native);
 
@@ -176,22 +176,7 @@ internal sealed class HostScreen : IHostScreen
             return;
         }
         try {
-            //var desc = new RenderPassDescriptor
-            //{
-            //    ColorAttachmentsClear = new ReadOnlySpan<RenderPassColorAttachment?>(new RenderPassColorAttachment
-            //    {
-            //        View = ,
-            //        Clear = (0, 0, 0, 0),
-            //    }),
-            //    DepthStencilAttachmentClear = new RenderPassDepthStencilAttachment
-            //    {
-            //        View = DepthTextureView,
-            //        DepthClear = 1f,
-            //        StencilClear = null,
-            //    },
-            //};
-            using var renderPassOwn = drawStateOwn.AsValue().CreateRenderPass();
-            RedrawRequested?.Invoke(this, renderPassOwn.AsValue());
+            RedrawRequested?.Invoke(drawStateOwn.AsValue());
         }
         finally {
             drawStateOwn.Dispose();
@@ -242,7 +227,7 @@ public readonly ref struct HostScreenRef
 
 public interface IHostScreen
 {
-    event Action<IHostScreen, RenderPass>? RedrawRequested;
+    event Action<HostScreenDrawState>? RedrawRequested;
     event Action<IHostScreen, Vector2i>? Resized;
 
     HostScreenRef Ref { get; }
