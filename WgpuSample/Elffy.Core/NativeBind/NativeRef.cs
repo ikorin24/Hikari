@@ -45,9 +45,13 @@ internal static class Box
 
 /// <summary>`Box&lt;T&gt;` in Rust</summary>
 /// <typeparam name="T">native type in Box</typeparam>
+[DebuggerDisplay("{DebugDisplay,nq}")]
 internal readonly struct Box<T> where T : INativeTypeNonReprC
 {
     private readonly NativePointer _p;
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebugDisplay => $"0x{(IntPtr)_p:x16} (Box::<{typeof(T).Name}>)";
 
     public static Box<T> Invalid => default;
 
@@ -110,9 +114,13 @@ internal readonly struct Box<T> where T : INativeTypeNonReprC
 
 /// <summary>`&amp;mut T` in Rust</summary>
 /// <typeparam name="T">referenced native type</typeparam>
+[DebuggerDisplay("{DebugDisplay,nq}")]
 internal readonly ref struct MutRef<T> where T : INativeTypeNonReprC
 {
     private readonly NativePointer _p;
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebugDisplay => $"0x{(IntPtr)_p:x16} (&mut {typeof(T).Name})";
 
     public static MutRef<T> Invalid => default;
     public unsafe bool IsInvalid => (void*)_p == null;
@@ -140,9 +148,13 @@ internal readonly ref struct MutRef<T> where T : INativeTypeNonReprC
 
 /// <summary>`&amp;T` in Rust</summary>
 /// <typeparam name="T">referenced native type</typeparam>
+[DebuggerDisplay("{DebugDisplay,nq}")]
 internal readonly ref struct Ref<T> where T : INativeTypeNonReprC
 {
     private readonly NativePointer _p;
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebugDisplay => $"0x{(IntPtr)_p:x16} (&{typeof(T).Name})";
 
     public static Ref<T> Invalid => default;
     public unsafe bool IsInvalid => (void*)_p == null;

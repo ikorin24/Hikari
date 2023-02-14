@@ -1,14 +1,19 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace Elffy.NativeBind;
 
 /// <summary>Opaque wrapper of a native pointer</summary>
+[DebuggerDisplay("{DebugDisplay,nq}")]
 internal unsafe readonly struct NativePointer : IEquatable<NativePointer>
 {
     private readonly void* _ptr;
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebugDisplay => $"0x{(IntPtr)_ptr:x16}";
 
     internal static NativePointer Null => default;
 
@@ -39,4 +44,6 @@ internal unsafe readonly struct NativePointer : IEquatable<NativePointer>
 
     public unsafe static implicit operator NativePointer(void* nativePtr) => new(nativePtr);
     public unsafe static implicit operator void*(NativePointer nativePtr) => nativePtr._ptr;
+    public unsafe static implicit operator IntPtr(NativePointer nativePtr) => (IntPtr)nativePtr._ptr;
+    public unsafe static implicit operator UIntPtr(NativePointer nativePtr) => (UIntPtr)nativePtr._ptr;
 }
