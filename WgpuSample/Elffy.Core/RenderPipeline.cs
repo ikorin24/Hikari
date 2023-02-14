@@ -101,7 +101,7 @@ public readonly struct VertexState
         {
             module = Module.NativeRef,
             entry_point = EntryPoint.AsFixedSlice(pins),
-            buffers = Buffers.SelectToArray(x => x.ToNative(pins)).AsFixedSlice(pins),
+            buffers = Buffers.SelectToArray(pins, static (x, pins) => x.ToNative(pins)).AsFixedSlice(pins),
         };
     }
 }
@@ -118,7 +118,7 @@ public readonly struct FragmentState
         {
             module = Module.NativeRef,
             entry_point = EntryPoint.AsFixedSlice(pins),
-            targets = Targets.SelectToArray(target => target.ToNative(x => x.ToNative())).AsFixedSlice(pins),
+            targets = Targets.SelectToArray(static target => target.ToNative(static x => x.ToNative())).AsFixedSlice(pins),
         };
     }
 }
@@ -356,7 +356,7 @@ public readonly struct VertexBufferLayout
         {
             array_stride = ArrayStride,
             step_mode = StepMode.MapOrThrow(),
-            attributes = Attributes.SelectToArray(x => x.ToNative()).AsFixedSlice(pins),
+            attributes = Attributes.SelectToArray(static x => x.ToNative()).AsFixedSlice(pins),
         };
     }
 }

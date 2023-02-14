@@ -69,13 +69,18 @@ public sealed class Texture : IEngineManaged
         return Own.New(new Texture(screen, texture, desc), _release);
     }
 
-    public unsafe void Write(u32 mipLevel, u32 bytesPerPixel, ReadOnlySpan<byte> pixelData)
+    public void Write<T>(u32 mipLevel, u32 bytesPerPixel, Span<T> pixelData) where T : unmanaged
+    {
+        Write(mipLevel, bytesPerPixel, (ReadOnlySpan<T>)pixelData);
+    }
+
+    public unsafe void Write<T>(u32 mipLevel, u32 bytesPerPixel, ReadOnlySpan<T> pixelData) where T : unmanaged
     {
         var screenRef = this.GetScreen().AsRefChecked();
         var texture = _native.AsRefChecked();
         var size = new Wgpu.Extent3d((u32)Width, (u32)Height, (u32)Depth);
 
-        fixed(byte* p = pixelData) {
+        fixed(T* p = pixelData) {
             screenRef.WriteTexture(
                 new CE.ImageCopyTexture
                 {
@@ -86,7 +91,7 @@ public sealed class Texture : IEngineManaged
                     origin_y = 0,
                     origin_z = 0,
                 },
-                new Slice<byte>(p, pixelData.Length),
+                new Slice<byte>((byte*)p, pixelData.Length * sizeof(T)),
                 new Wgpu.ImageDataLayout
                 {
                     offset = 0,

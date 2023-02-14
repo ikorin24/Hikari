@@ -32,6 +32,16 @@ internal static class InternalExtensions
         return result;
     }
 
+    public static TResult[] SelectToArray<T, TArg, TResult>(this ReadOnlyMemory<T> self, TArg arg, Func<T, TArg, TResult> selector)
+    {
+        var span = self.Span;
+        var result = new TResult[span.Length];
+        for(int i = 0; i < span.Length; i++) {
+            result[i] = selector(span[i], arg);
+        }
+        return result;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Opt<TResult> ToNative<T, TResult>(this T? self, Func<T, TResult> mapper) where T : struct where TResult : unmanaged
     {

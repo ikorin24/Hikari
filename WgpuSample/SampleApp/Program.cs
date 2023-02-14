@@ -40,9 +40,10 @@ internal class Program
         renderPass.SetPipeline(state.RenderPipeline.AsValue());
         renderPass.SetBindGroup(0, state.BindGroup.AsValue());
         renderPass.SetVertexBuffer(0, state.VertexBuffer.AsValue());
-        renderPass.SetVertexBuffer(1, state.InstanceBuffer.AsValue());
+        //renderPass.SetVertexBuffer(1, state.InstanceBuffer.AsValue());
         renderPass.SetIndexBuffer(state.IndexBuffer.AsValue(), state.IndexFormat);
-        renderPass.DrawIndexed(0, state.IndexCount, 0, 0, state.InstanceCount);
+        //renderPass.DrawIndexed(0, state.IndexCount, 0, 0, state.InstanceCount);
+        renderPass.DrawIndexed(0, state.IndexCount, 0, 0, 1);
     }
 
     private static void OnResized(IHostScreen screen, Vector2i newSize)
@@ -55,7 +56,7 @@ internal class Program
 
         var surfaceFormat = screen.SurfaceFormat;
         Debug.WriteLine($"backend: {screen.Backend}");
-        var (pixelData, width, height) = SamplePrimitives.LoadImagePixels("happy-tree.png");
+        var (pixelData, width, height) = SamplePrimitives.LoadImagePixels("pic.png");
         var texture = Texture.Create(screen, new TextureDescriptor
         {
             Size = new Vector3i(width, height, 1),
@@ -65,7 +66,7 @@ internal class Program
             Format = TextureFormat.Rgba8UnormSrgb,
             Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
         }).AsValue(out var textureOwn);
-        texture.Write(0, 4, pixelData);
+        texture.Write(0, 4, pixelData.AsSpan());
         var view = TextureView.Create(texture).AsValue(out var viewOwn);
         var sampler = Sampler.Create(screen, new SamplerDescriptor
         {
@@ -134,7 +135,7 @@ internal class Program
                 {
                     new VertexBufferLayout
                     {
-                        ArrayStride = (ulong)Unsafe.SizeOf<Vertex>(),
+                        ArrayStride = Vertex.TypeSize,
                         StepMode = VertexStepMode.Vertex,
                         Attributes = new[]
                         {
@@ -152,20 +153,20 @@ internal class Program
                             },
                         },
                     },
-                    new VertexBufferLayout
-                    {
-                        ArrayStride = (ulong)Unsafe.SizeOf<InstanceData>(),
-                        StepMode = VertexStepMode.Instance,
-                        Attributes = new[]
-                        {
-                            new VertexAttribute
-                            {
-                                Offset = 0,
-                                ShaderLocation = 5,
-                                Format = VertexFormat.Float32x3,
-                            }
-                        },
-                    },
+                    //new VertexBufferLayout
+                    //{
+                    //    ArrayStride = (ulong)Unsafe.SizeOf<InstanceData>(),
+                    //    StepMode = VertexStepMode.Instance,
+                    //    Attributes = new[]
+                    //    {
+                    //        new VertexAttribute
+                    //        {
+                    //            Offset = 0,
+                    //            ShaderLocation = 5,
+                    //            Format = VertexFormat.Float32x3,
+                    //        }
+                    //    },
+                    //},
                 },
             },
             Fragment = new FragmentState
@@ -207,13 +208,14 @@ internal class Program
         var indexBufferOwn = Buffer.CreateIndexBuffer<ushort>(screen, indices);
         var indexFormat = IndexFormat.Uint16;
 
-        ReadOnlySpan<InstanceData> instances = stackalloc InstanceData[2]
-        {
-            new InstanceData(new Vector3(0.5f, 0, 0)),
-            new InstanceData(new Vector3(-0.5f, 0, 0)),
-        };
-        var instanceBuffer = Buffer.CreateVertexBuffer(screen, instances);
-
+        //ReadOnlySpan<InstanceData> instances = stackalloc InstanceData[]
+        //{
+        //    //new InstanceData(new Vector3(0.5f, 0, 0)),
+        //    //new InstanceData(new Vector3(-0.5f, 0, 0)),
+        //    new InstanceData(new Vector3(0f, 0, 0)),
+        //};
+        //var instanceBuffer = Buffer.CreateVertexBuffer(screen, instances);
+        //RuntimeHelpers.CreateSpan
         _state = new State
         {
             Texture = textureOwn,
@@ -225,8 +227,8 @@ internal class Program
             PipelineLayout = pipelineLayoutOwn,
             RenderPipeline = renderPipelineOwn,
             VertexBuffer = vertexBufferOwn,
-            InstanceBuffer = instanceBuffer,
-            InstanceCount = (uint)instances.Length,
+            //InstanceBuffer = instanceBuffer,
+            //InstanceCount = (uint)instances.Length,
             IndexBuffer = indexBufferOwn,
             IndexCount = (uint)indices.Length,
             IndexFormat = indexFormat,
@@ -235,32 +237,29 @@ internal class Program
 
     private unsafe static ReadOnlySpan<byte> ShaderSource => """
         struct Vertex {
-            @location(0) position: vec3<f32>,
-            @location(1) tex_coords: vec2<f32>,
-        }
-        struct InstanceData {
-            @location(5) offset: vec3<f32>,
+            @location(0) pos: vec3<f32>,
+            @location(1) uv: vec2<f32>,
         }
 
-        struct VertexOutput {
-            @builtin(position) clip_position: vec4<f32>,
-            @location(0) tex_coords: vec2<f32>,
+        struct V2F {
+            @builtin(position) clip_pos: vec4<f32>,
+            @location(2) pos: vec3<f32>,
+            @location(3) uv: vec2<f32>,
         }
 
         @vertex fn vs_main(
             v: Vertex,
-            instance: InstanceData,
-        ) -> VertexOutput {
-            var out: VertexOutput;
-            out.clip_position = vec4<f32>(v.position + instance.offset, 1.0);
+        ) -> V2F {
+            var out: V2F;
+            out.clip_pos = vec4(v.pos, 1.0);
             return out;
         }
 
         @group(0) @binding(0) var t_diffuse: texture_2d<f32>;
-        @group(0)@binding(1) var s_diffuse: sampler;
+        @group(0) @binding(1) var s_diffuse: sampler;
 
-        @fragment fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-            return textureSample(t_diffuse, s_diffuse, in.tex_coords);
+        @fragment fn fs_main(in: V2F) -> @location(0) vec4<f32> {
+            return textureSample(t_diffuse, s_diffuse, in.pos.xy);
         }            
         """u8;
 }
@@ -278,8 +277,8 @@ internal sealed class State : IDisposable
     public required Own<RenderPipeline> RenderPipeline { get; init; }
 
     public required Own<Buffer> VertexBuffer { get; init; }
-    public required Own<Buffer> InstanceBuffer { get; init; }
-    public required uint InstanceCount { get; init; }
+    //public required Own<Buffer> InstanceBuffer { get; init; }
+    //public required uint InstanceCount { get; init; }
     public required Own<Buffer> IndexBuffer { get; init; }
     public required uint IndexCount { get; init; }
     public required IndexFormat IndexFormat { get; init; }
@@ -295,7 +294,7 @@ internal sealed class State : IDisposable
         PipelineLayout.Dispose();
         RenderPipeline.Dispose();
         VertexBuffer.Dispose();
-        InstanceBuffer.Dispose();
+        //InstanceBuffer.Dispose();
         IndexBuffer.Dispose();
     }
 }

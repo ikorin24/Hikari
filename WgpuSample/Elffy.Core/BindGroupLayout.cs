@@ -55,11 +55,11 @@ public readonly struct BindGroupLayoutDescriptor
 {
     public required ReadOnlyMemory<BindGroupLayoutEntry> Entries { get; init; }
 
-    internal unsafe CE.BindGroupLayoutDescriptor ToNative(PinHandleHolder holder)
+    internal unsafe CE.BindGroupLayoutDescriptor ToNative(PinHandleHolder pins)
     {
         return new CE.BindGroupLayoutDescriptor
         {
-            entries = Entries.SelectToArray(entry => entry.ToNative(holder)).AsFixedSlice(holder),
+            entries = Entries.SelectToArray(pins, static (entry, pins) => entry.ToNative(pins)).AsFixedSlice(pins),
         };
     }
 }

@@ -60,7 +60,7 @@ public readonly struct BindGroupDescriptor
         return new CE.BindGroupDescriptor
         {
             layout = Layout.NativeRef,
-            entries = Entries.SelectToArray(x => x.ToNative(pins)).AsFixedSlice(pins),
+            entries = Entries.SelectToArray(pins, static (x, pins) => x.ToNative(pins)).AsFixedSlice(pins),
         };
     }
 }

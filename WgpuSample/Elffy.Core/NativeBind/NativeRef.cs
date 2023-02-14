@@ -41,6 +41,15 @@ internal static class Box
         var value = Interlocked.Exchange(ref Unsafe.As<Box<T>, usize>(ref box), 0);
         return Unsafe.As<usize, Box<T>>(ref value);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Box<T> Swap<T>(ref Box<T> box, Box<T> newValue) where T : INativeTypeNonReprC
+    {
+        var value = Interlocked.Exchange(
+            ref Unsafe.As<Box<T>, usize>(ref box),
+            Unsafe.As<Box<T>, usize>(ref newValue));
+        return Unsafe.As<usize, Box<T>>(ref value);
+    }
 }
 
 /// <summary>`Box&lt;T&gt;` in Rust</summary>

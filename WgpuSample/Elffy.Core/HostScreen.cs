@@ -3,8 +3,10 @@ using Elffy.NativeBind;
 using System;
 using System.Buffers;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 
 namespace Elffy;
 
@@ -275,3 +277,55 @@ public readonly ref struct HostScreenConfig
         };
     }
 }
+
+
+//public sealed class SurfaceTexture : INativeRef<Wgpu.Texture>
+//{
+//    private Box<Wgpu.Texture> _native;
+//    private readonly int _thread;
+//    private ulong _token = 0;
+
+//    internal Ref<Wgpu.Texture> NativeRef
+//    {
+//        get
+//        {
+//            CheckThread();
+//            if(_native.IsInvalid) {
+//                ThrowInvalidTiming();
+//            }
+//            return _native;
+//        }
+//    }
+
+//    Ref<Wgpu.Texture> INativeRef<Wgpu.Texture>.NativeRef => NativeRef;
+
+//    internal SurfaceTexture()
+//    {
+//        _thread = Thread.CurrentThread.ManagedThreadId;
+//    }
+
+//    internal Box<Wgpu.Texture> Replace(Box<Wgpu.Texture> native)
+//    {
+//        CheckThread();
+//        _token++;
+//        return Box.Swap(ref _native, native);
+//    }
+
+//    private void CheckThread()
+//    {
+//        if(_thread != Thread.CurrentThread.ManagedThreadId) {
+//            throw new InvalidOperationException();
+//        }
+//    }
+
+//    [DoesNotReturn]
+//    private static void ThrowInvalidTiming()
+//    {
+//        throw new InvalidOperationException("The surface texture is not accessible at the current time.");
+//    }
+//}
+
+//internal interface INativeRef<T> where T : INativeTypeNonReprC
+//{
+//    Ref<T> NativeRef { get; }
+//}
