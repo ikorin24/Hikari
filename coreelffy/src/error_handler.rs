@@ -1,3 +1,5 @@
+use once_cell::sync::Lazy;
+use regex::Regex;
 use std::cell::Cell;
 use std::fmt::Debug;
 use std::num::NonZeroUsize;
@@ -5,6 +7,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
 static ERR_DISPATCHER: Mutex<Option<DispatchErrFn>> = Mutex::new(None);
+/// decorations of ANSI escape sequences.
+static ANCI_ESC_SEQ_DECORATION: Lazy<Regex> = Lazy::new(|| Regex::new("\x1b\\[[0-9;]*m").unwrap());
 
 thread_local! {
     /// thread local error counter
@@ -39,6 +43,11 @@ pub(crate) fn set_err_dispatcher(dispatcher: DispatchErrFn) {
 
 pub(crate) fn dispatch_err(err: impl std::fmt::Display) {
     let message = format!("{}", err);
+
+    // Some error messages contain decorations of ANSI escape sequences.
+    // They should be removed.
+    let message = ANCI_ESC_SEQ_DECORATION.replace_all(&message, "");
+
     increment_tls_err_count();
     let id = generate_message_id();
     if let Some(err_dispatcher) = get_err_dispatcher() {
