@@ -160,7 +160,7 @@ namespace Elffy
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //[DebuggerHidden]
+        [DebuggerHidden]
         public static (u32 Width, u32 Height) ScreenGetInnerSize(
             this Rust.Ref<CE.HostScreen> screen)
         {
@@ -179,19 +179,29 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void WriteTexture(
-            Rust.Ref<CE.HostScreen> screen,
-            CE.ImageCopyTexture* texture,
+            this Rust.Ref<CE.HostScreen> screen,
+            in CE.ImageCopyTexture texture,
             CE.Slice<u8> data,
-            Wgpu.ImageDataLayout* data_layout,
-            Wgpu.Extent3d* size)
-            => elffy_write_texture(screen, texture, data, data_layout, size).Validate();
+            in Wgpu.ImageDataLayout dataLayout,
+            in Wgpu.Extent3d size)
+        {
+            fixed(CE.ImageCopyTexture* texturePtr = &texture)
+            fixed(Wgpu.ImageDataLayout* dataLayoutPtr = &dataLayout)
+            fixed(Wgpu.Extent3d* sizePtr = &size) {
+                elffy_write_texture(screen, texturePtr, data, dataLayoutPtr, sizePtr).Validate();
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Rust.Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
-            Rust.Ref<CE.HostScreen> screen,
-            CE.BindGroupLayoutDescriptor* desc)
-            => elffy_create_bind_group_layout(screen, desc).Validate();
+            this Rust.Ref<CE.HostScreen> screen,
+            in CE.BindGroupLayoutDescriptor desc)
+        {
+            fixed(CE.BindGroupLayoutDescriptor* descPtr = &desc) {
+                return elffy_create_bind_group_layout(screen, descPtr).Validate();
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
@@ -206,8 +216,12 @@ namespace Elffy
         [DebuggerHidden]
         public static Rust.Box<Wgpu.BindGroup> CreateBindGroup(
             this Rust.Ref<CE.HostScreen> screen,
-            CE.BindGroupDescriptor* desc)
-            => elffy_create_bind_group(screen, desc).Validate();
+            in CE.BindGroupDescriptor desc)
+        {
+            fixed(CE.BindGroupDescriptor* descPtr = &desc) {
+                return elffy_create_bind_group(screen, descPtr).Validate();
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
@@ -221,9 +235,13 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Rust.Box<Wgpu.PipelineLayout> CreatePipelineLayout(
-            Rust.Ref<CE.HostScreen> screen,
-            CE.PipelineLayoutDescriptor* desc)
-            => elffy_create_pipeline_layout(screen, desc).Validate();
+            this Rust.Ref<CE.HostScreen> screen,
+            in CE.PipelineLayoutDescriptor desc)
+        {
+            fixed(CE.PipelineLayoutDescriptor* descPtr = &desc) {
+                return elffy_create_pipeline_layout(screen, descPtr).Validate();
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
@@ -237,9 +255,13 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Rust.Box<Wgpu.RenderPipeline> CreateRenderPipeline(
-            Rust.Ref<CE.HostScreen> screen,
-            CE.RenderPipelineDescriptor* desc)
-            => elffy_create_render_pipeline(screen, desc).Validate();
+            this Rust.Ref<CE.HostScreen> screen,
+            in CE.RenderPipelineDescriptor desc)
+        {
+            fixed(CE.RenderPipelineDescriptor* descPtr = &desc) {
+                return elffy_create_render_pipeline(screen, descPtr).Validate();
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
@@ -270,9 +292,13 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Rust.Box<Wgpu.Sampler> CreateSampler(
-            Rust.Ref<CE.HostScreen> screen,
-            CE.SamplerDescriptor* desc)
-            => elffy_create_sampler(screen, desc).Validate();
+            this Rust.Ref<CE.HostScreen> screen,
+            in CE.SamplerDescriptor desc)
+        {
+            fixed(CE.SamplerDescriptor* descPtr = &desc) {
+                return elffy_create_sampler(screen, descPtr).Validate();
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
@@ -287,8 +313,13 @@ namespace Elffy
         [DebuggerHidden]
         public static Rust.Box<Wgpu.ShaderModule> CreateShaderModule(
             this Rust.Ref<CE.HostScreen> screen,
-            CE.Slice<u8> shader_source)
-            => elffy_create_shader_module(screen, shader_source).Validate();
+            ReadOnlySpan<byte> shaderSource)
+        {
+            fixed(byte* shaderSourcePtr = shaderSource) {
+                var slice = new CE.Slice<u8>(shaderSourcePtr, shaderSource.Length);
+                return elffy_create_shader_module(screen, slice).Validate();
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
@@ -302,9 +333,13 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Rust.Box<Wgpu.Texture> CreateTexture(
-            Rust.Ref<CE.HostScreen> screen,
-            CE.TextureDescriptor* desc)
-            => elffy_create_texture(screen, desc).Validate();
+        this Rust.Ref<CE.HostScreen> screen,
+        in CE.TextureDescriptor desc)
+        {
+            fixed(CE.TextureDescriptor* descPtr = &desc) {
+                return elffy_create_texture(screen, descPtr).Validate();
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
@@ -326,9 +361,13 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static Rust.Box<Wgpu.TextureView> CreateTextureView(
-            Rust.Ref<Wgpu.Texture> texture,
-            CE.TextureViewDescriptor* desc)
-            => elffy_create_texture_view(texture, desc).Validate();
+            this Rust.Ref<Wgpu.Texture> texture,
+            in CE.TextureViewDescriptor desc)
+        {
+            fixed(CE.TextureViewDescriptor* descPtr = &desc) {
+                return elffy_create_texture_view(texture, descPtr).Validate();
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]

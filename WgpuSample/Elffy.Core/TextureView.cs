@@ -9,7 +9,6 @@ public sealed class TextureView : IEngineManaged
 {
     private IHostScreen? _screen;
     private Rust.Box<Wgpu.TextureView> _native;
-    private Texture? _texture;
 
     public IHostScreen? Screen => _screen;
 
@@ -18,7 +17,6 @@ public sealed class TextureView : IEngineManaged
     private TextureView(IHostScreen screen, Rust.Box<Wgpu.TextureView> native, Texture texture)
     {
         _screen = screen;
-        _texture = texture;
         _native = native;
     }
 
@@ -39,7 +37,6 @@ public sealed class TextureView : IEngineManaged
         native.DestroyTextureView();
         if(manualRelease) {
             _screen = null;
-            _texture = null;
         }
     }
 
@@ -48,7 +45,7 @@ public sealed class TextureView : IEngineManaged
         ArgumentNullException.ThrowIfNull(texture);
         texture.ThrowIfNotEngineManaged();
         var screen = texture.GetScreen();
-        var view = texture.NativeRef.CreateTextureView();
+        var view = texture.NativeRef.CreateTextureView(CE.TextureViewDescriptor.Default);
         return Own.New(new TextureView(screen, view, texture), _release);
     }
 }

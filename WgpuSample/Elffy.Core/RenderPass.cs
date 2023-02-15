@@ -34,11 +34,13 @@ public readonly struct RenderPass
     }
     public void SetVertexBuffer(u32 slot, Buffer buffer)
     {
-        _native.AsMut().SetVertexBuffer(slot, buffer.NativeRef.AsSlice());
+        var bufferSlice = new CE.BufferSlice(buffer.NativeRef, CE.RangeBoundsU64.RangeFull);
+        _native.AsMut().SetVertexBuffer(slot, bufferSlice);
     }
     public void SetIndexBuffer(Buffer buffer, IndexFormat indexFormat)
     {
-        _native.AsMut().SetIndexBuffer(buffer.NativeRef.AsSlice(), indexFormat.MapOrThrow());
+        var bufferSlice = new CE.BufferSlice(buffer.NativeRef, CE.RangeBoundsU64.RangeFull);
+        _native.AsMut().SetIndexBuffer(bufferSlice, indexFormat.MapOrThrow());
     }
     public void DrawIndexed(u32 indexStart, u32 indexCount, i32 baseVertex, u32 instanceStart, u32 instanceCount)
     {
