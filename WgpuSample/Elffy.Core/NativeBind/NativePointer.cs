@@ -6,7 +6,13 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy.NativeBind;
 
-/// <summary>Opaque wrapper of a native pointer</summary>
+/// <summary>
+/// Opaque wrapper of a native pointer.
+/// </summary>
+/// <remarks>
+/// Note that it can not be allocated or freed in C# code.
+/// It is the pointer that refers to the native memory. (NOT C# stack memory or fixed managed memory)
+/// </remarks>
 [DebuggerDisplay("{DebugDisplay,nq}")]
 internal unsafe readonly struct NativePointer : IEquatable<NativePointer>
 {
