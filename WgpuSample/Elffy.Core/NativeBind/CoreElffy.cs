@@ -328,7 +328,7 @@ internal static class CoreElffy
         private readonly PrimitiveState _primitive;
         private readonly Opt<DepthStencilState> _depth_stencil;
         private readonly Wgpu.MultisampleState _multisample;
-        private readonly NonZeroU32OrNone _multiview;
+        private readonly OptionNonZeroU32 _multiview;
 
         public unsafe required Rust.Ref<Wgpu.PipelineLayout> layout
         {
@@ -344,7 +344,7 @@ internal static class CoreElffy
         public required PrimitiveState primitive { get => _primitive; init => _primitive = value; }
         public required Opt<DepthStencilState> depth_stencil { get => _depth_stencil; init => _depth_stencil = value; }
         public required Wgpu.MultisampleState multisample { get => _multisample; init => _multisample = value; }
-        public required NonZeroU32OrNone multiview { get => _multiview; init => _multiview = value; }
+        public required OptionNonZeroU32 multiview { get => _multiview; init => _multiview = value; }
     }
 
     internal struct DepthStencilState

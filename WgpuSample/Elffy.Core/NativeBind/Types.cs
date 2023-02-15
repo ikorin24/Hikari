@@ -66,18 +66,6 @@ internal struct Slice<T> where T : unmanaged
     }
 }
 
-internal static class Slice
-{
-    public unsafe static Slice<T> FromFixedSpanUnsafe<T>(Span<T> fixedSpan) where T : unmanaged
-        => FromFixedSpanUnsafe((ReadOnlySpan<T>)fixedSpan);
-
-    public unsafe static Slice<T> FromFixedSpanUnsafe<T>(ReadOnlySpan<T> fixedSpan) where T : unmanaged
-    {
-        var pointer = (T*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(fixedSpan));
-        return new Slice<T>(pointer, fixedSpan.Length);
-    }
-}
-
 internal readonly struct RangeU32
 {
     private readonly u32 _start;
@@ -162,22 +150,22 @@ internal readonly struct RangeBoundsU64
 /// <summary>
 /// `Option&lt;NonZeroU32&gt;` in Rust
 /// </summary>
-internal readonly struct NonZeroU32OrNone : IEquatable<NonZeroU32OrNone>
+internal readonly struct OptionNonZeroU32 : IEquatable<OptionNonZeroU32>
 {
     private readonly u32 _value;
-    public static NonZeroU32OrNone None => default;
+    public static OptionNonZeroU32 None => default;
 
-    private NonZeroU32OrNone(u32 value) => _value = value;
+    private OptionNonZeroU32(u32 value) => _value = value;
 
-    public static implicit operator NonZeroU32OrNone(u32 value) => new(value);
+    public static implicit operator OptionNonZeroU32(u32 value) => new(value);
 
-    public static bool operator ==(NonZeroU32OrNone left, NonZeroU32OrNone right) => left.Equals(right);
+    public static bool operator ==(OptionNonZeroU32 left, OptionNonZeroU32 right) => left.Equals(right);
 
-    public static bool operator !=(NonZeroU32OrNone left, NonZeroU32OrNone right) => !(left == right);
+    public static bool operator !=(OptionNonZeroU32 left, OptionNonZeroU32 right) => !(left == right);
 
-    public override bool Equals(object? obj) => obj is NonZeroU32OrNone none && Equals(none);
+    public override bool Equals(object? obj) => obj is OptionNonZeroU32 none && Equals(none);
 
-    public bool Equals(NonZeroU32OrNone other) => _value == other._value;
+    public bool Equals(OptionNonZeroU32 other) => _value == other._value;
 
     public override int GetHashCode() => _value.GetHashCode();
 }
