@@ -9,12 +9,12 @@ namespace Elffy;
 public sealed class RenderPipeline : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Box<Wgpu.RenderPipeline> _native;
-    internal Ref<Wgpu.RenderPipeline> NativeRef => _native;
+    private Rust.Box<Wgpu.RenderPipeline> _native;
+    internal Rust.Ref<Wgpu.RenderPipeline> NativeRef => _native;
 
     public IHostScreen? Screen => _screen;
 
-    private RenderPipeline(IHostScreen screen, Box<Wgpu.RenderPipeline> native)
+    private RenderPipeline(IHostScreen screen, Rust.Box<Wgpu.RenderPipeline> native)
     {
         _screen = screen;
         _native = native;

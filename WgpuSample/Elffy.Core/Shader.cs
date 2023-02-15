@@ -7,12 +7,12 @@ namespace Elffy;
 public sealed class Shader : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Box<Wgpu.ShaderModule> _native;
+    private Rust.Box<Wgpu.ShaderModule> _native;
 
     public IHostScreen? Screen => _screen;
-    internal Ref<Wgpu.ShaderModule> NativeRef => _native;
+    internal Rust.Ref<Wgpu.ShaderModule> NativeRef => _native;
 
-    private Shader(IHostScreen screen, Box<Wgpu.ShaderModule> native)
+    private Shader(IHostScreen screen, Rust.Box<Wgpu.ShaderModule> native)
     {
         _screen = screen;
         _native = native;

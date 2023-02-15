@@ -8,16 +8,16 @@ namespace Elffy;
 public readonly struct HostScreenDrawState
 {
     private readonly IHostScreen _screen;
-    private readonly Box<Wgpu.CommandEncoder> _commandEncoder;
-    private readonly Box<Wgpu.SurfaceTexture> _surfaceTex;
-    private readonly Box<Wgpu.TextureView> _surfaceView;
+    private readonly Rust.Box<Wgpu.CommandEncoder> _commandEncoder;
+    private readonly Rust.Box<Wgpu.SurfaceTexture> _surfaceTex;
+    private readonly Rust.Box<Wgpu.TextureView> _surfaceView;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal HostScreenDrawState(
         IHostScreen screen,
-        Box<Wgpu.CommandEncoder> encoder,
-        Box<Wgpu.SurfaceTexture> surfaceTex,
-        Box<Wgpu.TextureView> surfaceView)
+        Rust.Box<Wgpu.CommandEncoder> encoder,
+        Rust.Box<Wgpu.SurfaceTexture> surfaceTex,
+        Rust.Box<Wgpu.TextureView> surfaceView)
     {
         _screen = screen;
         _commandEncoder = encoder;

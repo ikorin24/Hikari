@@ -7,7 +7,7 @@ namespace Elffy;
 public sealed class Buffer : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Box<Wgpu.Buffer> _native;
+    private Rust.Box<Wgpu.Buffer> _native;
     private BufferUsages? _usage;
     private usize _byteLen;
 
@@ -17,9 +17,9 @@ public sealed class Buffer : IEngineManaged
 
     public usize ByteLength => _byteLen;
 
-    internal Ref<Wgpu.Buffer> NativeRef => _native;
+    internal Rust.Ref<Wgpu.Buffer> NativeRef => _native;
 
-    private Buffer(IHostScreen screen, Box<Wgpu.Buffer> native, BufferUsages usage, usize byteLen)
+    private Buffer(IHostScreen screen, Rust.Box<Wgpu.Buffer> native, BufferUsages usage, usize byteLen)
     {
         _screen = screen;
         _native = native;

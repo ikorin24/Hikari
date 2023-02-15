@@ -7,13 +7,13 @@ namespace Elffy;
 public sealed class Texture : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Box<Wgpu.Texture> _native;
+    private Rust.Box<Wgpu.Texture> _native;
     private TextureDescriptor? _desc;
 
     public IHostScreen? Screen => _screen;
 
-    internal Ref<Wgpu.Texture> NativeRef => _native.AsRefChecked();
-    internal MutRef<Wgpu.Texture> NativeMut => _native.AsMutChecked();
+    internal Rust.Ref<Wgpu.Texture> NativeRef => _native.AsRefChecked();
+    internal Rust.MutRef<Wgpu.Texture> NativeMut => _native.AsMutChecked();
 
     public int Width => _desc.GetOrThrow().Size.X;
     public int Height => _desc.GetOrThrow().Size.Y;
@@ -33,7 +33,7 @@ public sealed class Texture : IEngineManaged
         }
     }
 
-    private Texture(IHostScreen screen, Box<Wgpu.Texture> native, in TextureDescriptor desc)
+    private Texture(IHostScreen screen, Rust.Box<Wgpu.Texture> native, in TextureDescriptor desc)
     {
         _screen = screen;
         _native = native;

@@ -10,12 +10,12 @@ namespace Elffy;
 public sealed class BindGroup : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Box<Wgpu.BindGroup> _native;
-    internal Ref<Wgpu.BindGroup> NativeRef => _native;
+    private Rust.Box<Wgpu.BindGroup> _native;
+    internal Rust.Ref<Wgpu.BindGroup> NativeRef => _native;
 
     public IHostScreen? Screen => _screen;
 
-    private BindGroup(IHostScreen screen, Box<Wgpu.BindGroup> native)
+    private BindGroup(IHostScreen screen, Rust.Box<Wgpu.BindGroup> native)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _native = native;

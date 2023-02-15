@@ -7,13 +7,13 @@ namespace Elffy;
 public sealed class Sampler : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Box<Wgpu.Sampler> _native;
+    private Rust.Box<Wgpu.Sampler> _native;
 
     public IHostScreen? Screen => _screen;
 
-    internal Ref<Wgpu.Sampler> NativeRef => _native;
+    internal Rust.Ref<Wgpu.Sampler> NativeRef => _native;
 
-    private Sampler(IHostScreen screen, Box<Wgpu.Sampler> native)
+    private Sampler(IHostScreen screen, Rust.Box<Wgpu.Sampler> native)
     {
         _screen = screen;
         _native = native;

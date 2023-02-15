@@ -46,11 +46,11 @@ internal static class CoreElffy
 
     internal unsafe readonly struct HostScreenInitFn
     {
-        private readonly delegate* unmanaged[Cdecl]<Box<HostScreen>, HostScreenInfo*, HostScreenId, void> _func;
+        private readonly delegate* unmanaged[Cdecl]<Rust.Box<HostScreen>, HostScreenInfo*, HostScreenId, void> _func;
 
         public HostScreenInitFn(delegate* unmanaged[Cdecl]<void*, HostScreenInfo*, HostScreenId, void> f)
         {
-            _func = (delegate* unmanaged[Cdecl]<Box<HostScreen>, HostScreenInfo*, HostScreenId, void>)f;
+            _func = (delegate* unmanaged[Cdecl]<Rust.Box<HostScreen>, HostScreenInfo*, HostScreenId, void>)f;
         }
     }
 
@@ -104,9 +104,9 @@ internal static class CoreElffy
     internal readonly struct BeginCommandData
     {
         public readonly bool success;
-        public readonly OptionBox<Wgpu.CommandEncoder> command_encoder;
-        public readonly OptionBox<Wgpu.SurfaceTexture> surface_texture;
-        public readonly OptionBox<Wgpu.TextureView> surface_texture_view;
+        public readonly Rust.OptionBox<Wgpu.CommandEncoder> command_encoder;
+        public readonly Rust.OptionBox<Wgpu.SurfaceTexture> surface_texture;
+        public readonly Rust.OptionBox<Wgpu.TextureView> surface_texture_view;
     }
 
     internal struct SizeU32
@@ -121,12 +121,12 @@ internal static class CoreElffy
         private readonly Opt<f32> _depth_clear;
         private readonly Opt<u32> _stencil_clear;
 
-        public unsafe required Ref<Wgpu.TextureView> view
+        public unsafe required Rust.Ref<Wgpu.TextureView> view
         {
             get
             {
                 var view = _view;
-                return *(Ref<Wgpu.TextureView>*)(&view);
+                return *(Rust.Ref<Wgpu.TextureView>*)(&view);
             }
             init => _view = value.AsPtr();
         }
@@ -141,7 +141,7 @@ internal static class CoreElffy
 
     internal ref struct ImageCopyTexture
     {
-        public required Ref<Wgpu.Texture> texture;
+        public required Rust.Ref<Wgpu.Texture> texture;
         public required u32 mip_level;
         public required u32 origin_x;
         public required u32 origin_y;
@@ -209,15 +209,15 @@ internal static class CoreElffy
 
     internal readonly struct RenderPassColorAttachment
     {
-        private readonly NativePointer _view;   // Ref<Wgpu.TextureView>
+        private readonly NativePointer _view;   // Rust.Ref<Wgpu.TextureView>
         private readonly Wgpu.Color _clear;
 
-        public unsafe required Ref<Wgpu.TextureView> view
+        public unsafe required Rust.Ref<Wgpu.TextureView> view
         {
             get
             {
                 var view = _view;
-                return *(Ref<Wgpu.TextureView>*)(&view);
+                return *(Rust.Ref<Wgpu.TextureView>*)(&view);
             }
             init => _view = value.AsPtr();
         }
@@ -230,12 +230,12 @@ internal static class CoreElffy
         private readonly NativePointer _layout;
         private readonly Slice<BindGroupEntry> _entries;
 
-        public unsafe required Ref<Wgpu.BindGroupLayout> layout
+        public unsafe required Rust.Ref<Wgpu.BindGroupLayout> layout
         {
             get
             {
                 var layout = _layout;
-                return *(Ref<Wgpu.BindGroupLayout>*)(&layout);
+                return *(Rust.Ref<Wgpu.BindGroupLayout>*)(&layout);
             }
             init => _layout = value.AsPtr();
         }
@@ -268,9 +268,9 @@ internal static class CoreElffy
 
         public unsafe static BindingResource Buffer(BufferBinding* payload) => new(BindingResourceTag.Buffer, payload);
 
-        public unsafe static BindingResource TextureView(Ref<Wgpu.TextureView> textureView) => new(BindingResourceTag.TextureView, textureView.AsPtr());
+        public unsafe static BindingResource TextureView(Rust.Ref<Wgpu.TextureView> textureView) => new(BindingResourceTag.TextureView, textureView.AsPtr());
 
-        public unsafe static BindingResource Sampler(Ref<Wgpu.Sampler> sampler) => new(BindingResourceTag.Sampler, sampler.AsPtr());
+        public unsafe static BindingResource Sampler(Rust.Ref<Wgpu.Sampler> sampler) => new(BindingResourceTag.Sampler, sampler.AsPtr());
 
         private enum BindingResourceTag : u32
         {
@@ -289,12 +289,12 @@ internal static class CoreElffy
         private readonly u64 _offset;
         private readonly u64 _size;
 
-        public unsafe required Ref<Wgpu.Buffer> buffer
+        public unsafe required Rust.Ref<Wgpu.Buffer> buffer
         {
             get
             {
                 var buffer = _buffer;
-                return *(Ref<Wgpu.Buffer>*)(&buffer);
+                return *(Rust.Ref<Wgpu.Buffer>*)(&buffer);
             }
             init => _buffer = value.AsPtr();
         }
@@ -314,7 +314,7 @@ internal static class CoreElffy
     {
         private readonly Slice<NativePointer> _bind_group_layouts;
 
-        public unsafe PipelineLayoutDescriptor(Ref<Wgpu.BindGroupLayout>* bind_group_layouts, nuint count)
+        public unsafe PipelineLayoutDescriptor(Rust.Ref<Wgpu.BindGroupLayout>* bind_group_layouts, nuint count)
         {
             _bind_group_layouts = new Slice<NativePointer>((NativePointer*)bind_group_layouts, count);
         }
@@ -330,12 +330,12 @@ internal static class CoreElffy
         private readonly Wgpu.MultisampleState _multisample;
         private readonly NonZeroU32OrNone _multiview;
 
-        public unsafe required Ref<Wgpu.PipelineLayout> layout
+        public unsafe required Rust.Ref<Wgpu.PipelineLayout> layout
         {
             get
             {
                 var layout = _layout;
-                return *(Ref<Wgpu.PipelineLayout>*)(&layout);
+                return *(Rust.Ref<Wgpu.PipelineLayout>*)(&layout);
             }
             init => _layout = value.AsPtr();
         }
@@ -362,12 +362,12 @@ internal static class CoreElffy
         private readonly Slice<u8> _entry_point;
         private readonly Slice<VertexBufferLayout> _buffers;
 
-        public unsafe required Ref<Wgpu.ShaderModule> module
+        public unsafe required Rust.Ref<Wgpu.ShaderModule> module
         {
             get
             {
                 var module = _module;
-                return *(Ref<Wgpu.ShaderModule>*)(&module);
+                return *(Rust.Ref<Wgpu.ShaderModule>*)(&module);
             }
             init => _module = value.AsPtr();
         }
@@ -381,12 +381,12 @@ internal static class CoreElffy
         private readonly Slice<u8> _entry_point;
         private readonly Slice<Opt<ColorTargetState>> _targets;
 
-        public unsafe required Ref<Wgpu.ShaderModule> module
+        public unsafe required Rust.Ref<Wgpu.ShaderModule> module
         {
             get
             {
                 var module = _module;
-                return *(Ref<Wgpu.ShaderModule>*)(&module);
+                return *(Rust.Ref<Wgpu.ShaderModule>*)(&module);
             }
             init => _module = value.AsPtr();
         }
@@ -534,12 +534,12 @@ internal static class CoreElffy
         private readonly NativePointer _buffer;
         private readonly RangeBoundsU64 _range;
 
-        public unsafe required Ref<Wgpu.Buffer> buffer
+        public unsafe required Rust.Ref<Wgpu.Buffer> buffer
         {
             get
             {
                 var buffer = _buffer;
-                return *(Ref<Wgpu.Buffer>*)(&buffer);
+                return *(Rust.Ref<Wgpu.Buffer>*)(&buffer);
             }
             init => _buffer = value.AsPtr();
         }
@@ -551,7 +551,7 @@ internal static class CoreElffy
         }
 
         [SetsRequiredMembers]
-        public BufferSlice(Ref<Wgpu.Buffer> buffer, RangeBoundsU64 range)
+        public BufferSlice(Rust.Ref<Wgpu.Buffer> buffer, RangeBoundsU64 range)
         {
             _buffer = buffer.AsPtr();
             _range = range;

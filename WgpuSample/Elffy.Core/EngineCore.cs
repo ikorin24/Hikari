@@ -53,13 +53,13 @@ namespace Elffy
 
             [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
             static void OnScreenInit(
-                void* screen_,  // Box<CE.HostScreen> screen
+                void* screen_,  // Rust.Box<CE.HostScreen> screen
                 CE.HostScreenInfo* info,
                 CE.HostScreenId id
                 )
             {
                 // UnmanagedCallersOnly methods cannot have generic type args.
-                Box<CE.HostScreen> screen = *(Box<CE.HostScreen>*)(&screen_);
+                Rust.Box<CE.HostScreen> screen = *(Rust.Box<CE.HostScreen>*)(&screen_);
 
                 _config.OnStart(screen, *info, id);
             }
@@ -93,7 +93,7 @@ namespace Elffy
         }
 
         private static readonly CreateRenderPassFunc _createRenderPassFunc =
-            (MutRef<Wgpu.CommandEncoder> command_encoder, in CE.RenderPassDescriptor desc) =>
+            (Rust.MutRef<Wgpu.CommandEncoder> command_encoder, in CE.RenderPassDescriptor desc) =>
             {
                 fixed(CE.RenderPassDescriptor* descPtr = &desc) {
                     return elffy_create_render_pass(command_encoder, descPtr).Validate();
@@ -101,23 +101,23 @@ namespace Elffy
             };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ScreenResizeSurface(this Ref<CE.HostScreen> screen, u32 width, u32 height)
+        public static void ScreenResizeSurface(this Rust.Ref<CE.HostScreen> screen, u32 width, u32 height)
         {
             elffy_screen_resize_surface(screen, width, height).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ScreenRequestRedraw(this Ref<CE.HostScreen> screen)
+        public static void ScreenRequestRedraw(this Rust.Ref<CE.HostScreen> screen)
         {
             elffy_screen_request_redraw(screen).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool ScreenBeginCommand(
-            this Ref<CE.HostScreen> screen,
-            out Box<Wgpu.CommandEncoder> commandEncoder,
-            out Box<Wgpu.SurfaceTexture> surfaceTexture,
-            out Box<Wgpu.TextureView> surfaceTextureView)
+            this Rust.Ref<CE.HostScreen> screen,
+            out Rust.Box<Wgpu.CommandEncoder> commandEncoder,
+            out Rust.Box<Wgpu.SurfaceTexture> surfaceTexture,
+            out Rust.Box<Wgpu.TextureView> surfaceTextureView)
         {
             ref readonly var data = ref elffy_screen_begin_command(screen).Validate();
             commandEncoder = data.command_encoder.UnwrapUnchecked();
@@ -128,16 +128,16 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ScreenFinishCommand(
-            this Ref<CE.HostScreen> screen,
-            Box<Wgpu.CommandEncoder> commandEncoder,
-            Box<Wgpu.SurfaceTexture> surfaceTexture,
-            Box<Wgpu.TextureView> surfaceTextureView)
+            this Rust.Ref<CE.HostScreen> screen,
+            Rust.Box<Wgpu.CommandEncoder> commandEncoder,
+            Rust.Box<Wgpu.SurfaceTexture> surfaceTexture,
+            Rust.Box<Wgpu.TextureView> surfaceTextureView)
         {
             elffy_screen_finish_command(screen, commandEncoder, surfaceTexture, surfaceTextureView).Validate();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void ScreenSetTitle(this Ref<CE.HostScreen> screen, ReadOnlySpan<byte> title)
+        public unsafe static void ScreenSetTitle(this Rust.Ref<CE.HostScreen> screen, ReadOnlySpan<byte> title)
         {
             fixed(byte* p = title) {
                 var titleRaw = new Slice<byte>(p, title.Length);
@@ -146,7 +146,7 @@ namespace Elffy
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Box<Wgpu.RenderPass> CreateRenderPass(this MutRef<Wgpu.CommandEncoder> commandEncoder, in CE.RenderPassDescriptor desc)
+        public static Rust.Box<Wgpu.RenderPass> CreateRenderPass(this Rust.MutRef<Wgpu.CommandEncoder> commandEncoder, in CE.RenderPassDescriptor desc)
         {
             fixed(CE.RenderPassDescriptor* descPtr = &desc) {
                 return elffy_create_render_pass(commandEncoder, descPtr).Validate();
@@ -154,7 +154,7 @@ namespace Elffy
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DestroyRenderPass(this Box<Wgpu.RenderPass> renderPass)
+        public static void DestroyRenderPass(this Rust.Box<Wgpu.RenderPass> renderPass)
         {
             elffy_destroy_render_pass(renderPass);
         }
@@ -162,7 +162,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         //[DebuggerHidden]
         public static (u32 Width, u32 Height) ScreenGetInnerSize(
-            this Ref<CE.HostScreen> screen)
+            this Rust.Ref<CE.HostScreen> screen)
         {
             var size = elffy_screen_get_inner_size(screen).Validate();
             return (size.width, size.height);
@@ -171,7 +171,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void ScreenSetInnerSize(
-            this Ref<CE.HostScreen> screen,
+            this Rust.Ref<CE.HostScreen> screen,
             u32 width,
             u32 height)
             => elffy_screen_set_inner_size(screen, width, height).Validate();
@@ -179,7 +179,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void WriteTexture(
-            Ref<CE.HostScreen> screen,
+            Rust.Ref<CE.HostScreen> screen,
             CE.ImageCopyTexture* texture,
             Slice<u8> data,
             Wgpu.ImageDataLayout* data_layout,
@@ -188,15 +188,15 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
-            Ref<CE.HostScreen> screen,
+        public static Rust.Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
+            Rust.Ref<CE.HostScreen> screen,
             CE.BindGroupLayoutDescriptor* desc)
             => elffy_create_bind_group_layout(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyBindGroupLayout(
-            this Box<Wgpu.BindGroupLayout> handle)
+            this Rust.Box<Wgpu.BindGroupLayout> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_bind_group_layout(handle);
@@ -204,15 +204,15 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static Box<Wgpu.BindGroup> CreateBindGroup(
-            this Ref<CE.HostScreen> screen,
+        public static Rust.Box<Wgpu.BindGroup> CreateBindGroup(
+            this Rust.Ref<CE.HostScreen> screen,
             CE.BindGroupDescriptor* desc)
             => elffy_create_bind_group(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyBindGroup(
-            this Box<Wgpu.BindGroup> handle)
+            this Rust.Box<Wgpu.BindGroup> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_bind_group(handle);
@@ -220,15 +220,15 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static Box<Wgpu.PipelineLayout> CreatePipelineLayout(
-            Ref<CE.HostScreen> screen,
+        public static Rust.Box<Wgpu.PipelineLayout> CreatePipelineLayout(
+            Rust.Ref<CE.HostScreen> screen,
             CE.PipelineLayoutDescriptor* desc)
             => elffy_create_pipeline_layout(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyPipelineLayout(
-            this Box<Wgpu.PipelineLayout> handle)
+            this Rust.Box<Wgpu.PipelineLayout> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_pipeline_layout(handle);
@@ -236,15 +236,15 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static Box<Wgpu.RenderPipeline> CreateRenderPipeline(
-            Ref<CE.HostScreen> screen,
+        public static Rust.Box<Wgpu.RenderPipeline> CreateRenderPipeline(
+            Rust.Ref<CE.HostScreen> screen,
             CE.RenderPipelineDescriptor* desc)
             => elffy_create_render_pipeline(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyRenderPipeline(
-            this Box<Wgpu.RenderPipeline> handle)
+            this Rust.Box<Wgpu.RenderPipeline> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_render_pipeline(handle);
@@ -252,8 +252,8 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static Box<Wgpu.Buffer> CreateBufferInit(
-            this Ref<CE.HostScreen> screen,
+        public static Rust.Box<Wgpu.Buffer> CreateBufferInit(
+            this Rust.Ref<CE.HostScreen> screen,
             Slice<u8> contents,
             Wgpu.BufferUsages usage)
             => elffy_create_buffer_init(screen, contents, usage).Validate();
@@ -261,7 +261,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyBuffer(
-            this Box<Wgpu.Buffer> handle)
+            this Rust.Box<Wgpu.Buffer> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_buffer(handle);
@@ -269,15 +269,15 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static Box<Wgpu.Sampler> CreateSampler(
-            Ref<CE.HostScreen> screen,
+        public static Rust.Box<Wgpu.Sampler> CreateSampler(
+            Rust.Ref<CE.HostScreen> screen,
             CE.SamplerDescriptor* desc)
             => elffy_create_sampler(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroySampler(
-            this Box<Wgpu.Sampler> handle)
+            this Rust.Box<Wgpu.Sampler> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_sampler(handle);
@@ -285,15 +285,15 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static Box<Wgpu.ShaderModule> CreateShaderModule(
-            this Ref<CE.HostScreen> screen,
+        public static Rust.Box<Wgpu.ShaderModule> CreateShaderModule(
+            this Rust.Ref<CE.HostScreen> screen,
             Slice<u8> shader_source)
             => elffy_create_shader_module(screen, shader_source).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyShaderModule(
-            this Box<Wgpu.ShaderModule> handle)
+            this Rust.Box<Wgpu.ShaderModule> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_shader_module(handle);
@@ -301,15 +301,15 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static Box<Wgpu.Texture> CreateTexture(
-            Ref<CE.HostScreen> screen,
+        public static Rust.Box<Wgpu.Texture> CreateTexture(
+            Rust.Ref<CE.HostScreen> screen,
             CE.TextureDescriptor* desc)
             => elffy_create_texture(screen, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static Box<Wgpu.Texture> CreateTextureWithData(
-            Ref<CE.HostScreen> screen,
+        public static Rust.Box<Wgpu.Texture> CreateTextureWithData(
+            Rust.Ref<CE.HostScreen> screen,
             CE.TextureDescriptor* desc,
             Slice<u8> data)
             => elffy_create_texture_with_data(screen, desc, data).Validate();
@@ -317,7 +317,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyTexture(
-            this Box<Wgpu.Texture> handle)
+            this Rust.Box<Wgpu.Texture> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_texture(handle);
@@ -325,15 +325,15 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
-        public static Box<Wgpu.TextureView> CreateTextureView(
-            Ref<Wgpu.Texture> texture,
+        public static Rust.Box<Wgpu.TextureView> CreateTextureView(
+            Rust.Ref<Wgpu.Texture> texture,
             CE.TextureViewDescriptor* desc)
             => elffy_create_texture_view(texture, desc).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DestroyTextureView(
-            this Box<Wgpu.TextureView> handle)
+            this Rust.Box<Wgpu.TextureView> handle)
         {
             handle.ThrowIfInvalid();
             elffy_destroy_texture_view(handle);
@@ -342,8 +342,8 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void WriteBuffer(
-            Ref<CE.HostScreen> screen,
-            Ref<Wgpu.Buffer> buffer,
+            Rust.Ref<CE.HostScreen> screen,
+            Rust.Ref<Wgpu.Buffer> buffer,
             u64 offset,
             Slice<u8> data)
         {
@@ -355,8 +355,8 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void SetPipeline(
-            this MutRef<Wgpu.RenderPass> render_pass,
-            Ref<Wgpu.RenderPipeline> render_pipeline)
+            this Rust.MutRef<Wgpu.RenderPass> render_pass,
+            Rust.Ref<Wgpu.RenderPipeline> render_pipeline)
         {
             render_pipeline.ThrowIfInvalid();
             elffy_set_pipeline(render_pass, render_pipeline).Validate();
@@ -365,9 +365,9 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void SetBindGroup(
-            this MutRef<Wgpu.RenderPass> render_pass,
+            this Rust.MutRef<Wgpu.RenderPass> render_pass,
             u32 index,
-            Ref<Wgpu.BindGroup> bind_group)
+            Rust.Ref<Wgpu.BindGroup> bind_group)
         {
             bind_group.ThrowIfInvalid();
             elffy_set_bind_group(render_pass, index, bind_group).Validate();
@@ -376,7 +376,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void SetVertexBuffer(
-            this MutRef<Wgpu.RenderPass> render_pass,
+            this Rust.MutRef<Wgpu.RenderPass> render_pass,
             u32 slot,
             CE.BufferSlice buffer_slice)
         {
@@ -387,7 +387,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void SetIndexBuffer(
-            this MutRef<Wgpu.RenderPass> render_pass,
+            this Rust.MutRef<Wgpu.RenderPass> render_pass,
             CE.BufferSlice buffer_slice,
             Wgpu.IndexFormat index_format)
         {
@@ -398,7 +398,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void Draw(
-            MutRef<Wgpu.RenderPass> render_pass,
+            Rust.MutRef<Wgpu.RenderPass> render_pass,
             RangeU32 vertices,
             RangeU32 instances)
         {
@@ -408,7 +408,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public static void DrawIndexed(
-            this MutRef<Wgpu.RenderPass> render_pass,
+            this Rust.MutRef<Wgpu.RenderPass> render_pass,
             RangeU32 indices,
             i32 base_vertex,
             RangeU32 instances)
@@ -463,14 +463,14 @@ namespace Elffy
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             //[DebuggerHidden]
-            public Box<T> Validate()
+            public Rust.Box<T> Validate()
             {
                 var nativePtr = _nativePtr;
                 Debug.Assert((_errorCount == 0 && nativePtr != null) || (_errorCount > 0 && nativePtr == null));
                 EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
                 Debug.Assert(_errorCount == 0);
                 Debug.Assert(nativePtr != null);
-                return *(Box<T>*)(&nativePtr);
+                return *(Rust.Box<T>*)(&nativePtr);
             }
         }
 
@@ -521,15 +521,15 @@ namespace Elffy
         }
     }
 
-    internal delegate void EngineCoreRenderAction(Ref<CE.HostScreen> screen, MutRef<Wgpu.RenderPass> renderPass);
-    internal delegate void EngineCoreResizedAction(Ref<CE.HostScreen> screen, uint width, uint height);
-    internal delegate Box<Wgpu.RenderPass> OnCommandBeginFunc(
-        Ref<CE.HostScreen> screen,
-        Ref<Wgpu.TextureView> surfaceTextureView,
-        MutRef<Wgpu.CommandEncoder> commandEncoder,
+    internal delegate void EngineCoreRenderAction(Rust.Ref<CE.HostScreen> screen, Rust.MutRef<Wgpu.RenderPass> renderPass);
+    internal delegate void EngineCoreResizedAction(Rust.Ref<CE.HostScreen> screen, uint width, uint height);
+    internal delegate Rust.Box<Wgpu.RenderPass> OnCommandBeginFunc(
+        Rust.Ref<CE.HostScreen> screen,
+        Rust.Ref<Wgpu.TextureView> surfaceTextureView,
+        Rust.MutRef<Wgpu.CommandEncoder> commandEncoder,
         CreateRenderPassFunc createRenderPass);
 
-    internal delegate Box<Wgpu.RenderPass> CreateRenderPassFunc(MutRef<Wgpu.CommandEncoder> commandEncoder, in CE.RenderPassDescriptor desc);
+    internal delegate Rust.Box<Wgpu.RenderPass> CreateRenderPassFunc(Rust.MutRef<Wgpu.CommandEncoder> commandEncoder, in CE.RenderPassDescriptor desc);
 
 
     public sealed class Never

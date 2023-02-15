@@ -7,7 +7,7 @@ namespace Elffy.NativeBind;
 internal unsafe static class HostScreenExtensions
 {
     public static void WriteTexture(
-        this Ref<Self> self,
+        this Rust.Ref<Self> self,
         in CE.ImageCopyTexture texture,
         Slice<u8> data,
         in Wgpu.ImageDataLayout dataLayout,
@@ -20,8 +20,8 @@ internal unsafe static class HostScreenExtensions
         }
     }
 
-    public static Box<Wgpu.Texture> CreateTexture(
-        this Ref<Self> self,
+    public static Rust.Box<Wgpu.Texture> CreateTexture(
+        this Rust.Ref<Self> self,
         in CE.TextureDescriptor desc)
     {
         fixed(CE.TextureDescriptor* descPtr = &desc) {
@@ -29,8 +29,8 @@ internal unsafe static class HostScreenExtensions
         }
     }
 
-    public static Box<Wgpu.Buffer> CreateBufferInit(
-        this Ref<Self> self,
+    public static Rust.Box<Wgpu.Buffer> CreateBufferInit(
+        this Rust.Ref<Self> self,
         ReadOnlySpan<u8> contents,
         Wgpu.BufferUsages usage)
     {
@@ -40,8 +40,8 @@ internal unsafe static class HostScreenExtensions
         }
     }
 
-    public static Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
-        this Ref<Self> self,
+    public static Rust.Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
+        this Rust.Ref<Self> self,
         in CE.BindGroupLayoutDescriptor desc)
     {
         fixed(CE.BindGroupLayoutDescriptor* descPtr = &desc) {
@@ -49,8 +49,8 @@ internal unsafe static class HostScreenExtensions
         }
     }
 
-    public static Box<Wgpu.BindGroup> CreateBindGroup(
-        this Ref<Self> self,
+    public static Rust.Box<Wgpu.BindGroup> CreateBindGroup(
+        this Rust.Ref<Self> self,
         in CE.BindGroupDescriptor desc)
     {
         fixed(CE.BindGroupDescriptor* descPtr = &desc) {
@@ -58,8 +58,8 @@ internal unsafe static class HostScreenExtensions
         }
     }
 
-    public static Box<Wgpu.ShaderModule> CreateShaderModule(
-        this Ref<Self> self,
+    public static Rust.Box<Wgpu.ShaderModule> CreateShaderModule(
+        this Rust.Ref<Self> self,
         ReadOnlySpan<byte> shaderSource)
     {
         fixed(byte* ptr = shaderSource) {
@@ -67,8 +67,8 @@ internal unsafe static class HostScreenExtensions
         }
     }
 
-    public static Box<Wgpu.Sampler> CreateSampler(
-        this Ref<Self> self,
+    public static Rust.Box<Wgpu.Sampler> CreateSampler(
+        this Rust.Ref<Self> self,
         in CE.SamplerDescriptor desc)
     {
         fixed(CE.SamplerDescriptor* descPtr = &desc) {
@@ -76,8 +76,8 @@ internal unsafe static class HostScreenExtensions
         }
     }
 
-    public static Box<Wgpu.PipelineLayout> CreatePipelineLayout(
-        this Ref<Self> self,
+    public static Rust.Box<Wgpu.PipelineLayout> CreatePipelineLayout(
+        this Rust.Ref<Self> self,
         in CE.PipelineLayoutDescriptor desc)
     {
         fixed(CE.PipelineLayoutDescriptor* descPtr = &desc) {
@@ -85,8 +85,8 @@ internal unsafe static class HostScreenExtensions
         }
     }
 
-    public static Box<Wgpu.RenderPipeline> CreateRenderPipeline(
-        this Ref<Self> self,
+    public static Rust.Box<Wgpu.RenderPipeline> CreateRenderPipeline(
+        this Rust.Ref<Self> self,
         in CE.RenderPipelineDescriptor desc)
     {
         fixed(CE.RenderPipelineDescriptor* descPtr = &desc) {
@@ -98,11 +98,11 @@ internal unsafe static class HostScreenExtensions
 
 internal unsafe static class TextureExtensions
 {
-    public static Box<Wgpu.TextureView> CreateTextureView(this Ref<Wgpu.Texture> self)
+    public static Rust.Box<Wgpu.TextureView> CreateTextureView(this Rust.Ref<Wgpu.Texture> self)
         => CreateTextureView(self, CE.TextureViewDescriptor.Default);
 
-    public static Box<Wgpu.TextureView> CreateTextureView(
-        this Ref<Wgpu.Texture> self,
+    public static Rust.Box<Wgpu.TextureView> CreateTextureView(
+        this Rust.Ref<Wgpu.Texture> self,
         in CE.TextureViewDescriptor desc)
     {
         fixed(CE.TextureViewDescriptor* descPtr = &desc) {
@@ -114,7 +114,7 @@ internal unsafe static class TextureExtensions
 internal unsafe static class BufferExtensions
 {
     public static CE.BufferBinding AsEntireBufferBinding(
-        this Ref<Wgpu.Buffer> self)
+        this Rust.Ref<Wgpu.Buffer> self)
     {
         return new CE.BufferBinding
         {
@@ -124,7 +124,7 @@ internal unsafe static class BufferExtensions
         };
     }
 
-    public static CE.BufferSlice AsSlice(this Ref<Wgpu.Buffer> self) => new CE.BufferSlice(self, RangeBoundsU64.RangeFull);
+    public static CE.BufferSlice AsSlice(this Rust.Ref<Wgpu.Buffer> self) => new CE.BufferSlice(self, RangeBoundsU64.RangeFull);
 
-    public static CE.BufferSlice AsSlice(this Ref<Wgpu.Buffer> self, RangeBoundsU64 range) => new CE.BufferSlice(self, range);
+    public static CE.BufferSlice AsSlice(this Rust.Ref<Wgpu.Buffer> self, RangeBoundsU64 range) => new CE.BufferSlice(self, range);
 }

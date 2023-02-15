@@ -7,13 +7,13 @@ namespace Elffy;
 public sealed class PipelineLayout : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Box<Wgpu.PipelineLayout> _native;
+    private Rust.Box<Wgpu.PipelineLayout> _native;
 
     public IHostScreen? Screen => _screen;
 
-    internal Ref<Wgpu.PipelineLayout> NativeRef => _native;
+    internal Rust.Ref<Wgpu.PipelineLayout> NativeRef => _native;
 
-    private PipelineLayout(IHostScreen screen, Box<Wgpu.PipelineLayout> native)
+    private PipelineLayout(IHostScreen screen, Rust.Box<Wgpu.PipelineLayout> native)
     {
         _screen = screen;
         _native = native;
@@ -42,7 +42,7 @@ public sealed class PipelineLayout : IEngineManaged
     public unsafe static Own<PipelineLayout> Create(IHostScreen screen, in PipelineLayoutDescriptor desc)
     {
         var bindGroupLayouts = desc.BindGroupLayouts.Span;
-        var bindGroupLayoutsNative = stackalloc Ref<Wgpu.BindGroupLayout>[bindGroupLayouts.Length];
+        var bindGroupLayoutsNative = stackalloc Rust.Ref<Wgpu.BindGroupLayout>[bindGroupLayouts.Length];
         for(int i = 0; i < bindGroupLayouts.Length; i++) {
             bindGroupLayoutsNative[i] = bindGroupLayouts[i].NativeRef;
         }

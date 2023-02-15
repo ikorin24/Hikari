@@ -12,7 +12,7 @@ namespace Elffy;
 
 internal sealed class HostScreen : IHostScreen
 {
-    private Box<CE.HostScreen> _native;
+    private Rust.Box<CE.HostScreen> _native;
     private CE.HostScreenId _id;
     private TextureFormat _surfaceFormat;
     private GraphicsBackend _backend;
@@ -95,7 +95,7 @@ internal sealed class HostScreen : IHostScreen
         }
     }
 
-    private HostScreen(Box<CE.HostScreen> screen, CE.HostScreenId id)
+    private HostScreen(Rust.Box<CE.HostScreen> screen, CE.HostScreenId id)
     {
         _native = screen;
         _id = id;
@@ -128,7 +128,7 @@ internal sealed class HostScreen : IHostScreen
         }
     }
 
-    internal static Own<HostScreen> Create(Box<CE.HostScreen> screen, CE.HostScreenId id)
+    internal static Own<HostScreen> Create(Rust.Box<CE.HostScreen> screen, CE.HostScreenId id)
     {
         return Own.New(new HostScreen(screen, id), _release);
     }
@@ -207,21 +207,21 @@ internal sealed class HostScreen : IHostScreen
 
 public readonly ref struct HostScreenRef
 {
-    private readonly Ref<CE.HostScreen> _ref;
+    private readonly Rust.Ref<CE.HostScreen> _ref;
 
     [Obsolete("Don't use default constructor.", true)]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public HostScreenRef() => throw new NotSupportedException("Don't use default constructor.");
 
-    internal HostScreenRef(Ref<CE.HostScreen> screen) => _ref = screen;
+    internal HostScreenRef(Rust.Ref<CE.HostScreen> screen) => _ref = screen;
 
-    internal Ref<CE.HostScreen> AsRefChecked()
+    internal Rust.Ref<CE.HostScreen> AsRefChecked()
     {
         _ref.ThrowIfInvalid();
         return _ref;
     }
 
-    internal Ref<CE.HostScreen> AsRefUnchecked()
+    internal Rust.Ref<CE.HostScreen> AsRefUnchecked()
     {
         return _ref;
     }
@@ -246,13 +246,13 @@ public interface IHostScreen
 internal static class HostScreenExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Ref<CE.HostScreen> AsRefChecked(this IHostScreen screen)
+    public static Rust.Ref<CE.HostScreen> AsRefChecked(this IHostScreen screen)
     {
         return screen.Ref.AsRefChecked();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Ref<CE.HostScreen> AsRefUnchecked(this IHostScreen screen)
+    public static Rust.Ref<CE.HostScreen> AsRefUnchecked(this IHostScreen screen)
     {
         return screen.Ref.AsRefUnchecked();
     }

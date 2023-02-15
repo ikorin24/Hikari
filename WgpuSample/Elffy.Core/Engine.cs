@@ -27,8 +27,8 @@ public static class Engine
         EngineCore.EngineStart(engineConfig, screenConfig);
     }
 
-    private static readonly Action<Box<CE.HostScreen>, CE.HostScreenInfo, CE.HostScreenId> _onStart =
-        (Box<CE.HostScreen> screenHandle, CE.HostScreenInfo info, CE.HostScreenId id) =>
+    private static readonly Action<Rust.Box<CE.HostScreen>, CE.HostScreenInfo, CE.HostScreenId> _onStart =
+        (Rust.Box<CE.HostScreen> screenHandle, CE.HostScreenInfo info, CE.HostScreenId id) =>
         {
             var screenOwn = HostScreen.Create(screenHandle, id);
             var screen = screenOwn.AsValue();
@@ -85,7 +85,7 @@ public static class Engine
 
 internal readonly struct EngineCoreConfig
 {
-    public required Action<Box<CE.HostScreen>, CE.HostScreenInfo, CE.HostScreenId> OnStart { get; init; }
+    public required Action<Rust.Box<CE.HostScreen>, CE.HostScreenInfo, CE.HostScreenId> OnStart { get; init; }
     public required Action<CE.HostScreenId> OnRedrawRequested { get; init; }
     public required Action<CE.HostScreenId> OnCleared { get; init; }
 
