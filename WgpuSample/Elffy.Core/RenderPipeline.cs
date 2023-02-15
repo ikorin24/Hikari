@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Elffy;
 using Elffy.NativeBind;
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -30,7 +31,7 @@ public sealed class RenderPipeline : IEngineManaged
 
     private void Release(bool disposing)
     {
-        var native = Box.SwapClear(ref _native);
+        var native = InterlockedEx.Exchange(ref _native, Rust.Box<Wgpu.RenderPipeline>.Invalid);
         if(native.IsInvalid) {
             return;
         }

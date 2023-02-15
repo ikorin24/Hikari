@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Elffy;
 using Elffy.NativeBind;
 using System;
 using System.Buffers;
@@ -111,7 +112,7 @@ internal sealed class HostScreen : IHostScreen
 
     private void Release(bool manualRelease)
     {
-        var native = Box.SwapClear(ref _native);
+        var native = InterlockedEx.Exchange(ref _native, Rust.Box<CE.HostScreen>.Invalid);
         if(native.IsInvalid) {
             return;
         }

@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Threading;
 
 namespace Elffy.NativeBind;
 
@@ -170,25 +169,6 @@ internal static class Rust
                 static void Throw() => throw new InvalidOperationException($"Box<{typeof(T).Name}> is already destroyed");
             }
         }
-    }
-}
-
-internal static class Box
-{
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Rust.Box<T> SwapClear<T>(ref Rust.Box<T> box) where T : INativeTypeNonReprC
-    {
-        var value = Interlocked.Exchange(ref Unsafe.As<Rust.Box<T>, usize>(ref box), 0);
-        return Unsafe.As<usize, Rust.Box<T>>(ref value);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Rust.Box<T> Swap<T>(ref Rust.Box<T> box, Rust.Box<T> newValue) where T : INativeTypeNonReprC
-    {
-        var value = Interlocked.Exchange(
-            ref Unsafe.As<Rust.Box<T>, usize>(ref box),
-            Unsafe.As<Rust.Box<T>, usize>(ref newValue));
-        return Unsafe.As<usize, Rust.Box<T>>(ref value);
     }
 }
 

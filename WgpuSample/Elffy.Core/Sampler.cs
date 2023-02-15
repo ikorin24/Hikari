@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Elffy;
 using Elffy.NativeBind;
 using System;
 
@@ -29,7 +30,7 @@ public sealed class Sampler : IEngineManaged
 
     private void Release(bool disposing)
     {
-        var native = Box.SwapClear(ref _native);
+        var native = InterlockedEx.Exchange(ref _native, Rust.Box<Wgpu.Sampler>.Invalid);
         if(native.IsInvalid) {
             return;
         }

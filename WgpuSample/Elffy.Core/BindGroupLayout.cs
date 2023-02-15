@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Elffy;
 using Elffy.NativeBind;
 using System;
 using System.ComponentModel;
@@ -32,7 +33,7 @@ public sealed class BindGroupLayout : IEngineManaged
 
     private void Release(bool disposing)
     {
-        var native = Box.SwapClear(ref _native);
+        var native = InterlockedEx.Exchange(ref _native, Rust.Box<Wgpu.BindGroupLayout>.Invalid);
         if(native.IsInvalid) {
             return;
         }
