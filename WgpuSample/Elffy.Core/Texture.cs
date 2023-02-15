@@ -85,7 +85,7 @@ public sealed class Texture : IEngineManaged
                 new CE.ImageCopyTexture
                 {
                     texture = texture,
-                    mip_level = 0,
+                    mip_level = mipLevel,
                     aspect = CE.TextureAspect.All,
                     origin_x = 0,
                     origin_y = 0,

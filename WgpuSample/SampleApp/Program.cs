@@ -66,7 +66,7 @@ internal class Program
             Format = TextureFormat.Rgba8UnormSrgb,
             Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
         }).AsValue(out var textureOwn);
-        texture.Write(0, 4, pixelData.AsSpan());
+        texture.Write(0, (uint)Unsafe.SizeOf<ColorByte>(), pixelData.AsSpan());
         var view = TextureView.Create(texture).AsValue(out var viewOwn);
         var sampler = Sampler.Create(screen, new SamplerDescriptor
         {
@@ -203,10 +203,9 @@ internal class Program
             Multiview = 0,
         });
 
-        var (vertices, indices) = SamplePrimitives.SampleData();
+        var (vertices, indices, indexFormat) = SamplePrimitives.SampleData();
         var vertexBufferOwn = Buffer.CreateVertexBuffer<Vertex>(screen, vertices);
         var indexBufferOwn = Buffer.CreateIndexBuffer<ushort>(screen, indices);
-        var indexFormat = IndexFormat.Uint16;
 
         //ReadOnlySpan<InstanceData> instances = stackalloc InstanceData[]
         //{

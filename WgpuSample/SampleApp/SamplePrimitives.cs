@@ -21,7 +21,7 @@ public static class SamplePrimitives
     //    return (Vertices: vertices, Indices: indices);
     //}
 
-    public static (Vertex[] Vertices, ushort[] Indices) SampleData()
+    public static (Vertex[] Vertices, ushort[] Indices, IndexFormat IndexFormat) SampleData()
     {
         //var vertices = new Vertex[5]
         //{
@@ -78,7 +78,7 @@ public static class SamplePrimitives
             },
 };
         var indices = new ushort[] { 0, 1, 2, 0 };
-        return (Vertices: vertices, Indices: indices);
+        return (Vertices: vertices, Indices: indices, IndexFormat: IndexFormat.Uint16);
     }
 
     public static (ColorByte[] PixelData, int Width, int Height) LoadImagePixels(string filepath)
