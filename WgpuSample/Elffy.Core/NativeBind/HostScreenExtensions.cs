@@ -9,7 +9,7 @@ internal unsafe static class HostScreenExtensions
     public static void WriteTexture(
         this Rust.Ref<Self> self,
         in CE.ImageCopyTexture texture,
-        Slice<u8> data,
+        CE.Slice<u8> data,
         in Wgpu.ImageDataLayout dataLayout,
         in Wgpu.Extent3d size)
     {
@@ -35,7 +35,7 @@ internal unsafe static class HostScreenExtensions
         Wgpu.BufferUsages usage)
     {
         fixed(u8* p = contents) {
-            var slice = new Slice<byte>(p, contents.Length);
+            var slice = new CE.Slice<byte>(p, contents.Length);
             return EngineCore.CreateBufferInit(self, slice, usage);
         }
     }
@@ -63,7 +63,7 @@ internal unsafe static class HostScreenExtensions
         ReadOnlySpan<byte> shaderSource)
     {
         fixed(byte* ptr = shaderSource) {
-            return EngineCore.CreateShaderModule(self, new Slice<u8>(ptr, shaderSource.Length));
+            return EngineCore.CreateShaderModule(self, new CE.Slice<u8>(ptr, shaderSource.Length));
         }
     }
 
@@ -124,7 +124,7 @@ internal unsafe static class BufferExtensions
         };
     }
 
-    public static CE.BufferSlice AsSlice(this Rust.Ref<Wgpu.Buffer> self) => new CE.BufferSlice(self, RangeBoundsU64.RangeFull);
+    public static CE.BufferSlice AsSlice(this Rust.Ref<Wgpu.Buffer> self) => new CE.BufferSlice(self, CE.RangeBoundsU64.RangeFull);
 
-    public static CE.BufferSlice AsSlice(this Rust.Ref<Wgpu.Buffer> self, RangeBoundsU64 range) => new CE.BufferSlice(self, range);
+    public static CE.BufferSlice AsSlice(this Rust.Ref<Wgpu.Buffer> self, CE.RangeBoundsU64 range) => new CE.BufferSlice(self, range);
 }

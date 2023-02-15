@@ -43,7 +43,7 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_set_title(
         Rust.Ref<CE.HostScreen> screen,
-        Slice<u8> title);
+        CE.Slice<u8> title);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.RenderPass> elffy_create_render_pass(
@@ -68,7 +68,7 @@ static unsafe partial class EngineCore
     private static partial ApiResult elffy_write_texture(
         Rust.Ref<CE.HostScreen> screen,
         CE.ImageCopyTexture* texture,
-        Slice<u8> data,
+        CE.Slice<u8> data,
         Wgpu.ImageDataLayout* data_layout,
         Wgpu.Extent3d* size);
 
@@ -111,7 +111,7 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Buffer> elffy_create_buffer_init(
         Rust.Ref<CE.HostScreen> screen,
-        Slice<u8> contents,
+        CE.Slice<u8> contents,
         Wgpu.BufferUsages usage);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -130,7 +130,7 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.ShaderModule> elffy_create_shader_module(
         Rust.Ref<CE.HostScreen> screen,
-        Slice<u8> shader_source);
+        CE.Slice<u8> shader_source);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_shader_module(
@@ -145,7 +145,7 @@ static unsafe partial class EngineCore
     private static partial ApiBoxResult<Wgpu.Texture> elffy_create_texture_with_data(
         Rust.Ref<CE.HostScreen> screen,
         CE.TextureDescriptor* desc,
-        Slice<u8> data);
+        CE.Slice<u8> data);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void elffy_destroy_texture(
@@ -165,7 +165,7 @@ static unsafe partial class EngineCore
         Rust.Ref<CE.HostScreen> screen,
         Rust.Ref<Wgpu.Buffer> buffer,
         u64 offset,
-        Slice<u8> data);
+        CE.Slice<u8> data);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_set_pipeline(
@@ -193,13 +193,13 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_draw(
         Rust.MutRef<Wgpu.RenderPass> render_pass,
-        RangeU32 vertices,
-        RangeU32 instances);
+        CE.RangeU32 vertices,
+        CE.RangeU32 instances);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_draw_indexed(
         Rust.MutRef<Wgpu.RenderPass> render_pass,
-        RangeU32 indices,
+        CE.RangeU32 indices,
         i32 base_vertex,
-        RangeU32 instances);
+        CE.RangeU32 instances);
 }

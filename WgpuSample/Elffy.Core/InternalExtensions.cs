@@ -9,17 +9,17 @@ namespace Elffy;
 internal static class InternalExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public unsafe static Slice<T> AsFixedSlice<T>(this T[] array, PinHandleHolder pins) where T : unmanaged
+    public unsafe static CE.Slice<T> AsFixedSlice<T>(this T[] array, PinHandleHolder pins) where T : unmanaged
     {
         return ((ReadOnlyMemory<T>)array).AsFixedSlice(pins);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public unsafe static Slice<T> AsFixedSlice<T>(this ReadOnlyMemory<T> memory, PinHandleHolder pins) where T : unmanaged
+    public unsafe static CE.Slice<T> AsFixedSlice<T>(this ReadOnlyMemory<T> memory, PinHandleHolder pins) where T : unmanaged
     {
         var handle = memory.Pin();
         pins.Add(handle);
-        return new Slice<T>((T*)handle.Pointer, memory.Length);
+        return new CE.Slice<T>((T*)handle.Pointer, memory.Length);
     }
 
     public static TResult[] SelectToArray<T, TResult>(this ReadOnlyMemory<T> self, Func<T, TResult> selector)
@@ -43,9 +43,9 @@ internal static class InternalExtensions
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Opt<TResult> ToNative<T, TResult>(this T? self, Func<T, TResult> mapper) where T : struct where TResult : unmanaged
+    public static CE.Opt<TResult> ToNative<T, TResult>(this T? self, Func<T, TResult> mapper) where T : struct where TResult : unmanaged
     {
-        return self == null ? Opt<TResult>.None : Opt<TResult>.Some(mapper(self.Value));
+        return self == null ? CE.Opt<TResult>.None : CE.Opt<TResult>.Some(mapper(self.Value));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -58,9 +58,3 @@ internal static class InternalExtensions
         return self.Value;
     }
 }
-
-//pub(crate) struct VertexState<'a> {
-//    pub module: &'a wgpu::ShaderModule,
-//    pub entry_point: Slice<'a, u8>,
-//    pub buffers: Slice<'a, VertexBufferLayout<'a>>,
-//}

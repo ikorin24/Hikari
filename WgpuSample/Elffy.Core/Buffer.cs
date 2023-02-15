@@ -91,7 +91,7 @@ public sealed class Buffer : IEngineManaged
     private unsafe static Own<Buffer> CreateFromPtr(IHostScreen screen, byte* ptr, usize byteLength, BufferUsages usage)
     {
         var screenRef = screen.AsRefChecked();
-        var data = new Slice<u8>(ptr, byteLength);
+        var data = new CE.Slice<u8>(ptr, byteLength);
         var buffer = screenRef.CreateBufferInit(data, usage.FlagsMap());
         return Own.New(new Buffer(screen, buffer, usage, byteLength), _release);
     }

@@ -92,7 +92,7 @@ public sealed class Texture : IEngineManaged
                     origin_y = 0,
                     origin_z = 0,
                 },
-                new Slice<byte>((byte*)p, pixelData.Length * sizeof(T)),
+                new CE.Slice<byte>((byte*)p, pixelData.Length * sizeof(T)),
                 new Wgpu.ImageDataLayout
                 {
                     offset = 0,

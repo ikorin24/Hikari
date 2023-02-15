@@ -50,7 +50,7 @@ public readonly struct HostScreenDrawState
     {
         CE.RenderPassDescriptor desc;
         {
-            var colorAttachment = new Opt<CE.RenderPassColorAttachment>(new()
+            var colorAttachment = new CE.Opt<CE.RenderPassColorAttachment>(new()
             {
                 view = _surfaceView.AsRef(),
                 clear = new Wgpu.Color(0, 0, 0, 0),
@@ -58,11 +58,11 @@ public readonly struct HostScreenDrawState
             desc = new CE.RenderPassDescriptor
             {
                 color_attachments_clear = new() { data = &colorAttachment, len = 1 },
-                depth_stencil_attachment_clear = new Opt<CE.RenderPassDepthStencilAttachment>(new()
+                depth_stencil_attachment_clear = new CE.Opt<CE.RenderPassDepthStencilAttachment>(new()
                 {
                     view = _screen.DepthTextureView.NativeRef,
-                    depth_clear = Opt<float>.Some(1f),
-                    stencil_clear = Opt<uint>.None,
+                    depth_clear = CE.Opt<float>.Some(1f),
+                    stencil_clear = CE.Opt<uint>.None,
                 }),
             };
         }
@@ -72,12 +72,12 @@ public readonly struct HostScreenDrawState
     public unsafe Own<RenderPass> CreateRenderPass(in RenderPassDescriptor desc)
     {
         var colorAttachmentsClearLen = desc.ColorAttachmentsClear.Length;
-        var colorAttachmentsClear = stackalloc Opt<CE.RenderPassColorAttachment>[colorAttachmentsClearLen];
+        var colorAttachmentsClear = stackalloc CE.Opt<CE.RenderPassColorAttachment>[colorAttachmentsClearLen];
         for(int i = 0; i < colorAttachmentsClearLen; i++) {
             colorAttachmentsClear[i] = desc.ColorAttachmentsClear[i] switch
             {
                 RenderPassColorAttachment value => new(value.ToNative()),
-                null => Opt<CE.RenderPassColorAttachment>.None,
+                null => CE.Opt<CE.RenderPassColorAttachment>.None,
             };
         }
 
@@ -86,8 +86,8 @@ public readonly struct HostScreenDrawState
             color_attachments_clear = new() { data = colorAttachmentsClear, len = (usize)colorAttachmentsClearLen },
             depth_stencil_attachment_clear = desc.DepthStencilAttachmentClear switch
             {
-                RenderPassDepthStencilAttachment value => new Opt<CE.RenderPassDepthStencilAttachment>(value.ToNative()),
-                null => Opt<CE.RenderPassDepthStencilAttachment>.None,
+                RenderPassDepthStencilAttachment value => new CE.Opt<CE.RenderPassDepthStencilAttachment>(value.ToNative()),
+                null => CE.Opt<CE.RenderPassDepthStencilAttachment>.None,
             },
         };
 
@@ -129,8 +129,8 @@ public readonly struct RenderPassDepthStencilAttachment
         return new CE.RenderPassDepthStencilAttachment
         {
             view = View.NativeRef,
-            depth_clear = DepthClear.HasValue ? new Opt<f32>(DepthClear.Value) : Opt<f32>.None,
-            stencil_clear = StencilClear.HasValue ? new Opt<u32>(StencilClear.Value) : Opt<u32>.None,
+            depth_clear = DepthClear.HasValue ? new CE.Opt<f32>(DepthClear.Value) : CE.Opt<f32>.None,
+            stencil_clear = StencilClear.HasValue ? new CE.Opt<u32>(StencilClear.Value) : CE.Opt<u32>.None,
         };
     }
 }

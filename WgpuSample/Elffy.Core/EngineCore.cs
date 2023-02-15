@@ -140,7 +140,7 @@ namespace Elffy
         public unsafe static void ScreenSetTitle(this Rust.Ref<CE.HostScreen> screen, ReadOnlySpan<byte> title)
         {
             fixed(byte* p = title) {
-                var titleRaw = new Slice<byte>(p, title.Length);
+                var titleRaw = new CE.Slice<byte>(p, title.Length);
                 elffy_screen_set_title(screen, titleRaw).Validate();
             }
         }
@@ -181,7 +181,7 @@ namespace Elffy
         public static void WriteTexture(
             Rust.Ref<CE.HostScreen> screen,
             CE.ImageCopyTexture* texture,
-            Slice<u8> data,
+            CE.Slice<u8> data,
             Wgpu.ImageDataLayout* data_layout,
             Wgpu.Extent3d* size)
             => elffy_write_texture(screen, texture, data, data_layout, size).Validate();
@@ -254,7 +254,7 @@ namespace Elffy
         [DebuggerHidden]
         public static Rust.Box<Wgpu.Buffer> CreateBufferInit(
             this Rust.Ref<CE.HostScreen> screen,
-            Slice<u8> contents,
+            CE.Slice<u8> contents,
             Wgpu.BufferUsages usage)
             => elffy_create_buffer_init(screen, contents, usage).Validate();
 
@@ -287,7 +287,7 @@ namespace Elffy
         [DebuggerHidden]
         public static Rust.Box<Wgpu.ShaderModule> CreateShaderModule(
             this Rust.Ref<CE.HostScreen> screen,
-            Slice<u8> shader_source)
+            CE.Slice<u8> shader_source)
             => elffy_create_shader_module(screen, shader_source).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -311,7 +311,7 @@ namespace Elffy
         public static Rust.Box<Wgpu.Texture> CreateTextureWithData(
             Rust.Ref<CE.HostScreen> screen,
             CE.TextureDescriptor* desc,
-            Slice<u8> data)
+            CE.Slice<u8> data)
             => elffy_create_texture_with_data(screen, desc, data).Validate();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -345,7 +345,7 @@ namespace Elffy
             Rust.Ref<CE.HostScreen> screen,
             Rust.Ref<Wgpu.Buffer> buffer,
             u64 offset,
-            Slice<u8> data)
+            CE.Slice<u8> data)
         {
             screen.ThrowIfInvalid();
             buffer.ThrowIfInvalid();
@@ -399,8 +399,8 @@ namespace Elffy
         [DebuggerHidden]
         public static void Draw(
             Rust.MutRef<Wgpu.RenderPass> render_pass,
-            RangeU32 vertices,
-            RangeU32 instances)
+            CE.RangeU32 vertices,
+            CE.RangeU32 instances)
         {
             elffy_draw(render_pass, vertices, instances).Validate();
         }
@@ -409,9 +409,9 @@ namespace Elffy
         [DebuggerHidden]
         public static void DrawIndexed(
             this Rust.MutRef<Wgpu.RenderPass> render_pass,
-            RangeU32 indices,
+            CE.RangeU32 indices,
             i32 base_vertex,
-            RangeU32 instances)
+            CE.RangeU32 instances)
         {
             elffy_draw_indexed(render_pass, indices, base_vertex, instances).Validate();
         }

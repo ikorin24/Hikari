@@ -42,8 +42,8 @@ public readonly struct RenderPass
     }
     public void DrawIndexed(u32 indexStart, u32 indexCount, i32 baseVertex, u32 instanceStart, u32 instanceCount)
     {
-        var indexRange = new RangeU32(indexStart, checked(indexStart + indexCount));
-        var instanceRange = new RangeU32(instanceStart, checked(instanceStart + instanceCount));
+        var indexRange = new CE.RangeU32(indexStart, checked(indexStart + indexCount));
+        var instanceRange = new CE.RangeU32(instanceStart, checked(instanceStart + instanceCount));
         _native.AsMut().DrawIndexed(indexRange, baseVertex, instanceRange);
     }
 }

@@ -1,13 +1,10 @@
 ﻿#nullable enable
-using Elffy;
 using Elffy.NativeBind;
 using System;
 using System.Buffers;
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
 
 namespace Elffy;
 
@@ -270,7 +267,7 @@ public readonly ref struct HostScreenConfig
     {
         return new CE.HostScreenConfig
         {
-            title = Slice<u8>.Empty,
+            title = CE.Slice<u8>.Empty,
             style = Style.MapOrThrow(),
             width = Width,
             height = Height,
