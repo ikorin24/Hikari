@@ -242,23 +242,24 @@ internal class Program
 
         struct V2F {
             @builtin(position) clip_pos: vec4<f32>,
-            @location(2) pos: vec3<f32>,
-            @location(3) uv: vec2<f32>,
+            @location(0) uv: vec2<f32>,
         }
 
         @vertex fn vs_main(
             v: Vertex,
         ) -> V2F {
-            var out: V2F;
-            out.clip_pos = vec4(v.pos, 1.0);
-            return out;
+            return V2F
+            (
+                vec4(v.pos, 1.0),
+                v.uv,
+            );
         }
 
         @group(0) @binding(0) var t_diffuse: texture_2d<f32>;
         @group(0) @binding(1) var s_diffuse: sampler;
 
         @fragment fn fs_main(in: V2F) -> @location(0) vec4<f32> {
-            return textureSample(t_diffuse, s_diffuse, in.pos.xy);
+            return textureSample(t_diffuse, s_diffuse, in.uv);
         }            
         """u8;
 }

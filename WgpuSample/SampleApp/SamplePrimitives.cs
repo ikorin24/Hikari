@@ -76,8 +76,8 @@ public static class SamplePrimitives
                 Pos = new(A, A, 0.0f),
                 UV = new(1f, 0f),
             },
-};
-        var indices = new ushort[] { 0, 1, 2, 0 };
+        };
+        var indices = new ushort[] { 0, 1, 2, 2, 3, 0 };
         return (Vertices: vertices, Indices: indices, IndexFormat: IndexFormat.Uint16);
     }
 
