@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Elffy;
 using Elffy.NativeBind;
 using System;
 using System.Diagnostics;
@@ -11,8 +10,8 @@ namespace Elffy;
 public sealed class BindGroup : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Rust.Box<Wgpu.BindGroup> _native;
-    internal Rust.Ref<Wgpu.BindGroup> NativeRef => _native;
+    private Rust.OptionBox<Wgpu.BindGroup> _native;
+    internal Rust.Ref<Wgpu.BindGroup> NativeRef => _native.Unwrap();
 
     public IHostScreen? Screen => _screen;
 
@@ -33,13 +32,11 @@ public sealed class BindGroup : IEngineManaged
 
     private void Release(bool disposing)
     {
-        var native = InterlockedEx.Exchange(ref _native, Rust.Box<Wgpu.BindGroup>.Invalid);
-        if(native.IsInvalid) {
-            return;
-        }
-        native.DestroyBindGroup();
-        if(disposing) {
-            _screen = null;
+        if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.BindGroup>.None).IsSome(out var native)) {
+            native.DestroyBindGroup();
+            if(disposing) {
+                _screen = null;
+            }
         }
     }
 

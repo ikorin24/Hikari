@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Elffy;
 using Elffy.NativeBind;
 using System;
 
@@ -8,11 +7,11 @@ namespace Elffy;
 public sealed class PipelineLayout : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Rust.Box<Wgpu.PipelineLayout> _native;
+    private Rust.OptionBox<Wgpu.PipelineLayout> _native;
 
     public IHostScreen? Screen => _screen;
 
-    internal Rust.Ref<Wgpu.PipelineLayout> NativeRef => _native;
+    internal Rust.Ref<Wgpu.PipelineLayout> NativeRef => _native.Unwrap();
 
     private PipelineLayout(IHostScreen screen, Rust.Box<Wgpu.PipelineLayout> native)
     {
@@ -30,13 +29,11 @@ public sealed class PipelineLayout : IEngineManaged
 
     private void Release(bool disposing)
     {
-        var native = InterlockedEx.Exchange(ref _native, Rust.Box<Wgpu.PipelineLayout>.Invalid);
-        if(native.IsInvalid) {
-            return;
-        }
-        native.DestroyPipelineLayout();
-        if(disposing) {
-            _screen = null;
+        if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.PipelineLayout>.None).IsSome(out var native)) {
+            native.DestroyPipelineLayout();
+            if(disposing) {
+                _screen = null;
+            }
         }
     }
 

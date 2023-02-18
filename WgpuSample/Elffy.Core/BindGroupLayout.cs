@@ -11,11 +11,11 @@ namespace Elffy;
 public sealed class BindGroupLayout : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Rust.Box<Wgpu.BindGroupLayout> _native;
+    private Rust.OptionBox<Wgpu.BindGroupLayout> _native;
 
     public IHostScreen? Screen => _screen;
 
-    internal Rust.Ref<Wgpu.BindGroupLayout> NativeRef => _native;
+    internal Rust.Ref<Wgpu.BindGroupLayout> NativeRef => _native.Unwrap();
 
     private BindGroupLayout(IHostScreen screen, Rust.Box<Wgpu.BindGroupLayout> native)
     {
@@ -33,13 +33,11 @@ public sealed class BindGroupLayout : IEngineManaged
 
     private void Release(bool disposing)
     {
-        var native = InterlockedEx.Exchange(ref _native, Rust.Box<Wgpu.BindGroupLayout>.Invalid);
-        if(native.IsInvalid) {
-            return;
-        }
-        native.DestroyBindGroupLayout();
-        if(disposing) {
-            _screen = null;
+        if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.BindGroupLayout>.None).IsSome(out var native)) {
+            native.DestroyBindGroupLayout();
+            if(disposing) {
+                _screen = null;
+            }
         }
     }
 

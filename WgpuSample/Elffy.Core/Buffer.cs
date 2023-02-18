@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Elffy;
 using Elffy.NativeBind;
 using System;
 
@@ -8,7 +7,7 @@ namespace Elffy;
 public sealed class Buffer : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Rust.Box<Wgpu.Buffer> _native;
+    private Rust.OptionBox<Wgpu.Buffer> _native;
     private BufferUsages? _usage;
     private usize _byteLen;
 
@@ -18,7 +17,7 @@ public sealed class Buffer : IEngineManaged
 
     public usize ByteLength => _byteLen;
 
-    internal Rust.Ref<Wgpu.Buffer> NativeRef => _native;
+    internal Rust.Ref<Wgpu.Buffer> NativeRef => _native.Unwrap();
 
     private Buffer(IHostScreen screen, Rust.Box<Wgpu.Buffer> native, BufferUsages usage, usize byteLen)
     {
@@ -38,15 +37,13 @@ public sealed class Buffer : IEngineManaged
 
     private void Release(bool disposing)
     {
-        var native = InterlockedEx.Exchange(ref _native, Rust.Box<Wgpu.Buffer>.Invalid);
-        if(native.IsInvalid) {
-            return;
-        }
-        native.DestroyBuffer();
-        if(disposing) {
-            _screen = null;
-            _usage = null;
-            _byteLen = 0;
+        if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.Buffer>.None).IsSome(out var native)) {
+            native.DestroyBuffer();
+            if(disposing) {
+                _screen = null;
+                _usage = null;
+                _byteLen = 0;
+            }
         }
     }
 

@@ -8,13 +8,13 @@ namespace Elffy;
 public sealed class TextureView : IEngineManaged, ITextureView
 {
     private IHostScreen? _screen;
-    private Rust.Box<Wgpu.TextureView> _native;
+    private Rust.OptionBox<Wgpu.TextureView> _native;
 
     public IHostScreen? Screen => _screen;
 
-    internal Rust.Ref<Wgpu.TextureView> NativeRef => _native;
+    internal Rust.Ref<Wgpu.TextureView> NativeRef => _native.Unwrap();
 
-    public TextureViewHandle Handle => new TextureViewHandle(_native);
+    public TextureViewHandle Handle => new TextureViewHandle(_native.Unwrap());
 
     private TextureView(IHostScreen screen, Rust.Box<Wgpu.TextureView> native, Texture texture)
     {
@@ -32,13 +32,11 @@ public sealed class TextureView : IEngineManaged, ITextureView
 
     private void Release(bool manualRelease)
     {
-        var native = InterlockedEx.Exchange(ref _native, Rust.Box<Wgpu.TextureView>.Invalid);
-        if(native.IsInvalid) {
-            return;
-        }
-        native.DestroyTextureView();
-        if(manualRelease) {
-            _screen = null;
+        if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.TextureView>.None).IsSome(out var native)) {
+            native.DestroyTextureView();
+            if(manualRelease) {
+                _screen = null;
+            }
         }
     }
 

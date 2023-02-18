@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Elffy;
 using Elffy.NativeBind;
 using System;
 
@@ -8,10 +7,10 @@ namespace Elffy;
 public sealed class Shader : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Rust.Box<Wgpu.ShaderModule> _native;
+    private Rust.OptionBox<Wgpu.ShaderModule> _native;
 
     public IHostScreen? Screen => _screen;
-    internal Rust.Ref<Wgpu.ShaderModule> NativeRef => _native;
+    internal Rust.Ref<Wgpu.ShaderModule> NativeRef => _native.Unwrap();
 
     private Shader(IHostScreen screen, Rust.Box<Wgpu.ShaderModule> native)
     {
@@ -29,13 +28,11 @@ public sealed class Shader : IEngineManaged
 
     private void Release(bool disposing)
     {
-        var native = InterlockedEx.Exchange(ref _native, Rust.Box<Wgpu.ShaderModule>.Invalid);
-        if(native.IsInvalid) {
-            return;
-        }
-        native.DestroyShaderModule();
-        if(disposing) {
-            _screen = null;
+        if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.ShaderModule>.None).IsSome(out var native)) {
+            native.DestroyShaderModule();
+            if(disposing) {
+                _screen = null;
+            }
         }
     }
 

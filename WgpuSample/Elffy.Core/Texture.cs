@@ -7,13 +7,13 @@ namespace Elffy;
 public sealed class Texture : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Rust.Box<Wgpu.Texture> _native;
+    private Rust.OptionBox<Wgpu.Texture> _native;
     private TextureDescriptor? _desc;
 
     public IHostScreen? Screen => _screen;
 
-    internal Rust.Ref<Wgpu.Texture> NativeRef => _native.AsRefChecked();
-    internal Rust.MutRef<Wgpu.Texture> NativeMut => _native.AsMutChecked();
+    internal Rust.Ref<Wgpu.Texture> NativeRef => _native.Unwrap();
+    internal Rust.MutRef<Wgpu.Texture> NativeMut => _native.Unwrap();
 
     public int Width => _desc.GetOrThrow().Size.X;
     public int Height => _desc.GetOrThrow().Size.Y;
@@ -50,14 +50,12 @@ public sealed class Texture : IEngineManaged
 
     private void Release(bool manualRelease)
     {
-        var native = InterlockedEx.Exchange(ref _native, Rust.Box<Wgpu.Texture>.Invalid);
-        if(native.IsInvalid) {
-            return;
-        }
-        native.DestroyTexture();
-        if(manualRelease) {
-            _screen = null;
-            _desc = null;
+        if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.Texture>.None).IsSome(out var native)) {
+            native.DestroyTexture();
+            if(manualRelease) {
+                _screen = null;
+                _desc = null;
+            }
         }
     }
 
@@ -77,7 +75,7 @@ public sealed class Texture : IEngineManaged
     public unsafe void Write<T>(u32 mipLevel, u32 bytesPerPixel, ReadOnlySpan<T> pixelData) where T : unmanaged
     {
         var screenRef = this.GetScreen().AsRefChecked();
-        var texture = _native.AsRefChecked();
+        var texture = NativeRef;
         var size = new Wgpu.Extent3d((u32)Width, (u32)Height, (u32)Depth);
 
         fixed(T* p = pixelData) {

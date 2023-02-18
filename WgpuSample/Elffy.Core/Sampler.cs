@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Elffy;
 using Elffy.NativeBind;
 using System;
 
@@ -8,11 +7,11 @@ namespace Elffy;
 public sealed class Sampler : IEngineManaged
 {
     private IHostScreen? _screen;
-    private Rust.Box<Wgpu.Sampler> _native;
+    private Rust.OptionBox<Wgpu.Sampler> _native;
 
     public IHostScreen? Screen => _screen;
 
-    internal Rust.Ref<Wgpu.Sampler> NativeRef => _native;
+    internal Rust.Ref<Wgpu.Sampler> NativeRef => _native.Unwrap();
 
     private Sampler(IHostScreen screen, Rust.Box<Wgpu.Sampler> native)
     {
@@ -30,13 +29,11 @@ public sealed class Sampler : IEngineManaged
 
     private void Release(bool disposing)
     {
-        var native = InterlockedEx.Exchange(ref _native, Rust.Box<Wgpu.Sampler>.Invalid);
-        if(native.IsInvalid) {
-            return;
-        }
-        native.DestroySampler();
-        if(disposing) {
-            _screen = null;
+        if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.Sampler>.None).IsSome(out var native)) {
+            native.DestroySampler();
+            if(disposing) {
+                _screen = null;
+            }
         }
     }
 
