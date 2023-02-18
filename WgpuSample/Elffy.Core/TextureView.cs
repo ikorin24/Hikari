@@ -5,7 +5,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class TextureView : IEngineManaged
+public sealed class TextureView : IEngineManaged, ITextureView
 {
     private IHostScreen? _screen;
     private Rust.Box<Wgpu.TextureView> _native;
@@ -13,6 +13,8 @@ public sealed class TextureView : IEngineManaged
     public IHostScreen? Screen => _screen;
 
     internal Rust.Ref<Wgpu.TextureView> NativeRef => _native;
+
+    public TextureViewHandle Handle => new TextureViewHandle(_native);
 
     private TextureView(IHostScreen screen, Rust.Box<Wgpu.TextureView> native, Texture texture)
     {
