@@ -21,7 +21,7 @@ internal unsafe static partial class EngineCore
     public static bool IsStarted => _isStarted == 1;
 
     [DoesNotReturn]
-    public static Never EngineStart(in EngineCoreConfig config, in HostScreenConfig screenConfig)
+    public static void EngineStart(in EngineCoreConfig config, in HostScreenConfig screenConfig)
     {
         if(Interlocked.CompareExchange(ref _isStarted, 1, 0) == 1) {
             throw new InvalidOperationException("The engine is already running.");
@@ -519,38 +519,15 @@ internal unsafe static partial class EngineCore
     }
 }
 
-internal record struct NativeError(CE.ErrMessageId Id, string Message);
-
-internal sealed class EngineCoreException : Exception
+internal readonly struct EngineCoreConfig
 {
-    //private readonly string[] _messages;
-    private readonly NativeError[] _errors;
+    public required Action<Rust.Box<CE.HostScreen>, CE.HostScreenInfo, CE.HostScreenId> OnStart { get; init; }
+    public required Action<CE.HostScreenId> OnRedrawRequested { get; init; }
+    public required Action<CE.HostScreenId> OnCleared { get; init; }
 
-    public ReadOnlyMemory<NativeError> Errors => _errors;
-
-    internal static EngineCoreException NewUnknownError() => new(ReadOnlySpan<NativeError>.Empty);
-    internal EngineCoreException(ReadOnlySpan<NativeError> errors) : base(BuildExceptionMessage(errors))
-    {
-        _errors = errors.ToArray();
-    }
-
-    private static string BuildExceptionMessage(ReadOnlySpan<NativeError> errors)
-    {
-        if(errors.Length == 0) {
-            return "Some error occurred in the native code, but the error message could not be retrieved.";
-        }
-        if(errors.Length == 1) {
-            return errors[0].Message;
-        }
-        else {
-            var sb = new StringBuilder($"Multiple errors occurred in the native code. (ErrorCount: {errors.Length}) \n");
-            foreach(var err in errors) {
-                sb.AppendLine(err.Message);
-            }
-            return sb.ToString();
-        }
-    }
+    public required Action<CE.HostScreenId, u32, u32> OnResized { get; init; }
 }
+
 
 internal delegate void EngineCoreRenderAction(Rust.Ref<CE.HostScreen> screen, Rust.MutRef<Wgpu.RenderPass> renderPass);
 internal delegate void EngineCoreResizedAction(Rust.Ref<CE.HostScreen> screen, uint width, uint height);
@@ -561,9 +538,3 @@ internal delegate Rust.Box<Wgpu.RenderPass> OnCommandBeginFunc(
     CreateRenderPassFunc createRenderPass);
 
 internal delegate Rust.Box<Wgpu.RenderPass> CreateRenderPassFunc(Rust.MutRef<Wgpu.CommandEncoder> commandEncoder, in CE.RenderPassDescriptor desc);
-
-
-public sealed class Never
-{
-    private Never() => throw new UnreachableException();
-}

@@ -82,12 +82,3 @@ public static class Engine
         return false;
     }
 }
-
-internal readonly struct EngineCoreConfig
-{
-    public required Action<Rust.Box<CE.HostScreen>, CE.HostScreenInfo, CE.HostScreenId> OnStart { get; init; }
-    public required Action<CE.HostScreenId> OnRedrawRequested { get; init; }
-    public required Action<CE.HostScreenId> OnCleared { get; init; }
-
-    public required Action<CE.HostScreenId, u32, u32> OnResized { get; init; }
-}
