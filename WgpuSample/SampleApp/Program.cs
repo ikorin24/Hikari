@@ -30,11 +30,11 @@ internal class Program
         OnSetup(screen);
     }
 
-    private static void OnRedrawRequested(HostScreenDrawState drawState)
+    private static void OnRedrawRequested(IHostScreen screen, CommandEncoder encoder)
     {
         var state = _state;
         if(state == null) { return; }
-        using var renderPassOwn = drawState.CreateSurfaceRenderPass();
+        using var renderPassOwn = encoder.CreateSurfaceRenderPass(screen.SurfaceTextureView, screen.DepthTextureView);
         var renderPass = renderPassOwn.AsValue();
 
         renderPass.SetPipeline(state.RenderPipeline.AsValue());

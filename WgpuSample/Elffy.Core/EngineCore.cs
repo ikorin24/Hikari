@@ -92,14 +92,6 @@ namespace Elffy
             }
         }
 
-        private static readonly CreateRenderPassFunc _createRenderPassFunc =
-            (Rust.MutRef<Wgpu.CommandEncoder> command_encoder, in CE.RenderPassDescriptor desc) =>
-            {
-                fixed(CE.RenderPassDescriptor* descPtr = &desc) {
-                    return elffy_create_render_pass(command_encoder, descPtr).Validate();
-                }
-            };
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ScreenResizeSurface(this Rust.Ref<CE.HostScreen> screen, u32 width, u32 height)
         {

@@ -4,6 +4,7 @@
     <OutputType>Library</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <WarningsAsErrors>Nullable</WarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>Elffy</RootNamespace>
   </PropertyGroup>

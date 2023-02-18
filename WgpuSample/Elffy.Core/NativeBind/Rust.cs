@@ -35,20 +35,45 @@ internal static class Rust
 
     /// <summary>`Option&lt;Box&lt;T&gt;&gt;` in Rust</summary>
     /// <typeparam name="T">native type in Box</typeparam>
-    internal readonly struct OptionBox<T> where T : INativeTypeNonReprC
+    internal unsafe readonly struct OptionBox<T> where T : INativeTypeNonReprC
     {
         private readonly NativePointer _p;
         public static OptionBox<T> None => default;
-        public unsafe bool IsNone => (void*)_p == null;
+        public bool IsNone => (void*)_p == null;
+
+        public OptionBox(Box<T> box)
+        {
+            _p = box.AsPtr();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsSome(out Box<T> box)
+        {
+            var p = _p;
+            box = Unsafe.As<NativePointer, Box<T>>(ref p);
+            return (void*)p == null;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Box<T> Unwrap()
         {
-            if(IsNone) {
+            var p = _p;
+            if((void*)p == null) {
                 Throw();
                 static void Throw() => throw new InvalidOperationException("Cannot unwrap None");
             }
-            return Unsafe.As<OptionBox<T>, Box<T>>(ref Unsafe.AsRef(in this));
+            return Unsafe.As<NativePointer, Box<T>>(ref p);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Box<T> Expect(string message)
+        {
+            var p = _p;
+            if((void*)p == null) {
+                Throw(message);
+                static void Throw(string message) => throw new InvalidOperationException(message);
+            }
+            return Unsafe.As<NativePointer, Box<T>>(ref p);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -56,6 +81,8 @@ internal static class Rust
         {
             return Unsafe.As<OptionBox<T>, Box<T>>(ref Unsafe.AsRef(in this));
         }
+
+        public static implicit operator OptionBox<T>(Box<T> box) => new OptionBox<T>(box);
     }
 
     /// <summary>`Box&lt;T&gt;` in Rust</summary>

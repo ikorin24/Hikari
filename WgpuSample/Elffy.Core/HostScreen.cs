@@ -3,6 +3,7 @@ using Elffy.NativeBind;
 using System;
 using System.Buffers;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -18,9 +19,10 @@ internal sealed class HostScreen : IHostScreen
     private string _title = "";
     private Own<Texture> _depthTexture;
     private Own<TextureView> _depthTextureView;
+    private SurfaceTextureView _surfaceTexView;
 
     public event Action<IHostScreen, Vector2i>? Resized;
-    public event Action<HostScreenDrawState>? RedrawRequested;
+    public event RedrawRequestedAction? RedrawRequested;
 
     public HostScreenRef Ref => new HostScreenRef(_native);
 
@@ -28,6 +30,8 @@ internal sealed class HostScreen : IHostScreen
 
     public Texture DepthTexture => _depthTexture.AsValue();
     public TextureView DepthTextureView => _depthTextureView.AsValue();
+
+    public SurfaceTextureView SurfaceTextureView => _surfaceTexView;
 
     public TextureFormat SurfaceFormat
     {
@@ -97,6 +101,7 @@ internal sealed class HostScreen : IHostScreen
     {
         _native = screen;
         _id = id;
+        _surfaceTexView = new SurfaceTextureView(this, Environment.CurrentManagedThreadId);
     }
 
     ~HostScreen() => Release(false);
@@ -172,14 +177,22 @@ internal sealed class HostScreen : IHostScreen
             return;
         }
 
-        if(HostScreenDrawState.TryCreate(this, out var drawStateOwn) == false) {
-            return;
+        var screenRef = _native.AsRef();
+        Rust.Box<Wgpu.CommandEncoder> encoderNative;
+        Rust.Box<Wgpu.SurfaceTexture> surfaceTexNative;
+        {
+            if(screenRef.ScreenBeginCommand(out encoderNative, out surfaceTexNative, out var surfaceViewNative) == false) {
+                return;
+            }
+            var oldSurfaceView = _surfaceTexView.Replace(surfaceViewNative);
+            Debug.Assert(oldSurfaceView.IsNone);
         }
         try {
-            RedrawRequested?.Invoke(drawStateOwn.AsValue());
+            RedrawRequested?.Invoke(this, new CommandEncoder(encoderNative));
         }
         finally {
-            drawStateOwn.Dispose();
+            var surfaceViewNative = _surfaceTexView.Replace(Rust.OptionBox<Wgpu.TextureView>.None);
+            screenRef.ScreenFinishCommand(encoderNative, surfaceTexNative, surfaceViewNative.Unwrap());
         }
     }
 
@@ -202,6 +215,8 @@ internal sealed class HostScreen : IHostScreen
         }
     }
 }
+
+public delegate void RedrawRequestedAction(IHostScreen screen, CommandEncoder encoder);
 
 public readonly ref struct HostScreenRef
 {
@@ -227,7 +242,7 @@ public readonly ref struct HostScreenRef
 
 public interface IHostScreen
 {
-    event Action<HostScreenDrawState>? RedrawRequested;
+    event RedrawRequestedAction? RedrawRequested;
     event Action<IHostScreen, Vector2i>? Resized;
 
     HostScreenRef Ref { get; }
@@ -239,6 +254,7 @@ public interface IHostScreen
     GraphicsBackend Backend { get; }
     Texture DepthTexture { get; }
     TextureView DepthTextureView { get; }
+    SurfaceTextureView SurfaceTextureView { get; }
 }
 
 internal static class HostScreenExtensions
@@ -275,55 +291,3 @@ public readonly ref struct HostScreenConfig
         };
     }
 }
-
-
-//public sealed class SurfaceTexture : INativeRef<Wgpu.Texture>
-//{
-//    private Box<Wgpu.Texture> _native;
-//    private readonly int _thread;
-//    private ulong _token = 0;
-
-//    internal Ref<Wgpu.Texture> NativeRef
-//    {
-//        get
-//        {
-//            CheckThread();
-//            if(_native.IsInvalid) {
-//                ThrowInvalidTiming();
-//            }
-//            return _native;
-//        }
-//    }
-
-//    Ref<Wgpu.Texture> INativeRef<Wgpu.Texture>.NativeRef => NativeRef;
-
-//    internal SurfaceTexture()
-//    {
-//        _thread = Thread.CurrentThread.ManagedThreadId;
-//    }
-
-//    internal Box<Wgpu.Texture> Replace(Box<Wgpu.Texture> native)
-//    {
-//        CheckThread();
-//        _token++;
-//        return Box.Swap(ref _native, native);
-//    }
-
-//    private void CheckThread()
-//    {
-//        if(_thread != Thread.CurrentThread.ManagedThreadId) {
-//            throw new InvalidOperationException();
-//        }
-//    }
-
-//    [DoesNotReturn]
-//    private static void ThrowInvalidTiming()
-//    {
-//        throw new InvalidOperationException("The surface texture is not accessible at the current time.");
-//    }
-//}
-
-//internal interface INativeRef<T> where T : INativeTypeNonReprC
-//{
-//    Ref<T> NativeRef { get; }
-//}

@@ -24,6 +24,37 @@ public readonly struct RenderPass
         return Own.New(new(native), _release);
     }
 
+    public static unsafe Own<RenderPass> CreateSurfaceRenderPass(CommandEncoder encoder, SurfaceTextureView surface, TextureView? depth)
+    {
+        ArgumentNullException.ThrowIfNull(surface);
+        var encoderMut = encoder.NativeMut;
+
+        CE.RenderPassDescriptor desc;
+        {
+            var colorAttachment = new CE.Opt<CE.RenderPassColorAttachment>(new()
+            {
+                view = surface.Handle.AsRef(),
+                clear = new Wgpu.Color(0, 0, 0, 0),
+            });
+            var depthStencilAttachment = depth switch
+            {
+                null => CE.Opt<CE.RenderPassDepthStencilAttachment>.None,
+                not null => new(new()
+                {
+                    view = depth.NativeRef,
+                    depth_clear = CE.Opt<float>.Some(1f),
+                    stencil_clear = CE.Opt<uint>.None,
+                }),
+            };
+            desc = new CE.RenderPassDescriptor
+            {
+                color_attachments_clear = new() { data = &colorAttachment, len = 1 },
+                depth_stencil_attachment_clear = depthStencilAttachment,
+            };
+        }
+        return Create(encoderMut, desc);
+    }
+
     public void SetPipeline(RenderPipeline renderPipeline)
     {
         _native.AsMut().SetPipeline(renderPipeline.NativeRef);
