@@ -42,6 +42,7 @@ internal unsafe static partial class EngineCore
             event_resized = new(&EventResized),
             event_keyboard = new(&EventKeyboard),
             event_char_received = new(&EventCharReceived),
+            event_closing = new(&EventClosing),
         };
 
         var screenConfigNative = screenConfig.ToCoreType();
@@ -94,6 +95,13 @@ internal unsafe static partial class EngineCore
         static void EventCharReceived(CE.HostScreenId id, Rune input)
         {
             _config.OnCharReceived(id, input);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        static void EventClosing(CE.HostScreenId id, bool* mut_cancel)
+        {
+            ref bool cancel = ref *mut_cancel;
+            _config.OnClosing(id, ref cancel);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -549,7 +557,10 @@ internal readonly struct EngineCoreConfig
 
     public required Action<CE.HostScreenId, Winit.VirtualKeyCode, bool> OnKeyboardInput { get; init; }
     public required Action<CE.HostScreenId, Rune> OnCharReceived { get; init; }
+    public required EngineCoreScreenClosingAction OnClosing { get; init; }
 }
+
+internal delegate void EngineCoreScreenClosingAction(CE.HostScreenId id, ref bool cancel);
 
 
 internal delegate void EngineCoreRenderAction(Rust.Ref<CE.HostScreen> screen, Rust.MutRef<Wgpu.RenderPass> renderPass);

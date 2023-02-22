@@ -125,9 +125,16 @@ impl HostScreen {
         close_requested.set(true);
     }
 
-    pub fn is_close_requested(&self) -> bool {
+    // pub fn reset_close_request(&self) {
+    //     let close_requested = self.close_requested.lock().unwrap();
+    //     close_requested.set(false);
+    // }
+
+    pub fn reset_close_request(&self) -> bool {
         let close_requested = self.close_requested.lock().unwrap();
-        close_requested.get()
+        let is_requested = close_requested.get();
+        close_requested.set(false);
+        is_requested
     }
 }
 

@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 
 namespace Elffy;
 
@@ -222,6 +223,10 @@ internal sealed class HostScreen : IHostScreen
     internal void OnCharReceived(Rune input)
     {
         Debug.WriteLine(input);
+    }
+
+    internal void OnClosing(ref bool cancel)
+    {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

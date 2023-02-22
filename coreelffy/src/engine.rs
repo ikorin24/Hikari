@@ -13,6 +13,7 @@ pub(crate) struct Engine {
     pub(crate) event_resized: ResizedEventFn,
     pub(crate) event_keyboard: KeyboardEventFn,
     pub(crate) event_char_received: CharReceivedEventFn,
+    pub(crate) event_closing: ClosingEventFn,
 }
 
 static ENGINE: sync::RwLock<Option<Engine>> = sync::RwLock::new(None);
@@ -44,6 +45,7 @@ pub(crate) fn engine_start(
                 event_resized: engine_config.event_resized,
                 event_keyboard: engine_config.event_keyboard,
                 event_char_received: engine_config.event_char_received,
+                event_closing: engine_config.event_closing,
             });
         }
         Err(err) => {
@@ -66,13 +68,18 @@ pub(crate) fn engine_start(
     }
     event_loop.run(move |event, _event_loop, control_flow| {
         let continue_next = handle_event(screen_id, window_id, &event);
+        let screen = unsafe { screen_id.to_screen() };
         if continue_next == false {
-            *control_flow = winit::event_loop::ControlFlow::Exit;
+            screen.request_close();
         }
 
-        let screen = unsafe { screen_id.to_screen() };
-        if screen.is_close_requested() {
-            *control_flow = winit::event_loop::ControlFlow::Exit;
+        if screen.reset_close_request() {
+            let event_closing = get_callback(|engine| engine.event_closing).unwrap();
+            let mut cancel = false;
+            event_closing(screen_id, &mut cancel);
+            if cancel == false {
+                *control_flow = winit::event_loop::ControlFlow::Exit;
+            }
         }
     });
 }

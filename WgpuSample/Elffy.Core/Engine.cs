@@ -26,6 +26,7 @@ public static class Engine
             OnResized = _onResized,
             OnKeyboardInput = _onKeyboardInput,
             OnCharReceived = _onCharReceived,
+            OnClosing = _onClosing,
         };
         EngineCore.EngineStart(engineConfig, screenConfig);
     }
@@ -87,6 +88,16 @@ public static class Engine
                 return;
             }
             screen.OnCharReceived(input);
+        };
+
+    private static readonly EngineCoreScreenClosingAction _onClosing =
+        (CE.HostScreenId id, ref bool cancel) =>
+        {
+            if(TryFindScreen(id, out var screen) == false) {
+                Debug.Fail("HostScreen should be found");
+                return;
+            }
+            screen.OnClosing(ref cancel);
         };
 
     private static bool TryFindScreen(CE.HostScreenId id, [MaybeNullWhen(false)] out HostScreen screen)

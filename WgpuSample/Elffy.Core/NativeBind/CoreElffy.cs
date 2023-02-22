@@ -171,6 +171,7 @@ internal static class CoreElffy
         public required ResizedEventFn event_resized;
         public required KeyboardEventFn event_keyboard;
         public required CharReceivedEventFn event_char_received;
+        public required ClosingEventFn event_closing;
     }
 
     internal struct HostScreenConfig
@@ -238,6 +239,12 @@ internal static class CoreElffy
     {
         private readonly delegate* unmanaged[Cdecl]<HostScreenId, Rune, void> _func;
         public CharReceivedEventFn(delegate* unmanaged[Cdecl]<HostScreenId, Rune, void> f) => _func = f;
+    }
+
+    internal unsafe readonly struct ClosingEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<HostScreenId, bool*, void> _func;
+        public ClosingEventFn(delegate* unmanaged[Cdecl]<HostScreenId, bool*, void> f) => _func = f;
     }
 
     internal readonly struct HostScreenId : IEquatable<HostScreenId>
