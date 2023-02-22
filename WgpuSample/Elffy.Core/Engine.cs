@@ -23,6 +23,7 @@ public static class Engine
             OnRedrawRequested = _onRedrawRequested,
             OnCleared = _onCleared,
             OnResized = _onResized,
+            OnKeyboardInput = _onKeyboardInput,
         };
         EngineCore.EngineStart(engineConfig, screenConfig);
     }
@@ -65,6 +66,17 @@ public static class Engine
                 return;
             }
             screen.OnResized(width, height);
+        };
+
+    private static readonly Action<CE.HostScreenId, Winit.VirtualKeyCode, bool> _onKeyboardInput =
+        (CE.HostScreenId id, Winit.VirtualKeyCode key, bool pressed) =>
+        {
+            if(TryFindScreen(id, out var screen) == false) {
+                Debug.Fail("HostScreen should be found");
+                return;
+            }
+
+            Debug.WriteLine($"{key}: {pressed}");
         };
 
     private static bool TryFindScreen(CE.HostScreenId id, [MaybeNullWhen(false)] out HostScreen screen)

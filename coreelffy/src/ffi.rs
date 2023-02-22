@@ -38,6 +38,11 @@ extern "cdecl" fn elffy_screen_resize_surface(
     make_result()
 }
 
+// #[no_mangle]
+// extern "cdecl" fn elffy_screen_request_close(screen: &HostScreen) -> ApiResult {
+//     make_result()
+// }
+
 /// # Thread Safety
 /// Only from main thread. (iOS requires that.)
 /// ## NG
@@ -45,7 +50,7 @@ extern "cdecl" fn elffy_screen_resize_surface(
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_screen_request_redraw(screen: &HostScreen) -> ApiResult {
-    screen.get_window().request_redraw();
+    screen.window.request_redraw();
     make_result()
 }
 
@@ -59,13 +64,13 @@ extern "cdecl" fn elffy_screen_request_redraw(screen: &HostScreen) -> ApiResult 
 extern "cdecl" fn elffy_screen_begin_command(
     screen: &HostScreen,
 ) -> ApiValueResult<BeginCommandData> {
-    match screen.get_surface().get_current_texture() {
+    match screen.surface.get_current_texture() {
         Ok(surface_texture) => {
             let view = surface_texture
                 .texture
                 .create_view(&wgpu::TextureViewDescriptor::default());
             let command_encoder = screen
-                .get_device()
+                .device
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
             let value = BeginCommandData::new(
                 Box::new(command_encoder),
@@ -75,7 +80,7 @@ extern "cdecl" fn elffy_screen_begin_command(
             make_value_result(value)
         }
         Err(wgpu::SurfaceError::Lost) => {
-            let size = screen.get_window().inner_size();
+            let size = screen.window.inner_size();
             screen.resize_surface(size.width, size.height);
             let value = BeginCommandData::failed();
             make_value_result(value)
@@ -99,7 +104,7 @@ extern "cdecl" fn elffy_screen_finish_command(
 ) -> ApiResult {
     let command_encoder = *command_encoder;
     screen
-        .get_queue()
+        .queue
         .submit(std::iter::once(command_encoder.finish()));
     surface_tex.present();
     drop(surface_tex_view);
@@ -114,7 +119,7 @@ extern "cdecl" fn elffy_screen_finish_command(
 extern "cdecl" fn elffy_screen_set_title(screen: &HostScreen, title: Slice<u8>) -> ApiResult {
     match title.as_str() {
         Ok(title) => {
-            screen.get_window().set_title(title);
+            screen.window.set_title(title);
         }
         Err(err) => {
             dispatch_err(err);
@@ -182,8 +187,8 @@ extern "cdecl" fn elffy_screen_set_inner_size(
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_screen_get_inner_size(screen: &HostScreen) -> ApiValueResult<SizeU32> {
-    let size = screen.get_inner_size().into();
-    make_value_result(size)
+    let size: (u32, u32) = screen.window.inner_size().into();
+    make_value_result(size.into())
 }
 
 /// # Thread Safety
@@ -198,7 +203,9 @@ extern "cdecl" fn elffy_write_texture(
     data_layout: &wgpu::ImageDataLayout,
     size: &wgpu::Extent3d,
 ) -> ApiResult {
-    screen.write_texture(texture.to_wgpu_type(), &data, data_layout, size);
+    screen
+        .queue
+        .write_texture(texture.to_wgpu_type(), &data, *data_layout, *size);
     make_result()
 }
 
@@ -211,7 +218,10 @@ extern "cdecl" fn elffy_create_bind_group_layout(
     screen: &HostScreen,
     desc: &BindGroupLayoutDescriptor,
 ) -> ApiBoxResult<wgpu::BindGroupLayout> {
-    let value = desc.use_wgpu_type(|x| screen.create_bind_group_layout(x));
+    let value = desc.use_wgpu_type(|desc| {
+        let layout = screen.device.create_bind_group_layout(desc);
+        Box::new(layout)
+    });
     make_box_result(value, None)
 }
 
@@ -239,7 +249,10 @@ extern "cdecl" fn elffy_create_bind_group(
     screen: &HostScreen,
     desc: &BindGroupDescriptor,
 ) -> ApiBoxResult<wgpu::BindGroup> {
-    let value = desc.use_wgpu_type(|x| screen.create_bind_group(x));
+    let value = desc.use_wgpu_type(|desc| {
+        let bind_group = screen.device.create_bind_group(desc);
+        Box::new(bind_group)
+    });
     make_box_result(value, None)
 }
 
@@ -267,7 +280,8 @@ extern "cdecl" fn elffy_create_pipeline_layout(
     screen: &HostScreen,
     desc: &PipelineLayoutDescriptor,
 ) -> ApiBoxResult<wgpu::PipelineLayout> {
-    let value = screen.create_pipeline_layout(&desc.to_wgpu_type());
+    let value = screen.device.create_pipeline_layout(&desc.to_wgpu_type());
+    let value = Box::new(value);
     make_box_result(value, None)
 }
 
@@ -295,7 +309,10 @@ extern "cdecl" fn elffy_create_render_pipeline(
     screen: &HostScreen,
     desc: &RenderPipelineDescriptor,
 ) -> ApiBoxResult<wgpu::RenderPipeline> {
-    let value = match desc.use_wgpu_type(|x| Ok(screen.create_render_pipeline(x))) {
+    let value = match desc.use_wgpu_type(|desc| {
+        let value = screen.device.create_render_pipeline(desc);
+        Ok(Box::new(value))
+    }) {
         Ok(value) => value,
         Err(err) => {
             return error_box_result(err);
@@ -329,7 +346,16 @@ extern "cdecl" fn elffy_create_buffer_init(
     contents: Slice<u8>,
     usage: wgpu::BufferUsages,
 ) -> ApiBoxResult<wgpu::Buffer> {
-    let value = screen.create_buffer_init(&contents, usage);
+    use wgpu::util::DeviceExt;
+
+    let buffer = screen
+        .device
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: None,
+            contents: &contents,
+            usage,
+        });
+    let value = Box::new(buffer);
     make_box_result(value, Some(|value| value.destroy()))
 }
 
@@ -360,7 +386,8 @@ extern "cdecl" fn elffy_create_sampler(
     screen: &HostScreen,
     desc: &SamplerDescriptor,
 ) -> ApiBoxResult<wgpu::Sampler> {
-    let value = screen.create_sampler(&desc.to_wgpu_type());
+    let sampler = screen.device.create_sampler(&desc.to_wgpu_type());
+    let value = Box::new(sampler);
     make_box_result(value, None)
 }
 
@@ -394,7 +421,13 @@ extern "cdecl" fn elffy_create_shader_module(
             return error_box_result(err);
         }
     };
-    let value = screen.create_shader_module(shader_source);
+    let shader = screen
+        .device
+        .create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: None,
+            source: wgpu::ShaderSource::Wgsl(shader_source.into()),
+        });
+    let value = Box::new(shader);
     make_box_result(value, None)
 }
 
@@ -422,7 +455,7 @@ extern "cdecl" fn elffy_create_texture(
     screen: &HostScreen,
     desc: &TextureDescriptor,
 ) -> ApiBoxResult<wgpu::Texture> {
-    let value = screen.create_texture(&desc.to_wgpu_type());
+    let value = Box::new(screen.device.create_texture(&desc.to_wgpu_type()));
     make_box_result(value, Some(|value| value.destroy()))
 }
 
@@ -436,7 +469,13 @@ extern "cdecl" fn elffy_create_texture_with_data(
     desc: &TextureDescriptor,
     data: Slice<u8>,
 ) -> ApiBoxResult<wgpu::Texture> {
-    let value = screen.create_texture_with_data(&desc.to_wgpu_type(), &data);
+    use wgpu::util::DeviceExt;
+
+    let texture =
+        screen
+            .device
+            .create_texture_with_data(&screen.queue, &desc.to_wgpu_type(), &data);
+    let value = Box::new(texture);
     make_box_result(value, Some(|value| value.destroy()))
 }
 
@@ -496,7 +535,7 @@ extern "cdecl" fn elffy_write_buffer(
     offset: u64,
     data: Slice<u8>,
 ) -> ApiResult {
-    screen.write_buffer(buffer, offset, &data);
+    screen.queue.write_buffer(buffer, offset, &data);
     make_result()
 }
 

@@ -168,6 +168,7 @@ internal static class CoreElffy
         public required ClearedEventFn event_cleared;
         public required RedrawRequestedEventFn event_redraw_requested;
         public required ResizedEventFn event_resized;
+        public required KeyboardEventFn event_keyboard;
     }
 
     internal struct HostScreenConfig
@@ -223,6 +224,12 @@ internal static class CoreElffy
         private readonly delegate* unmanaged[Cdecl]<HostScreenId, u32, u32, void> _func;
 
         public ResizedEventFn(delegate* unmanaged[Cdecl]<HostScreenId, u32, u32, void> f) => _func = f;
+    }
+
+    internal unsafe readonly struct KeyboardEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<HostScreenId, Winit.VirtualKeyCode, bool, void> _func;
+        public KeyboardEventFn(delegate* unmanaged[Cdecl]<HostScreenId, Winit.VirtualKeyCode, bool, void> f) => _func = f;
     }
 
     internal readonly struct HostScreenId : IEquatable<HostScreenId>

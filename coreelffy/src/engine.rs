@@ -11,6 +11,7 @@ pub(crate) struct Engine {
     pub(crate) event_cleared: ClearedEventFn,
     pub(crate) event_redraw_requested: RedrawRequestedEventFn,
     pub(crate) event_resized: ResizedEventFn,
+    pub(crate) event_keyboard: KeyboardEventFn,
 }
 
 static ENGINE: sync::RwLock<Option<Engine>> = sync::RwLock::new(None);
@@ -40,6 +41,7 @@ pub(crate) fn engine_start(
                 event_cleared: engine_config.event_cleared,
                 event_redraw_requested: engine_config.event_redraw_requested,
                 event_resized: engine_config.event_resized,
+                event_keyboard: engine_config.event_keyboard,
             });
         }
         Err(err) => {
@@ -54,7 +56,7 @@ pub(crate) fn engine_start(
         }
     };
     let screen_id = HostScreenId::new(&screen);
-    let window_id = screen.get_window().id();
+    let window_id = screen.window.id();
     let screen_info = &screen.get_info();
     {
         let on_screen_init = engine_config.on_screen_init;
@@ -91,12 +93,19 @@ fn handle_event(
             WindowEvent::KeyboardInput {
                 input:
                     KeyboardInput {
-                        state: ElementState::Pressed,
-                        virtual_keycode: Some(VirtualKeyCode::Space),
+                        state,
+                        virtual_keycode: Some(key),
                         ..
                     },
                 ..
-            } => {}
+            } => {
+                let event_keyboard = get_callback(|engine| engine.event_keyboard).unwrap();
+                let pressed = match state {
+                    ElementState::Pressed => true,
+                    ElementState::Released => false,
+                };
+                event_keyboard(target_screen_id, *key, pressed);
+            }
             WindowEvent::Resized(physical_size) => {
                 let event_resized = get_callback(|engine| engine.event_resized).unwrap();
                 event_resized(target_screen_id, physical_size.width, physical_size.height);

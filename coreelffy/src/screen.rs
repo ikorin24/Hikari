@@ -13,37 +13,20 @@ use std::cell::Cell;
 use std::error::Error;
 use std::num;
 use std::sync::Mutex;
-use wgpu::util::DeviceExt;
 use winit;
 use winit::{dpi, event_loop, window};
 
 pub(crate) struct HostScreen {
     pub window: window::Window,
-    surface: wgpu::Surface,
+    pub surface: wgpu::Surface,
     surface_config_data: SurfaceConfigData,
     surface_size: Mutex<Cell<(num::NonZeroU32, num::NonZeroU32)>>,
-    device: wgpu::Device,
+    pub device: wgpu::Device,
     backend: wgpu::Backend,
-    queue: wgpu::Queue,
+    pub queue: wgpu::Queue,
 }
 
 impl HostScreen {
-    pub fn get_window(&self) -> &window::Window {
-        &self.window
-    }
-
-    pub fn get_surface(&self) -> &wgpu::Surface {
-        &self.surface
-    }
-
-    pub fn get_device(&self) -> &wgpu::Device {
-        &self.device
-    }
-
-    pub fn get_queue(&self) -> &wgpu::Queue {
-        &self.queue
-    }
-
     pub fn new(
         config: &HostScreenConfig,
         event_loop: &event_loop::EventLoop<()>,
@@ -117,96 +100,6 @@ impl HostScreen {
             backend: self.backend,
             surface_format: format.try_into().ok().into(),
         }
-    }
-
-    pub fn write_texture(
-        &self,
-        texture: wgpu::ImageCopyTexture,
-        data: &[u8],
-        data_layout: &wgpu::ImageDataLayout,
-        size: &wgpu::Extent3d,
-    ) {
-        self.queue.write_texture(texture, data, *data_layout, *size)
-    }
-
-    pub fn write_buffer(&self, buffer: &wgpu::Buffer, offset: u64, data: &[u8]) {
-        self.queue.write_buffer(buffer, offset, data)
-    }
-
-    pub fn create_bind_group_layout(
-        &self,
-        desc: &wgpu::BindGroupLayoutDescriptor,
-    ) -> Box<wgpu::BindGroupLayout> {
-        let layout = self.device.create_bind_group_layout(desc);
-        Box::new(layout)
-    }
-
-    pub fn create_bind_group(&self, desc: &wgpu::BindGroupDescriptor) -> Box<wgpu::BindGroup> {
-        let bind_group = self.device.create_bind_group(desc);
-        Box::new(bind_group)
-    }
-
-    pub fn create_sampler(&self, desc: &wgpu::SamplerDescriptor) -> Box<wgpu::Sampler> {
-        let sampler = self.device.create_sampler(desc);
-        Box::new(sampler)
-    }
-
-    pub fn create_pipeline_layout(
-        &self,
-        desc: &wgpu::PipelineLayoutDescriptor,
-    ) -> Box<wgpu::PipelineLayout> {
-        Box::new(self.device.create_pipeline_layout(desc))
-    }
-
-    pub fn create_render_pipeline(
-        &self,
-        desc: &wgpu::RenderPipelineDescriptor,
-    ) -> Box<wgpu::RenderPipeline> {
-        Box::new(self.device.create_render_pipeline(desc))
-    }
-
-    pub fn create_shader_module(&self, shader_source: &str) -> Box<wgpu::ShaderModule> {
-        let shader = self
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: None,
-                source: wgpu::ShaderSource::Wgsl(shader_source.into()),
-            });
-        Box::new(shader)
-    }
-
-    pub fn create_buffer_init(
-        &self,
-        contents: &[u8],
-        usage: wgpu::BufferUsages,
-    ) -> Box<wgpu::Buffer> {
-        let buffer = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents,
-                usage,
-            });
-        Box::new(buffer)
-    }
-
-    pub fn create_texture(&self, desc: &wgpu::TextureDescriptor) -> Box<wgpu::Texture> {
-        Box::new(self.device.create_texture(desc))
-    }
-
-    pub fn create_texture_with_data(
-        &self,
-        desc: &wgpu::TextureDescriptor,
-        data: &[u8],
-    ) -> Box<wgpu::Texture> {
-        let texture = self
-            .device
-            .create_texture_with_data(&self.queue, desc, data);
-        Box::new(texture)
-    }
-
-    pub fn get_inner_size(&self) -> (u32, u32) {
-        self.window.inner_size().into()
     }
 
     pub fn set_inner_size(&self, width: num::NonZeroU32, height: num::NonZeroU32) {

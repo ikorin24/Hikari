@@ -21,6 +21,7 @@ pub(crate) struct EngineCoreConfig {
     pub event_cleared: ClearedEventFn,
     pub event_redraw_requested: RedrawRequestedEventFn,
     pub event_resized: ResizedEventFn,
+    pub event_keyboard: KeyboardEventFn,
 }
 
 #[repr(C)]
@@ -1500,3 +1501,5 @@ pub(crate) type HostScreenInitFn = extern "cdecl" fn(
 pub(crate) type ClearedEventFn = extern "cdecl" fn(id: HostScreenId) -> ();
 pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(id: HostScreenId) -> ();
 pub(crate) type ResizedEventFn = extern "cdecl" fn(id: HostScreenId, width: u32, height: u32) -> ();
+pub(crate) type KeyboardEventFn =
+    extern "cdecl" fn(id: HostScreenId, key: winit::event::VirtualKeyCode, pressed: bool) -> ();
