@@ -155,6 +155,11 @@ internal sealed class HostScreen : IHostScreen
         _depthTextureView = view;
     }
 
+    public void RequestClose()
+    {
+        _native.AsRefChecked().ScreenRequestClose();
+    }
+
     internal void OnInitialize(in CE.HostScreenInfo info)
     {
         _surfaceFormat = info.surface_format.Unwrap().MapOrThrow();
@@ -208,6 +213,9 @@ internal sealed class HostScreen : IHostScreen
 
     internal void OnKeyboardInput(Winit.VirtualKeyCode key, bool pressed)
     {
+        if(key == Winit.VirtualKeyCode.Escape && pressed) {
+            RequestClose();
+        }
         Debug.WriteLine($"{key}: {pressed}");
     }
 

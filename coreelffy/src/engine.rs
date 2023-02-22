@@ -65,7 +65,15 @@ pub(crate) fn engine_start(
         on_screen_init(screen, screen_info, screen_id);
     }
     event_loop.run(move |event, _event_loop, control_flow| {
-        handle_event(screen_id, window_id, &event, control_flow);
+        let continue_next = handle_event(screen_id, window_id, &event);
+        if continue_next == false {
+            *control_flow = winit::event_loop::ControlFlow::Exit;
+        }
+
+        let screen = unsafe { screen_id.to_screen() };
+        if screen.is_close_requested() {
+            *control_flow = winit::event_loop::ControlFlow::Exit;
+        }
     });
 }
 
@@ -73,8 +81,7 @@ fn handle_event(
     target_screen_id: HostScreenId,
     target_window_id: window::WindowId,
     event: &event::Event<()>,
-    control_flow: &mut event_loop::ControlFlow,
-) {
+) -> bool {
     use winit::event::*;
 
     match event {
@@ -87,16 +94,9 @@ fn handle_event(
                     get_callback(|engine| engine.event_char_received).unwrap();
                 event_char_received(target_screen_id, *c);
             }
-            WindowEvent::CloseRequested
-            | WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        state: ElementState::Pressed,
-                        virtual_keycode: Some(VirtualKeyCode::Escape),
-                        ..
-                    },
-                ..
-            } => *control_flow = winit::event_loop::ControlFlow::Exit,
+            WindowEvent::CloseRequested => {
+                return false;
+            }
             WindowEvent::KeyboardInput {
                 input:
                     KeyboardInput {
@@ -138,6 +138,7 @@ fn handle_event(
         }
         _ => {}
     }
+    return true;
 }
 
 #[derive(Clone, Copy)]

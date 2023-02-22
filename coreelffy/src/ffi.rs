@@ -38,10 +38,15 @@ extern "cdecl" fn elffy_screen_resize_surface(
     make_result()
 }
 
-// #[no_mangle]
-// extern "cdecl" fn elffy_screen_request_close(screen: &HostScreen) -> ApiResult {
-//     make_result()
-// }
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn elffy_screen_request_close(screen: &HostScreen) -> ApiResult {
+    screen.request_close();
+    make_result()
+}
 
 /// # Thread Safety
 /// Only from main thread. (iOS requires that.)

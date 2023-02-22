@@ -24,6 +24,7 @@ pub(crate) struct HostScreen {
     pub device: wgpu::Device,
     backend: wgpu::Backend,
     pub queue: wgpu::Queue,
+    close_requested: Mutex<Cell<bool>>,
 }
 
 impl HostScreen {
@@ -91,6 +92,7 @@ impl HostScreen {
             device,
             backend: adapter.get_info().backend,
             queue,
+            close_requested: Mutex::new(Cell::new(false)),
         })
     }
 
@@ -117,6 +119,16 @@ impl HostScreen {
             self.surface.configure(&self.device, &config);
         }
     }
+
+    pub fn request_close(&self) {
+        let close_requested = self.close_requested.lock().unwrap();
+        close_requested.set(true);
+    }
+
+    pub fn is_close_requested(&self) -> bool {
+        let close_requested = self.close_requested.lock().unwrap();
+        close_requested.get()
+    }
 }
 
 #[repr(transparent)]
@@ -128,6 +140,12 @@ impl HostScreenId {
         let screen_ref: &HostScreen = screen.as_ref();
         let screen_addr = screen_ref as *const HostScreen as usize;
         Self(screen_addr)
+    }
+
+    pub unsafe fn to_screen(&self) -> &HostScreen {
+        let addr: usize = self.0;
+        let pointer = addr as *const HostScreen;
+        pointer.as_ref().unwrap()
     }
 }
 

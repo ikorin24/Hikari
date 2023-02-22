@@ -26,6 +26,10 @@ static unsafe partial class EngineCore
         u32 height);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_screen_request_close(
+        Rust.Ref<CE.HostScreen> screen);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_request_redraw(
         Rust.Ref<CE.HostScreen> screen);
 

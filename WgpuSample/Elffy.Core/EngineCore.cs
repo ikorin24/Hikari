@@ -113,6 +113,12 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void ScreenRequestClose(this Rust.Ref<CE.HostScreen> screen)
+    {
+        elffy_screen_request_close(screen).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void ScreenRequestRedraw(this Rust.Ref<CE.HostScreen> screen)
     {
         elffy_screen_request_redraw(screen).Validate();
