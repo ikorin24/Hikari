@@ -85,6 +85,67 @@ internal static class Rust
         public static implicit operator OptionBox<T>(Box<T> box) => new OptionBox<T>(box);
     }
 
+    /// <summary>`Option&lt;&amp;T&gt;` in Rust</summary>
+    /// <typeparam name="T">native type in Box</typeparam>
+    internal unsafe readonly ref struct OptionRef<T> where T : INativeTypeNonReprC
+    {
+        private readonly NativePointer _p;
+        public static OptionRef<T> None => default;
+        public bool IsNone => (void*)_p == null;
+
+        public OptionRef(Ref<T> reference)
+        {
+            _p = reference.AsPtr();
+        }
+
+        public OptionRef(NativePointer pointer)
+        {
+            _p = pointer;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsSome(out Ref<T> reference)
+        {
+            var p = _p;
+            reference = *(Ref<T>*)&p;
+            return (void*)p == null;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Ref<T> Unwrap()
+        {
+            var p = _p;
+            if((void*)p == null) {
+                Throw();
+                static void Throw() => throw new InvalidOperationException("Cannot unwrap None");
+            }
+            return *(Ref<T>*)&p;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Ref<T> Expect(string message)
+        {
+            var p = _p;
+            if((void*)p == null) {
+                Throw(message);
+                static void Throw(string message) => throw new InvalidOperationException(message);
+            }
+            return *(Ref<T>*)&p;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Ref<T> UnwrapUnchecked()
+        {
+            var p = _p;
+            return *(Ref<T>*)&p;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public NativePointer AsPtr() => _p;
+
+        public static implicit operator OptionRef<T>(Ref<T> reference) => new OptionRef<T>(reference);
+    }
+
     /// <summary>`Box&lt;T&gt;` in Rust</summary>
     /// <typeparam name="T">native type in Box</typeparam>
     [DebuggerDisplay("{DebugDisplay,nq}")]

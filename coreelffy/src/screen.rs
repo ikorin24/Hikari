@@ -140,21 +140,7 @@ impl HostScreen {
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub(crate) struct HostScreenId(usize);
-
-impl HostScreenId {
-    pub fn new(screen: &Box<HostScreen>) -> Self {
-        let screen_ref: &HostScreen = screen.as_ref();
-        let screen_addr = screen_ref as *const HostScreen as usize;
-        Self(screen_addr)
-    }
-
-    pub unsafe fn to_screen(&self) -> &HostScreen {
-        let addr: usize = self.0;
-        let pointer = addr as *const HostScreen;
-        pointer.as_ref().unwrap()
-    }
-}
+pub(crate) struct ScreenId(usize);
 
 #[derive(Clone, Copy)]
 struct SurfaceConfigData {

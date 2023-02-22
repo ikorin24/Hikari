@@ -13,7 +13,6 @@ namespace Elffy;
 internal sealed class HostScreen : IHostScreen
 {
     private Rust.Box<CE.HostScreen> _native;
-    private CE.HostScreenId _id;
     private TextureFormat _surfaceFormat;
     private GraphicsBackend _backend;
     private bool _initialized;
@@ -27,7 +26,7 @@ internal sealed class HostScreen : IHostScreen
 
     public HostScreenRef Ref => new HostScreenRef(_native);
 
-    public nuint Id => _id.AsNumber();
+    internal CE.ScreenId ScreenId => new CE.ScreenId(_native);
 
     public Texture DepthTexture => _depthTexture.AsValue();
     public TextureView DepthTextureView => _depthTextureView.AsValue();
@@ -98,10 +97,9 @@ internal sealed class HostScreen : IHostScreen
         }
     }
 
-    private HostScreen(Rust.Box<CE.HostScreen> screen, CE.HostScreenId id)
+    private HostScreen(Rust.Box<CE.HostScreen> screen)
     {
         _native = screen;
-        _id = id;
         _surfaceTexView = new SurfaceTextureView(this, Environment.CurrentManagedThreadId);
     }
 
@@ -125,16 +123,15 @@ internal sealed class HostScreen : IHostScreen
         _depthTextureView.Dispose();
         _depthTexture = Own.None<Texture>();
         _depthTextureView = Own.None<TextureView>();
-        _id = CE.HostScreenId.None;
         if(manualRelease) {
             Resized = null;
             RedrawRequested = null;
         }
     }
 
-    internal static Own<HostScreen> Create(Rust.Box<CE.HostScreen> screen, CE.HostScreenId id)
+    internal static Own<HostScreen> Create(Rust.Box<CE.HostScreen> screen)
     {
-        return Own.New(new HostScreen(screen, id), _release);
+        return Own.New(new HostScreen(screen), _release);
     }
 
     private void UpdateDepthTexture(Vector2i size)

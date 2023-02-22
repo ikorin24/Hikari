@@ -11,8 +11,6 @@ public interface IHostScreen
     event Action<IHostScreen, Vector2i>? Resized;
 
     HostScreenRef Ref { get; }
-
-    nuint Id { get; }
     Vector2i ClientSize { get; set; }
     string Title { get; set; }
     TextureFormat SurfaceFormat { get; }

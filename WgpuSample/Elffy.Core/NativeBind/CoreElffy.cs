@@ -166,6 +166,7 @@ internal static class CoreElffy
     {
         public required DispatchErrFn err_dispatcher;
         public required HostScreenInitFn on_screen_init;
+        public required FindHostScreenFn on_find_screen;
         public required ClearedEventFn event_cleared;
         public required RedrawRequestedEventFn event_redraw_requested;
         public required ResizedEventFn event_resized;
@@ -193,11 +194,23 @@ internal static class CoreElffy
 
     internal unsafe readonly struct HostScreenInitFn
     {
-        private readonly delegate* unmanaged[Cdecl]<Rust.Box<HostScreen>, HostScreenInfo*, HostScreenId, void> _func;
+        private readonly delegate* unmanaged[Cdecl]<Rust.Box<HostScreen>, HostScreenInfo*, ScreenId> _func;
 
-        public HostScreenInitFn(delegate* unmanaged[Cdecl]<void*, HostScreenInfo*, HostScreenId, void> f)
+        public HostScreenInitFn(delegate* unmanaged[Cdecl]<void*, HostScreenInfo*, ScreenId> f)
         {
-            _func = (delegate* unmanaged[Cdecl]<Rust.Box<HostScreen>, HostScreenInfo*, HostScreenId, void>)f;
+            _func = (delegate* unmanaged[Cdecl]<Rust.Box<HostScreen>, HostScreenInfo*, ScreenId>)f;
+        }
+    }
+
+    internal unsafe readonly struct FindHostScreenFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionRef<HostScreen>> _func;
+
+        public FindHostScreenFn(delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionRef<HostScreen>> f) => _func = f;
+
+        public FindHostScreenFn(delegate* unmanaged[Cdecl]<ScreenId, NativePointer> f)
+        {
+            _func = (delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionRef<HostScreen>>)f;
         }
     }
 
@@ -210,60 +223,86 @@ internal static class CoreElffy
 
     internal unsafe readonly struct ClearedEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<HostScreenId, void> _func;
+        private readonly delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, void> _func;
 
-        public ClearedEventFn(delegate* unmanaged[Cdecl]<HostScreenId, void> f) => _func = f;
+        public ClearedEventFn(delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, void> f) => _func = f;
+        public ClearedEventFn(delegate* unmanaged[Cdecl]<NativePointer, void> f) => _func = (delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, void>)f;
     }
 
     internal unsafe readonly struct RedrawRequestedEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<HostScreenId, void> _func;
+        private readonly delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, void> _func;
 
-        public RedrawRequestedEventFn(delegate* unmanaged[Cdecl]<HostScreenId, void> f) => _func = f;
+        public RedrawRequestedEventFn(delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, void> f) => _func = f;
+        public RedrawRequestedEventFn(delegate* unmanaged[Cdecl]<NativePointer, void> f) => _func = (delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, void>)f;
     }
 
     internal unsafe readonly struct ResizedEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<HostScreenId, u32, u32, void> _func;
+        private readonly delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, u32, u32, void> _func;
 
-        public ResizedEventFn(delegate* unmanaged[Cdecl]<HostScreenId, u32, u32, void> f) => _func = f;
+        public ResizedEventFn(delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, u32, u32, void> f) => _func = f;
+        public ResizedEventFn(delegate* unmanaged[Cdecl]<NativePointer, u32, u32, void> f) => _func = (delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, u32, u32, void>)f;
     }
 
     internal unsafe readonly struct KeyboardEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<HostScreenId, Winit.VirtualKeyCode, bool, void> _func;
-        public KeyboardEventFn(delegate* unmanaged[Cdecl]<HostScreenId, Winit.VirtualKeyCode, bool, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, Winit.VirtualKeyCode, bool, void> _func;
+        public KeyboardEventFn(delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, Winit.VirtualKeyCode, bool, void> f) => _func = f;
+        public KeyboardEventFn(delegate* unmanaged[Cdecl]<NativePointer, Winit.VirtualKeyCode, bool, void> f)
+        {
+            _func = (delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, Winit.VirtualKeyCode, bool, void>)f;
+        }
     }
 
     internal unsafe readonly struct CharReceivedEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<HostScreenId, Rune, void> _func;
-        public CharReceivedEventFn(delegate* unmanaged[Cdecl]<HostScreenId, Rune, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, Rune, void> _func;
+        public CharReceivedEventFn(delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, Rune, void> f) => _func = f;
+        public CharReceivedEventFn(delegate* unmanaged[Cdecl]<NativePointer, Rune, void> f) => _func = (delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, Rune, void>)f;
     }
 
     internal unsafe readonly struct ClosingEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<HostScreenId, bool*, void> _func;
-        public ClosingEventFn(delegate* unmanaged[Cdecl]<HostScreenId, bool*, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, bool*, void> _func;
+        public ClosingEventFn(delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, bool*, void> f) => _func = f;
+        public ClosingEventFn(delegate* unmanaged[Cdecl]<NativePointer, bool*, void> f) => _func = (delegate* unmanaged[Cdecl]<Rust.Ref<HostScreen>, bool*, void>)f;
     }
 
-    internal readonly struct HostScreenId : IEquatable<HostScreenId>
+    internal readonly struct ScreenId : IEquatable<ScreenId>
     {
-        private readonly nuint _id;
+        private readonly NativePointer _value;
 
-        public static HostScreenId None => default;
+        internal ScreenId(Rust.Box<HostScreen> screen)
+        {
+            _value = screen.AsPtrChecked();
+        }
 
-        public nuint AsNumber() => _id;
+        public Rust.OptionRef<HostScreen> ToScreen()
+        {
+            return new Rust.OptionRef<HostScreen>(_value);
+        }
 
-        public override bool Equals(object? obj) => obj is HostScreenId id && Equals(id);
+        internal unsafe bool TryToScreen(out Rust.Ref<HostScreen> screen)
+        {
+            var value = _value;
+            if(value == 0) {
+                screen = Rust.Ref<HostScreen>.Invalid;
+                return false;
+            }
+            screen = *(Rust.Ref<HostScreen>*)&value;
+            return true;
+        }
 
-        public bool Equals(HostScreenId other) => _id == other._id;
+        public override bool Equals(object? obj) => obj is ScreenId id && Equals(id);
 
-        public override int GetHashCode() => _id.GetHashCode();
+        public bool Equals(ScreenId other) => _value.Equals(other._value);
 
-        public static bool operator ==(HostScreenId left, HostScreenId right) => left.Equals(right);
+        public override int GetHashCode() => HashCode.Combine(_value);
 
-        public static bool operator !=(HostScreenId left, HostScreenId right) => !(left == right);
+        public static bool operator ==(ScreenId left, ScreenId right) => left.Equals(right);
+
+        public static bool operator !=(ScreenId left, ScreenId right) => !(left == right);
     }
 
     internal readonly struct BeginCommandData

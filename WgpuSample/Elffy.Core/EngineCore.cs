@@ -37,6 +37,7 @@ internal unsafe static partial class EngineCore
         {
             err_dispatcher = new(&DispatchError),
             on_screen_init = new(&OnScreenInit),
+            on_find_screen = new(&OnFindScreen),
             event_cleared = new(&EventCleared),
             event_redraw_requested = new(&EventRedrawRequested),
             event_resized = new(&EventResized),
@@ -55,53 +56,81 @@ internal unsafe static partial class EngineCore
 
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        static void OnScreenInit(
+        static CE.ScreenId OnScreenInit(
             void* screen_,  // Rust.Box<CE.HostScreen> screen
-            CE.HostScreenInfo* info,
-            CE.HostScreenId id
+            CE.HostScreenInfo* info
             )
         {
             // UnmanagedCallersOnly methods cannot have generic type args.
             Rust.Box<CE.HostScreen> screen = *(Rust.Box<CE.HostScreen>*)(&screen_);
 
-            _config.OnStart(screen, *info, id);
+            return _config.OnStart(screen, *info);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        static void EventCleared(CE.HostScreenId id)
+        static NativePointer OnFindScreen(CE.ScreenId id)
         {
-            _config.OnCleared(id);
+            return _config.OnFindScreen(id).AsPtr();
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        static void EventRedrawRequested(CE.HostScreenId id)
+        static void EventCleared(
+            NativePointer screen_       // Rust.Ref<CE.HostScreen>
+            )
         {
-            _config.OnRedrawRequested(id);
+            var screen = new Rust.OptionRef<CE.HostScreen>(screen_).UnwrapUnchecked();
+            _config.OnCleared(screen);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        static void EventResized(CE.HostScreenId id, u32 width, u32 height)
+        static void EventRedrawRequested(
+            NativePointer screen_       // Rust.Ref<CE.HostScreen>
+            )
         {
-            _config.OnResized(id, width, height);
+            var screen = new Rust.OptionRef<CE.HostScreen>(screen_).UnwrapUnchecked();
+            _config.OnRedrawRequested(screen);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        static void EventKeyboard(CE.HostScreenId id, Winit.VirtualKeyCode key, bool pressed)
+        static void EventResized(
+            NativePointer screen_,      // Rust.Ref<CE.HostScreen>
+            u32 width,
+            u32 height
+            )
         {
-            _config.OnKeyboardInput(id, key, pressed);
+            var screen = new Rust.OptionRef<CE.HostScreen>(screen_).UnwrapUnchecked();
+            _config.OnResized(screen, width, height);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        static void EventCharReceived(CE.HostScreenId id, Rune input)
+        static void EventKeyboard(
+            NativePointer screen_,      // Rust.Ref<CE.HostScreen>
+            Winit.VirtualKeyCode key,
+            bool pressed
+            )
         {
-            _config.OnCharReceived(id, input);
+            var screen = new Rust.OptionRef<CE.HostScreen>(screen_).UnwrapUnchecked();
+            _config.OnKeyboardInput(screen, key, pressed);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        static void EventClosing(CE.HostScreenId id, bool* mut_cancel)
+        static void EventCharReceived(
+            NativePointer screen_,      // Rust.Ref<CE.HostScreen>
+            Rune input
+            )
+        {
+            var screen = new Rust.OptionRef<CE.HostScreen>(screen_).UnwrapUnchecked();
+            _config.OnCharReceived(screen, input);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        static void EventClosing(
+            NativePointer screen_,      // Rust.Ref<CE.HostScreen>
+            bool* mut_cancel)
         {
             ref bool cancel = ref *mut_cancel;
-            _config.OnClosing(id, ref cancel);
+            var screen = new Rust.OptionRef<CE.HostScreen>(screen_).UnwrapUnchecked();
+            _config.OnClosing(screen, ref cancel);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -549,18 +578,25 @@ internal unsafe static partial class EngineCore
 
 internal readonly struct EngineCoreConfig
 {
-    public required Action<Rust.Box<CE.HostScreen>, CE.HostScreenInfo, CE.HostScreenId> OnStart { get; init; }
-    public required Action<CE.HostScreenId> OnRedrawRequested { get; init; }
-    public required Action<CE.HostScreenId> OnCleared { get; init; }
+    public required Func<Rust.Box<CE.HostScreen>, CE.HostScreenInfo, CE.ScreenId> OnStart { get; init; }
+    public required FindScreenFunc OnFindScreen { get; init; }
+    public required ScreenAction OnRedrawRequested { get; init; }
+    public required ScreenAction OnCleared { get; init; }
 
-    public required Action<CE.HostScreenId, u32, u32> OnResized { get; init; }
+    public required ScreenAction<u32, u32> OnResized { get; init; }
 
-    public required Action<CE.HostScreenId, Winit.VirtualKeyCode, bool> OnKeyboardInput { get; init; }
-    public required Action<CE.HostScreenId, Rune> OnCharReceived { get; init; }
+    public required ScreenAction<Winit.VirtualKeyCode, bool> OnKeyboardInput { get; init; }
+    public required ScreenAction<Rune> OnCharReceived { get; init; }
     public required EngineCoreScreenClosingAction OnClosing { get; init; }
 }
 
-internal delegate void EngineCoreScreenClosingAction(CE.HostScreenId id, ref bool cancel);
+internal delegate Rust.OptionRef<CE.HostScreen> FindScreenFunc(CE.ScreenId id);
+
+internal delegate void ScreenAction(Rust.Ref<CE.HostScreen> screen);
+internal delegate void ScreenAction<T1>(Rust.Ref<CE.HostScreen> screen, T1 a1);
+internal delegate void ScreenAction<T1, T2>(Rust.Ref<CE.HostScreen> screen, T1 a1, T2 a2);
+
+internal delegate void EngineCoreScreenClosingAction(Rust.Ref<CE.HostScreen> screen, ref bool cancel);
 
 
 internal delegate void EngineCoreRenderAction(Rust.Ref<CE.HostScreen> screen, Rust.MutRef<Wgpu.RenderPass> renderPass);

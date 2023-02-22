@@ -4,20 +4,20 @@ mod ffi;
 mod screen;
 
 use crate::error_handler::*;
-use crate::screen::{HostScreen, HostScreenId};
+use crate::screen::{HostScreen, ScreenId};
 use coreelffy_macros::tagged_ref_union;
 use smallvec::SmallVec;
 use static_assertions::assert_eq_size;
 use std;
 use std::error::Error;
-use std::mem;
-use std::{num, ops, str};
+use std::{mem, num, ops, str};
 use winit::window;
 
 #[repr(C)]
 pub(crate) struct EngineCoreConfig {
     pub err_dispatcher: DispatchErrFn,
     pub on_screen_init: HostScreenInitFn,
+    pub on_find_screen: FindHostScreenFn,
     pub event_cleared: ClearedEventFn,
     pub event_redraw_requested: RedrawRequestedEventFn,
     pub event_resized: ResizedEventFn,
@@ -1494,16 +1494,15 @@ pub(crate) struct HostScreenInfo {
 
 static_assertions::assert_eq_size!(window::WindowId, usize);
 
-pub(crate) type HostScreenInitFn = extern "cdecl" fn(
-    screen: Box<HostScreen>,
-    screen_info: &HostScreenInfo,
-    id: HostScreenId,
-) -> ();
+pub(crate) type HostScreenInitFn =
+    extern "cdecl" fn(screen: Box<HostScreen>, screen_info: &HostScreenInfo) -> ScreenId;
+pub(crate) type FindHostScreenFn = extern "cdecl" fn(id: ScreenId) -> *const HostScreen;
 
-pub(crate) type ClearedEventFn = extern "cdecl" fn(id: HostScreenId) -> ();
-pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(id: HostScreenId) -> ();
-pub(crate) type ResizedEventFn = extern "cdecl" fn(id: HostScreenId, width: u32, height: u32) -> ();
+pub(crate) type ClearedEventFn = extern "cdecl" fn(screen: &HostScreen) -> ();
+pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(screen: &HostScreen) -> ();
+pub(crate) type ResizedEventFn =
+    extern "cdecl" fn(screen: &HostScreen, width: u32, height: u32) -> ();
 pub(crate) type KeyboardEventFn =
-    extern "cdecl" fn(id: HostScreenId, key: winit::event::VirtualKeyCode, pressed: bool) -> ();
-pub(crate) type CharReceivedEventFn = extern "cdecl" fn(id: HostScreenId, input: char) -> ();
-pub(crate) type ClosingEventFn = extern "cdecl" fn(id: HostScreenId, cancel: &mut bool) -> ();
+    extern "cdecl" fn(screen: &HostScreen, key: winit::event::VirtualKeyCode, pressed: bool) -> ();
+pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen: &HostScreen, input: char) -> ();
+pub(crate) type ClosingEventFn = extern "cdecl" fn(screen: &HostScreen, cancel: &mut bool) -> ();

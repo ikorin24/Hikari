@@ -59,37 +59,36 @@ pub(crate) fn engine_start(
             return err;
         }
     };
-    let screen_id = HostScreenId::new(&screen);
-    let window_id = screen.window.id();
     let screen_info = &screen.get_info();
-    {
+    let screen_id = {
         let on_screen_init = engine_config.on_screen_init;
-        on_screen_init(screen, screen_info, screen_id);
-    }
-    event_loop.run(move |event, _event_loop, control_flow| {
-        let continue_next = handle_event(screen_id, window_id, &event);
-        let screen = unsafe { screen_id.to_screen() };
-        if continue_next == false {
-            screen.request_close();
-        }
+        on_screen_init(screen, screen_info)
+    };
 
-        if screen.reset_close_request() {
-            let event_closing = get_callback(|engine| engine.event_closing).unwrap();
-            let mut cancel = false;
-            event_closing(screen_id, &mut cancel);
-            if cancel == false {
-                *control_flow = winit::event_loop::ControlFlow::Exit;
+    let find_screen = engine_config.on_find_screen;
+
+    event_loop.run(move |event, _event_loop, control_flow| {
+        if let Some(screen) = unsafe { find_screen(screen_id).as_ref() } {
+            if handle_event(screen, &event) == false {
+                screen.request_close();
+            }
+
+            if screen.reset_close_request() {
+                let event_closing = get_callback(|engine| engine.event_closing).unwrap();
+                let mut cancel = false;
+                event_closing(screen, &mut cancel);
+                if cancel == false {
+                    *control_flow = winit::event_loop::ControlFlow::Exit;
+                }
             }
         }
     });
 }
 
-fn handle_event(
-    target_screen_id: HostScreenId,
-    target_window_id: window::WindowId,
-    event: &event::Event<()>,
-) -> bool {
+fn handle_event(screen: &HostScreen, event: &event::Event<()>) -> bool {
     use winit::event::*;
+
+    let target_window_id = screen.window.id();
 
     match event {
         Event::WindowEvent {
@@ -99,7 +98,7 @@ fn handle_event(
             WindowEvent::ReceivedCharacter(c) => {
                 let event_char_received =
                     get_callback(|engine| engine.event_char_received).unwrap();
-                event_char_received(target_screen_id, *c);
+                event_char_received(screen, *c);
             }
             WindowEvent::CloseRequested => {
                 return false;
@@ -118,30 +117,26 @@ fn handle_event(
                     ElementState::Pressed => true,
                     ElementState::Released => false,
                 };
-                event_keyboard(target_screen_id, *key, pressed);
+                event_keyboard(screen, *key, pressed);
             }
             WindowEvent::Resized(physical_size) => {
                 let event_resized = get_callback(|engine| engine.event_resized).unwrap();
-                event_resized(target_screen_id, physical_size.width, physical_size.height);
+                event_resized(screen, physical_size.width, physical_size.height);
             }
             WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                 let event_resized = get_callback(|engine| engine.event_resized).unwrap();
-                event_resized(
-                    target_screen_id,
-                    new_inner_size.width,
-                    new_inner_size.height,
-                );
+                event_resized(screen, new_inner_size.width, new_inner_size.height);
             }
             _ => {}
         },
         Event::RedrawRequested(window_id) if *window_id == target_window_id => {
             let event_redraw_requested =
                 get_callback(|engine| engine.event_redraw_requested).unwrap();
-            event_redraw_requested(target_screen_id);
+            event_redraw_requested(screen);
         }
         Event::MainEventsCleared => {
             let event_cleared = get_callback(|engine| engine.event_cleared).unwrap();
-            event_cleared(target_screen_id);
+            event_cleared(screen);
         }
         _ => {}
     }
