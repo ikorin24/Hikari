@@ -206,6 +206,16 @@ internal sealed class HostScreen : IHostScreen
         Resized?.Invoke(this, checked(new Vector2i((int)width, (int)height)));
     }
 
+    internal void OnKeyboardInput(Winit.VirtualKeyCode key, bool pressed)
+    {
+        Debug.WriteLine($"{key}: {pressed}");
+    }
+
+    internal void OnCharReceived(Rune input)
+    {
+        Debug.WriteLine(input);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ThrowIfNotInit()
     {

@@ -41,6 +41,7 @@ internal unsafe static partial class EngineCore
             event_redraw_requested = new(&EventRedrawRequested),
             event_resized = new(&EventResized),
             event_keyboard = new(&EventKeyboard),
+            event_char_received = new(&EventCharReceived),
         };
 
         var screenConfigNative = screenConfig.ToCoreType();
@@ -87,6 +88,12 @@ internal unsafe static partial class EngineCore
         static void EventKeyboard(CE.HostScreenId id, Winit.VirtualKeyCode key, bool pressed)
         {
             _config.OnKeyboardInput(id, key, pressed);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        static void EventCharReceived(CE.HostScreenId id, Rune input)
+        {
+            _config.OnCharReceived(id, input);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -535,6 +542,7 @@ internal readonly struct EngineCoreConfig
     public required Action<CE.HostScreenId, u32, u32> OnResized { get; init; }
 
     public required Action<CE.HostScreenId, Winit.VirtualKeyCode, bool> OnKeyboardInput { get; init; }
+    public required Action<CE.HostScreenId, Rune> OnCharReceived { get; init; }
 }
 
 

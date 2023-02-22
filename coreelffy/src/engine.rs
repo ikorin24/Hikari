@@ -12,6 +12,7 @@ pub(crate) struct Engine {
     pub(crate) event_redraw_requested: RedrawRequestedEventFn,
     pub(crate) event_resized: ResizedEventFn,
     pub(crate) event_keyboard: KeyboardEventFn,
+    pub(crate) event_char_received: CharReceivedEventFn,
 }
 
 static ENGINE: sync::RwLock<Option<Engine>> = sync::RwLock::new(None);
@@ -42,6 +43,7 @@ pub(crate) fn engine_start(
                 event_redraw_requested: engine_config.event_redraw_requested,
                 event_resized: engine_config.event_resized,
                 event_keyboard: engine_config.event_keyboard,
+                event_char_received: engine_config.event_char_received,
             });
         }
         Err(err) => {
@@ -80,6 +82,11 @@ fn handle_event(
             ref event,
             window_id,
         } if *window_id == target_window_id => match event {
+            WindowEvent::ReceivedCharacter(c) => {
+                let event_char_received =
+                    get_callback(|engine| engine.event_char_received).unwrap();
+                event_char_received(target_screen_id, *c);
+            }
             WindowEvent::CloseRequested
             | WindowEvent::KeyboardInput {
                 input:

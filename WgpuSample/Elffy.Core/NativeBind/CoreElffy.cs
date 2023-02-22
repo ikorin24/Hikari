@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Elffy.NativeBind;
 
@@ -169,6 +170,7 @@ internal static class CoreElffy
         public required RedrawRequestedEventFn event_redraw_requested;
         public required ResizedEventFn event_resized;
         public required KeyboardEventFn event_keyboard;
+        public required CharReceivedEventFn event_char_received;
     }
 
     internal struct HostScreenConfig
@@ -230,6 +232,12 @@ internal static class CoreElffy
     {
         private readonly delegate* unmanaged[Cdecl]<HostScreenId, Winit.VirtualKeyCode, bool, void> _func;
         public KeyboardEventFn(delegate* unmanaged[Cdecl]<HostScreenId, Winit.VirtualKeyCode, bool, void> f) => _func = f;
+    }
+
+    internal unsafe readonly struct CharReceivedEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<HostScreenId, Rune, void> _func;
+        public CharReceivedEventFn(delegate* unmanaged[Cdecl]<HostScreenId, Rune, void> f) => _func = f;
     }
 
     internal readonly struct HostScreenId : IEquatable<HostScreenId>

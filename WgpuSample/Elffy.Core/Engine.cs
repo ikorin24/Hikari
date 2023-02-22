@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Elffy;
 
@@ -24,6 +25,7 @@ public static class Engine
             OnCleared = _onCleared,
             OnResized = _onResized,
             OnKeyboardInput = _onKeyboardInput,
+            OnCharReceived = _onCharReceived,
         };
         EngineCore.EngineStart(engineConfig, screenConfig);
     }
@@ -75,8 +77,16 @@ public static class Engine
                 Debug.Fail("HostScreen should be found");
                 return;
             }
-
-            Debug.WriteLine($"{key}: {pressed}");
+            screen.OnKeyboardInput(key, pressed);
+        };
+    private static readonly Action<CE.HostScreenId, Rune> _onCharReceived =
+        (CE.HostScreenId id, Rune input) =>
+        {
+            if(TryFindScreen(id, out var screen) == false) {
+                Debug.Fail("HostScreen should be found");
+                return;
+            }
+            screen.OnCharReceived(input);
         };
 
     private static bool TryFindScreen(CE.HostScreenId id, [MaybeNullWhen(false)] out HostScreen screen)
