@@ -23,6 +23,7 @@ pub(crate) struct EngineCoreConfig {
     pub event_keyboard: KeyboardEventFn,
     pub event_char_received: CharReceivedEventFn,
     pub event_closing: ClosingEventFn,
+    pub event_closed: ClosedEventFn,
 }
 
 #[repr(C)]
@@ -1504,3 +1505,4 @@ pub(crate) type KeyboardEventFn =
     extern "cdecl" fn(screen_id: ScreenId, key: winit::event::VirtualKeyCode, pressed: bool) -> ();
 pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen_id: ScreenId, input: char) -> ();
 pub(crate) type ClosingEventFn = extern "cdecl" fn(screen_id: ScreenId, cancel: &mut bool) -> ();
+pub(crate) type ClosedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> Option<Box<HostScreen>>;

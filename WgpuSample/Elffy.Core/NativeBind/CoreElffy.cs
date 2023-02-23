@@ -172,6 +172,7 @@ internal static class CoreElffy
         public required KeyboardEventFn event_keyboard;
         public required CharReceivedEventFn event_char_received;
         public required ClosingEventFn event_closing;
+        public required ClosedEventFn event_closed;
     }
 
     internal struct HostScreenConfig
@@ -245,6 +246,15 @@ internal static class CoreElffy
     {
         private readonly delegate* unmanaged[Cdecl]<ScreenId, bool*, void> _func;
         public ClosingEventFn(delegate* unmanaged[Cdecl]<ScreenId, bool*, void> f) => _func = f;
+    }
+
+    internal unsafe readonly struct ClosedEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionBox<HostScreen>> _func;
+        public ClosedEventFn(delegate* unmanaged[Cdecl]<ScreenId, NativePointer> f)
+        {
+            _func = (delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionBox<HostScreen>>)f;
+        }
     }
 
     internal readonly struct ScreenId : IEquatable<ScreenId>

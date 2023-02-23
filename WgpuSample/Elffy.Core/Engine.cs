@@ -28,6 +28,7 @@ public static class Engine
             OnKeyboardInput = _onKeyboardInput,
             OnCharReceived = _onCharReceived,
             OnClosing = _onClosing,
+            OnClosed = _onClosed,
         };
         EngineCore.EngineStart(engineConfig, screenConfig);
     }
@@ -86,6 +87,15 @@ public static class Engine
         {
             var screen = GetScreen(id);
             screen.OnClosing(ref cancel);
+        };
+
+    private static readonly Func<CE.ScreenId, Rust.OptionBox<CE.HostScreen>> _onClosed =
+        (CE.ScreenId id) =>
+        {
+            if(_screens.Remove(id, out var screen) == false) {
+                return Rust.OptionBox<CE.HostScreen>.None;
+            }
+            return screen.AsValue().OnClosed();
         };
 
     private static HostScreen GetScreen(CE.ScreenId id)

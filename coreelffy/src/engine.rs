@@ -4,6 +4,7 @@ use crate::*;
 use std::error::Error;
 use std::fmt::Debug;
 use std::sync;
+use std::sync::Mutex;
 use winit;
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::{event, event_loop, window};
@@ -16,6 +17,7 @@ pub(crate) struct Engine {
     event_keyboard: KeyboardEventFn,
     event_char_received: CharReceivedEventFn,
     event_closing: ClosingEventFn,
+    event_closed: ClosedEventFn,
 }
 
 impl Engine {
@@ -28,6 +30,7 @@ impl Engine {
             event_keyboard: config.event_keyboard,
             event_char_received: config.event_char_received,
             event_closing: config.event_closing,
+            event_closed: config.event_closed,
         }
     }
 
@@ -77,6 +80,11 @@ impl Engine {
         !cancel
     }
 
+    pub fn event_closed(screen_id: ScreenId) -> Option<Box<HostScreen>> {
+        let f = Self::get_callback(|engine| engine.event_closed).unwrap();
+        f(screen_id)
+    }
+
     fn get_callback<T>(f: fn(engine: &Engine) -> T) -> Result<T, EngineErr> {
         let reader = ENGINE.read().unwrap();
         match reader.as_ref().map(f) {
@@ -91,7 +99,30 @@ impl Engine {
 
 static ENGINE: sync::RwLock<Option<Engine>> = sync::RwLock::new(None);
 
-#[derive(Clone, Copy)]
+static SCREENS: Mutex<Vec<ScreenIdData>> = Mutex::new(vec![]);
+
+fn get_screen(window_id: &window::WindowId) -> Option<ScreenIdData> {
+    let screens = SCREENS.lock().unwrap();
+    screens.iter().find(|x| x.0 == *window_id).copied()
+}
+fn push_screen(id_data: ScreenIdData) {
+    let mut screens = SCREENS.lock().unwrap();
+    screens.push(id_data);
+}
+fn remove_screen(id_data: ScreenIdData, is_empty: &mut bool) {
+    let mut screens = SCREENS.lock().unwrap();
+    let index = screens
+        .iter()
+        .enumerate()
+        .find(|(_, x)| **x == id_data)
+        .map(|(i, _)| i);
+    if let Some(index) = index {
+        screens.swap_remove(index);
+    }
+    *is_empty = screens.is_empty();
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct ScreenIdData(window::WindowId, ScreenId);
 
 pub(crate) fn engine_start(
@@ -104,69 +135,90 @@ pub(crate) fn engine_start(
         let mut engine = ENGINE.write()?;
         *engine = Some(Engine::new(engine_config));
     }
+
     let mut event_loop = event_loop::EventLoop::new();
-    let mut screens: Vec<ScreenIdData> = vec![];
 
     let screen = Box::new(HostScreen::new(screen_config, &event_loop)?);
     let window_id = screen.window.id();
     let screen_id = Engine::on_screen_init(screen);
-    screens.push(ScreenIdData(window_id, screen_id));
-    let id_data = screens.last().unwrap();
 
-    event_loop.run_return(move |event, _event_loop, control_flow| {
-        let continue_next = handle_event(id_data, &event);
-        if continue_next == false {
-            if Engine::event_closing(screen_id) {
-                *control_flow = winit::event_loop::ControlFlow::Exit;
-            }
-        }
+    push_screen(ScreenIdData(window_id, screen_id));
+
+    event_loop.run_return(move |event, _, control_flow| {
+        handle_event(&event, control_flow);
     });
     return Ok(());
 }
 
-fn handle_event(target: &ScreenIdData, event: &event::Event<()>) -> bool {
+fn handle_event(event: &event::Event<()>, control_flow: &mut winit::event_loop::ControlFlow) {
     use winit::event::*;
 
     match event {
         Event::WindowEvent {
             ref event,
             window_id,
-        } if *window_id == target.0 => match event {
-            WindowEvent::ReceivedCharacter(c) => {
-                Engine::event_char_received(target.1, *c);
-                true
-            }
-            WindowEvent::CloseRequested => false,
-            WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        state,
-                        virtual_keycode: Some(key),
+        } => {
+            if let Some(target) = get_screen(window_id) {
+                match event {
+                    WindowEvent::ReceivedCharacter(c) => {
+                        Engine::event_char_received(target.1, *c);
+                    }
+                    WindowEvent::CloseRequested => {
+                        close_screen(&target, control_flow);
+                    }
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state,
+                                virtual_keycode: Some(key),
+                                ..
+                            },
                         ..
-                    },
-                ..
-            } => {
-                Engine::event_keyboard(target.1, key, state);
-                true
+                    } => {
+                        Engine::event_keyboard(target.1, key, state);
+                    }
+                    WindowEvent::Resized(physical_size) => {
+                        Engine::event_resized(target.1, physical_size.width, physical_size.height);
+                    }
+                    WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                        Engine::event_resized(
+                            target.1,
+                            new_inner_size.width,
+                            new_inner_size.height,
+                        );
+                    }
+                    _ => {}
+                }
             }
-            WindowEvent::Resized(physical_size) => {
-                Engine::event_resized(target.1, physical_size.width, physical_size.height);
-                true
+        }
+        Event::RedrawRequested(window_id) => {
+            if let Some(target) = get_screen(window_id) {
+                let continue_next = Engine::event_redraw_requested(target.1);
+                if continue_next == false {
+                    close_screen(&target, control_flow);
+                }
             }
-            WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                Engine::event_resized(target.1, new_inner_size.width, new_inner_size.height);
-                true
-            }
-            _ => true,
-        },
-        Event::RedrawRequested(window_id) if *window_id == target.0 => {
-            Engine::event_redraw_requested(target.1)
         }
         Event::MainEventsCleared => {
-            Engine::event_cleared(target.1);
-            true
+            let screens = SCREENS.lock().unwrap();
+            screens.iter().for_each(|x| {
+                Engine::event_cleared(x.1);
+            });
         }
-        _ => true,
+        _ => {}
+    }
+}
+
+fn close_screen(target: &ScreenIdData, control_flow: &mut winit::event_loop::ControlFlow) {
+    if Engine::event_closing(target.1) {
+        let mut is_empty = false;
+        remove_screen(*target, &mut is_empty);
+        let closed_screen = Engine::event_closed(target.1);
+        drop(closed_screen);
+
+        if is_empty {
+            *control_flow = winit::event_loop::ControlFlow::Exit;
+        }
     }
 }
 

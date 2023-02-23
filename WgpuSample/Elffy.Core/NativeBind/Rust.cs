@@ -82,6 +82,9 @@ internal static class Rust
             return Unsafe.As<OptionBox<T>, Box<T>>(ref Unsafe.AsRef(in this));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public NativePointer AsPtr() => _p;
+
         public static implicit operator OptionBox<T>(Box<T> box) => new OptionBox<T>(box);
     }
 

@@ -120,7 +120,7 @@ impl HostScreen {
 }
 
 #[repr(transparent)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct ScreenId(usize);
 
 #[derive(Clone, Copy)]

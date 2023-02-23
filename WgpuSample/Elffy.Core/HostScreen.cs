@@ -12,7 +12,7 @@ namespace Elffy;
 
 internal sealed class HostScreen : IHostScreen
 {
-    private Rust.Box<CE.HostScreen> _native;
+    private Rust.OptionBox<CE.HostScreen> _native;
     private TextureFormat _surfaceFormat;
     private GraphicsBackend _backend;
     private bool _initialized;
@@ -26,9 +26,9 @@ internal sealed class HostScreen : IHostScreen
     public event Action<IHostScreen, Vector2i>? Resized;
     public event RedrawRequestedAction? RedrawRequested;
 
-    public HostScreenRef Ref => new HostScreenRef(_native);
+    public HostScreenRef Ref => new HostScreenRef(_native.Unwrap());
 
-    internal CE.ScreenId ScreenId => new CE.ScreenId(_native);
+    internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
 
     public Texture DepthTexture => _depthTexture.AsValue();
     public TextureView DepthTextureView => _depthTextureView.AsValue();
@@ -89,7 +89,7 @@ internal sealed class HostScreen : IHostScreen
                 try {
                     var buf = array.AsSpan(0, byteLen);
                     utf8.GetBytes(value.AsSpan(), buf);
-                    EngineCore.ScreenSetTitle(_native, buf);
+                    EngineCore.ScreenSetTitle(_native.Unwrap(), buf);
                 }
                 finally {
                     ArrayPool<byte>.Shared.Return(array);
@@ -115,8 +115,8 @@ internal sealed class HostScreen : IHostScreen
 
     private void Release(bool manualRelease)
     {
-        var native = InterlockedEx.Exchange(ref _native, Rust.Box<CE.HostScreen>.Invalid);
-        if(native.IsInvalid) {
+        var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
+        if(native.IsNone) {
             return;
         }
         // TODO: Destroy HostScreen
@@ -172,7 +172,7 @@ internal sealed class HostScreen : IHostScreen
 
     internal void OnCleared()
     {
-        _native.AsRef().ScreenRequestRedraw();
+        _native.Unwrap().AsRef().ScreenRequestRedraw();
     }
 
     internal unsafe bool OnRedrawRequested()
@@ -182,7 +182,7 @@ internal sealed class HostScreen : IHostScreen
             return true;
         }
 
-        var screenRef = _native.AsRef();
+        var screenRef = _native.Unwrap().AsRef();
         Rust.Box<Wgpu.CommandEncoder> encoderNative;
         Rust.Box<Wgpu.SurfaceTexture> surfaceTexNative;
         {
@@ -208,7 +208,7 @@ internal sealed class HostScreen : IHostScreen
     internal void OnResized(uint width, uint height)
     {
         if(width != 0 && height != 0) {
-            _native.AsRef().ScreenResizeSurface(width, height);
+            _native.Unwrap().AsRef().ScreenResizeSurface(width, height);
             UpdateDepthTexture(new Vector2i((i32)width, (i32)height));
         }
 
@@ -230,6 +230,19 @@ internal sealed class HostScreen : IHostScreen
 
     internal void OnClosing(ref bool cancel)
     {
+        Debug.WriteLine("closing");
+    }
+
+    internal Rust.OptionBox<CE.HostScreen> OnClosed()
+    {
+        var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
+        _depthTexture.Dispose();
+        _depthTextureView.Dispose();
+        _depthTexture = Own.None<Texture>();
+        _depthTextureView = Own.None<TextureView>();
+        Resized = null;
+        RedrawRequested = null;
+        return native;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
