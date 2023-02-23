@@ -15,7 +15,7 @@ static unsafe partial class EngineCore
     private const string CoreDll = $"{DllDir}coreelffy";
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial NonZeroUsize elffy_engine_start(
+    private static partial ApiResult elffy_engine_start(
         CE.EngineCoreConfig* engine_config,
         CE.HostScreenConfig* screen_config);
 

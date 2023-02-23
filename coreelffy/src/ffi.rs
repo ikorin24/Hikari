@@ -14,11 +14,11 @@ use std::num::{NonZeroU32, NonZeroUsize};
 extern "cdecl" fn elffy_engine_start(
     engine_config: &EngineCoreConfig,
     screen_config: &HostScreenConfig,
-) -> NonZeroUsize {
-    let err = engine_start(engine_config, screen_config);
-    dispatch_err(err);
-    let err_count = reset_tls_err_count();
-    NonZeroUsize::new(err_count).unwrap()
+) -> ApiResult {
+    if let Err(err) = engine_start(engine_config, screen_config) {
+        dispatch_err(err);
+    }
+    make_result()
 }
 
 static_assertions::assert_impl_all!(HostScreen: Send, Sync);

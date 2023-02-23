@@ -18,7 +18,7 @@ internal class Program
             Height = 720,
             Style = WindowStyle.Default,
         };
-        Engine.Start(screenConfig, OnInitialized);
+        Engine.Run(screenConfig, OnInitialized);
     }
 
     private static State? _state;

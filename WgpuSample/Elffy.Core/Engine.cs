@@ -14,7 +14,7 @@ public static class Engine
     private static readonly List<Own<HostScreen>> _screens = new List<Own<HostScreen>>();
     private static Action<IHostScreen>? _onInitialized;
 
-    public static void Start(in HostScreenConfig screenConfig, Action<IHostScreen> onInitialized)
+    public static void Run(in HostScreenConfig screenConfig, Action<IHostScreen> onInitialized)
     {
         ArgumentNullException.ThrowIfNull(onInitialized);
         _onInitialized = onInitialized;

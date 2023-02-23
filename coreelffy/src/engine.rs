@@ -5,6 +5,7 @@ use std::error::Error;
 use std::fmt::Debug;
 use std::sync;
 use winit;
+use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::{event, event_loop};
 
 pub(crate) struct Engine {
@@ -34,31 +35,22 @@ pub(crate) fn get_callback<T>(f: fn(engine: &Engine) -> T) -> Result<T, EngineEr
 pub(crate) fn engine_start(
     engine_config: &EngineCoreConfig,
     screen_config: &HostScreenConfig,
-) -> Box<dyn Error> {
+) -> Result<(), Box<dyn Error>> {
     env_logger::init();
     set_err_dispatcher(engine_config.err_dispatcher);
-    match ENGINE.write() {
-        Ok(mut writer) => {
-            *writer = Some(Engine {
-                event_cleared: engine_config.event_cleared,
-                event_redraw_requested: engine_config.event_redraw_requested,
-                event_resized: engine_config.event_resized,
-                event_keyboard: engine_config.event_keyboard,
-                event_char_received: engine_config.event_char_received,
-                event_closing: engine_config.event_closing,
-            });
-        }
-        Err(err) => {
-            return Box::new(err);
-        }
-    };
-    let event_loop = event_loop::EventLoop::new();
-    let screen = match HostScreen::new(screen_config, &event_loop) {
-        Ok(screen) => Box::new(screen),
-        Err(err) => {
-            return err;
-        }
-    };
+    {
+        let mut engine = ENGINE.write()?;
+        *engine = Some(Engine {
+            event_cleared: engine_config.event_cleared,
+            event_redraw_requested: engine_config.event_redraw_requested,
+            event_resized: engine_config.event_resized,
+            event_keyboard: engine_config.event_keyboard,
+            event_char_received: engine_config.event_char_received,
+            event_closing: engine_config.event_closing,
+        });
+    }
+    let mut event_loop = event_loop::EventLoop::new();
+    let screen = Box::new(HostScreen::new(screen_config, &event_loop)?);
     let screen_info = &screen.get_info();
     let screen_id = {
         let on_screen_init = engine_config.on_screen_init;
@@ -67,7 +59,7 @@ pub(crate) fn engine_start(
 
     let find_screen = engine_config.on_find_screen;
 
-    event_loop.run(move |event, _event_loop, control_flow| {
+    event_loop.run_return(move |event, _event_loop, control_flow| {
         if let Some(screen) = unsafe { find_screen(screen_id).as_ref() } {
             if handle_event(screen, &event) == false {
                 screen.request_close();
@@ -83,6 +75,7 @@ pub(crate) fn engine_start(
             }
         }
     });
+    return Ok(());
 }
 
 fn handle_event(screen: &HostScreen, event: &event::Event<()>) -> bool {

@@ -20,7 +20,6 @@ internal unsafe static partial class EngineCore
 
     public static bool IsStarted => _isStarted == 1;
 
-    [DoesNotReturn]
     public static void EngineStart(in EngineCoreConfig config, in HostScreenConfig screenConfig)
     {
         if(Interlocked.CompareExchange(ref _isStarted, 1, 0) == 1) {
@@ -48,11 +47,8 @@ internal unsafe static partial class EngineCore
 
         var screenConfigNative = screenConfig.ToCoreType();
 
-        var errorCount = elffy_engine_start(&engineConfigNative, &screenConfigNative);
-        Debug.Assert(errorCount > 0);
-        ThrowNativeErrorIfNotZero(errorCount);
-
-        throw new UnreachableException();
+        elffy_engine_start(&engineConfigNative, &screenConfigNative).Validate();
+        return;
 
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
