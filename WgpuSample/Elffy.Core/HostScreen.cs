@@ -21,6 +21,8 @@ internal sealed class HostScreen : IHostScreen
     private Own<TextureView> _depthTextureView;
     private SurfaceTextureView _surfaceTexView;
 
+    private bool _isCloseRequested;
+
     public event Action<IHostScreen, Vector2i>? Resized;
     public event RedrawRequestedAction? RedrawRequested;
 
@@ -155,7 +157,7 @@ internal sealed class HostScreen : IHostScreen
 
     public void RequestClose()
     {
-        _native.AsRefChecked().ScreenRequestClose();
+        _isCloseRequested = true;
     }
 
     internal void OnInitialize(in CE.HostScreenInfo info)
@@ -173,11 +175,11 @@ internal sealed class HostScreen : IHostScreen
         _native.AsRef().ScreenRequestRedraw();
     }
 
-    internal unsafe void OnRedrawRequested()
+    internal unsafe bool OnRedrawRequested()
     {
         var depthTextureView = _depthTextureView;
         if(depthTextureView.IsNone) {
-            return;
+            return true;
         }
 
         var screenRef = _native.AsRef();
@@ -185,13 +187,17 @@ internal sealed class HostScreen : IHostScreen
         Rust.Box<Wgpu.SurfaceTexture> surfaceTexNative;
         {
             if(screenRef.ScreenBeginCommand(out encoderNative, out surfaceTexNative, out var surfaceViewNative) == false) {
-                return;
+                return true;
             }
             var oldSurfaceView = _surfaceTexView.Replace(surfaceViewNative);
             Debug.Assert(oldSurfaceView.IsNone);
         }
         try {
             RedrawRequested?.Invoke(this, new CommandEncoder(encoderNative));
+
+            var isCloseRequested = _isCloseRequested;
+            _isCloseRequested = false;
+            return !isCloseRequested;
         }
         finally {
             var surfaceViewNative = _surfaceTexView.Replace(Rust.OptionBox<Wgpu.TextureView>.None);

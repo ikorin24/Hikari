@@ -17,7 +17,6 @@ use winit::window;
 pub(crate) struct EngineCoreConfig {
     pub err_dispatcher: DispatchErrFn,
     pub on_screen_init: HostScreenInitFn,
-    pub on_find_screen: FindHostScreenFn,
     pub event_cleared: ClearedEventFn,
     pub event_redraw_requested: RedrawRequestedEventFn,
     pub event_resized: ResizedEventFn,
@@ -1496,13 +1495,12 @@ static_assertions::assert_eq_size!(window::WindowId, usize);
 
 pub(crate) type HostScreenInitFn =
     extern "cdecl" fn(screen: Box<HostScreen>, screen_info: &HostScreenInfo) -> ScreenId;
-pub(crate) type FindHostScreenFn = extern "cdecl" fn(id: ScreenId) -> *const HostScreen;
 
-pub(crate) type ClearedEventFn = extern "cdecl" fn(screen: &HostScreen) -> ();
-pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(screen: &HostScreen) -> ();
+pub(crate) type ClearedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> ();
+pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> bool;
 pub(crate) type ResizedEventFn =
-    extern "cdecl" fn(screen: &HostScreen, width: u32, height: u32) -> ();
+    extern "cdecl" fn(screen_id: ScreenId, width: u32, height: u32) -> ();
 pub(crate) type KeyboardEventFn =
-    extern "cdecl" fn(screen: &HostScreen, key: winit::event::VirtualKeyCode, pressed: bool) -> ();
-pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen: &HostScreen, input: char) -> ();
-pub(crate) type ClosingEventFn = extern "cdecl" fn(screen: &HostScreen, cancel: &mut bool) -> ();
+    extern "cdecl" fn(screen_id: ScreenId, key: winit::event::VirtualKeyCode, pressed: bool) -> ();
+pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen_id: ScreenId, input: char) -> ();
+pub(crate) type ClosingEventFn = extern "cdecl" fn(screen_id: ScreenId, cancel: &mut bool) -> ();

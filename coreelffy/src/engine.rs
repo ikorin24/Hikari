@@ -6,7 +6,7 @@ use std::fmt::Debug;
 use std::sync;
 use winit;
 use winit::platform::run_return::EventLoopExtRunReturn;
-use winit::{event, event_loop};
+use winit::{event, event_loop, window};
 
 pub(crate) struct Engine {
     on_screen_init: HostScreenInitFn,
@@ -37,23 +37,23 @@ impl Engine {
         f(screen, screen_info)
     }
 
-    pub fn event_cleared(screen: &HostScreen) {
+    pub fn event_cleared(screen_id: ScreenId) {
         let f = Self::get_callback(|engine| engine.event_cleared).unwrap();
-        f(screen)
+        f(screen_id)
     }
 
-    pub fn event_redraw_requested(screen: &HostScreen) {
+    pub fn event_redraw_requested(screen_id: ScreenId) -> bool {
         let f = Self::get_callback(|engine| engine.event_redraw_requested).unwrap();
-        f(screen)
+        f(screen_id)
     }
 
-    pub fn event_resized(screen: &HostScreen, width: u32, height: u32) {
+    pub fn event_resized(screen_id: ScreenId, width: u32, height: u32) {
         let f = Self::get_callback(|engine| engine.event_resized).unwrap();
-        f(screen, width, height)
+        f(screen_id, width, height)
     }
 
     pub fn event_keyboard(
-        screen: &HostScreen,
+        screen_id: ScreenId,
         key: &event::VirtualKeyCode,
         state: &event::ElementState,
     ) {
@@ -62,18 +62,18 @@ impl Engine {
             event::ElementState::Pressed => true,
             event::ElementState::Released => false,
         };
-        f(screen, *key, pressed)
+        f(screen_id, *key, pressed)
     }
 
-    pub fn event_char_received(screen: &HostScreen, c: char) {
+    pub fn event_char_received(screen_id: ScreenId, c: char) {
         let f = Self::get_callback(|engine| engine.event_char_received).unwrap();
-        f(screen, c)
+        f(screen_id, c)
     }
 
-    pub fn event_closing(screen: &HostScreen) -> bool {
+    pub fn event_closing(screen_id: ScreenId) -> bool {
         let f = Self::get_callback(|engine| engine.event_closing).unwrap();
         let mut cancel = false;
-        f(screen, &mut cancel);
+        f(screen_id, &mut cancel);
         !cancel
     }
 
@@ -91,6 +91,9 @@ impl Engine {
 
 static ENGINE: sync::RwLock<Option<Engine>> = sync::RwLock::new(None);
 
+#[derive(Clone, Copy)]
+struct ScreenInfo(window::WindowId, ScreenId);
+
 pub(crate) fn engine_start(
     engine_config: &EngineCoreConfig,
     screen_config: &HostScreenConfig,
@@ -102,41 +105,40 @@ pub(crate) fn engine_start(
         *engine = Some(Engine::new(engine_config));
     }
     let mut event_loop = event_loop::EventLoop::new();
-    // let screens: Vec<&HostScreen> = vec![];
+    let mut screens: Vec<ScreenInfo> = vec![];
 
     let screen = Box::new(HostScreen::new(screen_config, &event_loop)?);
+    let window_id = screen.window.id();
     let screen_id = Engine::on_screen_init(screen);
-    let find_screen = engine_config.on_find_screen;
+    screens.push(ScreenInfo(window_id, screen_id));
+    let screen_info = screens.last().unwrap();
+
+    // let find_screen = engine_config.on_find_screen;
 
     event_loop.run_return(move |event, _event_loop, control_flow| {
-        if let Some(screen) = unsafe { find_screen(screen_id).as_ref() } {
-            handle_event(screen, &event);
-            if screen.reset_close_request() {
-                if Engine::event_closing(screen) {
-                    *control_flow = winit::event_loop::ControlFlow::Exit;
-                }
+        let continue_next = handle_event(screen_info, &event);
+        if continue_next == false {
+            if Engine::event_closing(screen_id) {
+                *control_flow = winit::event_loop::ControlFlow::Exit;
             }
         }
     });
     return Ok(());
 }
 
-fn handle_event(screen: &HostScreen, event: &event::Event<()>) {
+fn handle_event(target: &ScreenInfo, event: &event::Event<()>) -> bool {
     use winit::event::*;
-
-    let target_window_id = screen.window.id();
 
     match event {
         Event::WindowEvent {
             ref event,
             window_id,
-        } if *window_id == target_window_id => match event {
+        } if *window_id == target.0 => match event {
             WindowEvent::ReceivedCharacter(c) => {
-                Engine::event_char_received(screen, *c);
+                Engine::event_char_received(target.1, *c);
+                true
             }
-            WindowEvent::CloseRequested => {
-                screen.request_close();
-            }
+            WindowEvent::CloseRequested => false,
             WindowEvent::KeyboardInput {
                 input:
                     KeyboardInput {
@@ -146,23 +148,27 @@ fn handle_event(screen: &HostScreen, event: &event::Event<()>) {
                     },
                 ..
             } => {
-                Engine::event_keyboard(screen, key, state);
+                Engine::event_keyboard(target.1, key, state);
+                true
             }
             WindowEvent::Resized(physical_size) => {
-                Engine::event_resized(screen, physical_size.width, physical_size.height);
+                Engine::event_resized(target.1, physical_size.width, physical_size.height);
+                true
             }
             WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                Engine::event_resized(screen, new_inner_size.width, new_inner_size.height);
+                Engine::event_resized(target.1, new_inner_size.width, new_inner_size.height);
+                true
             }
-            _ => {}
+            _ => true,
         },
-        Event::RedrawRequested(window_id) if *window_id == target_window_id => {
-            Engine::event_redraw_requested(screen);
+        Event::RedrawRequested(window_id) if *window_id == target.0 => {
+            Engine::event_redraw_requested(target.1)
         }
         Event::MainEventsCleared => {
-            Engine::event_cleared(screen);
+            Engine::event_cleared(target.1);
+            true
         }
-        _ => {}
+        _ => true,
     }
 }
 

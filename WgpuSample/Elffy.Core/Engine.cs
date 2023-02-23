@@ -11,7 +11,10 @@ namespace Elffy;
 
 public static class Engine
 {
-    private static readonly List<Own<HostScreen>> _screens = new List<Own<HostScreen>>();
+    //private static readonly List<Own<HostScreen>> _screens = new List<Own<HostScreen>>();
+
+    private static readonly Dictionary<CE.ScreenId, Own<HostScreen>> _screens = new();
+
     private static Action<IHostScreen>? _onInitialized;
 
     public static void Run(in HostScreenConfig screenConfig, Action<IHostScreen> onInitialized)
@@ -21,7 +24,6 @@ public static class Engine
         var engineConfig = new EngineCoreConfig
         {
             OnStart = _onStart,
-            OnFindScreen = _idToScreenNative,
             OnRedrawRequested = _onRedrawRequested,
             OnCleared = _onCleared,
             OnResized = _onResized,
@@ -37,84 +39,74 @@ public static class Engine
         {
             var screenOwn = HostScreen.Create(screenHandle);
             var screen = screenOwn.AsValue();
-            _screens.Add(screenOwn);
+            var id = screen.ScreenId;
+            _screens.Add(id, screenOwn);
             screen.OnInitialize(info);
             _onInitialized?.Invoke(screen);
-            return screen.ScreenId;
+            return id;
         };
 
-    private static readonly FindScreenFunc _idToScreenNative = (CE.ScreenId id) => id.ToScreen();
-
-    private static readonly ScreenAction _onRedrawRequested =
-        (Rust.Ref<CE.HostScreen> screenNative) =>
+    private static readonly Func<CE.ScreenId, bool> _onRedrawRequested =
+        (CE.ScreenId id) =>
         {
-            if(TryFindScreen(screenNative, out var screen) == false) {
+            if(TryGetScreen(id, out var screen) == false) {
                 Debug.Fail("HostScreen should be found");
-                return;
+                return false;
             }
-            screen.OnRedrawRequested();
+            return screen.OnRedrawRequested();
         };
 
-    private static readonly ScreenAction _onCleared =
-        (Rust.Ref<CE.HostScreen> screenNative) =>
+    private static readonly Action<CE.ScreenId> _onCleared =
+        (CE.ScreenId id) =>
         {
-            if(TryFindScreen(screenNative, out var screen) == false) {
-                Debug.Fail("HostScreen should be found");
-                return;
-            }
+            var screen = GetScreen(id);
             screen.OnCleared();
         };
 
-    private static readonly ScreenAction<uint, uint> _onResized =
-        (Rust.Ref<CE.HostScreen> screenNative, uint width, uint height) =>
+    private static readonly Action<CE.ScreenId, uint, uint> _onResized =
+        (CE.ScreenId id, uint width, uint height) =>
         {
-            if(TryFindScreen(screenNative, out var screen) == false) {
-                Debug.Fail("HostScreen should be found");
-                return;
-            }
+            var screen = GetScreen(id);
             screen.OnResized(width, height);
         };
 
-    private static readonly ScreenAction<Winit.VirtualKeyCode, bool> _onKeyboardInput =
-        (Rust.Ref<CE.HostScreen> screenNative, Winit.VirtualKeyCode key, bool pressed) =>
+    private static readonly Action<CE.ScreenId, Winit.VirtualKeyCode, bool> _onKeyboardInput =
+        (CE.ScreenId id, Winit.VirtualKeyCode key, bool pressed) =>
         {
-            if(TryFindScreen(screenNative, out var screen) == false) {
-                Debug.Fail("HostScreen should be found");
-                return;
-            }
+            var screen = GetScreen(id);
             screen.OnKeyboardInput(key, pressed);
         };
-    private static readonly ScreenAction<Rune> _onCharReceived =
-        (Rust.Ref<CE.HostScreen> screenNative, Rune input) =>
+    private static readonly Action<CE.ScreenId, Rune> _onCharReceived =
+        (CE.ScreenId id, Rune input) =>
         {
-            if(TryFindScreen(screenNative, out var screen) == false) {
-                Debug.Fail("HostScreen should be found");
-                return;
-            }
+            var screen = GetScreen(id);
             screen.OnCharReceived(input);
         };
 
     private static readonly EngineCoreScreenClosingAction _onClosing =
-        (Rust.Ref<CE.HostScreen> screenNative, ref bool cancel) =>
+        (CE.ScreenId id, ref bool cancel) =>
         {
-            if(TryFindScreen(screenNative, out var screen) == false) {
-                Debug.Fail("HostScreen should be found");
-                return;
-            }
+            var screen = GetScreen(id);
             screen.OnClosing(ref cancel);
         };
 
-    private static bool TryFindScreen(Rust.Ref<CE.HostScreen> native, [MaybeNullWhen(false)] out HostScreen screen)
+    private static HostScreen GetScreen(CE.ScreenId id)
     {
-        var screens = (ReadOnlySpan<Own<HostScreen>>)CollectionsMarshal.AsSpan(_screens);
-        foreach(var screenOwn in screens) {
-            var s = screenOwn.AsValue();
-            if(s.AsRefUnchecked().AsPtr() == native.AsPtr()) {
-                screen = s;
-                return true;
-            }
+        if(TryGetScreen(id, out var screen) == false) {
+            Throw(id);
+
+            [DoesNotReturn] static void Throw(CE.ScreenId id) => throw new InvalidOperationException($"No HostScreen (id={id})");
         }
-        screen = null;
-        return false;
+        return screen;
+    }
+
+    private static bool TryGetScreen(CE.ScreenId id, [MaybeNullWhen(false)] out HostScreen screen)
+    {
+        if(_screens.TryGetValue(id, out var screenOwn) == false) {
+            screen = null;
+            return false;
+        }
+        screen = screenOwn.AsValue();
+        return true;
     }
 }
