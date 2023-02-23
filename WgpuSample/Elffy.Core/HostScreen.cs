@@ -105,35 +105,35 @@ internal sealed class HostScreen : IHostScreen
         _surfaceTexView = new SurfaceTextureView(this, Environment.CurrentManagedThreadId);
     }
 
-    ~HostScreen() => Release(false);
+    //~HostScreen() => Release(false);
 
-    private static readonly Action<HostScreen> _release = static self =>
-    {
-        self.Release(true);
-        GC.SuppressFinalize(self);
-    };
+    //private static readonly Action<HostScreen> _release = static self =>
+    //{
+    //    self.Release(true);
+    //    GC.SuppressFinalize(self);
+    //};
 
-    private void Release(bool manualRelease)
-    {
-        var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
-        if(native.IsNone) {
-            return;
-        }
-        // TODO: Destroy HostScreen
-        //native.
-        _depthTexture.Dispose();
-        _depthTextureView.Dispose();
-        _depthTexture = Own.None<Texture>();
-        _depthTextureView = Own.None<TextureView>();
-        if(manualRelease) {
-            Resized = null;
-            RedrawRequested = null;
-        }
-    }
+    //private void Release(bool manualRelease)
+    //{
+    //    var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
+    //    if(native.IsNone) {
+    //        return;
+    //    }
+    //    // TODO: Destroy HostScreen
+    //    //native.
+    //    _depthTexture.Dispose();
+    //    _depthTextureView.Dispose();
+    //    _depthTexture = Own.None<Texture>();
+    //    _depthTextureView = Own.None<TextureView>();
+    //    if(manualRelease) {
+    //        Resized = null;
+    //        RedrawRequested = null;
+    //    }
+    //}
 
-    internal static Own<HostScreen> Create(Rust.Box<CE.HostScreen> screen)
+    internal static HostScreen Create(Rust.Box<CE.HostScreen> screen)
     {
-        return Own.New(new HostScreen(screen), _release);
+        return new HostScreen(screen);
     }
 
     private void UpdateDepthTexture(Vector2i size)

@@ -11,7 +11,7 @@ namespace Elffy;
 
 public static class Engine
 {
-    private static readonly Dictionary<CE.ScreenId, Own<HostScreen>> _screens = new();
+    private static readonly Dictionary<CE.ScreenId, HostScreen> _screens = new();
 
     private static Action<IHostScreen>? _onInitialized;
 
@@ -36,10 +36,9 @@ public static class Engine
     private static readonly Func<Rust.Box<CE.HostScreen>, CE.HostScreenInfo, CE.ScreenId> _onStart =
         (Rust.Box<CE.HostScreen> screenHandle, CE.HostScreenInfo info) =>
         {
-            var screenOwn = HostScreen.Create(screenHandle);
-            var screen = screenOwn.AsValue();
+            var screen = HostScreen.Create(screenHandle);
             var id = screen.ScreenId;
-            _screens.Add(id, screenOwn);
+            _screens.Add(id, screen);
             screen.OnInitialize(info);
             _onInitialized?.Invoke(screen);
             return id;
@@ -48,45 +47,36 @@ public static class Engine
     private static readonly Func<CE.ScreenId, bool> _onRedrawRequested =
         (CE.ScreenId id) =>
         {
-            if(TryGetScreen(id, out var screen) == false) {
-                Debug.Fail("HostScreen should be found");
-                return false;
-            }
-            return screen.OnRedrawRequested();
+            return _screens[id].OnRedrawRequested();
         };
 
     private static readonly Action<CE.ScreenId> _onCleared =
         (CE.ScreenId id) =>
         {
-            var screen = GetScreen(id);
-            screen.OnCleared();
+            _screens[id].OnCleared();
         };
 
     private static readonly Action<CE.ScreenId, uint, uint> _onResized =
         (CE.ScreenId id, uint width, uint height) =>
         {
-            var screen = GetScreen(id);
-            screen.OnResized(width, height);
+            _screens[id].OnResized(width, height);
         };
 
     private static readonly Action<CE.ScreenId, Winit.VirtualKeyCode, bool> _onKeyboardInput =
         (CE.ScreenId id, Winit.VirtualKeyCode key, bool pressed) =>
         {
-            var screen = GetScreen(id);
-            screen.OnKeyboardInput(key, pressed);
+            _screens[id].OnKeyboardInput(key, pressed);
         };
     private static readonly Action<CE.ScreenId, Rune> _onCharReceived =
         (CE.ScreenId id, Rune input) =>
         {
-            var screen = GetScreen(id);
-            screen.OnCharReceived(input);
+            _screens[id].OnCharReceived(input);
         };
 
     private static readonly EngineCoreScreenClosingAction _onClosing =
         (CE.ScreenId id, ref bool cancel) =>
         {
-            var screen = GetScreen(id);
-            screen.OnClosing(ref cancel);
+            _screens[id].OnClosing(ref cancel);
         };
 
     private static readonly Func<CE.ScreenId, Rust.OptionBox<CE.HostScreen>> _onClosed =
@@ -95,26 +85,6 @@ public static class Engine
             if(_screens.Remove(id, out var screen) == false) {
                 return Rust.OptionBox<CE.HostScreen>.None;
             }
-            return screen.AsValue().OnClosed();
+            return screen.OnClosed();
         };
-
-    private static HostScreen GetScreen(CE.ScreenId id)
-    {
-        if(TryGetScreen(id, out var screen) == false) {
-            Throw(id);
-
-            [DoesNotReturn] static void Throw(CE.ScreenId id) => throw new InvalidOperationException($"No HostScreen (id={id})");
-        }
-        return screen;
-    }
-
-    private static bool TryGetScreen(CE.ScreenId id, [MaybeNullWhen(false)] out HostScreen screen)
-    {
-        if(_screens.TryGetValue(id, out var screenOwn) == false) {
-            screen = null;
-            return false;
-        }
-        screen = screenOwn.AsValue();
-        return true;
-    }
 }
