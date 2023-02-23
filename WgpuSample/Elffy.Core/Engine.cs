@@ -11,8 +11,6 @@ namespace Elffy;
 
 public static class Engine
 {
-    //private static readonly List<Own<HostScreen>> _screens = new List<Own<HostScreen>>();
-
     private static readonly Dictionary<CE.ScreenId, Own<HostScreen>> _screens = new();
 
     private static Action<IHostScreen>? _onInitialized;

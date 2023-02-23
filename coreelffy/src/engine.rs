@@ -92,7 +92,7 @@ impl Engine {
 static ENGINE: sync::RwLock<Option<Engine>> = sync::RwLock::new(None);
 
 #[derive(Clone, Copy)]
-struct ScreenInfo(window::WindowId, ScreenId);
+struct ScreenIdData(window::WindowId, ScreenId);
 
 pub(crate) fn engine_start(
     engine_config: &EngineCoreConfig,
@@ -105,18 +105,16 @@ pub(crate) fn engine_start(
         *engine = Some(Engine::new(engine_config));
     }
     let mut event_loop = event_loop::EventLoop::new();
-    let mut screens: Vec<ScreenInfo> = vec![];
+    let mut screens: Vec<ScreenIdData> = vec![];
 
     let screen = Box::new(HostScreen::new(screen_config, &event_loop)?);
     let window_id = screen.window.id();
     let screen_id = Engine::on_screen_init(screen);
-    screens.push(ScreenInfo(window_id, screen_id));
-    let screen_info = screens.last().unwrap();
-
-    // let find_screen = engine_config.on_find_screen;
+    screens.push(ScreenIdData(window_id, screen_id));
+    let id_data = screens.last().unwrap();
 
     event_loop.run_return(move |event, _event_loop, control_flow| {
-        let continue_next = handle_event(screen_info, &event);
+        let continue_next = handle_event(id_data, &event);
         if continue_next == false {
             if Engine::event_closing(screen_id) {
                 *control_flow = winit::event_loop::ControlFlow::Exit;
@@ -126,7 +124,7 @@ pub(crate) fn engine_start(
     return Ok(());
 }
 
-fn handle_event(target: &ScreenInfo, event: &event::Event<()>) -> bool {
+fn handle_event(target: &ScreenIdData, event: &event::Event<()>) -> bool {
     use winit::event::*;
 
     match event {
