@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using NonZeroUsize = System.UIntPtr;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
