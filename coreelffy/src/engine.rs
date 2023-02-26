@@ -101,9 +101,9 @@ static SCREENS: Mutex<Vec<ScreenIdData>> = Mutex::new(vec![]);
 
 static LOOP_PROXY: Mutex<Option<EventLoopProxy<ProxyMessage>>> = Mutex::new(None);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum ProxyMessage {
-    CreateScreen,
+    CreateScreen(HostScreenConfig),
 }
 
 pub(crate) fn get_loop_proxy() -> Result<EventLoopProxy<ProxyMessage>, EngineErr> {
@@ -203,16 +203,8 @@ fn handle_event(
 
     match event {
         Event::UserEvent(proxy_message) => match proxy_message {
-            ProxyMessage::CreateScreen => {
-                // TODO: config
-                let config = HostScreenConfig {
-                    title: Slice::default(),
-                    style: WindowStyle::Default,
-                    width: 1280,
-                    height: 720,
-                    backend: wgpu::Backends::VULKAN,
-                };
-                if let Err(err) = create_screen(&config, event_loop) {
+            ProxyMessage::CreateScreen(config) => {
+                if let Err(err) = create_screen(config, event_loop) {
                     dispatch_err(err);
                 }
             }

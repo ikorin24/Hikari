@@ -116,9 +116,10 @@ internal unsafe static partial class EngineCore
         }
     }
 
-    public static void CreateScreen()
+    public static void CreateScreen(in HostScreenConfig config)
     {
-        elffy_create_screen().Validate();
+        var screenConfig = config.ToCoreType();
+        elffy_create_screen(&screenConfig).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

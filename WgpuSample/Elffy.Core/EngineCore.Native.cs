@@ -19,7 +19,7 @@ static unsafe partial class EngineCore
         CE.HostScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiResult elffy_create_screen();
+    private static partial ApiResult elffy_create_screen(CE.HostScreenConfig* config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_resize_surface(

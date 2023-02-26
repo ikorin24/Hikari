@@ -9,7 +9,7 @@ pub(crate) fn create_window(
     use winit::platform::windows::WindowBuilderExtWindows;
 
     let window = window::WindowBuilder::new()
-        .with_title(config.title.as_str()?)
+        .with_title("")
         .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(
             config.width,
             config.height,

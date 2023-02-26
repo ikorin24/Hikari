@@ -222,7 +222,14 @@ internal sealed class HostScreen : IHostScreen
             RequestClose();
         }
         if(key == Winit.VirtualKeyCode.A && pressed) {
-            EngineCore.CreateScreen();
+            var config = new HostScreenConfig
+            {
+                Backend = GraphicsBackend.Dx12,
+                Width = 400,
+                Height = 100,
+                Style = WindowStyle.Default,
+            };
+            EngineCore.CreateScreen(config);
         }
         Debug.WriteLine($"{key}: {pressed}");
     }
@@ -294,7 +301,6 @@ public readonly ref struct HostScreenConfig
     {
         return new CE.HostScreenConfig
         {
-            title = CE.Slice<u8>.Empty,
             style = Style.MapOrThrow(),
             width = Width,
             height = Height,

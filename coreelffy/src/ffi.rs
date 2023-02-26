@@ -22,8 +22,8 @@ extern "cdecl" fn elffy_engine_start(
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_create_screen() -> ApiResult {
-    match send_proxy_message(ProxyMessage::CreateScreen) {
+extern "cdecl" fn elffy_create_screen(config: &HostScreenConfig) -> ApiResult {
+    match send_proxy_message(ProxyMessage::CreateScreen(*config)) {
         Ok(_) => {}
         Err(err) => dispatch_err(err),
     };

@@ -177,7 +177,6 @@ internal static class CoreElffy
 
     internal struct HostScreenConfig
     {
-        public required Slice<u8> title;
         public required WindowStyle style;
         public required u32 width;
         public required u32 height;

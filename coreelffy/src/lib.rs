@@ -27,9 +27,8 @@ pub(crate) struct EngineCoreConfig {
 }
 
 #[repr(C)]
-#[derive(Debug)]
-pub(crate) struct HostScreenConfig<'a> {
-    pub title: Slice<'a, u8>,
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct HostScreenConfig {
     pub style: WindowStyle,
     pub width: u32,
     pub height: u32,
