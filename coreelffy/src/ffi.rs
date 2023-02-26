@@ -21,6 +21,15 @@ extern "cdecl" fn elffy_engine_start(
     make_result()
 }
 
+#[no_mangle]
+extern "cdecl" fn elffy_create_screen() -> ApiResult {
+    match send_proxy_message(ProxyMessage::CreateScreen) {
+        Ok(_) => {}
+        Err(err) => dispatch_err(err),
+    };
+    make_result()
+}
+
 static_assertions::assert_impl_all!(HostScreen: Send, Sync);
 static_assertions::assert_impl_all!(Slice<u8>: Send, Sync);
 

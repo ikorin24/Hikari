@@ -4,7 +4,7 @@ use crate::screen::*;
 
 pub(crate) fn create_window(
     config: &HostScreenConfig,
-    event_loop: &event_loop::EventLoop<()>,
+    event_loop: &EventLoopWindowTarget<ProxyMessage>,
 ) -> Result<window::Window, Box<dyn Error>> {
     use winit::platform::windows::WindowBuilderExtWindows;
 
@@ -15,7 +15,7 @@ pub(crate) fn create_window(
             config.height,
         )))
         .with_theme(Some(window::Theme::Light))
-        .build(&event_loop)?;
+        .build(event_loop)?;
     match config.style {
         WindowStyle::Default => {
             window.set_resizable(true);

@@ -6,6 +6,7 @@ use macos as platform;
 #[cfg(target_os = "windows")]
 use windows as platform;
 
+use crate::engine::ProxyMessage;
 use crate::error_handler::*;
 use crate::*;
 use pollster::FutureExt;
@@ -14,7 +15,8 @@ use std::error::Error;
 use std::num;
 use std::sync::Mutex;
 use winit;
-use winit::{dpi, event_loop, window};
+use winit::event_loop::EventLoopWindowTarget;
+use winit::{dpi, window};
 
 pub(crate) struct HostScreen {
     pub window: window::Window,
@@ -29,9 +31,9 @@ pub(crate) struct HostScreen {
 impl HostScreen {
     pub fn new(
         config: &HostScreenConfig,
-        event_loop: &event_loop::EventLoop<()>,
+        event_loop: &EventLoopWindowTarget<ProxyMessage>,
     ) -> Result<HostScreen, Box<dyn Error>> {
-        let window = platform::create_window(&config, &event_loop)?;
+        let window = platform::create_window(&config, event_loop)?;
         if let Some(monitor) = window.current_monitor() {
             let monitor_size = monitor.size();
             let window_size = window.outer_size();

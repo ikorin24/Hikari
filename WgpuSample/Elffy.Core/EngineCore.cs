@@ -116,6 +116,11 @@ internal unsafe static partial class EngineCore
         }
     }
 
+    public static void CreateScreen()
+    {
+        elffy_create_screen().Validate();
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void ScreenResizeSurface(this Rust.Ref<CE.HostScreen> screen, u32 width, u32 height)
     {

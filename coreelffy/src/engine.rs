@@ -6,6 +6,7 @@ use std::fmt::Debug;
 use std::sync;
 use std::sync::Mutex;
 use winit;
+use winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::{event, event_loop, window};
 
@@ -98,6 +99,18 @@ static ENGINE: sync::RwLock<Option<Engine>> = sync::RwLock::new(None);
 
 static SCREENS: Mutex<Vec<ScreenIdData>> = Mutex::new(vec![]);
 
+static LOOP_PROXY: Mutex<Option<EventLoopProxy<ProxyMessage>>> = Mutex::new(None);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ProxyMessage {
+    CreateScreen,
+}
+
+pub(crate) fn get_loop_proxy() -> Result<EventLoopProxy<ProxyMessage>, EngineErr> {
+    let proxy = LOOP_PROXY.lock().unwrap();
+    proxy.clone().ok_or(EngineErr::NOT_RUNNING)
+}
+
 fn get_screen(window_id: &window::WindowId) -> Option<ScreenIdData> {
     let screens = SCREENS.lock().unwrap();
     screens.iter().find(|x| x.0 == *window_id).copied()
@@ -122,11 +135,17 @@ fn remove_screen(id_data: ScreenIdData, is_empty: &mut bool) {
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct ScreenIdData(window::WindowId, ScreenId);
 
-pub(crate) fn create_screen(
+pub(crate) fn send_proxy_message(message: ProxyMessage) -> Result<(), Box<dyn Error>> {
+    let proxy = get_loop_proxy()?;
+    proxy.send_event(message)?;
+    Ok(())
+}
+
+fn create_screen(
     screen_config: &HostScreenConfig,
-    event_loop: &event_loop::EventLoop<()>,
+    event_loop: &EventLoopWindowTarget<ProxyMessage>,
 ) -> Result<(), Box<dyn Error>> {
-    let screen = Box::new(HostScreen::new(screen_config, &event_loop)?);
+    let screen = Box::new(HostScreen::new(screen_config, event_loop)?);
     let window_id = screen.window.id();
     let screen_id = Engine::on_screen_init(screen);
     push_screen(ScreenIdData(window_id, screen_id));
@@ -148,18 +167,23 @@ pub(crate) fn engine_start(
     env_logger::init();
     set_err_dispatcher(engine_config.err_dispatcher);
 
+    let mut event_loop = event_loop::EventLoop::with_user_event();
+
     // set a new engine to the static field.
     {
         let mut engine = ENGINE.write().unwrap();
         *engine = Some(Engine::new(engine_config));
-    }
 
-    let mut event_loop = event_loop::EventLoop::new();
+        {
+            let mut proxy = LOOP_PROXY.lock().unwrap();
+            *proxy = Some(event_loop.create_proxy());
+        }
+    }
 
     create_screen(screen_config, &event_loop)?;
 
-    event_loop.run_return(move |event, _, control_flow| {
-        handle_event(&event, control_flow);
+    event_loop.run_return(move |event, event_loop, control_flow| {
+        handle_event(&event, event_loop, control_flow);
     });
 
     // drop the engine from the static field.
@@ -170,10 +194,29 @@ pub(crate) fn engine_start(
     return Ok(());
 }
 
-fn handle_event(event: &event::Event<()>, control_flow: &mut winit::event_loop::ControlFlow) {
+fn handle_event(
+    event: &event::Event<ProxyMessage>,
+    event_loop: &EventLoopWindowTarget<ProxyMessage>,
+    control_flow: &mut winit::event_loop::ControlFlow,
+) {
     use winit::event::*;
 
     match event {
+        Event::UserEvent(proxy_message) => match proxy_message {
+            ProxyMessage::CreateScreen => {
+                // TODO: config
+                let config = HostScreenConfig {
+                    title: Slice::default(),
+                    style: WindowStyle::Default,
+                    width: 1280,
+                    height: 720,
+                    backend: wgpu::Backends::VULKAN,
+                };
+                if let Err(err) = create_screen(&config, event_loop) {
+                    dispatch_err(err);
+                }
+            }
+        },
         Event::WindowEvent {
             ref event,
             window_id,

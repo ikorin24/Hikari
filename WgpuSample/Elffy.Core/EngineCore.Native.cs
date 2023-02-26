@@ -19,6 +19,9 @@ static unsafe partial class EngineCore
         CE.HostScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_create_screen();
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_resize_surface(
         Rust.Ref<CE.HostScreen> screen,
         u32 width,

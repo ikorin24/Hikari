@@ -217,8 +217,12 @@ internal sealed class HostScreen : IHostScreen
 
     internal void OnKeyboardInput(Winit.VirtualKeyCode key, bool pressed)
     {
+        // TODO: The following is sample code. Remove it.
         if(key == Winit.VirtualKeyCode.Escape && pressed) {
             RequestClose();
+        }
+        if(key == Winit.VirtualKeyCode.A && pressed) {
+            EngineCore.CreateScreen();
         }
         Debug.WriteLine($"{key}: {pressed}");
     }
