@@ -21,6 +21,12 @@ extern "cdecl" fn elffy_engine_start(
     make_result()
 }
 
+static_assertions::assert_impl_all!(HostScreenConfig: Send, Sync);
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_screen(config: &HostScreenConfig) -> ApiResult {
     match send_proxy_message(ProxyMessage::CreateScreen(*config)) {
