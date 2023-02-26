@@ -35,23 +35,23 @@ impl Engine {
     }
 
     pub fn on_screen_init(screen: Box<HostScreen>) -> ScreenId {
-        let f = Self::get_callback(|engine| engine.on_screen_init).unwrap();
+        let f = Self::get_engine_field(|engine| engine.on_screen_init).unwrap();
         let screen_info = &screen.get_info();
         f(screen, screen_info)
     }
 
     pub fn event_cleared(screen_id: ScreenId) {
-        let f = Self::get_callback(|engine| engine.event_cleared).unwrap();
+        let f = Self::get_engine_field(|engine| engine.event_cleared).unwrap();
         f(screen_id)
     }
 
     pub fn event_redraw_requested(screen_id: ScreenId) -> bool {
-        let f = Self::get_callback(|engine| engine.event_redraw_requested).unwrap();
+        let f = Self::get_engine_field(|engine| engine.event_redraw_requested).unwrap();
         f(screen_id)
     }
 
     pub fn event_resized(screen_id: ScreenId, width: u32, height: u32) {
-        let f = Self::get_callback(|engine| engine.event_resized).unwrap();
+        let f = Self::get_engine_field(|engine| engine.event_resized).unwrap();
         f(screen_id, width, height)
     }
 
@@ -60,7 +60,7 @@ impl Engine {
         key: &event::VirtualKeyCode,
         state: &event::ElementState,
     ) {
-        let f = Self::get_callback(|engine| engine.event_keyboard).unwrap();
+        let f = Self::get_engine_field(|engine| engine.event_keyboard).unwrap();
         let pressed = match state {
             event::ElementState::Pressed => true,
             event::ElementState::Released => false,
@@ -69,32 +69,29 @@ impl Engine {
     }
 
     pub fn event_char_received(screen_id: ScreenId, c: char) {
-        let f = Self::get_callback(|engine| engine.event_char_received).unwrap();
+        let f = Self::get_engine_field(|engine| engine.event_char_received).unwrap();
         f(screen_id, c)
     }
 
     pub fn event_closing(screen_id: ScreenId) -> bool {
-        let f = Self::get_callback(|engine| engine.event_closing).unwrap();
+        let f = Self::get_engine_field(|engine| engine.event_closing).unwrap();
         let mut cancel = false;
         f(screen_id, &mut cancel);
         !cancel
     }
 
     pub fn event_closed(screen_id: ScreenId) -> Option<Box<HostScreen>> {
-        let f = Self::get_callback(|engine| engine.event_closed).unwrap();
+        let f = Self::get_engine_field(|engine| engine.event_closed).unwrap();
         f(screen_id)
     }
 
-    fn get_callback<T>(f: fn(engine: &Engine) -> T) -> Result<T, EngineErr> {
+    fn get_engine_field<T>(f: fn(engine: &Engine) -> T) -> Result<T, EngineErr> {
         let reader = ENGINE.read().unwrap();
         match reader.as_ref().map(f) {
             Some(value) => Ok(value),
-            None => Err(Self::SHOULD_NOT_NONE_WHEN_ENGINE_RUNNING),
+            None => Err(EngineErr::NOT_RUNNING),
         }
     }
-
-    const SHOULD_NOT_NONE_WHEN_ENGINE_RUNNING: EngineErr =
-        EngineErr::new("It should not be None when engine is running");
 }
 
 static ENGINE: sync::RwLock<Option<Engine>> = sync::RwLock::new(None);
@@ -125,28 +122,51 @@ fn remove_screen(id_data: ScreenIdData, is_empty: &mut bool) {
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct ScreenIdData(window::WindowId, ScreenId);
 
+pub(crate) fn create_screen(
+    screen_config: &HostScreenConfig,
+    event_loop: &event_loop::EventLoop<()>,
+) -> Result<(), Box<dyn Error>> {
+    let screen = Box::new(HostScreen::new(screen_config, &event_loop)?);
+    let window_id = screen.window.id();
+    let screen_id = Engine::on_screen_init(screen);
+    push_screen(ScreenIdData(window_id, screen_id));
+    Ok(())
+}
+
 pub(crate) fn engine_start(
     engine_config: &EngineCoreConfig,
     screen_config: &HostScreenConfig,
 ) -> Result<(), Box<dyn Error>> {
+    let is_engine_running = {
+        let a = ENGINE.read().unwrap();
+        a.is_some()
+    };
+    if is_engine_running {
+        return Err(EngineErr::ALREADY_RUNNING.into());
+    }
+
     env_logger::init();
     set_err_dispatcher(engine_config.err_dispatcher);
+
+    // set a new engine to the static field.
     {
-        let mut engine = ENGINE.write()?;
+        let mut engine = ENGINE.write().unwrap();
         *engine = Some(Engine::new(engine_config));
     }
 
     let mut event_loop = event_loop::EventLoop::new();
 
-    let screen = Box::new(HostScreen::new(screen_config, &event_loop)?);
-    let window_id = screen.window.id();
-    let screen_id = Engine::on_screen_init(screen);
-
-    push_screen(ScreenIdData(window_id, screen_id));
+    create_screen(screen_config, &event_loop)?;
 
     event_loop.run_return(move |event, _, control_flow| {
         handle_event(&event, control_flow);
     });
+
+    // drop the engine from the static field.
+    {
+        let mut engine = ENGINE.write().unwrap();
+        _ = engine.take();
+    }
     return Ok(());
 }
 
@@ -259,4 +279,7 @@ impl EngineErr {
     pub const fn new(message: &'static str) -> Self {
         Self { message }
     }
+
+    const NOT_RUNNING: Self = Self::new("The engine is not running");
+    const ALREADY_RUNNING: Self = Self::new("The engine is already running");
 }
