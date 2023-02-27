@@ -6,8 +6,6 @@ pub(crate) fn create_window(
     config: &HostScreenConfig,
     event_loop: &EventLoopWindowTarget<ProxyMessage>,
 ) -> Result<window::Window, Box<dyn Error>> {
-    use winit::platform::windows::WindowBuilderExtWindows;
-
     let window = window::WindowBuilder::new()
         .with_title("")
         .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(

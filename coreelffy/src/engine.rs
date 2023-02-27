@@ -6,9 +6,9 @@ use std::fmt::Debug;
 use std::sync;
 use std::sync::Mutex;
 use winit;
-use winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
+use winit::event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget};
 use winit::platform::run_return::EventLoopExtRunReturn;
-use winit::{event, event_loop, window};
+use winit::{event, window};
 
 pub(crate) struct Engine {
     on_screen_init: HostScreenInitFn,
@@ -157,8 +157,8 @@ pub(crate) fn engine_start(
     screen_config: &HostScreenConfig,
 ) -> Result<(), Box<dyn Error>> {
     let is_engine_running = {
-        let a = ENGINE.read().unwrap();
-        a.is_some()
+        let engine = ENGINE.read().unwrap();
+        engine.is_some()
     };
     if is_engine_running {
         return Err(EngineErr::ALREADY_RUNNING.into());
@@ -167,7 +167,7 @@ pub(crate) fn engine_start(
     env_logger::init();
     set_err_dispatcher(engine_config.err_dispatcher);
 
-    let mut event_loop = event_loop::EventLoop::with_user_event();
+    let mut event_loop = EventLoopBuilder::with_user_event().build();
 
     // set a new engine to the static field.
     {

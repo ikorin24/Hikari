@@ -50,7 +50,6 @@ public enum TextureFormat : u32
     [EnumMapTo(Wgpu.TextureFormat.Depth32FloatStencil8)] Depth32FloatStencil8,
     [EnumMapTo(Wgpu.TextureFormat.Depth24Plus)] Depth24Plus,
     [EnumMapTo(Wgpu.TextureFormat.Depth24PlusStencil8)] Depth24PlusStencil8,
-    [EnumMapTo(Wgpu.TextureFormat.Depth24UnormStencil8)] Depth24UnormStencil8,
     [EnumMapTo(Wgpu.TextureFormat.Rgb9e5Ufloat)] Rgb9e5Ufloat,
     [EnumMapTo(Wgpu.TextureFormat.Bc1RgbaUnorm)] Bc1RgbaUnorm,
     [EnumMapTo(Wgpu.TextureFormat.Bc1RgbaUnormSrgb)] Bc1RgbaUnormSrgb,

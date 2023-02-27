@@ -53,8 +53,11 @@ impl HostScreen {
         backends: &wgpu::Backends,
     ) -> Result<HostScreen, Box<dyn Error>> {
         let size = window.inner_size();
-        let instance = wgpu::Instance::new(*backends);
-        let surface = unsafe { instance.create_surface(&window) };
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: *backends,
+            dx12_shader_compiler: wgpu::Dx12Compiler::default(),
+        });
+        let surface = unsafe { instance.create_surface(&window)? };
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
@@ -73,13 +76,24 @@ impl HostScreen {
                 None,
             )
             .block_on()?;
-        device.on_uncaptured_error(|err: wgpu::Error| dispatch_err(err));
-        let surface_config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface.get_supported_formats(&adapter)[0],
-            width: size.width,
-            height: size.height,
-            present_mode: wgpu::PresentMode::Fifo,
+        device.on_uncaptured_error(Box::new(|error| dispatch_err(error)));
+        let surface_config = {
+            let surface_caps = surface.get_capabilities(&adapter);
+            let surface_format = surface_caps
+                .formats
+                .iter()
+                .copied()
+                .filter(|f| f.describe().srgb)
+                .next()
+                .unwrap_or(surface_caps.formats[0]);
+
+            new_default_surface_config(
+                surface_format,
+                size.width,
+                size.height,
+                surface_caps.present_modes[0],
+                surface_caps.alpha_modes[0],
+            )
         };
         surface.configure(&device, &surface_config);
         let size = (surface_config.width, surface_config.height);
@@ -131,6 +145,7 @@ struct SurfaceConfigData {
     pub usage: wgpu::TextureUsages,
     pub format: wgpu::TextureFormat,
     pub present_mode: wgpu::PresentMode,
+    pub alpha_mode: wgpu::CompositeAlphaMode,
 }
 
 impl SurfaceConfigData {
@@ -145,6 +160,8 @@ impl SurfaceConfigData {
             width: width.into(),
             height: height.into(),
             present_mode: self.present_mode,
+            alpha_mode: self.alpha_mode,
+            view_formats: vec![],
         }
     }
 }
@@ -155,6 +172,25 @@ impl From<wgpu::SurfaceConfiguration> for SurfaceConfigData {
             usage: x.usage,
             format: x.format,
             present_mode: x.present_mode,
+            alpha_mode: x.alpha_mode,
         }
+    }
+}
+
+fn new_default_surface_config(
+    format: wgpu::TextureFormat,
+    width: u32,
+    height: u32,
+    present_mode: wgpu::PresentMode,
+    alpha_mode: wgpu::CompositeAlphaMode,
+) -> wgpu::SurfaceConfiguration {
+    wgpu::SurfaceConfiguration {
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        format,
+        width,
+        height,
+        present_mode,
+        alpha_mode,
+        view_formats: vec![],
     }
 }
