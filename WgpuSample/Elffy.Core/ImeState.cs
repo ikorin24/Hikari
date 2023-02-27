@@ -15,8 +15,8 @@ internal unsafe sealed class ImeState
     private byte* _buf;
     private usize _bufCapacity;
     private usize _len;
-    private int _start;
-    private int _end;
+
+    private (usize Start, usize End)? _range;
 
     public ImeState()
     {
@@ -33,14 +33,41 @@ internal unsafe sealed class ImeState
                 System.Buffer.MemoryCopy(input.text.data, _buf, _bufCapacity, input.text.len);
                 _len = input.text.len;
 
-                Console.WriteLine($"Preedit: {DumpToString()}");
-                if(input.range.TryGetValue(out var range)) {
-                    var a = new string(' ', (int)range.Start) + new string('~', (int)(range.End - range.Start));
-                    Console.WriteLine($"         {a}");
-                    Console.WriteLine($"  ({range.Start}, {range.End})");
+
+                {
+                    if(input.range.TryGetValue(out var range)) {
+                        _range = (range.Start, range.End);
+                    }
+                    else {
+                        _range = null;
+                    }
+                }
+
+
+                if(_range.HasValue) {
+                    var charCount = _utf8.GetCharCount(_buf, checked((int)_len));
+                    var targetCharRange = (Start: 0, Length: 0);
+                    // TODO: capture
+                    var str = string.Create(charCount, (this, _range.Value), (dest, x) =>
+                    {
+                        var (self, range) = x;
+                        var rangeStart = checked((int)range.Start);
+                        var rangeEnd = checked((int)range.End);
+                        var source = new ReadOnlySpan<byte>(self._buf, checked((int)self._len));
+
+                        var charCount1 = Utf8ToUtf16(source[..rangeStart], dest[..], out _);
+                        var charCount2 = Utf8ToUtf16(source[rangeStart..rangeEnd], dest[charCount1..], out _);
+                        _ = Utf8ToUtf16(source[rangeEnd..], dest[(charCount1 + charCount2)..], out _);
+
+                        targetCharRange.Start = charCount1;
+                        targetCharRange.Length = charCount2;
+                    });
+                    Console.WriteLine($"Preedit: {str}");
+                    Console.WriteLine("         " + new string('　', targetCharRange.Start) + new string('～', targetCharRange.Length));
+                    Debug.WriteLine($"{targetCharRange.Start}, {targetCharRange.Length}");
                 }
                 else {
-                    Console.WriteLine();
+                    Console.WriteLine($"Preedit: ");
                 }
                 break;
             }
@@ -78,6 +105,23 @@ internal unsafe sealed class ImeState
                 throw new ArgumentException("buffer is too short");
             case OperationStatus.NeedMoreData:
                 break;
+            case OperationStatus.InvalidData:
+                throw new ArgumentException("failed to encode to utf16");
+            default:
+                break;
+        }
+        return writtenLen;
+    }
+
+    private static int Utf8ToUtf16(ReadOnlySpan<byte> source, Span<char> dest, out int bytesRead)
+    {
+        switch(Utf8.ToUtf16(source, dest, out bytesRead, out int writtenLen)) {
+            case OperationStatus.Done:
+                break;
+            case OperationStatus.DestinationTooSmall:
+                throw new ArgumentException("buffer is too short");
+            case OperationStatus.NeedMoreData:
+                throw new ArgumentException("insufficient byte sequence to encode to utf16");
             case OperationStatus.InvalidData:
                 throw new ArgumentException("failed to encode to utf16");
             default:
