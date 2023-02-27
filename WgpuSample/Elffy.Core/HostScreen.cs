@@ -221,16 +221,17 @@ internal sealed class HostScreen : IHostScreen
         if(key == Winit.VirtualKeyCode.Escape && pressed) {
             RequestClose();
         }
-        if(key == Winit.VirtualKeyCode.A && pressed) {
-            var config = new HostScreenConfig
-            {
-                Backend = GraphicsBackend.Dx12,
-                Width = 400,
-                Height = 100,
-                Style = WindowStyle.Default,
-            };
-            EngineCore.CreateScreen(config);
-        }
+        //if(key == Winit.VirtualKeyCode.A && pressed) {
+        //    var config = new HostScreenConfig
+        //    {
+        //        Backend = GraphicsBackend.Dx12,
+        //        Width = 400,
+        //        Height = 100,
+        //        Style = WindowStyle.Default,
+        //    };
+        //    EngineCore.CreateScreen(config);
+        //}
+
         Debug.WriteLine($"{key}: {pressed}");
     }
 
