@@ -41,6 +41,7 @@ internal unsafe static partial class EngineCore
             event_resized = new(&EventResized),
             event_keyboard = new(&EventKeyboard),
             event_char_received = new(&EventCharReceived),
+            event_ime = new(&EventIme),
             event_closing = new(&EventClosing),
             event_closed = new(&EventClosed),
         };
@@ -91,6 +92,12 @@ internal unsafe static partial class EngineCore
         static void EventCharReceived(CE.ScreenId id, Rune input)
         {
             _config.OnCharReceived(id, input);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        static void EventIme(CE.ScreenId id, CE.ImeInputData* input)
+        {
+            _config.OnImeInput(id, in *input);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -559,9 +566,12 @@ internal readonly struct EngineCoreConfig
 
     public required Action<CE.ScreenId, Winit.VirtualKeyCode, bool> OnKeyboardInput { get; init; }
     public required Action<CE.ScreenId, Rune> OnCharReceived { get; init; }
+    public required EngineCoreImeInputAction OnImeInput { get; init; }
     public required EngineCoreScreenClosingAction OnClosing { get; init; }
     public required Func<CE.ScreenId, Rust.OptionBox<CE.HostScreen>> OnClosed { get; init; }
 }
+
+internal delegate void EngineCoreImeInputAction(CE.ScreenId id, in CE.ImeInputData input);
 
 internal delegate void EngineCoreScreenClosingAction(CE.ScreenId id, ref bool cancel);
 

@@ -27,6 +27,7 @@ public static class Engine
             OnResized = _onResized,
             OnKeyboardInput = _onKeyboardInput,
             OnCharReceived = _onCharReceived,
+            OnImeInput = _onImeInput,
             OnClosing = _onClosing,
             OnClosed = _onClosed,
         };
@@ -71,6 +72,14 @@ public static class Engine
         (CE.ScreenId id, Rune input) =>
         {
             _screens[id].OnCharReceived(input);
+        };
+
+    private static readonly ImeState _imeState = new ImeState();   // TODO: not static
+    private static readonly EngineCoreImeInputAction _onImeInput =
+        (CE.ScreenId id, in CE.ImeInputData input) =>
+        {
+            //_screens[id].OnCharReceived(input);
+            _imeState.OnInput(input);
         };
 
     private static readonly EngineCoreScreenClosingAction _onClosing =

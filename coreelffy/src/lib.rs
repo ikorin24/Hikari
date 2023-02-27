@@ -11,6 +11,7 @@ use static_assertions::assert_eq_size;
 use std;
 use std::error::Error;
 use std::{mem, num, ops, str};
+use winit::event::Ime;
 use winit::window;
 
 #[repr(C)]
@@ -22,6 +23,7 @@ pub(crate) struct EngineCoreConfig {
     pub event_resized: ResizedEventFn,
     pub event_keyboard: KeyboardEventFn,
     pub event_char_received: CharReceivedEventFn,
+    pub event_ime: ImeInputEventFn,
     pub event_closing: ClosingEventFn,
     pub event_closed: ClosedEventFn,
 }
@@ -1348,7 +1350,7 @@ pub(crate) struct Slice<'a, T> {
 
 impl<'a, T> Default for Slice<'a, T> {
     fn default() -> Self {
-        Self { data: None, len: 0 }
+        Self::empty()
     }
 }
 
@@ -1370,6 +1372,18 @@ impl<'a, T> Slice<'a, T> {
                 let p: *const T = r;
                 std::slice::from_raw_parts(p, self.len)
             },
+        }
+    }
+
+    pub const fn empty() -> Self {
+        Self { data: None, len: 0 }
+    }
+
+    #[inline]
+    pub fn new(s: &'a [T]) -> Self {
+        Self {
+            data: s.get(0),
+            len: s.len(),
         }
     }
 
@@ -1484,6 +1498,55 @@ impl ops::RangeBounds<u64> for RangeBoundsU64 {
 }
 
 #[repr(C)]
+pub(crate) struct ImeInputData<'a> {
+    tag: ImeInputDataTag,
+    text: Slice<'a, u8>,
+    range: Opt<(usize, usize)>,
+}
+
+impl<'a> From<&'a Ime> for ImeInputData<'a> {
+    fn from(value: &'a Ime) -> Self {
+        Self::new(value)
+    }
+}
+
+impl<'a> ImeInputData<'a> {
+    fn new(value: &'a Ime) -> Self {
+        match value {
+            Ime::Enabled => Self {
+                tag: ImeInputDataTag::Enabled,
+                text: Slice::default(),
+                range: None.into(),
+            },
+            Ime::Preedit(text, range) => Self {
+                tag: ImeInputDataTag::Preedit,
+                text: Slice::new(text.as_bytes()),
+                range: range.clone().into(),
+            },
+            Ime::Commit(text) => Self {
+                tag: ImeInputDataTag::Commit,
+                text: Slice::new(text.as_bytes()),
+                range: None.into(),
+            },
+            Ime::Disabled => Self {
+                tag: ImeInputDataTag::Disabled,
+                text: Slice::default(),
+                range: None.into(),
+            },
+        }
+    }
+}
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ImeInputDataTag {
+    Enabled = 0,
+    Preedit = 1,
+    Commit = 2,
+    Disabled = 3,
+}
+
+#[repr(C)]
 pub(crate) struct HostScreenInfo {
     pub backend: wgpu::Backend,
     pub surface_format: Opt<TextureFormat>,
@@ -1501,5 +1564,7 @@ pub(crate) type ResizedEventFn =
 pub(crate) type KeyboardEventFn =
     extern "cdecl" fn(screen_id: ScreenId, key: winit::event::VirtualKeyCode, pressed: bool) -> ();
 pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen_id: ScreenId, input: char) -> ();
+pub(crate) type ImeInputEventFn =
+    extern "cdecl" fn(screen_id: ScreenId, input: &ImeInputData) -> ();
 pub(crate) type ClosingEventFn = extern "cdecl" fn(screen_id: ScreenId, cancel: &mut bool) -> ();
 pub(crate) type ClosedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> Option<Box<HostScreen>>;

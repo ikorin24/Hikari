@@ -671,6 +671,19 @@ extern "cdecl" fn elffy_draw_indexed<'a>(
     make_result()
 }
 
+static_assertions::assert_impl_all!(winit::window::Window: Send, Sync);
+
+#[no_mangle]
+extern "cdecl" fn elffy_set_ime_allowed(screen: &HostScreen, allowed: bool) {
+    screen.window.set_ime_allowed(allowed);
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_set_ime_position(screen: &HostScreen, x: u32, y: u32) {
+    let pos = winit::dpi::PhysicalPosition::new(x, y);
+    screen.window.set_ime_position(pos);
+}
+
 #[inline]
 fn make_box_result<T>(value: Box<T>, on_value_drop: Option<fn(Box<T>)>) -> ApiBoxResult<T> {
     let err_count = reset_tls_err_count();

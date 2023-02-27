@@ -17,6 +17,7 @@ pub(crate) struct Engine {
     event_resized: ResizedEventFn,
     event_keyboard: KeyboardEventFn,
     event_char_received: CharReceivedEventFn,
+    event_ime: ImeInputEventFn,
     event_closing: ClosingEventFn,
     event_closed: ClosedEventFn,
 }
@@ -30,6 +31,7 @@ impl Engine {
             event_resized: config.event_resized,
             event_keyboard: config.event_keyboard,
             event_char_received: config.event_char_received,
+            event_ime: config.event_ime,
             event_closing: config.event_closing,
             event_closed: config.event_closed,
         }
@@ -72,6 +74,11 @@ impl Engine {
     pub fn event_char_received(screen_id: ScreenId, c: char) {
         let f = Self::get_engine_field(|engine| engine.event_char_received).unwrap();
         f(screen_id, c)
+    }
+
+    pub fn event_ime(screen_id: ScreenId, input: &ImeInputData) {
+        let f = Self::get_engine_field(|engine| engine.event_ime).unwrap();
+        f(screen_id, input)
     }
 
     pub fn event_closing(screen_id: ScreenId) -> bool {
@@ -215,6 +222,10 @@ fn handle_event(
         } => {
             if let Some(target) = get_screen(window_id) {
                 match event {
+                    WindowEvent::Ime(ime) => {
+                        let data = ImeInputData::new(ime);
+                        Engine::event_ime(target.1, &data);
+                    }
                     WindowEvent::ReceivedCharacter(c) => {
                         Engine::event_char_received(target.1, *c);
                     }

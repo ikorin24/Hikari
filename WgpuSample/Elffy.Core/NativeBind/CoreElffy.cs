@@ -155,6 +155,23 @@ internal static class CoreElffy
         }
     }
 
+    internal readonly struct ImeInputData
+    {
+        public readonly Tag tag;
+        public readonly Slice<u8> text;
+        public readonly Opt<RangeValue> range;
+
+        internal enum Tag : u32
+        {
+            Enabled = 0,
+            Preedit = 1,
+            Commit = 2,
+            Disabled = 3,
+        }
+
+        internal record struct RangeValue(usize Start, usize End);
+    }
+
     internal enum WindowStyle
     {
         Default = 0,
@@ -171,6 +188,7 @@ internal static class CoreElffy
         public required ResizedEventFn event_resized;
         public required KeyboardEventFn event_keyboard;
         public required CharReceivedEventFn event_char_received;
+        public required ImeInputEventFn event_ime;
         public required ClosingEventFn event_closing;
         public required ClosedEventFn event_closed;
     }
@@ -239,6 +257,12 @@ internal static class CoreElffy
     {
         private readonly delegate* unmanaged[Cdecl]<ScreenId, Rune, void> _func;
         public CharReceivedEventFn(delegate* unmanaged[Cdecl]<ScreenId, Rune, void> f) => _func = f;
+    }
+
+    internal unsafe readonly struct ImeInputEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<ScreenId, ImeInputData*, void> _func;
+        public ImeInputEventFn(delegate* unmanaged[Cdecl]<ScreenId, ImeInputData*, void> f) => _func = f;
     }
 
     internal unsafe readonly struct ClosingEventFn
