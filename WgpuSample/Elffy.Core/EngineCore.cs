@@ -485,6 +485,23 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SetImeAllowed(
+        this Rust.Ref<CE.HostScreen> screen,
+        bool allowed)
+    {
+        elffy_set_ime_allowed(screen, allowed).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SetImePosition(
+        this Rust.Ref<CE.HostScreen> screen,
+        u32 x,
+        u32 y)
+    {
+        elffy_set_ime_position(screen, x, y).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerNonUserCode]
     private static void ThrowNativeErrorIfNotZero(usize errorCount)
     {

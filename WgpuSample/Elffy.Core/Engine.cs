@@ -74,12 +74,10 @@ public static class Engine
             _screens[id].OnCharReceived(input);
         };
 
-    private static readonly ImeState _imeState = new ImeState();   // TODO: not static
     private static readonly EngineCoreImeInputAction _onImeInput =
         (CE.ScreenId id, in CE.ImeInputData input) =>
         {
-            //_screens[id].OnCharReceived(input);
-            _imeState.OnInput(input);
+            _screens[id].OnImeInput(input);
         };
 
     private static readonly EngineCoreScreenClosingAction _onClosing =

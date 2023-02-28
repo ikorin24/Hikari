@@ -674,14 +674,16 @@ extern "cdecl" fn elffy_draw_indexed<'a>(
 static_assertions::assert_impl_all!(winit::window::Window: Send, Sync);
 
 #[no_mangle]
-extern "cdecl" fn elffy_set_ime_allowed(screen: &HostScreen, allowed: bool) {
+extern "cdecl" fn elffy_set_ime_allowed(screen: &HostScreen, allowed: bool) -> ApiResult {
     screen.window.set_ime_allowed(allowed);
+    make_result()
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_set_ime_position(screen: &HostScreen, x: u32, y: u32) {
+extern "cdecl" fn elffy_set_ime_position(screen: &HostScreen, x: u32, y: u32) -> ApiResult {
     let pos = winit::dpi::PhysicalPosition::new(x, y);
     screen.window.set_ime_position(pos);
+    make_result()
 }
 
 #[inline]

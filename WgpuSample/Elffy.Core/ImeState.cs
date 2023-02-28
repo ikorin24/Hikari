@@ -3,8 +3,6 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Buffers;
-using System.Text.Unicode;
 
 namespace Elffy;
 
@@ -12,6 +10,7 @@ internal unsafe sealed class ImeState : IImeState
 {
     private static readonly Encoding _utf8 = Encoding.UTF8;
 
+    private readonly IHostScreen _screen;
     private byte* _buf;
     private int _bufCapacity;
     private int _len;
@@ -22,8 +21,10 @@ internal unsafe sealed class ImeState : IImeState
     private ReadOnlySpan<byte> TextUtf8Span => new ReadOnlySpan<byte>(_buf, _len);
     private ReadOnlySpan<byte> CursorTextUtf8Span => _cursorBufRange.HasValue ? TextUtf8Span[_cursorBufRange.Value] : ReadOnlySpan<byte>.Empty;
 
-    public ImeState()
+    internal ImeState(IHostScreen screen)
     {
+        _screen = screen;
+
         // TODO: sample
         Input += static (ime) =>
         {
@@ -34,6 +35,12 @@ internal unsafe sealed class ImeState : IImeState
                 Console.WriteLine(c);
             }
         };
+    }
+
+    ~ImeState()
+    {
+        // TODO:
+        FreeMem(_buf);
     }
 
     public event Action<IImeState>? Input;
@@ -63,11 +70,17 @@ internal unsafe sealed class ImeState : IImeState
 
         var textUtf8 = new ReadOnlySpan<byte>(input.text.data, input.text.len.ToInt32());
 
+        if(input.tag != NativeBind.CoreElffy.ImeInputData.Tag.Disabled) {
+            EngineCore.SetImePosition(_screen.AsRefChecked(), 10, 10);
+        }
 
         switch(input.tag) {
-            case CE.ImeInputData.Tag.Enabled:
+            case CE.ImeInputData.Tag.Enabled: {
+                //EngineCore.SetImePosition(_screen.AsRefChecked(), 10, 10);
                 break;
+            }
             case CE.ImeInputData.Tag.Preedit: {
+                //EngineCore.SetImePosition(_screen.AsRefChecked(), 10, 10);
                 EnsureBufSize(textUtf8.Length, false);
                 Debug.Assert(_bufCapacity >= textUtf8.Length);
                 textUtf8.CopyTo(BufferSpan);

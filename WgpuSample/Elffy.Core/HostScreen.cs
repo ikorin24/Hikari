@@ -20,6 +20,7 @@ internal sealed class HostScreen : IHostScreen
     private Own<Texture> _depthTexture;
     private Own<TextureView> _depthTextureView;
     private SurfaceTextureView _surfaceTexView;
+    private readonly ImeState _imeState;
 
     private bool _isCloseRequested;
 
@@ -103,6 +104,7 @@ internal sealed class HostScreen : IHostScreen
     {
         _native = screen;
         _surfaceTexView = new SurfaceTextureView(this, Environment.CurrentManagedThreadId);
+        _imeState = new ImeState(this);
     }
 
     //~HostScreen() => Release(false);
@@ -167,6 +169,11 @@ internal sealed class HostScreen : IHostScreen
 
         var size = ClientSize;
         UpdateDepthTexture(size);
+        //EngineCore.SetImeAllowed(this.AsRefChecked(), true);
+        //EngineCore.SetImePosition(this.AsRefChecked(), 10, 10);
+        //EngineCore.SetImeAllowed(this.AsRefChecked(), false);
+        //EngineCore.SetImeAllowed(this.AsRefChecked(), true);
+        //EngineCore.SetImeAllowed(this.AsRefChecked(), true);
         _initialized = true;
     }
 
@@ -213,6 +220,11 @@ internal sealed class HostScreen : IHostScreen
         }
 
         Resized?.Invoke(this, checked(new Vector2i((int)width, (int)height)));
+    }
+
+    internal void OnImeInput(in CE.ImeInputData input)
+    {
+        _imeState.OnInput(input);
     }
 
     internal void OnKeyboardInput(Winit.VirtualKeyCode key, bool pressed)

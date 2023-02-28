@@ -44,7 +44,6 @@ impl HostScreen {
             window.set_outer_position(dpi::Position::Physical(pos));
         }
         window.set_ime_allowed(true);
-        window.set_ime_position(dpi::PhysicalPosition::new(0, 0));
         window.focus_window();
         Self::initialize(window, &config.backend)
     }

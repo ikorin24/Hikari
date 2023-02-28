@@ -204,4 +204,15 @@ static unsafe partial class EngineCore
         CE.RangeU32 indices,
         i32 base_vertex,
         CE.RangeU32 instances);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_set_ime_allowed(
+        Rust.Ref<CE.HostScreen> screen,
+        [MarshalAs(UnmanagedType.U1)] bool allowed);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_set_ime_position(
+        Rust.Ref<CE.HostScreen> screen,
+        u32 x,
+        u32 y);
 }
