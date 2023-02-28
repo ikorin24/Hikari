@@ -8,71 +8,83 @@ using System.Text.Unicode;
 
 namespace Elffy;
 
-internal unsafe sealed class ImeState
+internal unsafe sealed class ImeState : IImeState
 {
     private static readonly Encoding _utf8 = Encoding.UTF8;
 
     private byte* _buf;
-    private usize _bufCapacity;
-    private usize _len;
+    private int _bufCapacity;
+    private int _len;
+    private Range? _cursorBufRange;
+    private Range? _cursorStringRange;
 
-    private (usize Start, usize End)? _range;
+    private Span<byte> BufferSpan => new Span<byte>(_buf, _bufCapacity);
+    private ReadOnlySpan<byte> TextUtf8Span => new ReadOnlySpan<byte>(_buf, _len);
+    private ReadOnlySpan<byte> CursorTextUtf8Span => _cursorBufRange.HasValue ? TextUtf8Span[_cursorBufRange.Value] : ReadOnlySpan<byte>.Empty;
 
     public ImeState()
     {
+        // TODO: sample
+        Input += static (ime) =>
+        {
+            var str = ime.GetText();
+            Console.WriteLine(str);
+            if(ime.TryGetCursor(out var range)) {
+                var c = new string('　', range.Start.Value) + new string('～', range.End.Value - range.Start.Value);
+                Console.WriteLine(c);
+            }
+        };
+    }
+
+    public event Action<IImeState>? Input;
+
+    public string GetText()
+    {
+        var text = _utf8.GetString(TextUtf8Span);
+        return text;
+    }
+
+    public bool TryGetCursor(out Range cursorRange)
+    {
+        var r = _cursorStringRange;
+        if(r.HasValue) {
+            cursorRange = r.Value;
+            return true;
+        }
+        else {
+            cursorRange = default;
+            return false;
+        }
     }
 
     public void OnInput(in CE.ImeInputData input)
     {
+        Range? range = input.range.TryGetValue(out var r) ? new Range(r.Start.ToInt32(), r.End.ToInt32()) : null;
+
+        var textUtf8 = new ReadOnlySpan<byte>(input.text.data, input.text.len.ToInt32());
+
+
         switch(input.tag) {
             case CE.ImeInputData.Tag.Enabled:
                 break;
             case CE.ImeInputData.Tag.Preedit: {
-                EnsureBufSize(input.text.len, false);
-                Debug.Assert(_bufCapacity >= input.text.len);
-                System.Buffer.MemoryCopy(input.text.data, _buf, _bufCapacity, input.text.len);
-                _len = input.text.len;
-
-
-                {
-                    if(input.range.TryGetValue(out var range)) {
-                        _range = (range.Start, range.End);
-                    }
-                    else {
-                        _range = null;
-                    }
-                }
-
-
-                if(_range.HasValue) {
-                    var charCount = _utf8.GetCharCount(_buf, checked((int)_len));
-                    var targetCharRange = (Start: 0, Length: 0);
-                    // TODO: capture
-                    var str = string.Create(charCount, (this, _range.Value), (dest, x) =>
-                    {
-                        var (self, range) = x;
-                        var rangeStart = checked((int)range.Start);
-                        var rangeEnd = checked((int)range.End);
-                        var source = new ReadOnlySpan<byte>(self._buf, checked((int)self._len));
-
-                        var charCount1 = Utf8ToUtf16(source[..rangeStart], dest[..], out _);
-                        var charCount2 = Utf8ToUtf16(source[rangeStart..rangeEnd], dest[charCount1..], out _);
-                        _ = Utf8ToUtf16(source[rangeEnd..], dest[(charCount1 + charCount2)..], out _);
-
-                        targetCharRange.Start = charCount1;
-                        targetCharRange.Length = charCount2;
-                    });
-                    Console.WriteLine($"Preedit: {str}");
-                    Console.WriteLine("         " + new string('　', targetCharRange.Start) + new string('～', targetCharRange.Length));
-                    Debug.WriteLine($"{targetCharRange.Start}, {targetCharRange.Length}");
+                EnsureBufSize(textUtf8.Length, false);
+                Debug.Assert(_bufCapacity >= textUtf8.Length);
+                textUtf8.CopyTo(BufferSpan);
+                _len = textUtf8.Length;
+                _cursorBufRange = range;
+                if(range.HasValue) {
+                    int rangeStart = _utf8.GetCharCount(textUtf8[0..range.Value.Start]);
+                    int rangeLength = _utf8.GetCharCount(textUtf8[range.Value]);
+                    _cursorStringRange = new Range(rangeStart, rangeStart + rangeLength);
                 }
                 else {
-                    Console.WriteLine($"Preedit: ");
+                    _cursorStringRange = null;
                 }
+                Input?.Invoke(this);
                 break;
             }
             case CE.ImeInputData.Tag.Commit: {
-                Console.WriteLine($"Commit: {DumpToString()}");
                 break;
             }
             case CE.ImeInputData.Tag.Disabled:
@@ -82,67 +94,20 @@ internal unsafe sealed class ImeState
         }
     }
 
-    private string DumpToString()
+    private void EnsureBufSize(int neededSize, bool copyData)
     {
-        var len = _len;
-        if(len == 0) {
-            return "";
-        }
-        return _utf8.GetString(_buf, checked((int)len));
-    }
-
-    private int GetEncodedAsUtf16(Span<char> dest)
-    {
-        var len = _len;
-        if(len == 0) {
-            return 0;
-        }
-        var bufSpan = new Span<byte>(_buf, checked((int)len));
-        switch(Utf8.ToUtf16(bufSpan, dest, out var _, out int writtenLen)) {
-            case OperationStatus.Done:
-                break;
-            case OperationStatus.DestinationTooSmall:
-                throw new ArgumentException("buffer is too short");
-            case OperationStatus.NeedMoreData:
-                break;
-            case OperationStatus.InvalidData:
-                throw new ArgumentException("failed to encode to utf16");
-            default:
-                break;
-        }
-        return writtenLen;
-    }
-
-    private static int Utf8ToUtf16(ReadOnlySpan<byte> source, Span<char> dest, out int bytesRead)
-    {
-        switch(Utf8.ToUtf16(source, dest, out bytesRead, out int writtenLen)) {
-            case OperationStatus.Done:
-                break;
-            case OperationStatus.DestinationTooSmall:
-                throw new ArgumentException("buffer is too short");
-            case OperationStatus.NeedMoreData:
-                throw new ArgumentException("insufficient byte sequence to encode to utf16");
-            case OperationStatus.InvalidData:
-                throw new ArgumentException("failed to encode to utf16");
-            default:
-                break;
-        }
-        return writtenLen;
-    }
-
-    private void EnsureBufSize(usize neededSize, bool copyData)
-    {
+        Debug.Assert(neededSize >= 0);
         if(neededSize == 0) {
             return;
         }
 
-        const usize MinCapacity = 128;
+        const int MinCapacity = 128;
 
         var cap = _bufCapacity;
         if(cap < neededSize) {
-            var newCap = usize.Max(neededSize, usize.Min(cap * 2, usize.MaxValue));
-            newCap = usize.Max(newCap, neededSize);
-            var newBuf = (byte*)AllocateMem(newCap);
+            int newCap = int.Max(neededSize, (int)uint.Min((uint)cap * 2, int.MaxValue));
+            newCap = int.Max(newCap, MinCapacity);
+            var newBuf = (byte*)AllocateMem((usize)newCap);
             if(_len > 0 && copyData) {
                 System.Buffer.MemoryCopy(_buf, newBuf, newCap, _len);
             }
@@ -154,4 +119,10 @@ internal unsafe sealed class ImeState
 
     private static void* AllocateMem(usize size) => NativeMemory.Alloc(size);
     private static void FreeMem(void* ptr) => NativeMemory.Free(ptr);
+}
+
+internal interface IImeState
+{
+    string GetText();
+    bool TryGetCursor(out Range cursorRange);
 }
