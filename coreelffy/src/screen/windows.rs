@@ -1,6 +1,7 @@
 #![cfg(target_os = "windows")]
 
 use crate::screen::*;
+use winit::window::{Fullscreen, WindowButtons};
 
 pub(crate) fn create_window(
     config: &HostScreenConfig,
@@ -12,17 +13,19 @@ pub(crate) fn create_window(
             config.width,
             config.height,
         )))
-        .with_theme(Some(window::Theme::Light))
+        .with_theme(None)
         .build(event_loop)?;
     match config.style {
         WindowStyle::Default => {
             window.set_resizable(true);
+            window.set_enabled_buttons(WindowButtons::all())
         }
         WindowStyle::Fixed => {
             window.set_resizable(false);
+            window.set_enabled_buttons(WindowButtons::CLOSE | WindowButtons::MINIMIZE);
         }
         WindowStyle::Fullscreen => {
-            window.set_fullscreen(None);
+            window.set_fullscreen(Some(Fullscreen::Borderless(None)));
         }
     }
     Ok(window)
