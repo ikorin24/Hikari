@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Elffy;
 
-internal unsafe sealed class ImeState : IImeState
+internal unsafe sealed class ImeState : IImePreeditState
 {
     private static readonly Encoding _utf8 = Encoding.UTF8;
 
@@ -21,19 +21,36 @@ internal unsafe sealed class ImeState : IImeState
     private ReadOnlySpan<byte> TextUtf8Span => new ReadOnlySpan<byte>(_buf, _len);
     private ReadOnlySpan<byte> CursorTextUtf8Span => _cursorBufRange.HasValue ? TextUtf8Span[_cursorBufRange.Value] : ReadOnlySpan<byte>.Empty;
 
+    public event Action<IHostScreen>? Start;
+    public event Action<IHostScreen>? End;
+    public event Action<IImePreeditState, IHostScreen>? Preedit;
+    public event ReadOnlySpanAction<byte, IHostScreen>? Commit;
+
     internal ImeState(IHostScreen screen)
     {
         _screen = screen;
 
         // TODO: sample
-        Input += static (ime) =>
+        Start += static _ =>
+        {
+            Debug.WriteLine("[start]");
+        };
+        Preedit += static (ime, a) =>
         {
             var str = ime.GetText();
-            Console.WriteLine(str);
+            Debug.WriteLine(str);
             if(ime.TryGetCursor(out var range)) {
                 var c = new string('　', range.Start.Value) + new string('～', range.End.Value - range.Start.Value);
-                Console.WriteLine(c);
+                Debug.WriteLine(c);
             }
+        };
+        Commit += static (s, a) =>
+        {
+            Debug.WriteLine($"[commit] {Encoding.UTF8.GetString(s)}");
+        };
+        End += static _ =>
+        {
+            Debug.WriteLine("[end]");
         };
     }
 
@@ -43,15 +60,13 @@ internal unsafe sealed class ImeState : IImeState
         FreeMem(_buf);
     }
 
-    public event Action<IImeState>? Input;
-
-    public string GetText()
+    string IImePreeditState.GetText()
     {
         var text = _utf8.GetString(TextUtf8Span);
         return text;
     }
 
-    public bool TryGetCursor(out Range cursorRange)
+    bool IImePreeditState.TryGetCursor(out Range cursorRange)
     {
         var r = _cursorStringRange;
         if(r.HasValue) {
@@ -76,11 +91,10 @@ internal unsafe sealed class ImeState : IImeState
 
         switch(input.tag) {
             case CE.ImeInputData.Tag.Enabled: {
-                //EngineCore.SetImePosition(_screen.AsRefChecked(), 10, 10);
+                Start?.Invoke(_screen);
                 break;
             }
             case CE.ImeInputData.Tag.Preedit: {
-                //EngineCore.SetImePosition(_screen.AsRefChecked(), 10, 10);
                 EnsureBufSize(textUtf8.Length, false);
                 Debug.Assert(_bufCapacity >= textUtf8.Length);
                 textUtf8.CopyTo(BufferSpan);
@@ -94,13 +108,15 @@ internal unsafe sealed class ImeState : IImeState
                 else {
                     _cursorStringRange = null;
                 }
-                Input?.Invoke(this);
+                Preedit?.Invoke(this, _screen);
                 break;
             }
             case CE.ImeInputData.Tag.Commit: {
+                Commit?.Invoke(textUtf8, _screen);
                 break;
             }
             case CE.ImeInputData.Tag.Disabled:
+                End?.Invoke(_screen);
                 break;
             default:
                 break;
@@ -134,7 +150,7 @@ internal unsafe sealed class ImeState : IImeState
     private static void FreeMem(void* ptr) => NativeMemory.Free(ptr);
 }
 
-internal interface IImeState
+internal interface IImePreeditState
 {
     string GetText();
     bool TryGetCursor(out Range cursorRange);
