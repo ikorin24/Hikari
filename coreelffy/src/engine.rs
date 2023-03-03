@@ -189,9 +189,29 @@ pub(crate) fn engine_start(
 
     create_screen(screen_config, &event_loop)?;
 
-    event_loop.run_return(move |event, event_loop, control_flow| {
-        handle_event(&event, event_loop, control_flow);
-    });
+    if cfg!(target_os = "windows") {
+        // [NOTE]
+        // To avoid strange IME behavior, set 'control_flow' to 'Wait' for the first few times.
+        // After that, set it to 'Poll'.
+        // Poll' is necessary because the game engine always needs to loop as fast as possible.
+
+        let mut i: usize = 0;
+        const WAIT_EVENT_COUNT: usize = 50;
+        event_loop.run_return(move |event, event_loop, control_flow| {
+            if i == 0 {
+                control_flow.set_wait();
+            }
+            if i == WAIT_EVENT_COUNT {
+                control_flow.set_poll();
+            }
+            i = i.saturating_add(1);
+            handle_event(&event, event_loop, control_flow);
+        });
+    } else {
+        event_loop.run_return(move |event, event_loop, control_flow| {
+            handle_event(&event, event_loop, control_flow);
+        });
+    }
 
     // drop the engine from the static field.
     {
