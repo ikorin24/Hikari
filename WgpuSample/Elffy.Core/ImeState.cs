@@ -29,29 +29,6 @@ internal unsafe sealed class ImeState : IImePreeditState
     internal ImeState(IHostScreen screen)
     {
         _screen = screen;
-
-        // TODO: sample
-        Start += static _ =>
-        {
-            Debug.WriteLine("[start]");
-        };
-        Preedit += static (ime, a) =>
-        {
-            var str = ime.GetText();
-            Debug.WriteLine(str);
-            if(ime.TryGetCursor(out var range)) {
-                var c = new string('　', range.Start.Value) + new string('～', range.End.Value - range.Start.Value);
-                Debug.WriteLine(c);
-            }
-        };
-        Commit += static (s, a) =>
-        {
-            Debug.WriteLine($"[commit] {Encoding.UTF8.GetString(s)}");
-        };
-        End += static _ =>
-        {
-            Debug.WriteLine("[end]");
-        };
     }
 
     ~ImeState()

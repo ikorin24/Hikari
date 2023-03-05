@@ -20,7 +20,7 @@ internal sealed class HostScreen : IHostScreen
     private Own<Texture> _depthTexture;
     private Own<TextureView> _depthTextureView;
     private SurfaceTextureView _surfaceTexView;
-    private readonly ImeState _imeState;
+    private readonly Keyboard _keyboard;
     private ulong _frameNum;
 
     private bool _isCloseRequested;
@@ -33,6 +33,7 @@ internal sealed class HostScreen : IHostScreen
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
 
     public Mouse Mouse => _mouse;
+    public Keyboard Keyboard => _keyboard;
     public ulong FrameNum => _frameNum;
 
     public Texture DepthTexture => _depthTexture.AsValue();
@@ -108,8 +109,8 @@ internal sealed class HostScreen : IHostScreen
     {
         _native = screen;
         _surfaceTexView = new SurfaceTextureView(this, Environment.CurrentManagedThreadId);
-        _imeState = new ImeState(this);
         _mouse = new Mouse(this);
+        _keyboard = new Keyboard(this);
     }
 
     internal static HostScreen Create(Rust.Box<CE.HostScreen> screen)
@@ -174,6 +175,8 @@ internal sealed class HostScreen : IHostScreen
             Debug.Assert(oldSurfaceView.IsNone);
         }
         try {
+            _keyboard.InitFrame();
+
             RedrawRequested?.Invoke(this, new CommandEncoder(encoderNative));
 
             var isCloseRequested = _isCloseRequested;
@@ -195,36 +198,6 @@ internal sealed class HostScreen : IHostScreen
         }
 
         Resized?.Invoke(this, checked(new Vector2i((int)width, (int)height)));
-    }
-
-    internal void OnImeInput(in CE.ImeInputData input)
-    {
-        _imeState.OnInput(input);
-    }
-
-    internal void OnKeyboardInput(Winit.VirtualKeyCode key, bool pressed)
-    {
-        // TODO: The following is sample code. Remove it.
-        if(key == Winit.VirtualKeyCode.Escape && pressed) {
-            RequestClose();
-        }
-        //if(key == Winit.VirtualKeyCode.A && pressed) {
-        //    var config = new HostScreenConfig
-        //    {
-        //        Backend = GraphicsBackend.Dx12,
-        //        Width = 400,
-        //        Height = 100,
-        //        Style = WindowStyle.Default,
-        //    };
-        //    EngineCore.CreateScreen(config);
-        //}
-
-        Debug.WriteLine($"{key}: {pressed}");
-    }
-
-    internal void OnCharReceived(Rune input)
-    {
-        Debug.WriteLine(input);
     }
 
     internal void OnClosing(ref bool cancel)

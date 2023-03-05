@@ -9,6 +9,7 @@ public interface IHostScreen
 {
     string Title { get; set; }
     Mouse Mouse { get; }
+    Keyboard Keyboard { get; }
     Vector2i ClientSize { get; set; }
     ulong FrameNum { get; }
 

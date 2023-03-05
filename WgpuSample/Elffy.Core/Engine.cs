@@ -66,18 +66,18 @@ public static class Engine
     private static readonly Action<CE.ScreenId, Winit.VirtualKeyCode, bool> _onKeyboardInput =
         (CE.ScreenId id, Winit.VirtualKeyCode key, bool pressed) =>
         {
-            _screens[id].OnKeyboardInput(key, pressed);
+            _screens[id].Keyboard.OnKeyboardInput(key, pressed);
         };
     private static readonly Action<CE.ScreenId, Rune> _onCharReceived =
         (CE.ScreenId id, Rune input) =>
         {
-            _screens[id].OnCharReceived(input);
+            _screens[id].Keyboard.OnCharReceived(input);
         };
 
     private static readonly EngineCoreImeInputAction _onImeInput =
         (CE.ScreenId id, in CE.ImeInputData input) =>
         {
-            _screens[id].OnImeInput(input);
+            _screens[id].Keyboard.OnImeInput(input);
         };
 
     private static readonly Action<CE.ScreenId, f32, f32> _onWheel =

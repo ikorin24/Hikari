@@ -36,17 +36,10 @@ public sealed class Mouse
     internal void OnCursorMoved(Vector2 pos)
     {
         _pos = pos;
-        Debug.WriteLine(pos);
     }
 
     internal void OnCursorEnteredLeft(bool entered)
     {
         _onScreen = entered;
-        if(entered) {
-            Debug.WriteLine("cursor entered");
-        }
-        else {
-            Debug.WriteLine("curosr left");
-        }
     }
 }
