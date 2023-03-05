@@ -1,9 +1,14 @@
-use crate::error_handler::*;
 use crate::screen::*;
 use crate::*;
+use once_cell::sync::Lazy;
+use regex::Regex;
+use std::cell::Cell;
 use std::error::Error;
 use std::fmt::Debug;
+use std::num::NonZeroUsize;
 use std::sync;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use winit;
 use winit::event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget};
@@ -11,50 +16,82 @@ use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::{event, window};
 
 pub(crate) struct Engine {
-    on_screen_init: HostScreenInitFn,
-    event_cleared: ClearedEventFn,
-    event_redraw_requested: RedrawRequestedEventFn,
-    event_resized: ResizedEventFn,
-    event_keyboard: KeyboardEventFn,
-    event_char_received: CharReceivedEventFn,
-    event_ime: ImeInputEventFn,
-    event_closing: ClosingEventFn,
-    event_closed: ClosedEventFn,
+    config: EngineCoreConfig,
+}
+
+thread_local! {
+    /// thread local error counter
+    static ERROR_COUNTER: Cell<usize>  = Cell::new(0);
+}
+
+/// increment the error counter and get the incremented value.
+#[inline]
+fn increment_tls_err_count() -> usize {
+    ERROR_COUNTER.with(|cell| cell.replace(cell.get() + 1)) + 1
+}
+
+/// reset the error counter and get the value before reset.
+#[inline]
+pub(crate) fn reset_tls_err_count() -> usize {
+    ERROR_COUNTER.with(|cell| cell.replace(0))
+}
+
+#[inline]
+fn generate_message_id() -> ErrMessageId {
+    static ID_SEED: AtomicUsize = AtomicUsize::new(1);
+
+    // x  = { 1, 3, 5, ..., 2^N -1 }
+    // id = x / 2 + 1
+    //    = { 1, 2, 3, ..., 2^(N-1) }
+    let x = ID_SEED.fetch_add(2, Ordering::Relaxed) / 2 + 1;
+    ErrMessageId(unsafe { NonZeroUsize::new_unchecked(x / 2 + 1) })
 }
 
 impl Engine {
     pub fn new(config: &EngineCoreConfig) -> Self {
-        Engine {
-            on_screen_init: config.on_screen_init,
-            event_cleared: config.event_cleared,
-            event_redraw_requested: config.event_redraw_requested,
-            event_resized: config.event_resized,
-            event_keyboard: config.event_keyboard,
-            event_char_received: config.event_char_received,
-            event_ime: config.event_ime,
-            event_closing: config.event_closing,
-            event_closed: config.event_closed,
+        Engine { config: *config }
+    }
+
+    pub fn dispatch_err(err: impl std::fmt::Display) {
+        static ANCI_ESC_SEQ_DECORATION: Lazy<Regex> =
+            Lazy::new(|| Regex::new("\x1b\\[[0-9;]*m").unwrap());
+
+        let message = format!("{}", err);
+
+        // Some error messages contain decorations of ANSI escape sequences.
+        // They should be removed.
+        let message = ANCI_ESC_SEQ_DECORATION.replace_all(&message, "");
+
+        increment_tls_err_count();
+        let id = generate_message_id();
+        if let Some(err_dispatcher) =
+            Self::get_engine_field(|engine| engine.config.err_dispatcher).ok()
+        {
+            let message_bytes = message.as_bytes();
+            err_dispatcher(id, message_bytes.as_ptr(), message_bytes.len());
+        } else {
+            eprintln!("id: {}, {}", id, message);
         }
     }
 
     pub fn on_screen_init(screen: Box<HostScreen>) -> ScreenId {
-        let f = Self::get_engine_field(|engine| engine.on_screen_init).unwrap();
+        let f = Self::get_engine_field(|engine| engine.config.on_screen_init).unwrap();
         let screen_info = &screen.get_info();
         f(screen, screen_info)
     }
 
     pub fn event_cleared(screen_id: ScreenId) {
-        let f = Self::get_engine_field(|engine| engine.event_cleared).unwrap();
+        let f = Self::get_engine_field(|engine| engine.config.event_cleared).unwrap();
         f(screen_id)
     }
 
     pub fn event_redraw_requested(screen_id: ScreenId) -> bool {
-        let f = Self::get_engine_field(|engine| engine.event_redraw_requested).unwrap();
+        let f = Self::get_engine_field(|engine| engine.config.event_redraw_requested).unwrap();
         f(screen_id)
     }
 
     pub fn event_resized(screen_id: ScreenId, width: u32, height: u32) {
-        let f = Self::get_engine_field(|engine| engine.event_resized).unwrap();
+        let f = Self::get_engine_field(|engine| engine.config.event_resized).unwrap();
         f(screen_id, width, height)
     }
 
@@ -63,7 +100,7 @@ impl Engine {
         key: &event::VirtualKeyCode,
         state: &event::ElementState,
     ) {
-        let f = Self::get_engine_field(|engine| engine.event_keyboard).unwrap();
+        let f = Self::get_engine_field(|engine| engine.config.event_keyboard).unwrap();
         let pressed = match state {
             event::ElementState::Pressed => true,
             event::ElementState::Released => false,
@@ -72,24 +109,24 @@ impl Engine {
     }
 
     pub fn event_char_received(screen_id: ScreenId, c: char) {
-        let f = Self::get_engine_field(|engine| engine.event_char_received).unwrap();
+        let f = Self::get_engine_field(|engine| engine.config.event_char_received).unwrap();
         f(screen_id, c)
     }
 
     pub fn event_ime(screen_id: ScreenId, input: &ImeInputData) {
-        let f = Self::get_engine_field(|engine| engine.event_ime).unwrap();
+        let f = Self::get_engine_field(|engine| engine.config.event_ime).unwrap();
         f(screen_id, input)
     }
 
     pub fn event_closing(screen_id: ScreenId) -> bool {
-        let f = Self::get_engine_field(|engine| engine.event_closing).unwrap();
+        let f = Self::get_engine_field(|engine| engine.config.event_closing).unwrap();
         let mut cancel = false;
         f(screen_id, &mut cancel);
         !cancel
     }
 
     pub fn event_closed(screen_id: ScreenId) -> Option<Box<HostScreen>> {
-        let f = Self::get_engine_field(|engine| engine.event_closed).unwrap();
+        let f = Self::get_engine_field(|engine| engine.config.event_closed).unwrap();
         f(screen_id)
     }
 
@@ -170,23 +207,16 @@ pub(crate) fn engine_start(
     if is_engine_running {
         return Err(EngineErr::ALREADY_RUNNING.into());
     }
-
-    env_logger::init();
-    set_err_dispatcher(engine_config.err_dispatcher);
-
     let mut event_loop = EventLoopBuilder::with_user_event().build();
-
-    // set a new engine to the static field.
     {
         let mut engine = ENGINE.write().unwrap();
         *engine = Some(Engine::new(engine_config));
-
         {
             let mut proxy = LOOP_PROXY.lock().unwrap();
             *proxy = Some(event_loop.create_proxy());
         }
     }
-
+    env_logger::init();
     create_screen(screen_config, &event_loop)?;
 
     if cfg!(target_os = "windows") {
@@ -232,7 +262,7 @@ fn handle_event(
         Event::UserEvent(proxy_message) => match proxy_message {
             ProxyMessage::CreateScreen(config) => {
                 if let Err(err) = create_screen(config, event_loop) {
-                    dispatch_err(err);
+                    Engine::dispatch_err(err);
                 }
             }
         },
@@ -348,4 +378,64 @@ impl EngineErr {
 
     const NOT_RUNNING: Self = Self::new("The engine is not running");
     const ALREADY_RUNNING: Self = Self::new("The engine is already running");
+}
+
+#[repr(transparent)]
+pub(crate) struct ApiResult {
+    #[allow(dead_code)]
+    err_count: usize,
+}
+
+impl ApiResult {
+    #[inline]
+    pub const fn from_err_count(err_count: usize) -> Self {
+        Self { err_count }
+    }
+}
+
+#[repr(C)]
+pub(crate) struct ApiBoxResult<T> {
+    err_count: usize,
+    value: Option<Box<T>>,
+}
+
+impl<T> ApiBoxResult<T> {
+    #[inline]
+    pub const fn ok(value: Box<T>) -> Self {
+        Self {
+            err_count: 0,
+            value: Some(value),
+        }
+    }
+
+    #[inline]
+    pub fn err(err_count: NonZeroUsize) -> Self {
+        Self {
+            err_count: err_count.into(),
+            value: None,
+        }
+    }
+}
+
+#[repr(C)]
+pub(crate) struct ApiValueResult<T: Default + 'static> {
+    err_count: usize,
+    value: T,
+}
+
+impl<T: Default> ApiValueResult<T> {
+    #[inline]
+    pub const fn ok(value: T) -> Self {
+        Self {
+            err_count: 0,
+            value,
+        }
+    }
+    #[inline]
+    pub fn err(err_count: NonZeroUsize) -> Self {
+        Self {
+            err_count: err_count.into(),
+            value: Default::default(),
+        }
+    }
 }

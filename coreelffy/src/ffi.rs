@@ -1,5 +1,4 @@
 use crate::engine::*;
-use crate::error_handler::*;
 use crate::screen::*;
 use crate::*;
 use std::num::{NonZeroU32, NonZeroUsize};
@@ -16,7 +15,7 @@ extern "cdecl" fn elffy_engine_start(
     screen_config: &HostScreenConfig,
 ) -> ApiResult {
     if let Err(err) = engine_start(engine_config, screen_config) {
-        dispatch_err(err);
+        Engine::dispatch_err(err);
     }
     make_result()
 }
@@ -31,7 +30,7 @@ static_assertions::assert_impl_all!(HostScreenConfig: Send, Sync);
 extern "cdecl" fn elffy_create_screen(config: &HostScreenConfig) -> ApiResult {
     match send_proxy_message(ProxyMessage::CreateScreen(*config)) {
         Ok(_) => {}
-        Err(err) => dispatch_err(err),
+        Err(err) => Engine::dispatch_err(err),
     };
     make_result()
 }
@@ -132,7 +131,7 @@ extern "cdecl" fn elffy_screen_set_title(screen: &HostScreen, title: Slice<u8>) 
             screen.window.set_title(title);
         }
         Err(err) => {
-            dispatch_err(err);
+            Engine::dispatch_err(err);
         }
     }
     make_result()
@@ -702,7 +701,7 @@ fn make_box_result<T>(value: Box<T>, on_value_drop: Option<fn(Box<T>)>) -> ApiBo
 
 #[inline]
 fn error_box_result<T>(err: impl std::fmt::Display) -> ApiBoxResult<T> {
-    dispatch_err(err);
+    Engine::dispatch_err(err);
     let err_count = reset_tls_err_count().try_into().unwrap();
     ApiBoxResult::err(err_count)
 }
@@ -718,7 +717,7 @@ fn make_value_result<T: Default + 'static>(value: T) -> ApiValueResult<T> {
 
 #[inline]
 fn error_value_result<T: Default + 'static>(err: impl std::fmt::Display) -> ApiValueResult<T> {
-    dispatch_err(err);
+    Engine::dispatch_err(err);
     let err_count = reset_tls_err_count().try_into().unwrap();
     ApiValueResult::err(err_count)
 }
