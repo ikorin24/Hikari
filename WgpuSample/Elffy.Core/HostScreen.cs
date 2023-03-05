@@ -6,7 +6,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
 
 namespace Elffy;
 
@@ -17,6 +16,7 @@ internal sealed class HostScreen : IHostScreen
     private GraphicsBackend _backend;
     private bool _initialized;
     private string _title = "";
+    private Mouse _mouse;
     private Own<Texture> _depthTexture;
     private Own<TextureView> _depthTextureView;
     private SurfaceTextureView _surfaceTexView;
@@ -30,6 +30,8 @@ internal sealed class HostScreen : IHostScreen
     public HostScreenRef Ref => new HostScreenRef(_native.Unwrap());
 
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
+
+    public Mouse Mouse => _mouse;
 
     public Texture DepthTexture => _depthTexture.AsValue();
     public TextureView DepthTextureView => _depthTextureView.AsValue();
@@ -105,33 +107,8 @@ internal sealed class HostScreen : IHostScreen
         _native = screen;
         _surfaceTexView = new SurfaceTextureView(this, Environment.CurrentManagedThreadId);
         _imeState = new ImeState(this);
+        _mouse = new Mouse(this);
     }
-
-    //~HostScreen() => Release(false);
-
-    //private static readonly Action<HostScreen> _release = static self =>
-    //{
-    //    self.Release(true);
-    //    GC.SuppressFinalize(self);
-    //};
-
-    //private void Release(bool manualRelease)
-    //{
-    //    var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
-    //    if(native.IsNone) {
-    //        return;
-    //    }
-    //    // TODO: Destroy HostScreen
-    //    //native.
-    //    _depthTexture.Dispose();
-    //    _depthTextureView.Dispose();
-    //    _depthTexture = Own.None<Texture>();
-    //    _depthTextureView = Own.None<TextureView>();
-    //    if(manualRelease) {
-    //        Resized = null;
-    //        RedrawRequested = null;
-    //    }
-    //}
 
     internal static HostScreen Create(Rust.Box<CE.HostScreen> screen)
     {
@@ -169,11 +146,6 @@ internal sealed class HostScreen : IHostScreen
 
         var size = ClientSize;
         UpdateDepthTexture(size);
-        //EngineCore.SetImeAllowed(this.AsRefChecked(), true);
-        //EngineCore.SetImePosition(this.AsRefChecked(), 10, 10);
-        //EngineCore.SetImeAllowed(this.AsRefChecked(), false);
-        //EngineCore.SetImeAllowed(this.AsRefChecked(), true);
-        //EngineCore.SetImeAllowed(this.AsRefChecked(), true);
         _initialized = true;
     }
 
@@ -252,29 +224,8 @@ internal sealed class HostScreen : IHostScreen
         Debug.WriteLine(input);
     }
 
-    internal void OnWheel(Vector2 delta)
-    {
-
-    }
-
-    internal void OnCursorMoved(Vector2 pos)
-    {
-
-    }
-
-    internal void OnCursorEntered()
-    {
-
-    }
-
-    internal void OnCursorLeft()
-    {
-
-    }
-
     internal void OnClosing(ref bool cancel)
     {
-        Debug.WriteLine("closing");
     }
 
     internal Rust.OptionBox<CE.HostScreen> OnClosed()

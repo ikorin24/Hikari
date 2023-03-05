@@ -27,8 +27,7 @@ public static class Engine
             OnImeInput = _onImeInput,
             OnWheel = _onWheel,
             OnCursorMoved = _onCursorMoved,
-            OnCursorEntered = _onCursorEntered,
-            OnCursorLeft = _onCursorLeft,
+            OnCursorEnteredLeft = _onCursorEnteredLeft,
             OnClosing = _onClosing,
             OnClosed = _onClosed,
         };
@@ -84,25 +83,19 @@ public static class Engine
     private static readonly Action<CE.ScreenId, f32, f32> _onWheel =
         (CE.ScreenId id, f32 xDelta, f32 yDelta) =>
         {
-            _screens[id].OnWheel(new Vector2(xDelta, yDelta));
+            _screens[id].Mouse.OnWheel(new Vector2(xDelta, yDelta));
         };
 
     private static readonly Action<CE.ScreenId, f32, f32> _onCursorMoved =
         (CE.ScreenId id, f32 x, f32 y) =>
         {
-            _screens[id].OnCursorMoved(new Vector2(x, y));
+            _screens[id].Mouse.OnCursorMoved(new Vector2(x, y));
         };
 
-    private static readonly Action<CE.ScreenId> _onCursorEntered =
-        (CE.ScreenId id) =>
+    private static readonly Action<CE.ScreenId, bool> _onCursorEnteredLeft =
+        (CE.ScreenId id, bool entered) =>
         {
-            _screens[id].OnCursorEntered();
-        };
-
-    private static readonly Action<CE.ScreenId> _onCursorLeft =
-        (CE.ScreenId id) =>
-        {
-            _screens[id].OnCursorLeft();
+            _screens[id].Mouse.OnCursorEnteredLeft(entered);
         };
 
     private static readonly EngineCoreScreenClosingAction _onClosing =

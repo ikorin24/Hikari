@@ -118,12 +118,7 @@ internal unsafe static partial class EngineCore
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         static void EventCursorEnteredLeft(CE.ScreenId id, bool entered)
         {
-            if(entered) {
-                _config.OnCursorEntered(id);
-            }
-            else {
-                _config.OnCursorLeft(id);
-            }
+            _config.OnCursorEnteredLeft(id, entered);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -613,8 +608,7 @@ internal readonly struct EngineCoreConfig
 
     public required Action<CE.ScreenId, f32, f32> OnWheel { get; init; }
     public required Action<CE.ScreenId, f32, f32> OnCursorMoved { get; init; }
-    public required Action<CE.ScreenId> OnCursorEntered { get; init; }
-    public required Action<CE.ScreenId> OnCursorLeft { get; init; }
+    public required Action<CE.ScreenId, bool> OnCursorEnteredLeft { get; init; }
 
     public required EngineCoreScreenClosingAction OnClosing { get; init; }
     public required Func<CE.ScreenId, Rust.OptionBox<CE.HostScreen>> OnClosed { get; init; }

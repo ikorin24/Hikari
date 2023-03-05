@@ -13,6 +13,7 @@ public interface IHostScreen
     HostScreenRef Ref { get; }
     Vector2i ClientSize { get; set; }
     string Title { get; set; }
+    Mouse Mouse { get; }
     TextureFormat SurfaceFormat { get; }
     GraphicsBackend Backend { get; }
     Texture DepthTexture { get; }
