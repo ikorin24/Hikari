@@ -2,9 +2,6 @@
 using Elffy.NativeBind;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Elffy;
@@ -28,6 +25,10 @@ public static class Engine
             OnKeyboardInput = _onKeyboardInput,
             OnCharReceived = _onCharReceived,
             OnImeInput = _onImeInput,
+            OnWheel = _onWheel,
+            OnCursorMoved = _onCursorMoved,
+            OnCursorEntered = _onCursorEntered,
+            OnCursorLeft = _onCursorLeft,
             OnClosing = _onClosing,
             OnClosed = _onClosed,
         };
@@ -78,6 +79,30 @@ public static class Engine
         (CE.ScreenId id, in CE.ImeInputData input) =>
         {
             _screens[id].OnImeInput(input);
+        };
+
+    private static readonly Action<CE.ScreenId, f32, f32> _onWheel =
+        (CE.ScreenId id, f32 xDelta, f32 yDelta) =>
+        {
+            _screens[id].OnWheel(new Vector2(xDelta, yDelta));
+        };
+
+    private static readonly Action<CE.ScreenId, f32, f32> _onCursorMoved =
+        (CE.ScreenId id, f32 x, f32 y) =>
+        {
+            _screens[id].OnCursorMoved(new Vector2(x, y));
+        };
+
+    private static readonly Action<CE.ScreenId> _onCursorEntered =
+        (CE.ScreenId id) =>
+        {
+            _screens[id].OnCursorEntered();
+        };
+
+    private static readonly Action<CE.ScreenId> _onCursorLeft =
+        (CE.ScreenId id) =>
+        {
+            _screens[id].OnCursorLeft();
         };
 
     private static readonly EngineCoreScreenClosingAction _onClosing =

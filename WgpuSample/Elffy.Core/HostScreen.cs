@@ -252,6 +252,26 @@ internal sealed class HostScreen : IHostScreen
         Debug.WriteLine(input);
     }
 
+    internal void OnWheel(Vector2 delta)
+    {
+
+    }
+
+    internal void OnCursorMoved(Vector2 pos)
+    {
+
+    }
+
+    internal void OnCursorEntered()
+    {
+
+    }
+
+    internal void OnCursorLeft()
+    {
+
+    }
+
     internal void OnClosing(ref bool cancel)
     {
         Debug.WriteLine("closing");

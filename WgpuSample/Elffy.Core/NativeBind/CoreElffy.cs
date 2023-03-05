@@ -189,6 +189,9 @@ internal static class CoreElffy
         public required KeyboardEventFn event_keyboard;
         public required CharReceivedEventFn event_char_received;
         public required ImeInputEventFn event_ime;
+        public required MouseWheelEventFn event_wheel;
+        public required CursorMovedEventFn event_cursor_moved;
+        public required CursorEnteredLeftEventFn event_cursor_entered_left;
         public required ClosingEventFn event_closing;
         public required ClosedEventFn event_closed;
     }
@@ -263,6 +266,24 @@ internal static class CoreElffy
     {
         private readonly delegate* unmanaged[Cdecl]<ScreenId, ImeInputData*, void> _func;
         public ImeInputEventFn(delegate* unmanaged[Cdecl]<ScreenId, ImeInputData*, void> f) => _func = f;
+    }
+
+    internal unsafe readonly struct MouseWheelEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<ScreenId, f32, f32, void> _func;
+        public MouseWheelEventFn(delegate* unmanaged[Cdecl]<ScreenId, f32, f32, void> f) => _func = f;
+    }
+
+    internal unsafe readonly struct CursorMovedEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<ScreenId, f32, f32, void> _func;
+        public CursorMovedEventFn(delegate* unmanaged[Cdecl]<ScreenId, f32, f32, void> f) => _func = f;
+    }
+
+    internal unsafe readonly struct CursorEnteredLeftEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<ScreenId, bool, void> _func;
+        public CursorEnteredLeftEventFn(delegate* unmanaged[Cdecl]<ScreenId, bool, void> f) => _func = f;
     }
 
     internal unsafe readonly struct ClosingEventFn

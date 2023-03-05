@@ -42,6 +42,9 @@ internal unsafe static partial class EngineCore
             event_keyboard = new(&EventKeyboard),
             event_char_received = new(&EventCharReceived),
             event_ime = new(&EventIme),
+            event_wheel = new(&EventWheel),
+            event_cursor_moved = new(&EventCursorMoved),
+            event_cursor_entered_left = new(&EventCursorEnteredLeft),
             event_closing = new(&EventClosing),
             event_closed = new(&EventClosed),
         };
@@ -98,6 +101,29 @@ internal unsafe static partial class EngineCore
         static void EventIme(CE.ScreenId id, CE.ImeInputData* input)
         {
             _config.OnImeInput(id, in *input);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        static void EventWheel(CE.ScreenId id, f32 x_delta, f32 y_delta)
+        {
+            _config.OnWheel(id, x_delta, y_delta);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        static void EventCursorMoved(CE.ScreenId id, f32 x, f32 y)
+        {
+            _config.OnCursorMoved(id, x, y);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        static void EventCursorEnteredLeft(CE.ScreenId id, bool entered)
+        {
+            if(entered) {
+                _config.OnCursorEntered(id);
+            }
+            else {
+                _config.OnCursorLeft(id);
+            }
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -584,6 +610,12 @@ internal readonly struct EngineCoreConfig
     public required Action<CE.ScreenId, Winit.VirtualKeyCode, bool> OnKeyboardInput { get; init; }
     public required Action<CE.ScreenId, Rune> OnCharReceived { get; init; }
     public required EngineCoreImeInputAction OnImeInput { get; init; }
+
+    public required Action<CE.ScreenId, f32, f32> OnWheel { get; init; }
+    public required Action<CE.ScreenId, f32, f32> OnCursorMoved { get; init; }
+    public required Action<CE.ScreenId> OnCursorEntered { get; init; }
+    public required Action<CE.ScreenId> OnCursorLeft { get; init; }
+
     public required EngineCoreScreenClosingAction OnClosing { get; init; }
     public required Func<CE.ScreenId, Rust.OptionBox<CE.HostScreen>> OnClosed { get; init; }
 }

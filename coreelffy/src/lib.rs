@@ -24,6 +24,9 @@ pub(crate) struct EngineCoreConfig {
     pub event_keyboard: KeyboardEventFn,
     pub event_char_received: CharReceivedEventFn,
     pub event_ime: ImeInputEventFn,
+    pub event_wheel: MouseWheelEventFn,
+    pub event_cursor_moved: CursorMovedEventFn,
+    pub event_cursor_entered_left: CursorEnteredLeftEventFn,
     pub event_closing: ClosingEventFn,
     pub event_closed: ClosedEventFn,
 }
@@ -1565,17 +1568,19 @@ impl std::fmt::Display for ErrMessageId {
 }
 
 pub(crate) type DispatchErrFn =
-    extern "cdecl" fn(id: ErrMessageId, message: *const u8, message_len: usize) -> ();
+    extern "cdecl" fn(id: ErrMessageId, message: *const u8, message_len: usize);
 pub(crate) type HostScreenInitFn =
     extern "cdecl" fn(screen: Box<HostScreen>, screen_info: &HostScreenInfo) -> ScreenId;
-pub(crate) type ClearedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> ();
+pub(crate) type ClearedEventFn = extern "cdecl" fn(screen_id: ScreenId);
 pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> bool;
-pub(crate) type ResizedEventFn =
-    extern "cdecl" fn(screen_id: ScreenId, width: u32, height: u32) -> ();
+pub(crate) type ResizedEventFn = extern "cdecl" fn(screen_id: ScreenId, width: u32, height: u32);
 pub(crate) type KeyboardEventFn =
-    extern "cdecl" fn(screen_id: ScreenId, key: winit::event::VirtualKeyCode, pressed: bool) -> ();
-pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen_id: ScreenId, input: char) -> ();
-pub(crate) type ImeInputEventFn =
-    extern "cdecl" fn(screen_id: ScreenId, input: &ImeInputData) -> ();
-pub(crate) type ClosingEventFn = extern "cdecl" fn(screen_id: ScreenId, cancel: &mut bool) -> ();
+    extern "cdecl" fn(screen_id: ScreenId, key: winit::event::VirtualKeyCode, pressed: bool);
+pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen_id: ScreenId, input: char);
+pub(crate) type ImeInputEventFn = extern "cdecl" fn(screen_id: ScreenId, input: &ImeInputData);
+pub(crate) type MouseWheelEventFn =
+    extern "cdecl" fn(screen_id: ScreenId, x_delta: f32, y_delta: f32);
+pub(crate) type CursorMovedEventFn = extern "cdecl" fn(screen_id: ScreenId, x: f32, y: f32);
+pub(crate) type CursorEnteredLeftEventFn = extern "cdecl" fn(screen_id: ScreenId, entered: bool);
+pub(crate) type ClosingEventFn = extern "cdecl" fn(screen_id: ScreenId, cancel: &mut bool);
 pub(crate) type ClosedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> Option<Box<HostScreen>>;

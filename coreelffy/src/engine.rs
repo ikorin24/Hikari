@@ -118,6 +118,21 @@ impl Engine {
         f(screen_id, input)
     }
 
+    pub fn event_wheel(screen_id: ScreenId, x_delta: f32, y_delta: f32) {
+        let f = Self::get_engine_field(|engine| engine.config.event_wheel).unwrap();
+        f(screen_id, x_delta, y_delta)
+    }
+
+    pub fn event_cursor_moved(screen_id: ScreenId, x: f32, y: f32) {
+        let f = Self::get_engine_field(|engine| engine.config.event_cursor_moved).unwrap();
+        f(screen_id, x, y)
+    }
+
+    pub fn event_cursor_entered_left(screen_id: ScreenId, entered: bool) {
+        let f = Self::get_engine_field(|engine| engine.config.event_cursor_entered_left).unwrap();
+        f(screen_id, entered);
+    }
+
     pub fn event_closing(screen_id: ScreenId) -> bool {
         let f = Self::get_engine_field(|engine| engine.config.event_closing).unwrap();
         let mut cancel = false;
@@ -266,18 +281,34 @@ fn handle_event(
                 }
             }
         },
-        Event::WindowEvent {
-            ref event,
-            window_id,
-        } => {
+        Event::WindowEvent { event, window_id } => {
             if let Some(target) = get_screen(window_id) {
                 match event {
+                    WindowEvent::CursorEntered { .. } => {
+                        Engine::event_cursor_entered_left(target.1, true);
+                    }
+                    WindowEvent::CursorLeft { .. } => {
+                        Engine::event_cursor_entered_left(target.1, false);
+                    }
+                    WindowEvent::CursorMoved { position, .. } => {
+                        Engine::event_cursor_moved(target.1, position.x as f32, position.y as f32);
+                    }
                     WindowEvent::Ime(ime) => {
                         let data = ImeInputData::new(ime);
                         Engine::event_ime(target.1, &data);
                     }
                     WindowEvent::ReceivedCharacter(c) => {
                         Engine::event_char_received(target.1, *c);
+                    }
+                    WindowEvent::MouseWheel { delta, phase, .. } if *phase == TouchPhase::Moved => {
+                        match delta {
+                            MouseScrollDelta::LineDelta(x_delta, y_delta) => {
+                                Engine::event_wheel(target.1, *x_delta, *y_delta);
+                            }
+                            MouseScrollDelta::PixelDelta(_pos) => {
+                                // TODO: support touchpad devices
+                            }
+                        }
                     }
                     WindowEvent::CloseRequested => {
                         close_screen(&target, control_flow);
