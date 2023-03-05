@@ -7,13 +7,16 @@ namespace Elffy;
 
 public interface IHostScreen
 {
+    string Title { get; set; }
+    Mouse Mouse { get; }
+    Vector2i ClientSize { get; set; }
+    ulong FrameNum { get; }
+
+
     event RedrawRequestedAction? RedrawRequested;
     event Action<IHostScreen, Vector2i>? Resized;
 
     HostScreenRef Ref { get; }
-    Vector2i ClientSize { get; set; }
-    string Title { get; set; }
-    Mouse Mouse { get; }
     TextureFormat SurfaceFormat { get; }
     GraphicsBackend Backend { get; }
     Texture DepthTexture { get; }

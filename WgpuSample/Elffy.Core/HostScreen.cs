@@ -21,6 +21,7 @@ internal sealed class HostScreen : IHostScreen
     private Own<TextureView> _depthTextureView;
     private SurfaceTextureView _surfaceTexView;
     private readonly ImeState _imeState;
+    private ulong _frameNum;
 
     private bool _isCloseRequested;
 
@@ -32,6 +33,7 @@ internal sealed class HostScreen : IHostScreen
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
 
     public Mouse Mouse => _mouse;
+    public ulong FrameNum => _frameNum;
 
     public Texture DepthTexture => _depthTexture.AsValue();
     public TextureView DepthTextureView => _depthTextureView.AsValue();
@@ -181,6 +183,7 @@ internal sealed class HostScreen : IHostScreen
         finally {
             var surfaceViewNative = _surfaceTexView.Replace(Rust.OptionBox<Wgpu.TextureView>.None);
             screenRef.ScreenFinishCommand(encoderNative, surfaceTexNative, surfaceViewNative.Unwrap());
+            _frameNum++;
         }
     }
 
