@@ -346,7 +346,7 @@ public readonly struct VertexBufferLayout
 {
     public required u64 ArrayStride { get; init; }
     public required VertexStepMode StepMode { get; init; }
-    public required ReadOnlyMemory<VertexAttribute> Attributes { get; init; }
+    public required ReadOnlyMemory<VertexAttr> Attributes { get; init; }
 
     internal CE.VertexBufferLayout ToNative(PinHandleHolder pins)
     {
@@ -451,7 +451,7 @@ public enum BlendOperation
     [EnumMapTo(Wgpu.BlendOperation.Max)] Max = 4,
 }
 
-public readonly struct VertexAttribute
+public readonly struct VertexAttr
 {
     public required VertexFormat Format { get; init; }
     public required u64 Offset { get; init; }

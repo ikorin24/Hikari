@@ -135,17 +135,17 @@ internal class Program
                 {
                     new VertexBufferLayout
                     {
-                        ArrayStride = Vertex.TypeSize,
+                        ArrayStride = MyVertex.TypeSize,
                         StepMode = VertexStepMode.Vertex,
                         Attributes = new[]
                         {
-                            new VertexAttribute
+                            new VertexAttr
                             {
                                 Offset = 0,
                                 ShaderLocation = 0,
                                 Format = VertexFormat.Float32x3,
                             },
-                            new VertexAttribute
+                            new VertexAttr
                             {
                                 Offset = 12,
                                 ShaderLocation = 1,
@@ -204,7 +204,7 @@ internal class Program
         });
 
         var (vertices, indices, indexFormat) = SamplePrimitives.SampleData();
-        var vertexBufferOwn = Buffer.CreateVertexBuffer<Vertex>(screen, vertices);
+        var vertexBufferOwn = Buffer.CreateVertexBuffer<MyVertex>(screen, vertices);
         var indexBufferOwn = Buffer.CreateIndexBuffer<ushort>(screen, indices);
 
         //ReadOnlySpan<InstanceData> instances = stackalloc InstanceData[]
