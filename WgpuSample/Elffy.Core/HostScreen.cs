@@ -175,9 +175,8 @@ internal sealed class HostScreen : IHostScreen
             Debug.Assert(oldSurfaceView.IsNone);
         }
         try {
-            _keyboard.InitFrame();
-
             RedrawRequested?.Invoke(this, new CommandEncoder(encoderNative));
+            _keyboard.PrepareNextFrame();
 
             var isCloseRequested = _isCloseRequested;
             _isCloseRequested = false;

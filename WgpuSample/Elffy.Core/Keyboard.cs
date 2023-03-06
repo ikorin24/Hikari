@@ -47,7 +47,7 @@ public sealed class Keyboard
         _currentState[keyIndex] = pressed;
     }
 
-    internal void InitFrame()
+    internal void PrepareNextFrame()
     {
         (_prevAction, _currentAction) = (_currentAction, _prevAction);
         _currentAction.AsSpan().Clear();
