@@ -23,6 +23,8 @@ public interface IHostScreen
     Texture DepthTexture { get; }
     TextureView DepthTextureView { get; }
     SurfaceTextureView SurfaceTextureView { get; }
+
+    void Close();
 }
 
 internal static class HostScreenExtensions

@@ -37,6 +37,11 @@ internal class Program
         using var renderPassOwn = encoder.CreateSurfaceRenderPass(screen.SurfaceTextureView, screen.DepthTextureView);
         var renderPass = renderPassOwn.AsValue();
 
+
+        if(screen.Keyboard.IsDown(Keys.Escape)) {
+            screen.Close();
+        }
+
         renderPass.SetPipeline(state.RenderPipeline.AsValue());
         renderPass.SetBindGroup(0, state.BindGroup.AsValue());
         renderPass.SetVertexBuffer(0, state.VertexBuffer.AsValue());

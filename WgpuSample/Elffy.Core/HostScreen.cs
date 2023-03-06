@@ -137,7 +137,7 @@ internal sealed class HostScreen : IHostScreen
         _depthTextureView = view;
     }
 
-    public void RequestClose()
+    public void Close()
     {
         _isCloseRequested = true;
     }
