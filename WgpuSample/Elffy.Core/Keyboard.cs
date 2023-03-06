@@ -19,11 +19,11 @@ public sealed class Keyboard
         _screen = screen;
         _imeState = new ImeState(screen);
 
-        int n = Enum.GetValues<Winit.VirtualKeyCode>().Length;  // TODO: define it at compile time
-        _prevAction = new KeyActionFlag[n];
-        _prevState = new bool[n];
-        _currentAction = new KeyActionFlag[n];
-        _currentState = new bool[n];
+        const int N = SequentialSetCount.Keys;
+        _prevAction = new KeyActionFlag[N];
+        _prevState = new bool[N];
+        _currentAction = new KeyActionFlag[N];
+        _currentState = new bool[N];
     }
 
     internal void OnImeInput(in CE.ImeInputData input)
@@ -37,13 +37,14 @@ public sealed class Keyboard
 
     internal void OnKeyboardInput(Winit.VirtualKeyCode key, bool pressed)
     {
+        var keyIndex = (u32)key.MapOrThrow();
         if(pressed) {
-            _currentAction[(u32)key] |= KeyActionFlag.Pressed;
+            _currentAction[keyIndex] |= KeyActionFlag.Pressed;
         }
         else {
-            _currentAction[(u32)key] |= KeyActionFlag.Released;
+            _currentAction[keyIndex] |= KeyActionFlag.Released;
         }
-        _currentState[(u32)key] = pressed;
+        _currentState[keyIndex] = pressed;
     }
 
     internal void InitFrame()
@@ -54,29 +55,23 @@ public sealed class Keyboard
         _prevState.AsSpan().CopyTo(_currentState);
     }
 
-    public bool IsDown(Keys key) => IsDown(key.MapOrThrow());
-
-    internal bool IsDown(Winit.VirtualKeyCode key)
+    public bool IsDown(Keys key)
     {
-        var index = (u32)key;
+        var keyIndex = (u32)key;
         return
-            _prevState[index] == false &&
-            _currentAction[index].HasFlag(KeyActionFlag.Pressed);
+            _prevState[keyIndex] == false &&
+            _currentAction[keyIndex].HasFlag(KeyActionFlag.Pressed);
     }
 
-    public bool IsUp(Keys key) => IsUp(key.MapOrThrow());
-
-    internal bool IsUp(Winit.VirtualKeyCode key)
+    public bool IsUp(Keys key)
     {
-        var index = (u32)key;
+        var keyIndex = (u32)key;
         return
-            _prevState[index] == true &&
-            _currentAction[index].HasFlag(KeyActionFlag.Released);
+            _prevState[keyIndex] == true &&
+            _currentAction[keyIndex].HasFlag(KeyActionFlag.Released);
     }
 
-    public bool IsPressed(Keys key) => IsPressed(key.MapOrThrow());
-
-    internal bool IsPressed(Winit.VirtualKeyCode key)
+    public bool IsPressed(Keys key)
     {
         return _currentState[(u32)key];
     }
@@ -91,11 +86,7 @@ public sealed class Keyboard
     }
 }
 
-// const int SequentialSet_Keys.Count;
-// SequentialSet<Keys>.Count();
-// SequentialSet<Keys>.TryGetCount(out _);
-//
-//[SequentialSet]
+[SequentialSet]
 public enum Keys
 {
     [EnumMapTo(Winit.VirtualKeyCode.Key1)] Key1,
