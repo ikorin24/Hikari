@@ -119,7 +119,7 @@ internal class Program
             },
         });
 
-        var shader = Shader.Create(screen, ShaderSource).AsValue(out var shaderOwn);
+        var shader = ShaderModule.Create(screen, ShaderSource).AsValue(out var shaderOwn);
 
         var pipelineLayout = PipelineLayout.Create(screen, new PipelineLayoutDescriptor
         {
@@ -277,7 +277,7 @@ internal sealed class State : IDisposable
     public required Own<Sampler> Sampler { get; init; }
     public required Own<BindGroupLayout> BindGroupLayout { get; init; }
     public required Own<BindGroup> BindGroup { get; init; }
-    public required Own<Shader> Shader { get; init; }
+    public required Own<ShaderModule> Shader { get; init; }
     public required Own<PipelineLayout> PipelineLayout { get; init; }
     public required Own<RenderPipeline> RenderPipeline { get; init; }
 

@@ -4,7 +4,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class Shader : IEngineManaged
+public sealed class ShaderModule : IEngineManaged
 {
     private IHostScreen? _screen;
     private Rust.OptionBox<Wgpu.ShaderModule> _native;
@@ -12,15 +12,15 @@ public sealed class Shader : IEngineManaged
     public IHostScreen? Screen => _screen;
     internal Rust.Ref<Wgpu.ShaderModule> NativeRef => _native.Unwrap();
 
-    private Shader(IHostScreen screen, Rust.Box<Wgpu.ShaderModule> native)
+    private ShaderModule(IHostScreen screen, Rust.Box<Wgpu.ShaderModule> native)
     {
         _screen = screen;
         _native = native;
     }
 
-    ~Shader() => Release(false);
+    ~ShaderModule() => Release(false);
 
-    private static readonly Action<Shader> _release = static self =>
+    private static readonly Action<ShaderModule> _release = static self =>
     {
         self.Release(true);
         GC.SuppressFinalize(self);
@@ -36,10 +36,10 @@ public sealed class Shader : IEngineManaged
         }
     }
 
-    public static Own<Shader> Create(IHostScreen screen, ReadOnlySpan<byte> shaderSource)
+    public static Own<ShaderModule> Create(IHostScreen screen, ReadOnlySpan<byte> shaderSource)
     {
         ArgumentNullException.ThrowIfNull(screen);
         var shader = screen.AsRefChecked().CreateShaderModule(shaderSource);
-        return Own.New(new Shader(screen, shader), _release);
+        return Own.New(new ShaderModule(screen, shader), _release);
     }
 }

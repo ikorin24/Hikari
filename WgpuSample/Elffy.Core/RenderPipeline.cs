@@ -89,7 +89,7 @@ public readonly struct RenderPipelineDescriptor
 
 public readonly struct VertexState
 {
-    public required Shader Module { get; init; }
+    public required ShaderModule Module { get; init; }
     public required ReadOnlyMemory<byte> EntryPoint { get; init; }
     public required ReadOnlyMemory<VertexBufferLayout> Buffers { get; init; }
 
@@ -106,7 +106,7 @@ public readonly struct VertexState
 
 public readonly struct FragmentState
 {
-    public required Shader Module { get; init; }
+    public required ShaderModule Module { get; init; }
     public required ReadOnlyMemory<byte> EntryPoint { get; init; }
     public required ReadOnlyMemory<ColorTargetState?> Targets { get; init; }
 
