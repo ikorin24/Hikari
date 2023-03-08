@@ -1,5 +1,8 @@
 ﻿#nullable enable
+using Elffy.Effective;
+using Elffy.Features.Internal;
 using System;
+using System.Collections.Generic;
 
 namespace Elffy;
 
@@ -32,5 +35,95 @@ public sealed class RenderOperation
         var pipeline = RenderPipeline.Create(screen, in pipelineDesc);
         var self = new RenderOperation(screen, shader, pipeline);
         return new(self, static self => self.Release());
+    }
+}
+
+public sealed class RenderOperations
+{
+    private readonly IHostScreen _screen;
+    private readonly List<Own<RenderOperation>> _list;
+    private readonly List<(Own<RenderOperation>, Action<RenderOperation>?)> _addedList;
+    private readonly List<(RenderOperation, Action<RenderOperation>?)> _removedList;
+    private EventSource<RenderOperations> _added;
+    private EventSource<RenderOperations> _removed;
+
+    public IHostScreen Screen => _screen;
+
+    internal RenderOperations(IHostScreen screen)
+    {
+        _screen = screen;
+        _list = new();
+        _addedList = new();
+        _removedList = new();
+    }
+
+    public RenderOperation Add(Own<RenderOperation> operation)
+    {
+        operation.ThrowArgumentExceptionIfNone();
+        _addedList.Add((operation, null));
+        return operation.AsValue();
+    }
+
+    internal void ApplyAdd()
+    {
+        var addedList = _addedList;
+        if(addedList.Count == 0) {
+            return;
+        }
+
+        int addedCount;
+        {
+            var addedListSpan = addedList.AsSpan();
+            addedCount = addedListSpan.Length;
+            var list = _list;
+            foreach(var (item, onAdded) in addedListSpan) {
+                list.Add(item);
+                onAdded?.Invoke(item.AsValue());
+            }
+        }
+        if(addedCount == addedList.Count) {
+            addedList.Clear();
+        }
+        else {
+            addedList.RemoveRange(0, addedCount);
+        }
+        _added.Invoke(this);
+    }
+
+    public void Remove(RenderOperation operation)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        _removedList.Add((operation, null));
+    }
+
+    internal void ApplyRemove()
+    {
+        var removedList = _removedList;
+        if(removedList.Count == 0) {
+            return;
+        }
+        int removedCount;
+        {
+            var removedListSpan = removedList.AsSpan();
+            removedCount = removedListSpan.Length;
+            var list = _list;
+            foreach(var (item, onRemove) in removedListSpan) {
+
+                int i = 0;
+                foreach(var owned in list.AsSpan()) {
+                    if(owned.AsValue() == item) { break; }
+                    i++;
+                }
+                list.RemoveAt(i);
+                onRemove?.Invoke(item);
+            }
+        }
+        if(removedCount == removedList.Count) {
+            removedList.Clear();
+        }
+        else {
+            removedList.RemoveRange(0, removedCount);
+        }
+        _removed.Invoke(this);
     }
 }
