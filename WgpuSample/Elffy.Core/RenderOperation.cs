@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using Elffy.Effective;
-using Elffy.Features.Internal;
 using System;
 using System.Collections.Generic;
 
@@ -28,13 +27,24 @@ public sealed class RenderOperation
         _pipelineOwn.Dispose();
     }
 
-    public static Own<RenderOperation> Create(Own<Shader> shader, in RenderPipelineDescriptor pipelineDesc)
+    public static RenderOperation Create(Own<Shader> shader, in RenderPipelineDescriptor pipelineDesc)
     {
         shader.ThrowArgumentExceptionIfNone();
         var screen = shader.AsValue().Screen;
         var pipeline = RenderPipeline.Create(screen, in pipelineDesc);
         var self = new RenderOperation(screen, shader, pipeline);
-        return new(self, static self => self.Release());
+        var selfOwn = new Own<RenderOperation>(self, static self => self.Release());
+        return screen.RenderOperations.Add(selfOwn);
+    }
+
+    internal void Render(RenderPass renderPass)
+    {
+        renderPass.SetPipeline(Pipeline);
+    }
+
+    public void Terminate()
+    {
+        _screen.RenderOperations.Remove(this);
     }
 }
 
@@ -57,7 +67,15 @@ public sealed class RenderOperations
         _removedList = new();
     }
 
-    public RenderOperation Add(Own<RenderOperation> operation)
+    [Obsolete("make this method internal")]
+    public void Render(RenderPass renderPass)
+    {
+        foreach(var op in _list.AsSpan()) {
+            op.AsValue().Render(renderPass);
+        }
+    }
+
+    internal RenderOperation Add(Own<RenderOperation> operation)
     {
         operation.ThrowArgumentExceptionIfNone();
         _addedList.Add((operation, null));
@@ -90,7 +108,7 @@ public sealed class RenderOperations
         _added.Invoke(this);
     }
 
-    public void Remove(RenderOperation operation)
+    internal void Remove(RenderOperation operation)
     {
         ArgumentNullException.ThrowIfNull(operation);
         _removedList.Add((operation, null));

@@ -12,7 +12,7 @@ public interface IHostScreen
     Keyboard Keyboard { get; }
     Vector2i ClientSize { get; set; }
     ulong FrameNum { get; }
-
+    RenderOperations RenderOperations { get; }
 
     event RedrawRequestedAction? RedrawRequested;
     event Action<IHostScreen, Vector2i>? Resized;

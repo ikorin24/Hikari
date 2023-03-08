@@ -49,6 +49,11 @@ public sealed class Shader
         return new Own<Shader>(new(screen, bindGroupLayoutDesc, shaderSource), static self => self.Release());
     }
 
+    public BindGroupLayout GetBindGroupLayout(int index)
+    {
+        return _bindGroupLayouts[index];
+    }
+
     internal Own<Material> CreateMaterial(in BindGroupDescriptor bindGroupDescs)
     {
         return Material.Create(this, bindGroupDescs);

@@ -22,6 +22,7 @@ internal sealed class HostScreen : IHostScreen
     private SurfaceTextureView _surfaceTexView;
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
+    private readonly RenderOperations _renderOperations;
 
     private bool _isCloseRequested;
 
@@ -35,6 +36,7 @@ internal sealed class HostScreen : IHostScreen
     public Mouse Mouse => _mouse;
     public Keyboard Keyboard => _keyboard;
     public ulong FrameNum => _frameNum;
+    public RenderOperations RenderOperations => _renderOperations;
 
     public Texture DepthTexture => _depthTexture.AsValue();
     public TextureView DepthTextureView => _depthTextureView.AsValue();
@@ -111,6 +113,7 @@ internal sealed class HostScreen : IHostScreen
         _surfaceTexView = new SurfaceTextureView(this, Environment.CurrentManagedThreadId);
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
+        _renderOperations = new RenderOperations(this);
     }
 
     internal static HostScreen Create(Rust.Box<CE.HostScreen> screen)
@@ -175,9 +178,7 @@ internal sealed class HostScreen : IHostScreen
             Debug.Assert(oldSurfaceView.IsNone);
         }
         try {
-            RedrawRequested?.Invoke(this, new CommandEncoder(encoderNative));
-            _keyboard.PrepareNextFrame();
-
+            Render(new CommandEncoder(encoderNative));
             var isCloseRequested = _isCloseRequested;
             _isCloseRequested = false;
             return !isCloseRequested;
@@ -187,6 +188,14 @@ internal sealed class HostScreen : IHostScreen
             screenRef.ScreenFinishCommand(encoderNative, surfaceTexNative, surfaceViewNative.Unwrap());
             _frameNum++;
         }
+    }
+
+    private void Render(CommandEncoder commandEncoder)
+    {
+        _renderOperations.ApplyAdd();
+        RedrawRequested?.Invoke(this, commandEncoder);
+        _renderOperations.ApplyRemove();
+        _keyboard.PrepareNextFrame();
     }
 
     internal void OnResized(uint width, uint height)
