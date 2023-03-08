@@ -6,27 +6,31 @@ namespace Elffy;
 public sealed class RenderOperation
 {
     private readonly IHostScreen _screen;
-    private readonly Shader _shader;
-    private readonly Own<RenderPipeline> _pipeline;
+    private readonly Own<RenderPipeline> _pipelineOwn;
+    private readonly Own<Shader> _shaderOwn;
 
-    public Shader Shader => _shader;
-    public RenderPipeline Pipeline => _pipeline.AsValue();
+    public IHostScreen Screen => _screen;
+    public Shader Shader => _shaderOwn.AsValue();
+    public RenderPipeline Pipeline => _pipelineOwn.AsValue();
 
-    public RenderOperation(Shader shader, in RenderPipelineDescriptor pipelineDesc)
+    private RenderOperation(IHostScreen screen, Own<Shader> shaderOwn, Own<RenderPipeline> pipelineOwn)
     {
-        ArgumentNullException.ThrowIfNull(shader);
-        _screen = shader.Screen;
-        _shader = shader;
-        _pipeline = RenderPipeline.Create(_screen, in pipelineDesc);
+        _screen = screen;
+        _shaderOwn = shaderOwn;
+        _pipelineOwn = pipelineOwn;
     }
 
     private void Release()
     {
-        _pipeline.Dispose();
+        _pipelineOwn.Dispose();
     }
 
-    public static Own<RenderOperation> Create(Shader shader, in RenderPipelineDescriptor pipelineDesc)
+    public static Own<RenderOperation> Create(Own<Shader> shader, in RenderPipelineDescriptor pipelineDesc)
     {
-        return new(new RenderOperation(shader, pipelineDesc), static self => self.Release());
+        shader.ThrowArgumentExceptionIfNone();
+        var screen = shader.AsValue().Screen;
+        var pipeline = RenderPipeline.Create(screen, in pipelineDesc);
+        var self = new RenderOperation(screen, shader, pipeline);
+        return new(self, static self => self.Release());
     }
 }
