@@ -30,11 +30,6 @@ public sealed class Material
         }
     }
 
-    internal static Own<Material> Create(Shader shader, in BindGroupDescriptor bindGroupDesc)
-    {
-        return Create(shader, new ReadOnlySpan<BindGroupDescriptor>(in bindGroupDesc));
-    }
-
     internal static Own<Material> Create(Shader shader, ReadOnlySpan<BindGroupDescriptor> bindGroupDescs)
     {
         ArgumentNullException.ThrowIfNull(shader);

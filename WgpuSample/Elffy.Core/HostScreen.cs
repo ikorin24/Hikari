@@ -215,6 +215,7 @@ internal sealed class HostScreen : IHostScreen
     internal Rust.OptionBox<CE.HostScreen> OnClosed()
     {
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
+        _renderOperations.DisposeInternal();
         _depthTexture.Dispose();
         _depthTextureView.Dispose();
         _depthTexture = Own.None<Texture>();

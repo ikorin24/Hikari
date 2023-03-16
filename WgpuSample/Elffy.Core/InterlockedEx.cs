@@ -24,4 +24,22 @@ internal unsafe static class InterlockedEx
             Unsafe.As<Rust.OptionBox<T>, usize>(ref value));
         return Unsafe.As<usize, Rust.OptionBox<T>>(ref exchanged);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static LifeState CompareExchange(ref LifeState location1, LifeState value, LifeState comparand)
+    {
+        {
+#pragma warning disable CS0219 // unused variable
+            // [compile-time assertion]
+            // sizeof(LifeState) == sizeof(uint)
+            const uint _ = checked((uint)(sizeof(uint) - sizeof(LifeState)));
+            const uint __ = checked((uint)(sizeof(LifeState) - sizeof(uint)));
+#pragma warning restore CS0219 // unused variable
+        }
+
+        var exchanged = Interlocked.CompareExchange(
+            ref Unsafe.As<LifeState, uint>(ref location1),
+            (uint)value, (uint)comparand);
+        return Unsafe.As<uint, LifeState>(ref exchanged);
+    }
 }

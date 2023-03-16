@@ -2,39 +2,35 @@
 using Elffy.Effective;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-public sealed class RenderOperation
+public abstract class RenderOperation
 {
     private readonly IHostScreen _screen;
     private readonly Own<RenderPipeline> _pipelineOwn;
     private readonly Own<Shader> _shaderOwn;
+    private LifeState _lifeState;
 
     public IHostScreen Screen => _screen;
     public Shader Shader => _shaderOwn.AsValue();
     public RenderPipeline Pipeline => _pipelineOwn.AsValue();
+    public LifeState LifeState => _lifeState;
 
-    private RenderOperation(IHostScreen screen, Own<Shader> shaderOwn, Own<RenderPipeline> pipelineOwn)
+    protected RenderOperation(Own<Shader> shaderOwn, Own<RenderPipeline> pipelineOwn)
     {
-        _screen = screen;
+        shaderOwn.ThrowArgumentExceptionIfNone();
+        _screen = shaderOwn.AsValue().Screen;
         _shaderOwn = shaderOwn;
         _pipelineOwn = pipelineOwn;
+        _lifeState = LifeState.New;
     }
 
-    private void Release()
+    internal void Release()
     {
         _pipelineOwn.Dispose();
-    }
-
-    public static RenderOperation Create(Own<Shader> shader, in RenderPipelineDescriptor pipelineDesc)
-    {
-        shader.ThrowArgumentExceptionIfNone();
-        var screen = shader.AsValue().Screen;
-        var pipeline = RenderPipeline.Create(screen, in pipelineDesc);
-        var self = new RenderOperation(screen, shader, pipeline);
-        var selfOwn = new Own<RenderOperation>(self, static self => self.Release());
-        return screen.RenderOperations.Add(selfOwn);
     }
 
     internal void Render(RenderPass renderPass)
@@ -42,106 +38,100 @@ public sealed class RenderOperation
         renderPass.SetPipeline(Pipeline);
     }
 
-    public void Terminate()
+    public bool Terminate()
     {
+        var currentState = InterlockedEx.CompareExchange(ref _lifeState, LifeState.Terminating, LifeState.Alive);
+        if(currentState != LifeState.Alive) {
+            return false;
+        }
         _screen.RenderOperations.Remove(this);
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void SetLifeStateAlive()
+    {
+        Debug.Assert(_lifeState == LifeState.New);
+        _lifeState = LifeState.Alive;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void SetLifeStateDead()
+    {
+        Debug.Assert(_lifeState == LifeState.Terminating);
+        _lifeState = LifeState.Dead;
     }
 }
 
-public sealed class RenderOperations
+public sealed class ObjectLayer : RenderOperation
 {
-    private readonly IHostScreen _screen;
-    private readonly List<Own<RenderOperation>> _list;
-    private readonly List<(Own<RenderOperation>, Action<RenderOperation>?)> _addedList;
-    private readonly List<(RenderOperation, Action<RenderOperation>?)> _removedList;
-    private EventSource<RenderOperations> _added;
-    private EventSource<RenderOperations> _removed;
+    private readonly List<FrameObject> _list;
+    private readonly List<FrameObject> _addedList;
+    private readonly List<FrameObject> _removedList;
+    private readonly object _sync = new object();
 
-    public IHostScreen Screen => _screen;
-
-    internal RenderOperations(IHostScreen screen)
+    private ObjectLayer(Own<Shader> shaderOwn, Own<RenderPipeline> pipelineOwn) : base(shaderOwn, pipelineOwn)
     {
-        _screen = screen;
-        _list = new();
-        _addedList = new();
-        _removedList = new();
+        _list = new List<FrameObject>();
+        _addedList = new List<FrameObject>();
+        _removedList = new List<FrameObject>();
     }
 
-    [Obsolete("make this method internal")]
-    public void Render(RenderPass renderPass)
+    public static ObjectLayer Create(Own<Shader> shader, in RenderPipelineDescriptor pipelineDesc)
     {
-        foreach(var op in _list.AsSpan()) {
-            op.AsValue().Render(renderPass);
+        shader.ThrowArgumentExceptionIfNone();
+        var screen = shader.AsValue().Screen;
+        var pipeline = RenderPipeline.Create(screen, in pipelineDesc);
+        var self = new ObjectLayer(shader, pipeline);
+        screen.RenderOperations.Add(self);
+        return self;
+    }
+
+    internal void Add(FrameObject frameObject)
+    {
+        lock(_sync) {
+            _addedList.Add(frameObject);
         }
-    }
-
-    internal RenderOperation Add(Own<RenderOperation> operation)
-    {
-        operation.ThrowArgumentExceptionIfNone();
-        _addedList.Add((operation, null));
-        return operation.AsValue();
     }
 
     internal void ApplyAdd()
     {
         var addedList = _addedList;
-        if(addedList.Count == 0) {
-            return;
-        }
-
-        int addedCount;
-        {
-            var addedListSpan = addedList.AsSpan();
-            addedCount = addedListSpan.Length;
-            var list = _list;
-            foreach(var (item, onAdded) in addedListSpan) {
-                list.Add(item);
-                onAdded?.Invoke(item.AsValue());
+        lock(_sync) {
+            if(addedList.Count == 0) {
+                return;
             }
-        }
-        if(addedCount == addedList.Count) {
+            _list.AddRange(addedList);
+            foreach(var addedObject in addedList.AsSpan()) {
+                addedObject.SetLifeStateAlive();
+            }
             addedList.Clear();
         }
-        else {
-            addedList.RemoveRange(0, addedCount);
-        }
-        _added.Invoke(this);
     }
 
-    internal void Remove(RenderOperation operation)
+    internal void Remove(FrameObject frameObject)
     {
-        ArgumentNullException.ThrowIfNull(operation);
-        _removedList.Add((operation, null));
+        lock(_sync) {
+            Debug.Assert(frameObject.LifeState == LifeState.Terminating);
+            _removedList.Add(frameObject);
+        }
     }
 
     internal void ApplyRemove()
     {
+        var list = _list;
         var removedList = _removedList;
-        if(removedList.Count == 0) {
-            return;
-        }
-        int removedCount;
-        {
-            var removedListSpan = removedList.AsSpan();
-            removedCount = removedListSpan.Length;
-            var list = _list;
-            foreach(var (item, onRemove) in removedListSpan) {
-
-                int i = 0;
-                foreach(var owned in list.AsSpan()) {
-                    if(owned.AsValue() == item) { break; }
-                    i++;
-                }
-                list.RemoveAt(i);
-                onRemove?.Invoke(item);
+        lock(_sync) {
+            if(removedList.Count == 0) {
+                return;
             }
-        }
-        if(removedCount == removedList.Count) {
+            foreach(var removedItem in removedList.AsSpan()) {
+                if(list.RemoveFastUnordered(removedItem)) {
+                    removedItem.SetLifeStateDead();
+                    removedItem.OnDead();
+                }
+            }
             removedList.Clear();
         }
-        else {
-            removedList.RemoveRange(0, removedCount);
-        }
-        _removed.Invoke(this);
     }
 }
