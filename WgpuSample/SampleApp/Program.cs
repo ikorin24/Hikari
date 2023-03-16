@@ -25,17 +25,6 @@ internal class Program
     {
     }
 
-    private static void OnRedrawRequested3(IHostScreen screen, RenderPass renderPass)
-    {
-        //using var renderPassOwn = encoder.CreateSurfaceRenderPass(screen.SurfaceTextureView, screen.DepthTextureView);
-        //var renderPass = renderPassOwn.AsValue();
-
-        if(screen.Keyboard.IsDown(Keys.Escape)) {
-            screen.Close();
-        }
-
-    }
-
     private static void OnInitialized(IHostScreen screen)
     {
         screen.Resized += OnResized;
