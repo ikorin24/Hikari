@@ -27,7 +27,6 @@ internal sealed class HostScreen : IHostScreen
     private bool _isCloseRequested;
 
     public event Action<IHostScreen, Vector2i>? Resized;
-    public event RedrawRequestedAction? RedrawRequested;
 
     public HostScreenRef Ref => new HostScreenRef(_native.Unwrap());
 
@@ -190,10 +189,13 @@ internal sealed class HostScreen : IHostScreen
         }
     }
 
-    private void Render(CommandEncoder commandEncoder)
+    private void Render(CommandEncoder encoder)
     {
+        using var renderPassOwn = encoder.CreateSurfaceRenderPass(SurfaceTextureView, DepthTextureView);
+        var renderPass = renderPassOwn.AsValue();
+
         _renderOperations.ApplyAdd();
-        RedrawRequested?.Invoke(this, commandEncoder);
+        RenderOperations.Render(renderPass);
         _renderOperations.ApplyRemove();
         _keyboard.PrepareNextFrame();
     }
@@ -221,7 +223,7 @@ internal sealed class HostScreen : IHostScreen
         _depthTexture = Own.None<Texture>();
         _depthTextureView = Own.None<TextureView>();
         Resized = null;
-        RedrawRequested = null;
+        //RedrawRequested = null;
         return native;
     }
 
@@ -235,7 +237,7 @@ internal sealed class HostScreen : IHostScreen
     }
 }
 
-public delegate void RedrawRequestedAction(IHostScreen screen, CommandEncoder encoder);
+//public delegate void RedrawRequestedAction(IHostScreen screen, RenderPass renderPass);
 
 public readonly ref struct HostScreenRef
 {

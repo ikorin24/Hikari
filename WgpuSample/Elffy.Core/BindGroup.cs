@@ -40,8 +40,7 @@ public sealed class BindGroup : IEngineManaged
         }
     }
 
-    [Obsolete("make the method internal")]
-    public static Own<BindGroup> Create(IHostScreen screen, in BindGroupDescriptor desc)
+    internal static Own<BindGroup> Create(IHostScreen screen, in BindGroupDescriptor desc)
     {
         using var pins = new PinHandleHolder();
         var bindGroup = screen.AsRefChecked().CreateBindGroup(desc.ToNative(pins));

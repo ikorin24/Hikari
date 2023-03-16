@@ -32,6 +32,13 @@ public abstract class Renderable : Positionable
         renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
         renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
     }
+
+    internal override void OnDead()
+    {
+        base.OnDead();
+        _material.Dispose();
+        _mesh.Dispose();
+    }
 }
 
 public sealed class Mesh

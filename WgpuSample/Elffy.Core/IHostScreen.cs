@@ -14,7 +14,7 @@ public interface IHostScreen
     ulong FrameNum { get; }
     RenderOperations RenderOperations { get; }
 
-    event RedrawRequestedAction? RedrawRequested;
+    //event RedrawRequestedAction? RedrawRequested;
     event Action<IHostScreen, Vector2i>? Resized;
 
     HostScreenRef Ref { get; }

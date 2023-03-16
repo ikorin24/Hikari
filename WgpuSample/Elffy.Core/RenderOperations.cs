@@ -38,8 +38,7 @@ public sealed class RenderOperations
 
     }
 
-    [Obsolete("make this method internal")]
-    public void Render(RenderPass renderPass)
+    internal void Render(RenderPass renderPass)
     {
         foreach(var op in _list.AsSpan()) {
             op.InvokeRender(renderPass);
