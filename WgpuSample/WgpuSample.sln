@@ -16,8 +16,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SampleApp", "SampleApp\Samp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elffy.Events", "..\..\Elffy\src\Elffy.Events\Elffy.Events.csproj", "{31B3F625-1BD1-42C7-9980-67E2C1FC9530}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elffy.Shared", "Elffy.Shared\Elffy.Shared.csproj", "{E6A82C1E-8208-4196-B6DE-4190F21FE6CE}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,10 +38,6 @@ Global
 		{31B3F625-1BD1-42C7-9980-67E2C1FC9530}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{31B3F625-1BD1-42C7-9980-67E2C1FC9530}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{31B3F625-1BD1-42C7-9980-67E2C1FC9530}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E6A82C1E-8208-4196-B6DE-4190F21FE6CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E6A82C1E-8208-4196-B6DE-4190F21FE6CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E6A82C1E-8208-4196-B6DE-4190F21FE6CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E6A82C1E-8208-4196-B6DE-4190F21FE6CE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
