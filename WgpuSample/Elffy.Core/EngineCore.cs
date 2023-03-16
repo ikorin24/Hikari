@@ -431,7 +431,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static void WriteBuffer(
-        Rust.Ref<CE.HostScreen> screen,
+        this Rust.Ref<CE.HostScreen> screen,
         Rust.Ref<Wgpu.Buffer> buffer,
         u64 offset,
         CE.Slice<u8> data)

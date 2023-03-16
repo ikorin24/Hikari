@@ -92,6 +92,8 @@ public readonly struct BindGroupEntry
         };
     }
 
+    public static BindGroupEntry Buffer(u32 binding, Buffer buffer) => Buffer(binding, buffer, 0, buffer.ByteLength);
+
     public static BindGroupEntry Buffer(u32 binding, Buffer buffer, u64 offset, u64 size)
     {
         ArgumentNullException.ThrowIfNull(buffer);

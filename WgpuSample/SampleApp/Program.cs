@@ -51,6 +51,16 @@ internal class Program
                         visibility: ShaderStages.Fragment,
                         type: SamplerBindingType.Filtering,
                         count: 0),
+                    BindGroupLayoutEntry.Buffer(
+                        binding: 2,
+                        visibility: ShaderStages.Vertex,
+                        type: new BufferBindingData
+                        {
+                            HasDynamicOffset = false,
+                            MinBindingSize = 0,
+                            Type = BufferBindingType.Uniform,
+                        },
+                        count: 0),
                 },
             },
             ShaderSource)
@@ -147,6 +157,10 @@ internal class Program
         texture.AsValue().Write(0, pixelData.AsSpan());
         var sampler = Sampler.NoMipmap(screen, AddressMode.ClampToEdge, FilterMode.Linear, FilterMode.Nearest);
         var mesh = SamplePrimitives.SampleMesh(screen);
+
+        var uniformBuffer = Buffer.CreateUniformBuffer(screen, new Vector3(0, 0, 0));
+        uniformBuffer.AsValue().Write(0, new Vector3(0.1f, 0.4f, 0));
+
         var model = Model3D.Create(layer, mesh, new BindGroupDescriptor
         {
             Layout = layer.Shader.GetBindGroupLayout(0),
@@ -154,8 +168,12 @@ internal class Program
             {
                 BindGroupEntry.TextureView(0, texture.AsValue().View),
                 BindGroupEntry.Sampler(1, sampler.AsValue()),
+                BindGroupEntry.Buffer(2, uniformBuffer.AsValue()),
             },
-        }, texture, sampler);
+        }, texture, sampler, uniformBuffer);
+
+
+
     }
 
     private unsafe static ReadOnlySpan<byte> ShaderSource => """
@@ -169,18 +187,19 @@ internal class Program
             @location(0) uv: vec2<f32>,
         }
 
+        @group(0) @binding(0) var t_diffuse: texture_2d<f32>;
+        @group(0) @binding(1) var s_diffuse: sampler;
+        @group(0) @binding(2) var<uniform> offset: vec3<f32>;
+
         @vertex fn vs_main(
             v: Vertex,
         ) -> V2F {
             return V2F
             (
-                vec4(v.pos, 1.0),
+                vec4(v.pos + offset, 1.0),
                 v.uv,
             );
         }
-
-        @group(0) @binding(0) var t_diffuse: texture_2d<f32>;
-        @group(0) @binding(1) var s_diffuse: sampler;
 
         @fragment fn fs_main(in: V2F) -> @location(0) vec4<f32> {
             return textureSample(t_diffuse, s_diffuse, in.uv);
