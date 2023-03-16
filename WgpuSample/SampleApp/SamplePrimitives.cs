@@ -21,6 +21,38 @@ public static class SamplePrimitives
     //    return (Vertices: vertices, Indices: indices);
     //}
 
+    public static Own<Mesh> SampleMesh(IHostScreen screen)
+    {
+        const float A = 0.3f;
+        var vertices = new MyVertex[4]
+        {
+            new MyVertex
+            {
+                Pos = new(-A, A, 0.0f),
+                UV = new(0f, 0f),
+            },
+            new MyVertex
+            {
+                Pos = new(-A, -A, 0.0f),
+                UV = new(0f, 1f),
+            },
+            new MyVertex
+            {
+                Pos = new(A, -A, 0.0f),
+                UV = new (1f, 1f),
+            },
+            new MyVertex
+            {
+                Pos = new(A, A, 0.0f),
+                UV = new(1f, 0f),
+            },
+        };
+        var indices = new ushort[] { 0, 1, 2, 2, 3, 0 };
+        var vertexBufferOwn = Buffer.CreateVertexBuffer<MyVertex>(screen, vertices);
+        var indexBufferOwn = Buffer.CreateIndexBuffer<ushort>(screen, indices);
+        return Mesh.Create(screen, vertexBufferOwn, indexBufferOwn, (uint)indices.Length, IndexFormat.Uint16);
+    }
+
     public static (MyVertex[] Vertices, ushort[] Indices, IndexFormat IndexFormat) SampleData()
     {
         //var vertices = new Vertex[5]

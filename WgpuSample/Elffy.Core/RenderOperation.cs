@@ -33,10 +33,9 @@ public abstract class RenderOperation
         _pipelineOwn.Dispose();
     }
 
-    internal void Render(RenderPass renderPass)
-    {
-        renderPass.SetPipeline(Pipeline);
-    }
+    protected abstract void Render(RenderPass renderPass);
+
+    internal void InvokeRender(RenderPass renderPass) => Render(renderPass);
 
     public bool Terminate()
     {
@@ -132,6 +131,16 @@ public sealed class ObjectLayer : RenderOperation
                 }
             }
             removedList.Clear();
+        }
+    }
+
+    protected override void Render(RenderPass renderPass)
+    {
+        renderPass.SetPipeline(Pipeline);
+        foreach(var obj in _list.AsSpan()) {
+            if(obj is Renderable renderable) {
+                renderable.Render(renderPass);
+            }
         }
     }
 }

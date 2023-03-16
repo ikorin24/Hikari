@@ -42,7 +42,7 @@ public sealed class RenderOperations
     public void Render(RenderPass renderPass)
     {
         foreach(var op in _list.AsSpan()) {
-            op.Render(renderPass);
+            op.InvokeRender(renderPass);
         }
     }
 
@@ -57,17 +57,27 @@ public sealed class RenderOperations
     {
         var list = _list;
         var addedList = _addedList;
+        var isAdded = false;
         lock(_sync) {
-            if(addedList.Count == 0) {
-                return;
+            if(addedList.Count > 0) {
+                list.AddRange(addedList);
+                foreach(var addedItem in addedList.AsSpan()) {
+                    addedItem.SetLifeStateAlive();
+                }
+                addedList.Clear();
+                isAdded = true;
             }
-            list.AddRange(addedList);
-            foreach(var addedItem in addedList.AsSpan()) {
-                addedItem.SetLifeStateAlive();
-            }
-            addedList.Clear();
         }
-        _added.Invoke(this);
+
+        foreach(var operation in list.AsSpan()) {
+            if(operation is ObjectLayer objectLayer) {
+                objectLayer.ApplyAdd();
+            }
+        }
+
+        if(isAdded) {
+            _added.Invoke(this);
+        }
     }
 
     internal void Remove(RenderOperation operation)
@@ -81,20 +91,29 @@ public sealed class RenderOperations
     internal void ApplyRemove()
     {
         var list = _list;
-
         var removedList = _removedList;
+        var isRemoved = false;
         lock(_sync) {
-            if(removedList.Count == 0) {
-                return;
-            }
-            foreach(var removedItem in removedList.AsSpan()) {
-                if(list.RemoveFastUnordered(removedItem)) {
-                    removedItem.SetLifeStateDead();
-                    removedItem.Release();
+            if(removedList.Count > 0) {
+                foreach(var removedItem in removedList.AsSpan()) {
+                    if(list.RemoveFastUnordered(removedItem)) {
+                        removedItem.SetLifeStateDead();
+                        removedItem.Release();
+                    }
                 }
+                removedList.Clear();
+                isRemoved = true;
             }
-            removedList.Clear();
         }
-        _removed.Invoke(this);
+
+        foreach(var operation in list.AsSpan()) {
+            if(operation is ObjectLayer objectLayer) {
+                objectLayer.ApplyRemove();
+            }
+        }
+
+        if(isRemoved) {
+            _removed.Invoke(this);
+        }
     }
 }

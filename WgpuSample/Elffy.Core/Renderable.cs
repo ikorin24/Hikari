@@ -7,32 +7,89 @@ namespace Elffy;
 public abstract class Renderable : Positionable
 {
     private readonly Own<Material> _material;
+    private readonly Own<Mesh> _mesh;
 
     public Material Material => _material.AsValue();
+    public Mesh Mesh => _mesh.AsValue();
 
-    protected Renderable(ObjectLayer layer, Own<Material> material) : base(layer)
+    protected Renderable(ObjectLayer layer, Own<Material> material, Own<Mesh> mesh) : base(layer)
     {
-        ArgumentNullException.ThrowIfNull(material);
+        material.ThrowArgumentExceptionIfNone();
+        mesh.ThrowArgumentExceptionIfNone();
         _material = material;
+        _mesh = mesh;
+    }
+    internal void Render(RenderPass renderPass)
+    {
+        var material = Material;
+        var bindGroups = material.BindGroups.Span;
+        var mesh = _mesh.AsValue();
+        for(int i = 0; i < bindGroups.Length; i++) {
+            renderPass.SetBindGroup((uint)i, bindGroups[i]);
+        }
+
+        renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+        renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+        renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
+    }
+}
+
+public sealed class Mesh
+{
+    private Own<Buffer> _vertexBuffer;
+    private Own<Buffer> _indexBuffer;
+    private uint _indexCount;
+    private IndexFormat _indexFormat;
+
+    public Buffer VertexBuffer => _vertexBuffer.AsValue();
+    public Buffer IndexBuffer => _indexBuffer.AsValue();
+    public IndexFormat IndexFormat => _indexFormat;
+    public uint IndexCount => _indexCount;
+
+    private Mesh(Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat)
+    {
+        _vertexBuffer = vertexBuffer;
+        _indexBuffer = indexBuffer;
+        _indexCount = indexCount;
+        _indexFormat = indexFormat;
+    }
+
+    private static readonly Action<Mesh> _release = static self =>
+    {
+        self.Release();
+    };
+
+    private void Release()
+    {
+        _vertexBuffer.Dispose();
+        _indexBuffer.Dispose();
+    }
+
+    public static Own<Mesh> Create(IHostScreen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat)
+    {
+        ArgumentNullException.ThrowIfNull(screen);
+        vertexBuffer.ThrowArgumentExceptionIfNone();
+        indexBuffer.ThrowArgumentExceptionIfNone();
+        return new Own<Mesh>(new Mesh(vertexBuffer, indexBuffer, indexCount, indexFormat), _release);
     }
 }
 
 public sealed class Model3D : Renderable
 {
-    private Model3D(ObjectLayer layer, Own<Material> material) : base(layer, material)
+    private Model3D(ObjectLayer layer, Own<Material> material, Own<Mesh> mesh) : base(layer, material, mesh)
     {
     }
 
-    public static Model3D Create(ObjectLayer layer, in BindGroupDescriptor bindGroupDesc, params IDisposable?[]? associates)
+    public static Model3D Create(ObjectLayer layer, Own<Mesh> mesh, in BindGroupDescriptor bindGroupDesc, params IDisposable?[]? associates)
     {
-        return Create(layer, new ReadOnlySpan<BindGroupDescriptor>(in bindGroupDesc), associates);
+        return Create(layer, mesh, new ReadOnlySpan<BindGroupDescriptor>(in bindGroupDesc), associates);
     }
 
-    public static Model3D Create(ObjectLayer layer, ReadOnlySpan<BindGroupDescriptor> bindGroupDescs, params IDisposable?[]? associates)
+    public static Model3D Create(ObjectLayer layer, Own<Mesh> mesh, ReadOnlySpan<BindGroupDescriptor> bindGroupDescs, params IDisposable?[]? associates)
     {
         ArgumentNullException.ThrowIfNull(layer);
         var material = layer.Shader.CreateMaterial(bindGroupDescs, associates);
-        var model3D = new Model3D(layer, material);
+        var model3D = new Model3D(layer, material, mesh);
         layer.Add(model3D);
         return model3D;
     }

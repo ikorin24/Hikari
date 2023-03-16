@@ -30,11 +30,14 @@ internal class Program
         //screen.Resized += OnResized;
         //OnSetup(screen);
 
-        screen.RedrawRequested += OnRedrawRequested2;
+        //screen.RedrawRequested += OnRedrawRequested2;
+        screen.RedrawRequested += OnRedrawRequested3;
         screen.Resized += OnResized;
-        OnSetup2(screen);
+        //OnSetup2(screen);
+        OnSetup3(screen);
     }
 
+    [Obsolete]
     private static void OnRedrawRequested(IHostScreen screen, CommandEncoder encoder)
     {
         var state = _state;
@@ -60,6 +63,7 @@ internal class Program
     {
     }
 
+    [Obsolete]
     private static void OnRedrawRequested2(IHostScreen screen, CommandEncoder encoder)
     {
         using var renderPassOwn = encoder.CreateSurfaceRenderPass(screen.SurfaceTextureView, screen.DepthTextureView);
@@ -74,6 +78,20 @@ internal class Program
         _renderable?.Render(renderPass);
     }
 
+    private static void OnRedrawRequested3(IHostScreen screen, CommandEncoder encoder)
+    {
+        using var renderPassOwn = encoder.CreateSurfaceRenderPass(screen.SurfaceTextureView, screen.DepthTextureView);
+        var renderPass = renderPassOwn.AsValue();
+
+        if(screen.Keyboard.IsDown(Keys.Escape)) {
+            screen.Close();
+        }
+
+        // TODO:
+        screen.RenderOperations.Render(renderPass);
+    }
+
+    [Obsolete]
     private static void OnSetup2(IHostScreen screen)
     {
         screen.Title = "sample";
@@ -237,6 +255,8 @@ internal class Program
 
     private static void OnSetup3(IHostScreen screen)
     {
+        screen.Title = "sample";
+
         var shader = Shader.Create(screen, new BindGroupLayoutDescriptor
         {
             Entries = new[]
@@ -365,7 +385,8 @@ internal class Program
             Compare = null,
         });
 
-        var model = Model3D.Create(layer, new BindGroupDescriptor
+        var mesh = SamplePrimitives.SampleMesh(screen);
+        var model = Model3D.Create(layer, mesh, new BindGroupDescriptor
         {
             Layout = layer.Shader.GetBindGroupLayout(0),
             Entries = new[]
