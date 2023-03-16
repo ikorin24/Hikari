@@ -145,32 +145,17 @@ internal class Program
             Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
         });
         texture.AsValue().Write(0, pixelData.AsSpan());
-        var view = TextureView.Create(texture.AsValue());
-        var sampler = Sampler.Create(screen, new SamplerDescriptor
-        {
-            AddressModeU = AddressMode.ClampToEdge,
-            AddressModeV = AddressMode.ClampToEdge,
-            AddressModeW = AddressMode.ClampToEdge,
-            MagFilter = FilterMode.Linear,
-            MinFilter = FilterMode.Nearest,
-            MipmapFilter = FilterMode.Nearest,
-            AnisotropyClamp = 0,
-            LodMaxClamp = 0,
-            LodMinClamp = 0,
-            BorderColor = null,
-            Compare = null,
-        });
-
+        var sampler = Sampler.NoMipmap(screen, AddressMode.ClampToEdge, FilterMode.Linear, FilterMode.Nearest);
         var mesh = SamplePrimitives.SampleMesh(screen);
         var model = Model3D.Create(layer, mesh, new BindGroupDescriptor
         {
             Layout = layer.Shader.GetBindGroupLayout(0),
             Entries = new[]
             {
-                BindGroupEntry.TextureView(0, view.AsValue()),
+                BindGroupEntry.TextureView(0, texture.AsValue().View),
                 BindGroupEntry.Sampler(1, sampler.AsValue()),
             },
-        }, texture, view, sampler);
+        }, texture, sampler);
     }
 
     private unsafe static ReadOnlySpan<byte> ShaderSource => """

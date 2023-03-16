@@ -1,8 +1,6 @@
 ﻿#nullable enable
-using Elffy.Effective.Unsafes;
 using Elffy.NativeBind;
 using System;
-using System.Runtime.InteropServices;
 
 namespace Elffy;
 
@@ -11,6 +9,7 @@ public sealed class Texture : IEngineManaged
     private IHostScreen? _screen;
     private Rust.OptionBox<Wgpu.Texture> _native;
     private TextureDescriptor? _desc;
+    private Own<TextureView> _defaultView;
 
     public IHostScreen? Screen => _screen;
 
@@ -26,6 +25,8 @@ public sealed class Texture : IEngineManaged
     public TextureUsages Usage => _desc.GetOrThrow().Usage;
     public TextureDimension Dimension => _desc.GetOrThrow().Dimension;
 
+    public TextureView View => _defaultView.AsValue();
+
     public Vector2i Size
     {
         get
@@ -40,6 +41,7 @@ public sealed class Texture : IEngineManaged
         _screen = screen;
         _native = native;
         _desc = desc;
+        _defaultView = TextureView.Create(this);
     }
 
     ~Texture() => Release(false);
@@ -55,6 +57,8 @@ public sealed class Texture : IEngineManaged
         if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.Texture>.None).IsSome(out var native)) {
             native.DestroyTexture();
             if(manualRelease) {
+                _defaultView.Dispose();
+                _defaultView = Own<TextureView>.None;
                 _screen = null;
                 _desc = null;
             }

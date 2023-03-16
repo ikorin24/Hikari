@@ -44,6 +44,24 @@ public sealed class Sampler : IEngineManaged
         var sampler = screen.AsRefChecked().CreateSampler(descNative);
         return Own.New(new Sampler(screen, sampler), _release);
     }
+
+    public static Own<Sampler> NoMipmap(IHostScreen screen, AddressMode addressMode, FilterMode magFilter, FilterMode minFilter)
+    {
+        return Create(screen, new SamplerDescriptor
+        {
+            AddressModeU = addressMode,
+            AddressModeV = addressMode,
+            AddressModeW = addressMode,
+            MagFilter = magFilter,
+            MinFilter = minFilter,
+            MipmapFilter = FilterMode.Nearest,
+            AnisotropyClamp = 0,
+            LodMaxClamp = 0,
+            LodMinClamp = 0,
+            BorderColor = null,
+            Compare = null,
+        });
+    }
 }
 
 public readonly struct SamplerDescriptor
