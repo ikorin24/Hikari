@@ -23,15 +23,15 @@ public sealed class Model3D : Renderable
     {
     }
 
-    public static Model3D Create(ObjectLayer layer, in BindGroupDescriptor bindGroupDesc)
+    public static Model3D Create(ObjectLayer layer, in BindGroupDescriptor bindGroupDesc, params IDisposable?[]? associates)
     {
-        return Create(layer, new ReadOnlySpan<BindGroupDescriptor>(in bindGroupDesc));
+        return Create(layer, new ReadOnlySpan<BindGroupDescriptor>(in bindGroupDesc), associates);
     }
 
-    public static Model3D Create(ObjectLayer layer, ReadOnlySpan<BindGroupDescriptor> bindGroupDescs)
+    public static Model3D Create(ObjectLayer layer, ReadOnlySpan<BindGroupDescriptor> bindGroupDescs, params IDisposable?[]? associates)
     {
         ArgumentNullException.ThrowIfNull(layer);
-        var material = layer.Shader.CreateMaterial(bindGroupDescs);
+        var material = layer.Shader.CreateMaterial(bindGroupDescs, associates);
         var model3D = new Model3D(layer, material);
         layer.Add(model3D);
         return model3D;

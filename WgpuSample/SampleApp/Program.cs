@@ -195,7 +195,7 @@ internal class Program
             Format = TextureFormat.Rgba8UnormSrgb,
             Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
         }).AsValue(out var textureOwn);
-        texture.Write(0, (uint)Unsafe.SizeOf<ColorByte>(), pixelData.AsSpan());
+        texture.Write(0, pixelData.AsSpan());
         var view = TextureView.Create(texture).AsValue(out var viewOwn);
         var sampler = Sampler.Create(screen, new SamplerDescriptor
         {
@@ -235,7 +235,7 @@ internal class Program
         };
     }
 
-    private static void Hoge(IHostScreen screen)
+    private static void OnSetup3(IHostScreen screen)
     {
         var shader = Shader.Create(screen, new BindGroupLayoutDescriptor
         {
@@ -347,9 +347,9 @@ internal class Program
             Dimension = TextureDimension.D2,
             Format = TextureFormat.Rgba8UnormSrgb,
             Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
-        }).AsValue(out var textureOwn);
-        texture.Write(0, (uint)Unsafe.SizeOf<ColorByte>(), pixelData.AsSpan());
-        var view = TextureView.Create(texture).AsValue(out var viewOwn);
+        });
+        texture.AsValue().Write(0, pixelData.AsSpan());
+        var view = TextureView.Create(texture.AsValue());
         var sampler = Sampler.Create(screen, new SamplerDescriptor
         {
             AddressModeU = AddressMode.ClampToEdge,
@@ -363,201 +363,17 @@ internal class Program
             LodMinClamp = 0,
             BorderColor = null,
             Compare = null,
-        }).AsValue(out var samplerOwn);
+        });
 
         var model = Model3D.Create(layer, new BindGroupDescriptor
         {
             Layout = layer.Shader.GetBindGroupLayout(0),
             Entries = new[]
             {
-                BindGroupEntry.TextureView(0, view),
-                BindGroupEntry.Sampler(1, sampler),
+                BindGroupEntry.TextureView(0, view.AsValue()),
+                BindGroupEntry.Sampler(1, sampler.AsValue()),
             },
-        });
-    }
-
-    private static void OnSetup(IHostScreen screen)
-    {
-        screen.Title = "sample";
-
-        var surfaceFormat = screen.SurfaceFormat;
-        Debug.WriteLine($"backend: {screen.Backend}");
-        var (pixelData, width, height) = SamplePrimitives.LoadImagePixels("pic.png");
-        var texture = Texture.Create(screen, new TextureDescriptor
-        {
-            Size = new Vector3i(width, height, 1),
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = TextureDimension.D2,
-            Format = TextureFormat.Rgba8UnormSrgb,
-            Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
-        }).AsValue(out var textureOwn);
-        texture.Write(0, (uint)Unsafe.SizeOf<ColorByte>(), pixelData.AsSpan());
-        var view = TextureView.Create(texture).AsValue(out var viewOwn);
-        var sampler = Sampler.Create(screen, new SamplerDescriptor
-        {
-            AddressModeU = AddressMode.ClampToEdge,
-            AddressModeV = AddressMode.ClampToEdge,
-            AddressModeW = AddressMode.ClampToEdge,
-            MagFilter = FilterMode.Linear,
-            MinFilter = FilterMode.Nearest,
-            MipmapFilter = FilterMode.Nearest,
-            AnisotropyClamp = 0,
-            LodMaxClamp = 0,
-            LodMinClamp = 0,
-            BorderColor = null,
-            Compare = null,
-        }).AsValue(out var samplerOwn);
-
-        var bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
-        {
-            Entries = new[]
-            {
-                BindGroupLayoutEntry.Texture(
-                    binding: 0,
-                    visibility: ShaderStages.Fragment,
-                    type: new TextureBindingData
-                    {
-                        Multisampled = false,
-                        ViewDimension = TextureViewDimension.D2,
-                        SampleType = TextureSampleType.FloatFilterable,
-                    },
-                    count: 0),
-                BindGroupLayoutEntry.Sampler(
-                    binding: 1,
-                    visibility: ShaderStages.Fragment,
-                    type: SamplerBindingType.Filtering,
-                    count: 0),
-            },
-        }).AsValue(out var bindGroupLayoutOwn);
-        var bindGroupOwn = BindGroup.Create(screen, new BindGroupDescriptor
-        {
-            Layout = bindGroupLayout,
-            Entries = new[]
-            {
-                BindGroupEntry.TextureView(0, view),
-                BindGroupEntry.Sampler(1, sampler),
-            },
-        });
-
-        var shader = ShaderModule.Create(screen, ShaderSource).AsValue(out var shaderOwn);
-
-        var pipelineLayout = PipelineLayout.Create(screen, new PipelineLayoutDescriptor
-        {
-            BindGroupLayouts = new[]
-            {
-                bindGroupLayout,
-            },
-        }).AsValue(out var pipelineLayoutOwn);
-
-        var renderPipelineOwn = RenderPipeline.Create(screen, new RenderPipelineDescriptor
-        {
-            Layout = pipelineLayout,
-            Vertex = new VertexState
-            {
-                Module = shader,
-                EntryPoint = "vs_main"u8.ToArray(),
-                Buffers = new VertexBufferLayout[]
-                {
-                    new VertexBufferLayout
-                    {
-                        ArrayStride = MyVertex.TypeSize,
-                        StepMode = VertexStepMode.Vertex,
-                        Attributes = new[]
-                        {
-                            new VertexAttr
-                            {
-                                Offset = 0,
-                                ShaderLocation = 0,
-                                Format = VertexFormat.Float32x3,
-                            },
-                            new VertexAttr
-                            {
-                                Offset = 12,
-                                ShaderLocation = 1,
-                                Format = VertexFormat.Float32x2,
-                            },
-                        },
-                    },
-                    //new VertexBufferLayout
-                    //{
-                    //    ArrayStride = (ulong)Unsafe.SizeOf<InstanceData>(),
-                    //    StepMode = VertexStepMode.Instance,
-                    //    Attributes = new[]
-                    //    {
-                    //        new VertexAttribute
-                    //        {
-                    //            Offset = 0,
-                    //            ShaderLocation = 5,
-                    //            Format = VertexFormat.Float32x3,
-                    //        }
-                    //    },
-                    //},
-                },
-            },
-            Fragment = new FragmentState
-            {
-                Module = shader,
-                EntryPoint = "fs_main"u8.ToArray(),
-                Targets = new ColorTargetState?[]
-                {
-                    new ColorTargetState
-                    {
-                        Format = surfaceFormat,
-                        Blend = BlendState.Replace,
-                        WriteMask = ColorWrites.All,
-                    },
-                },
-            },
-            Primitive = new PrimitiveState
-            {
-                Topology = PrimitiveTopology.TriangleList,
-                StripIndexFormat = null,
-                FrontFace = FrontFace.Ccw,
-                CullMode = Face.Back,
-                PolygonMode = PolygonMode.Fill,
-            },
-            DepthStencil = new DepthStencilState
-            {
-                Format = screen.DepthTexture.Format,
-                DepthWriteEnabled = true,
-                DepthCompare = CompareFunction.Less,
-                Stencil = StencilState.Default,
-                Bias = DepthBiasState.Default,
-            },
-            Multisample = MultisampleState.Default,
-            Multiview = 0,
-        });
-
-        var (vertices, indices, indexFormat) = SamplePrimitives.SampleData();
-        var vertexBufferOwn = Buffer.CreateVertexBuffer<MyVertex>(screen, vertices);
-        var indexBufferOwn = Buffer.CreateIndexBuffer<ushort>(screen, indices);
-
-        //ReadOnlySpan<InstanceData> instances = stackalloc InstanceData[]
-        //{
-        //    //new InstanceData(new Vector3(0.5f, 0, 0)),
-        //    //new InstanceData(new Vector3(-0.5f, 0, 0)),
-        //    new InstanceData(new Vector3(0f, 0, 0)),
-        //};
-        //var instanceBuffer = Buffer.CreateVertexBuffer(screen, instances);
-        //RuntimeHelpers.CreateSpan
-        _state = new State
-        {
-            Texture = textureOwn,
-            TextureView = viewOwn,
-            Sampler = samplerOwn,
-            BindGroupLayout = bindGroupLayoutOwn,
-            BindGroup = bindGroupOwn,
-            Shader = shaderOwn,
-            PipelineLayout = pipelineLayoutOwn,
-            RenderPipeline = renderPipelineOwn,
-            VertexBuffer = vertexBufferOwn,
-            //InstanceBuffer = instanceBuffer,
-            //InstanceCount = (uint)instances.Length,
-            IndexBuffer = indexBufferOwn,
-            IndexCount = (uint)indices.Length,
-            IndexFormat = indexFormat,
-        };
+        }, texture, view, sampler);
     }
 
     private unsafe static ReadOnlySpan<byte> ShaderSource => """

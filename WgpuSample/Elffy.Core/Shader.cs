@@ -54,8 +54,8 @@ public sealed class Shader
         return _bindGroupLayouts[index];
     }
 
-    internal Own<Material> CreateMaterial(ReadOnlySpan<BindGroupDescriptor> bindGroupDescs)
+    internal Own<Material> CreateMaterial(ReadOnlySpan<BindGroupDescriptor> bindGroupDescs, IDisposable?[]? associates)
     {
-        return Material.Create(this, bindGroupDescs);
+        return Material.Create(this, bindGroupDescs, associates);
     }
 }

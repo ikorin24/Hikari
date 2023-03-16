@@ -1,6 +1,8 @@
 ﻿#nullable enable
+using Elffy.Effective.Unsafes;
 using Elffy.NativeBind;
 using System;
+using System.Runtime.InteropServices;
 
 namespace Elffy;
 
@@ -63,22 +65,23 @@ public sealed class Texture : IEngineManaged
     {
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
-        var texture = screen.AsRefChecked().CreateTexture(descNative);
-        return Own.New(new Texture(screen, texture, desc), _release);
+        var textureNative = screen.AsRefChecked().CreateTexture(descNative);
+        return Own.New(new Texture(screen, textureNative, desc), _release);
     }
 
-    public void Write<T>(u32 mipLevel, u32 bytesPerPixel, Span<T> pixelData) where T : unmanaged
+    public void Write<TPixel>(u32 mipLevel, Span<TPixel> pixelData) where TPixel : unmanaged
     {
-        Write(mipLevel, bytesPerPixel, (ReadOnlySpan<T>)pixelData);
+        Write(mipLevel, (ReadOnlySpan<TPixel>)pixelData);
     }
 
-    public unsafe void Write<T>(u32 mipLevel, u32 bytesPerPixel, ReadOnlySpan<T> pixelData) where T : unmanaged
+    public unsafe void Write<TPixel>(u32 mipLevel, ReadOnlySpan<TPixel> pixelData) where TPixel : unmanaged
     {
         var screenRef = this.GetScreen().AsRefChecked();
         var texture = NativeRef;
         var size = new Wgpu.Extent3d((u32)Width, (u32)Height, (u32)Depth);
+        u32 bytesPerPixel = (u32)sizeof(TPixel);
 
-        fixed(T* p = pixelData) {
+        fixed(TPixel* p = pixelData) {
             screenRef.WriteTexture(
                 new CE.ImageCopyTexture
                 {
@@ -89,7 +92,7 @@ public sealed class Texture : IEngineManaged
                     origin_y = 0,
                     origin_z = 0,
                 },
-                new CE.Slice<byte>((byte*)p, pixelData.Length * sizeof(T)),
+                new CE.Slice<byte>((byte*)p, pixelData.Length * sizeof(TPixel)),
                 new Wgpu.ImageDataLayout
                 {
                     offset = 0,
