@@ -39,14 +39,6 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
         _release = release;
     }
 
-    //public Own(T value, Delegate release)
-    //{
-    //    ArgumentNullException.ThrowIfNull(value);
-    //    ArgumentNullException.ThrowIfNull(release);
-    //    _value = value;
-    //    _release = release;
-    //}
-
     public void Dispose()
     {
         if(IsNone) { return; }
