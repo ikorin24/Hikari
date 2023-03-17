@@ -293,11 +293,11 @@ public sealed class MyMaterial : Material, IMaterial<MyMaterial, MyShader, MyMat
     public Sampler Sampler => _sampler.AsValue();
     public Buffer Uniform => _uniform.AsValue();
 
-    private MyMaterial(MyShader shader, Own<Texture> texture, Own<Sampler> sampler, Own<Buffer> uniform, Own<BindGroup> bindGroup) : base(shader, new[] { bindGroup }, null)
+    private MyMaterial(MyShader shader, Own<BindGroup> bindGroup, in Arg arg) : base(shader, new[] { bindGroup }, null)
     {
-        _texture = texture;
-        _sampler = sampler;
-        _uniform = uniform;
+        _texture = arg.Texture;
+        _sampler = arg.Sampler;
+        _uniform = arg.Uniform;
     }
 
     protected override void Release(bool manualRelease)
@@ -323,7 +323,7 @@ public sealed class MyMaterial : Material, IMaterial<MyMaterial, MyShader, MyMat
                 BindGroupEntry.Buffer(2, arg.Uniform.AsValue()),
             },
         });
-        return CreateOwn(new MyMaterial(shader, arg.Texture, arg.Sampler, arg.Uniform, bindGroup));
+        return CreateOwn(new MyMaterial(shader, bindGroup, arg));
     }
 }
 
