@@ -285,9 +285,9 @@ public sealed class MyMaterial : Material, IMaterial<MyMaterial, MyShader, MyMat
 {
     public record struct Arg(Own<Texture> Texture, Own<Sampler> Sampler, Own<Buffer> Uniform);
 
-    private Own<Texture> _texture;
-    private Own<Sampler> _sampler;
-    private Own<Buffer> _uniform;
+    private readonly Own<Texture> _texture;
+    private readonly Own<Sampler> _sampler;
+    private readonly Own<Buffer> _uniform;
 
     public Texture Texture => _texture.AsValue();
     public Sampler Sampler => _sampler.AsValue();
