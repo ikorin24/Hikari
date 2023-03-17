@@ -3,7 +3,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class Shader
+public class Shader
 {
     private readonly IHostScreen _screen;
     private readonly Own<ShaderModule> _module;
@@ -16,7 +16,7 @@ public sealed class Shader
     public ReadOnlyMemory<BindGroupLayout> BindGroupLayouts => _bindGroupLayouts;
     public PipelineLayout PipelineLayout => _pipelineLayoutOwn.AsValue();
 
-    private Shader(IHostScreen screen, in BindGroupLayoutDescriptor bindGroupLayoutDesc, ReadOnlySpan<byte> shaderSource)
+    protected Shader(IHostScreen screen, in BindGroupLayoutDescriptor bindGroupLayoutDesc, ReadOnlySpan<byte> shaderSource)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _screen = screen;
@@ -35,7 +35,7 @@ public sealed class Shader
         });
     }
 
-    private void Release()
+    protected virtual void Release(bool manualRelease)
     {
         _module.Dispose();
         _pipelineLayoutOwn.Dispose();
@@ -46,7 +46,13 @@ public sealed class Shader
 
     public static Own<Shader> Create(IHostScreen screen, in BindGroupLayoutDescriptor bindGroupLayoutDesc, ReadOnlySpan<byte> shaderSource)
     {
-        return new Own<Shader>(new(screen, bindGroupLayoutDesc, shaderSource), static self => self.Release());
+        return new Own<Shader>(new(screen, bindGroupLayoutDesc, shaderSource), static self => self.Release(true));
+    }
+
+    protected static Own<TShader> CreateOwn<TShader>(TShader self) where TShader : Shader
+    {
+        ArgumentNullException.ThrowIfNull(self);
+        return new Own<TShader>(self, static self => self.Release(true));
     }
 
     public BindGroupLayout GetBindGroupLayout(int index)
@@ -57,5 +63,29 @@ public sealed class Shader
     internal Own<Material> CreateMaterial(ReadOnlySpan<BindGroupDescriptor> bindGroupDescs, IDisposable?[]? associates)
     {
         return Material.Create(this, bindGroupDescs, associates);
+    }
+}
+
+public interface IShader<TSelf, TMaterial, TMatArg>
+    where TSelf : Shader, IShader<TSelf, TMaterial, TMatArg>
+    where TMaterial : Material, IMaterial<TMaterial, TSelf, TMatArg>
+{
+    static abstract Own<TSelf> Create(IHostScreen screen);
+}
+
+public interface IMaterial<TSelf, TShader, TArg>
+    where TSelf : Material, IMaterial<TSelf, TShader, TArg>
+    where TShader : Shader, IShader<TShader, TSelf, TArg>
+{
+    static abstract Own<TSelf> Create(TShader shader, TArg arg);
+}
+
+public static class ShaderExtensions
+{
+    public static Own<TMaterial> CreateMaterial<TShader, TMaterial, TArg>(this TShader shader, TArg arg)
+        where TShader : Shader, IShader<TShader, TMaterial, TArg>
+        where TMaterial : Material, IMaterial<TMaterial, TShader, TArg>
+    {
+        return TMaterial.Create(shader, arg);
     }
 }

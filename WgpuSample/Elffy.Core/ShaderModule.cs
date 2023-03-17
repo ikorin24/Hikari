@@ -40,6 +40,6 @@ public sealed class ShaderModule : IEngineManaged
     {
         ArgumentNullException.ThrowIfNull(screen);
         var shader = screen.AsRefChecked().CreateShaderModule(shaderSource);
-        return Own.New(new ShaderModule(screen, shader), _release);
+        return new Own<ShaderModule>(new ShaderModule(screen, shader), _release);
     }
 }

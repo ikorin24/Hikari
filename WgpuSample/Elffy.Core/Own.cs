@@ -68,16 +68,6 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
     public static bool operator !=(Own<T> left, Own<T> right) => !(left == right);
 }
 
-public static class Own
-{
-    public static Own<T> New<T>(T value, Action<T> release)
-    {
-        return new Own<T>(value, release);
-    }
-
-    public static Own<T> None<T>() => Own<T>.None;
-}
-
 public static class OwnExtensions
 {
     public static void ThrowArgumentExceptionIfNone<T>(this Own<T> self, [CallerArgumentExpression(nameof(self))] string? paramName = null)

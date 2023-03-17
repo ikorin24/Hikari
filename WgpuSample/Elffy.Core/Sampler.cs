@@ -42,7 +42,7 @@ public sealed class Sampler : IEngineManaged
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
         var sampler = screen.AsRefChecked().CreateSampler(descNative);
-        return Own.New(new Sampler(screen, sampler), _release);
+        return new Own<Sampler>(new Sampler(screen, sampler), _release);
     }
 
     public static Own<Sampler> NoMipmap(IHostScreen screen, AddressMode addressMode, FilterMode magFilter, FilterMode minFilter)

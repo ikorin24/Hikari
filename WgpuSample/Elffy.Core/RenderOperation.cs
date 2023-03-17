@@ -62,14 +62,14 @@ public abstract class RenderOperation
     }
 }
 
-public sealed class ObjectLayer : RenderOperation
+public class ObjectLayer : RenderOperation
 {
     private readonly List<FrameObject> _list;
     private readonly List<FrameObject> _addedList;
     private readonly List<FrameObject> _removedList;
     private readonly object _sync = new object();
 
-    private ObjectLayer(Own<Shader> shaderOwn, Own<RenderPipeline> pipelineOwn) : base(shaderOwn, pipelineOwn)
+    protected ObjectLayer(Own<Shader> shaderOwn, Own<RenderPipeline> pipelineOwn) : base(shaderOwn, pipelineOwn)
     {
         _list = new List<FrameObject>();
         _addedList = new List<FrameObject>();
@@ -143,4 +143,13 @@ public sealed class ObjectLayer : RenderOperation
             }
         }
     }
+}
+
+public interface IObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
+    where TSelf : ObjectLayer, IObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
+    where TVertex : unmanaged
+    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
+    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
+{
+
 }

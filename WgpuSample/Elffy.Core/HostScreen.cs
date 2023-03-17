@@ -220,8 +220,8 @@ internal sealed class HostScreen : IHostScreen
         _renderOperations.DisposeInternal();
         _depthTexture.Dispose();
         _depthTextureView.Dispose();
-        _depthTexture = Own.None<Texture>();
-        _depthTextureView = Own.None<TextureView>();
+        _depthTexture = Own<Texture>.None;
+        _depthTextureView = Own<TextureView>.None;
         Resized = null;
         //RedrawRequested = null;
         return native;

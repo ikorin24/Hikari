@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Elffy;
 
-public sealed class Material
+public class Material
 {
     private readonly Shader _shader;
     private readonly Own<BindGroup>[] _bindGroupOwns;
@@ -14,7 +14,7 @@ public sealed class Material
     public Shader Shader => _shader;
     public ReadOnlyMemory<BindGroup> BindGroups => _bindGroups;
 
-    private Material(Shader shader, Own<BindGroup>[] bindGroupOwns, IDisposable?[]? associates)
+    protected Material(Shader shader, Own<BindGroup>[] bindGroupOwns, IDisposable?[]? associates)
     {
         _shader = shader;
         _bindGroupOwns = bindGroupOwns;
@@ -26,15 +26,17 @@ public sealed class Material
         _associates = associates;
     }
 
-    private void Release()
+    protected virtual void Release(bool manualRelease)
     {
-        foreach(var item in _bindGroupOwns) {
-            item.Dispose();
-        }
-        var associates = Interlocked.Exchange(ref _associates, null);
-        if(associates != null) {
-            foreach(var associate in associates) {
-                associate?.Dispose();
+        if(manualRelease) {
+            foreach(var item in _bindGroupOwns) {
+                item.Dispose();
+            }
+            var associates = Interlocked.Exchange(ref _associates, null);
+            if(associates != null) {
+                foreach(var associate in associates) {
+                    associate?.Dispose();
+                }
             }
         }
     }
@@ -47,6 +49,12 @@ public sealed class Material
         for(int i = 0; i < bindGroupDescs.Length; i++) {
             bindGroupOwns[i] = BindGroup.Create(shader.Screen, bindGroupDescs[i]);
         }
-        return new Own<Material>(new Material(shader, bindGroupOwns, associates), static self => self.Release());
+        return new Own<Material>(new Material(shader, bindGroupOwns, associates), static self => self.Release(true));
+    }
+
+    protected static Own<TMaterial> CreateOwn<TMaterial>(TMaterial self) where TMaterial : Material
+    {
+        ArgumentNullException.ThrowIfNull(self);
+        return new Own<TMaterial>(self, static self => self.Release(true));
     }
 }

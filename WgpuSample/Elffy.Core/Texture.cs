@@ -70,7 +70,7 @@ public sealed class Texture : IEngineManaged
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
         var textureNative = screen.AsRefChecked().CreateTexture(descNative);
-        return Own.New(new Texture(screen, textureNative, desc), _release);
+        return new Own<Texture>(new Texture(screen, textureNative, desc), _release);
     }
 
     public void Write<TPixel>(u32 mipLevel, Span<TPixel> pixelData) where TPixel : unmanaged

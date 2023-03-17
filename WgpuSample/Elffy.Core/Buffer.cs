@@ -90,7 +90,7 @@ public sealed class Buffer : IEngineManaged
         var screenRef = screen.AsRefChecked();
         var data = new CE.Slice<u8>(ptr, byteLength);
         var buffer = screenRef.CreateBufferInit(data, usage.FlagsMap());
-        return Own.New(new Buffer(screen, buffer, usage, byteLength), _release);
+        return new Own<Buffer>(new Buffer(screen, buffer, usage, byteLength), _release);
     }
 
     public unsafe void Write<T>(u64 offset, in T data) where T : unmanaged
