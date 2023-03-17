@@ -45,8 +45,9 @@ public sealed class BindGroupLayout : IEngineManaged
     {
         using var pins = new PinHandleHolder();
         var descNative = desc.ToNative(pins);
-        var bindGroupLayout = screen.AsRefChecked().CreateBindGroupLayout(descNative);
-        return new Own<BindGroupLayout>(new BindGroupLayout(screen, bindGroupLayout), _release);
+        var bindGroupLayoutNative = screen.AsRefChecked().CreateBindGroupLayout(descNative);
+        var bindGroupLayout = new BindGroupLayout(screen, bindGroupLayoutNative);
+        return Own.RefType(bindGroupLayout, static x => _release(SafeCast.As<BindGroupLayout>(x)));
     }
 }
 

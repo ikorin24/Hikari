@@ -21,11 +21,11 @@ public sealed class Sampler : IEngineManaged
 
     ~Sampler() => Release(false);
 
-    private static readonly Action<Sampler> _release = static self =>
+    private void Release()
     {
-        self.Release(true);
-        GC.SuppressFinalize(self);
-    };
+        Release(true);
+        GC.SuppressFinalize(this);
+    }
 
     private void Release(bool disposing)
     {
@@ -41,8 +41,9 @@ public sealed class Sampler : IEngineManaged
     {
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
-        var sampler = screen.AsRefChecked().CreateSampler(descNative);
-        return new Own<Sampler>(new Sampler(screen, sampler), _release);
+        var samplerNative = screen.AsRefChecked().CreateSampler(descNative);
+        var sampler = new Sampler(screen, samplerNative);
+        return Own.RefType(sampler, static x => SafeCast.As<Sampler>(x).Release());
     }
 
     public static Own<Sampler> NoMipmap(IHostScreen screen, AddressMode addressMode, FilterMode magFilter, FilterMode minFilter)

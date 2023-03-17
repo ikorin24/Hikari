@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Elffy\src\Elffy.Events\Elffy.Events.csproj" />
+    <ProjectReference Include="..\..\..\Elffy\src\Elffy.InternalTools\Elffy.InternalTools.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"  />
     <ProjectReference Include="..\EnumMapper\EnumMapper.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 

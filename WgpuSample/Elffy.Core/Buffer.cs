@@ -29,11 +29,11 @@ public sealed class Buffer : IEngineManaged
 
     ~Buffer() => Release(false);
 
-    private static readonly Action<Buffer> _release = static self =>
+    private void Release()
     {
-        self.Release(true);
-        GC.SuppressFinalize(self);
-    };
+        Release(true);
+        GC.SuppressFinalize(this);
+    }
 
     private void Release(bool disposing)
     {
@@ -89,8 +89,9 @@ public sealed class Buffer : IEngineManaged
     {
         var screenRef = screen.AsRefChecked();
         var data = new CE.Slice<u8>(ptr, byteLength);
-        var buffer = screenRef.CreateBufferInit(data, usage.FlagsMap());
-        return new Own<Buffer>(new Buffer(screen, buffer, usage, byteLength), _release);
+        var bufferNative = screenRef.CreateBufferInit(data, usage.FlagsMap());
+        var buffer = new Buffer(screen, bufferNative, usage, byteLength);
+        return Own.RefType(buffer, static x => SafeCast.As<Buffer>(x).Release());
     }
 
     public unsafe void Write<T>(u64 offset, in T data) where T : unmanaged

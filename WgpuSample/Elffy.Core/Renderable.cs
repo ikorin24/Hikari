@@ -61,11 +61,6 @@ public sealed class Mesh
         _indexFormat = indexFormat;
     }
 
-    private static readonly Action<Mesh> _release = static self =>
-    {
-        self.Release();
-    };
-
     private void Release()
     {
         _vertexBuffer.Dispose();
@@ -77,7 +72,8 @@ public sealed class Mesh
         ArgumentNullException.ThrowIfNull(screen);
         vertexBuffer.ThrowArgumentExceptionIfNone();
         indexBuffer.ThrowArgumentExceptionIfNone();
-        return new Own<Mesh>(new Mesh(vertexBuffer, indexBuffer, indexCount, indexFormat), _release);
+        var mesh = new Mesh(vertexBuffer, indexBuffer, indexCount, indexFormat);
+        return Own.RefType(mesh, static x => SafeCast.As<Mesh>(x).Release());
     }
 }
 

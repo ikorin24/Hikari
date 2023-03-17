@@ -21,7 +21,7 @@ public readonly struct RenderPass
     internal static Own<RenderPass> Create(Rust.MutRef<Wgpu.CommandEncoder> encoder, in CE.RenderPassDescriptor desc)
     {
         var native = encoder.CreateRenderPass(desc);
-        return new Own<RenderPass>(new(native), _release);
+        return Own.ValueType(new(native), _release);
     }
 
     public static unsafe Own<RenderPass> CreateSurfaceRenderPass(CommandEncoder encoder, SurfaceTextureView surface, TextureView? depth)

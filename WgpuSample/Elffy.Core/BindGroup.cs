@@ -43,8 +43,9 @@ public sealed class BindGroup : IEngineManaged
     public static Own<BindGroup> Create(IHostScreen screen, in BindGroupDescriptor desc)
     {
         using var pins = new PinHandleHolder();
-        var bindGroup = screen.AsRefChecked().CreateBindGroup(desc.ToNative(pins));
-        return new Own<BindGroup>(new BindGroup(screen, bindGroup), _release);
+        var bindGroupNative = screen.AsRefChecked().CreateBindGroup(desc.ToNative(pins));
+        var bindGroup = new BindGroup(screen, bindGroupNative);
+        return Own.RefType(bindGroup, static x => _release(SafeCast.As<BindGroup>(x)));
     }
 }
 

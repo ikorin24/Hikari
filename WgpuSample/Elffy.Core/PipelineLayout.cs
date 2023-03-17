@@ -21,11 +21,11 @@ public sealed class PipelineLayout : IEngineManaged
 
     ~PipelineLayout() => Release(false);
 
-    private static readonly Action<PipelineLayout> _release = static self =>
+    private void Release()
     {
-        self.Release(true);
-        GC.SuppressFinalize(self);
-    };
+        Release(true);
+        GC.SuppressFinalize(this);
+    }
 
     private void Release(bool disposing)
     {
@@ -46,9 +46,9 @@ public sealed class PipelineLayout : IEngineManaged
         }
 
         var descNative = new CE.PipelineLayoutDescriptor(bindGroupLayoutsNative, (nuint)bindGroupLayouts.Length);
-        var pipelineLayout = screen.AsRefChecked().CreatePipelineLayout(descNative);
-        return new Own<PipelineLayout>(new PipelineLayout(screen, pipelineLayout), _release);
-
+        var pipelineLayoutNative = screen.AsRefChecked().CreatePipelineLayout(descNative);
+        var pipelineLayout = new PipelineLayout(screen, pipelineLayoutNative);
+        return Own.RefType(pipelineLayout, static x => SafeCast.As<PipelineLayout>(x).Release());
     }
 }
 

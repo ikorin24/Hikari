@@ -26,6 +26,11 @@ public class Material
         _associates = associates;
     }
 
+    private void Release()
+    {
+        Release(true);
+    }
+
     protected virtual void Release(bool manualRelease)
     {
         if(manualRelease) {
@@ -49,12 +54,13 @@ public class Material
         for(int i = 0; i < bindGroupDescs.Length; i++) {
             bindGroupOwns[i] = BindGroup.Create(shader.Screen, bindGroupDescs[i]);
         }
-        return new Own<Material>(new Material(shader, bindGroupOwns, associates), static self => self.Release(true));
+        var material = new Material(shader, bindGroupOwns, associates);
+        return Own.RefType(material, static x => SafeCast.As<Material>(x).Release());
     }
 
     protected static Own<TMaterial> CreateOwn<TMaterial>(TMaterial self) where TMaterial : Material
     {
         ArgumentNullException.ThrowIfNull(self);
-        return new Own<TMaterial>(self, static self => self.Release(true));
+        return Own.RefType(self, static x => SafeCast.As<TMaterial>(x).Release());
     }
 }

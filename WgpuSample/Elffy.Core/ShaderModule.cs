@@ -20,11 +20,11 @@ public sealed class ShaderModule : IEngineManaged
 
     ~ShaderModule() => Release(false);
 
-    private static readonly Action<ShaderModule> _release = static self =>
+    private void Release()
     {
-        self.Release(true);
-        GC.SuppressFinalize(self);
-    };
+        Release(true);
+        GC.SuppressFinalize(this);
+    }
 
     private void Release(bool disposing)
     {
@@ -39,7 +39,8 @@ public sealed class ShaderModule : IEngineManaged
     public static Own<ShaderModule> Create(IHostScreen screen, ReadOnlySpan<byte> shaderSource)
     {
         ArgumentNullException.ThrowIfNull(screen);
-        var shader = screen.AsRefChecked().CreateShaderModule(shaderSource);
-        return new Own<ShaderModule>(new ShaderModule(screen, shader), _release);
+        var shaderModuleNative = screen.AsRefChecked().CreateShaderModule(shaderSource);
+        var shaderModule = new ShaderModule(screen, shaderModuleNative);
+        return Own.RefType(shaderModule, static x => SafeCast.As<ShaderModule>(x).Release());
     }
 }

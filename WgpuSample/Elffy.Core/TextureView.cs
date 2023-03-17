@@ -24,11 +24,11 @@ public sealed class TextureView : IEngineManaged, ITextureView
 
     ~TextureView() => Release(false);
 
-    private static readonly Action<TextureView> _release = static self =>
+    private void Release()
     {
-        self.Release(true);
-        GC.SuppressFinalize(self);
-    };
+        Release(true);
+        GC.SuppressFinalize(this);
+    }
 
     private void Release(bool manualRelease)
     {
@@ -45,7 +45,8 @@ public sealed class TextureView : IEngineManaged, ITextureView
         ArgumentNullException.ThrowIfNull(texture);
         texture.ThrowIfNotEngineManaged();
         var screen = texture.GetScreen();
-        var view = texture.NativeRef.CreateTextureView(CE.TextureViewDescriptor.Default);
-        return new Own<TextureView>(new TextureView(screen, view, texture), _release);
+        var textureViewNative = texture.NativeRef.CreateTextureView(CE.TextureViewDescriptor.Default);
+        var textureView = new TextureView(screen, textureViewNative, texture);
+        return Own.RefType(textureView, static x => SafeCast.As<TextureView>(x).Release());
     }
 }

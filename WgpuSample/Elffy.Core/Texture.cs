@@ -46,11 +46,11 @@ public sealed class Texture : IEngineManaged
 
     ~Texture() => Release(false);
 
-    private static readonly Action<Texture> _release = static self =>
+    private void Release()
     {
-        self.Release(true);
-        GC.SuppressFinalize(self);
-    };
+        Release(true);
+        GC.SuppressFinalize(this);
+    }
 
     private void Release(bool manualRelease)
     {
@@ -70,7 +70,8 @@ public sealed class Texture : IEngineManaged
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
         var textureNative = screen.AsRefChecked().CreateTexture(descNative);
-        return new Own<Texture>(new Texture(screen, textureNative, desc), _release);
+        var texture = new Texture(screen, textureNative, desc);
+        return Own.RefType(texture, static x => SafeCast.As<Texture>(x).Release());
     }
 
     public void Write<TPixel>(u32 mipLevel, Span<TPixel> pixelData) where TPixel : unmanaged

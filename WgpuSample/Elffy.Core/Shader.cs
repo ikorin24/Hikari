@@ -35,6 +35,11 @@ public class Shader
         });
     }
 
+    private void Release()
+    {
+        Release(true);
+    }
+
     protected virtual void Release(bool manualRelease)
     {
         _module.Dispose();
@@ -46,13 +51,14 @@ public class Shader
 
     public static Own<Shader> Create(IHostScreen screen, in BindGroupLayoutDescriptor bindGroupLayoutDesc, ReadOnlySpan<byte> shaderSource)
     {
-        return new Own<Shader>(new(screen, bindGroupLayoutDesc, shaderSource), static self => self.Release(true));
+        var shader = new Shader(screen, bindGroupLayoutDesc, shaderSource);
+        return Own.RefType(shader, static x => SafeCast.As<Shader>(x).Release());
     }
 
-    protected static Own<TShader> CreateOwn<TShader>(TShader self) where TShader : Shader
+    protected static Own<TShader> CreateOwn<TShader>(TShader shader) where TShader : Shader
     {
-        ArgumentNullException.ThrowIfNull(self);
-        return new Own<TShader>(self, static self => self.Release(true));
+        ArgumentNullException.ThrowIfNull(shader);
+        return Own.RefType(shader, static x => SafeCast.As<TShader>(x).Release());
     }
 
     public BindGroupLayout GetBindGroupLayout(int index)

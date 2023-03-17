@@ -22,11 +22,11 @@ public sealed class RenderPipeline : IEngineManaged
 
     ~RenderPipeline() => Release(false);
 
-    private static readonly Action<RenderPipeline> _release = static self =>
+    private void Release()
     {
-        self.Release(true);
-        GC.SuppressFinalize(self);
-    };
+        Release(true);
+        GC.SuppressFinalize(this);
+    }
 
     private void Release(bool disposing)
     {
@@ -43,8 +43,9 @@ public sealed class RenderPipeline : IEngineManaged
         var pins = new PinHandleHolder();
         try {
             var descNative = desc.ToNative(pins);
-            var renderPipeline = screen.AsRefChecked().CreateRenderPipeline(descNative);
-            return new Own<RenderPipeline>(new RenderPipeline(screen, renderPipeline), _release);
+            var renderPipelineNative = screen.AsRefChecked().CreateRenderPipeline(descNative);
+            var renderPipeline = new RenderPipeline(screen, renderPipelineNative);
+            return Own.RefType(renderPipeline, static x => SafeCast.As<RenderPipeline>(x).Release());
         }
         finally {
             pins.Dispose();
