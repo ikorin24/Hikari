@@ -4,22 +4,12 @@ using System.Diagnostics;
 
 namespace Elffy;
 
-//public sealed class Model3D<TLayer, TVertex, TShader, TMaterial, TMatArg> : Renderable<TLayer, TVertex, TShader, TMaterial, TMatArg>
-//    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg>
-//    where TVertex : unmanaged
-//    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
-//    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
-//{
-//    public Model3D(TLayer layer, Own<Material> material, Own<Mesh> mesh) : base(layer, material, mesh)
-//    {
-//    }
-//}
-
-public abstract class Renderable<TLayer, TVertex, TShader, TMaterial, TMatArg> : Positionable<TLayer, TVertex, TShader, TMaterial, TMatArg>
+public abstract class Renderable<TLayer, TVertex, TShader, TMaterial, TMatArg>
+    : Positionable<TLayer, TVertex, TShader, TMaterial, TMatArg>
     where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg>
     where TVertex : unmanaged
-    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
-    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
+    where TShader : Shader<TShader, TMaterial, TMatArg>
+    where TMaterial : Material<TMaterial, TShader, TMatArg>
 {
     private readonly Own<TMaterial> _material;
     private readonly Own<Mesh> _mesh;
@@ -57,11 +47,12 @@ public abstract class Renderable<TLayer, TVertex, TShader, TMaterial, TMatArg> :
     }
 }
 
-public abstract class Positionable<TLayer, TVertex, TShader, TMaterial, TMatArg> : FrameObject<TLayer, TVertex, TShader, TMaterial, TMatArg>
+public abstract class Positionable<TLayer, TVertex, TShader, TMaterial, TMatArg>
+    : FrameObject<TLayer, TVertex, TShader, TMaterial, TMatArg>
     where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg>
     where TVertex : unmanaged
-    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
-    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
+    where TShader : Shader<TShader, TMaterial, TMatArg>
+    where TMaterial : Material<TMaterial, TShader, TMatArg>
 {
     private Vector3 _position;
     private Quaternion _rotation;
@@ -113,8 +104,8 @@ public abstract class FrameObject
 public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial, TMatArg> : FrameObject
     where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg>
     where TVertex : unmanaged
-    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
-    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
+    where TShader : Shader<TShader, TMaterial, TMatArg>
+    where TMaterial : Material<TMaterial, TShader, TMatArg>
 {
     private readonly IHostScreen _screen;
     private readonly TLayer _layer;

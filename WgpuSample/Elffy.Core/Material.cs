@@ -4,17 +4,19 @@ using System.Threading;
 
 namespace Elffy;
 
-public abstract class Material
+public abstract class Material<TSelf, TShader, TArg>
+    where TSelf : Material<TSelf, TShader, TArg>
+    where TShader : Shader<TShader, TSelf, TArg>
 {
-    private readonly Shader _shader;
+    private readonly TShader _shader;
     private readonly Own<BindGroup>[] _bindGroupOwns;
     private readonly BindGroup[] _bindGroups;
     private IDisposable?[]? _associates;
 
-    public Shader Shader => _shader;
+    public TShader Shader => _shader;
     public ReadOnlyMemory<BindGroup> BindGroups => _bindGroups;
 
-    protected Material(Shader shader, Own<BindGroup>[] bindGroupOwns, IDisposable?[]? associates)
+    protected Material(TShader shader, Own<BindGroup>[] bindGroupOwns, IDisposable?[]? associates)
     {
         _shader = shader;
         _bindGroupOwns = bindGroupOwns;
@@ -58,9 +60,9 @@ public abstract class Material
     //    return Own.RefType(material, static x => SafeCast.As<Material>(x).Release());
     //}
 
-    protected static Own<TMaterial> CreateOwn<TMaterial>(TMaterial self) where TMaterial : Material
+    protected static Own<TSelf> CreateOwn(TSelf self)
     {
         ArgumentNullException.ThrowIfNull(self);
-        return Own.RefType(self, static x => SafeCast.As<TMaterial>(x).Release());
+        return Own.RefType(self, static x => SafeCast.As<TSelf>(x).Release());
     }
 }

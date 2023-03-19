@@ -87,8 +87,8 @@ public abstract class RenderOperation
 
 public abstract class RenderOperation<TShader, TMaterial, TMatArg>
     : RenderOperation
-    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
-    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
+    where TShader : Shader<TShader, TMaterial, TMatArg>
+    where TMaterial : Material<TMaterial, TShader, TMatArg>
 {
     private readonly Own<TShader> _shaderOwn;
 
@@ -105,8 +105,8 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
     : RenderOperation<TShader, TMaterial, TMatArg>
     where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
     where TVertex : unmanaged
-    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
-    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
+    where TShader : Shader<TShader, TMaterial, TMatArg>
+    where TMaterial : Material<TMaterial, TShader, TMatArg>
 {
     private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg>> _list;
     private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg>> _addedList;
@@ -199,11 +199,11 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
     }
 }
 
-public interface IObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
-    where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>, IObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
-    where TVertex : unmanaged
-    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
-    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
-{
+//public interface IObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
+//    where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>, IObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
+//    where TVertex : unmanaged
+//    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
+//    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
+//{
 
-}
+//}

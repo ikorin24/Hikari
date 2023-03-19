@@ -91,7 +91,7 @@ public sealed class MyModel : Renderable<MyObjectLayer, MyVertex, MyShader, MyMa
     }
 }
 
-public sealed class MyShader : Shader, IShader<MyShader, MyMaterial, MyMaterial.Arg>
+public sealed class MyShader : Shader<MyShader, MyMaterial, MyMaterial.Arg>
 {
     private static ReadOnlySpan<byte> ShaderSource => """
         struct Vertex {
@@ -166,7 +166,7 @@ public sealed class MyShader : Shader, IShader<MyShader, MyMaterial, MyMaterial.
     }
 }
 
-public sealed class MyMaterial : Material, IMaterial<MyMaterial, MyShader, MyMaterial.Arg>
+public sealed class MyMaterial : Material<MyMaterial, MyShader, MyMaterial.Arg>
 {
     public record struct Arg(Own<Texture> Texture, Own<Sampler> Sampler, Own<Buffer> Uniform);
 
@@ -211,7 +211,6 @@ public sealed class MyMaterial : Material, IMaterial<MyMaterial, MyShader, MyMat
         return CreateOwn(new MyMaterial(shader, bindGroup, arg));
     }
 }
-
 
 public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShader, MyMaterial, MyMaterial.Arg>
 {

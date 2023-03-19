@@ -3,7 +3,9 @@ using System;
 
 namespace Elffy;
 
-public abstract class Shader
+public abstract class Shader<TSelf, TMaterial, TMatArg>
+    where TSelf : Shader<TSelf, TMaterial, TMatArg>
+    where TMaterial : Material<TMaterial, TSelf, TMatArg>
 {
     private readonly IHostScreen _screen;
     private readonly Own<ShaderModule> _module;
@@ -49,10 +51,10 @@ public abstract class Shader
         }
     }
 
-    protected static Own<TShader> CreateOwn<TShader>(TShader shader) where TShader : Shader
+    protected static Own<TSelf> CreateOwn(TSelf shader)
     {
         ArgumentNullException.ThrowIfNull(shader);
-        return Own.RefType(shader, static x => SafeCast.As<TShader>(x).Release());
+        return Own.RefType(shader, static x => SafeCast.As<TSelf>(x).Release());
     }
 
     public BindGroupLayout GetBindGroupLayout(int index)
@@ -66,26 +68,26 @@ public abstract class Shader
     //}
 }
 
-public interface IShader<TSelf, TMaterial, TMatArg>
-    where TSelf : Shader, IShader<TSelf, TMaterial, TMatArg>
-    where TMaterial : Material, IMaterial<TMaterial, TSelf, TMatArg>
-{
-    static abstract Own<TSelf> Create(IHostScreen screen);
-}
+//public interface IShader<TSelf, TMaterial, TMatArg>
+//    where TSelf : Shader, IShader<TSelf, TMaterial, TMatArg>
+//    where TMaterial : Material, IMaterial<TMaterial, TSelf, TMatArg>
+//{
+//    static abstract Own<TSelf> Create(IHostScreen screen);
+//}
 
-public interface IMaterial<TSelf, TShader, TArg>
-    where TSelf : Material, IMaterial<TSelf, TShader, TArg>
-    where TShader : Shader, IShader<TShader, TSelf, TArg>
-{
-    static abstract Own<TSelf> Create(TShader shader, TArg arg);
-}
+//public interface IMaterial<TSelf, TShader, TArg>
+//    where TSelf : Material, IMaterial<TSelf, TShader, TArg>
+//    where TShader : Shader, IShader<TShader, TSelf, TArg>
+//{
+//    static abstract Own<TSelf> Create(TShader shader, TArg arg);
+//}
 
-public static class ShaderExtensions
-{
-    public static Own<TMaterial> CreateMaterial<TShader, TMaterial, TArg>(this TShader shader, TArg arg)
-        where TShader : Shader, IShader<TShader, TMaterial, TArg>
-        where TMaterial : Material, IMaterial<TMaterial, TShader, TArg>
-    {
-        return TMaterial.Create(shader, arg);
-    }
-}
+//public static class ShaderExtensions
+//{
+//    public static Own<TMaterial> CreateMaterial<TShader, TMaterial, TArg>(this TShader shader, TArg arg)
+//        where TShader : Shader, IShader<TShader, TMaterial, TArg>
+//        where TMaterial : Material, IMaterial<TMaterial, TShader, TArg>
+//    {
+//        return TMaterial.Create(shader, arg);
+//    }
+//}
