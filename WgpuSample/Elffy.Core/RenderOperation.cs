@@ -17,8 +17,6 @@ public abstract class RenderOperation
     public RenderPipeline Pipeline => _pipelineOwn.AsValue();
     public LifeState LifeState => _lifeState;
 
-    //internal virtual RenderOperationKind Kind => RenderOperationKind.None;
-
     protected RenderOperation(IHostScreen screen, Own<RenderPipeline> pipelineOwn)
     {
         _screen = screen;
@@ -64,27 +62,6 @@ public abstract class RenderOperation
     }
 }
 
-//internal readonly struct RenderOperationKind
-//{
-//    private readonly RenderOperation? _value;
-//    //None = 0,
-//    //ObjectLayer,
-//    private RenderOperationKind(RenderOperation value)
-//    {
-//        _value = value;
-//    }
-
-//    public static RenderOperationKind None => default;
-//    public static RenderOperationKind ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg>(ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg> objectLayer)
-//        where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg>
-//        where TVertex : unmanaged
-//        where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
-//        where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
-//    {
-//        return new RenderOperationKind(objectLayer);
-//    }
-//}
-
 public abstract class RenderOperation<TShader, TMaterial>
     : RenderOperation
     where TShader : Shader<TShader, TMaterial>
@@ -104,7 +81,7 @@ public abstract class RenderOperation<TShader, TMaterial>
 public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
     : RenderOperation<TShader, TMaterial>
     where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial>
-    where TVertex : unmanaged
+    where TVertex : unmanaged, IVertex<TVertex>
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
@@ -198,12 +175,3 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
         }
     }
 }
-
-//public interface IObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
-//    where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>, IObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
-//    where TVertex : unmanaged
-//    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
-//    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
-//{
-
-//}

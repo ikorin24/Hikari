@@ -210,40 +210,11 @@ public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShade
                 EntryPoint = "vs_main"u8.ToArray(),
                 Buffers = new VertexBufferLayout[]
                 {
-                    new VertexBufferLayout
+                    VertexBufferLayout.FromVertex<MyVertex>(stackalloc[]
                     {
-                        ArrayStride = MyVertex.TypeSize,
-                        StepMode = VertexStepMode.Vertex,
-                        Attributes = new[]
-                        {
-                            new VertexAttr
-                            {
-                                Offset = 0,
-                                ShaderLocation = 0,
-                                Format = VertexFormat.Float32x3,
-                            },
-                            new VertexAttr
-                            {
-                                Offset = 12,
-                                ShaderLocation = 1,
-                                Format = VertexFormat.Float32x2,
-                            },
-                        },
-                    },
-                    //new VertexBufferLayout
-                    //{
-                    //    ArrayStride = (ulong)Unsafe.SizeOf<InstanceData>(),
-                    //    StepMode = VertexStepMode.Instance,
-                    //    Attributes = new[]
-                    //    {
-                    //        new VertexAttribute
-                    //        {
-                    //            Offset = 0,
-                    //            ShaderLocation = 5,
-                    //            Format = VertexFormat.Float32x3,
-                    //        }
-                    //    },
-                    //},
+                        (0u, VertexFieldSemantics.Position),
+                        (1u, VertexFieldSemantics.UV),
+                    }),
                 },
             },
             Fragment = new FragmentState

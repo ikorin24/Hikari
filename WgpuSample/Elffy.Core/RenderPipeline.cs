@@ -358,6 +358,32 @@ public readonly struct VertexBufferLayout
             attributes = Attributes.SelectToArray(static x => x.ToNative()).AsFixedSlice(pins),
         };
     }
+
+    public static VertexBufferLayout FromVertex<TVertex>(ReadOnlySpan<(uint Location, VertexFieldSemantics Semantics)> mapping)
+        where TVertex : unmanaged, IVertex<TVertex>
+    {
+        var fields = TVertex.Fields.Span;
+        var attrs = new VertexAttr[mapping.Length];
+        for(int i = 0; i < mapping.Length; i++) {
+            foreach(var field in fields) {
+                if(field.Semantics == mapping[i].Semantics) {
+                    attrs[i] = new VertexAttr
+                    {
+                        Format = field.Format,
+                        Offset = field.Offset,
+                        ShaderLocation = mapping[i].Location,
+                    };
+                    break;
+                }
+            }
+        }
+        return new VertexBufferLayout
+        {
+            ArrayStride = TVertex.VertexSize,
+            StepMode = VertexStepMode.Vertex,
+            Attributes = attrs,
+        };
+    }
 }
 
 [Flags]

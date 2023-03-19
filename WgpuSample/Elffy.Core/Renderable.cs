@@ -7,7 +7,7 @@ namespace Elffy;
 public abstract class Renderable<TLayer, TVertex, TShader, TMaterial>
     : Positionable<TLayer, TVertex, TShader, TMaterial>
     where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial>
-    where TVertex : unmanaged
+    where TVertex : unmanaged, IVertex<TVertex>
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
@@ -50,7 +50,7 @@ public abstract class Renderable<TLayer, TVertex, TShader, TMaterial>
 public abstract class Positionable<TLayer, TVertex, TShader, TMaterial>
     : FrameObject<TLayer, TVertex, TShader, TMaterial>
     where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial>
-    where TVertex : unmanaged
+    where TVertex : unmanaged, IVertex<TVertex>
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
@@ -103,7 +103,7 @@ public abstract class FrameObject
 
 public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameObject
     where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial>
-    where TVertex : unmanaged
+    where TVertex : unmanaged, IVertex<TVertex>
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
