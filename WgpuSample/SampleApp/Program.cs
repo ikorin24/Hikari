@@ -43,50 +43,16 @@ internal class Program
             Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
         });
         texture.AsValue().Write(0, pixelData.AsSpan());
-        var sampler = Sampler.NoMipmap(screen, AddressMode.ClampToEdge, FilterMode.Linear, FilterMode.Nearest);
         var mesh = SamplePrimitives.SampleMesh(screen);
-
-        var uniformBuffer = Buffer.CreateUniformBuffer(screen, new Vector3(0, 0, 0));
-        uniformBuffer.AsValue().Write(0, new Vector3(0.1f, 0.4f, 0));
-
-        var model = new MyModel(layer, mesh, new(texture, sampler, uniformBuffer));
+        var model = new MyModel(layer, mesh, texture);
+        model.Material.SetUniform(new Vector3(0.1f, 0.4f, 0));
     }
-
-    private unsafe static ReadOnlySpan<byte> ShaderSource => """
-        struct Vertex {
-            @location(0) pos: vec3<f32>,
-            @location(1) uv: vec2<f32>,
-        }
-
-        struct V2F {
-            @builtin(position) clip_pos: vec4<f32>,
-            @location(0) uv: vec2<f32>,
-        }
-
-        @group(0) @binding(0) var t_diffuse: texture_2d<f32>;
-        @group(0) @binding(1) var s_diffuse: sampler;
-        @group(0) @binding(2) var<uniform> offset: vec3<f32>;
-
-        @vertex fn vs_main(
-            v: Vertex,
-        ) -> V2F {
-            return V2F
-            (
-                vec4(v.pos + offset, 1.0),
-                v.uv,
-            );
-        }
-
-        @fragment fn fs_main(in: V2F) -> @location(0) vec4<f32> {
-            return textureSample(t_diffuse, s_diffuse, in.uv);
-        }            
-        """u8;
 }
 //internal record struct InstanceData(Vector3 Offset);
 
 public sealed class MyModel : Renderable<MyObjectLayer, MyVertex, MyShader, MyMaterial, MyMaterial.Arg>
 {
-    public MyModel(MyObjectLayer layer, Own<Mesh> mesh, in MyMaterial.Arg arg) : base(layer, mesh, MyMaterial.Create(layer.Shader, arg))
+    public MyModel(MyObjectLayer layer, Own<Mesh> mesh, Own<Texture> texture) : base(layer, mesh, MyMaterial.Create(layer.Shader, texture))
     {
     }
 }
@@ -172,17 +138,22 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader, MyMaterial.Arg>
 
     private readonly Own<Texture> _texture;
     private readonly Own<Sampler> _sampler;
-    private readonly Own<Buffer> _uniform;
+    private readonly Own<Uniform<Vector3>> _uniform;
 
     public Texture Texture => _texture.AsValue();
     public Sampler Sampler => _sampler.AsValue();
-    public Buffer Uniform => _uniform.AsValue();
 
-    private MyMaterial(MyShader shader, Own<BindGroup> bindGroup, in Arg arg) : base(shader, new[] { bindGroup }, null)
+    private MyMaterial(
+        MyShader shader,
+        Own<Texture> texture,
+        Own<Sampler> sampler,
+        Own<Uniform<Vector3>> uniform,
+        Own<BindGroup> bindGroup)
+        : base(shader, new[] { bindGroup }, null)
     {
-        _texture = arg.Texture;
-        _sampler = arg.Sampler;
-        _uniform = arg.Uniform;
+        _texture = texture;
+        _sampler = sampler;
+        _uniform = uniform;
     }
 
     protected override void Release(bool manualRelease)
@@ -195,20 +166,30 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader, MyMaterial.Arg>
         }
     }
 
-    public static Own<MyMaterial> Create(MyShader shader, Arg arg)
+    public static Own<MyMaterial> Create(MyShader shader, Own<Texture> texture)
     {
         ArgumentNullException.ThrowIfNull(shader);
+        texture.ThrowArgumentExceptionIfNone();
+
+        var screen = shader.Screen;
+        var sampler = Sampler.NoMipmap(screen, AddressMode.ClampToEdge, FilterMode.Linear, FilterMode.Nearest);
+        var uniform = Uniform.Create(screen, default(Vector3));
         var bindGroup = BindGroup.Create(shader.Screen, new BindGroupDescriptor
         {
             Layout = shader.GetBindGroupLayout(0),
             Entries = new BindGroupEntry[3]
             {
-                BindGroupEntry.TextureView(0, arg.Texture.AsValue().View),
-                BindGroupEntry.Sampler(1, arg.Sampler.AsValue()),
-                BindGroupEntry.Buffer(2, arg.Uniform.AsValue()),
+                BindGroupEntry.TextureView(0, texture.AsValue().View),
+                BindGroupEntry.Sampler(1, sampler.AsValue()),
+                BindGroupEntry.Buffer(2, uniform.AsValue().Buffer),
             },
         });
-        return CreateOwn(new MyMaterial(shader, bindGroup, arg));
+        return CreateOwn(new MyMaterial(shader, texture, sampler, uniform, bindGroup));
+    }
+
+    public void SetUniform(in Vector3 value)
+    {
+        _uniform.AsValue().Set(value);
     }
 }
 

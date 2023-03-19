@@ -15,6 +15,7 @@ public abstract class Material<TSelf, TShader, TArg>
 
     public TShader Shader => _shader;
     public ReadOnlyMemory<BindGroup> BindGroups => _bindGroups;
+    public IHostScreen Screen => _shader.Screen;
 
     protected Material(TShader shader, Own<BindGroup>[] bindGroupOwns, IDisposable?[]? associates)
     {
