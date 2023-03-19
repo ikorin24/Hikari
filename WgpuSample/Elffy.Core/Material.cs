@@ -4,9 +4,9 @@ using System.Threading;
 
 namespace Elffy;
 
-public abstract class Material<TSelf, TShader, TArg>
-    where TSelf : Material<TSelf, TShader, TArg>
-    where TShader : Shader<TShader, TSelf, TArg>
+public abstract class Material<TSelf, TShader>
+    where TSelf : Material<TSelf, TShader>
+    where TShader : Shader<TShader, TSelf>
 {
     private readonly TShader _shader;
     private readonly Own<BindGroup>[] _bindGroupOwns;

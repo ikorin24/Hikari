@@ -3,9 +3,9 @@ using System;
 
 namespace Elffy;
 
-public abstract class Shader<TSelf, TMaterial, TMatArg>
-    where TSelf : Shader<TSelf, TMaterial, TMatArg>
-    where TMaterial : Material<TMaterial, TSelf, TMatArg>
+public abstract class Shader<TSelf, TMaterial>
+    where TSelf : Shader<TSelf, TMaterial>
+    where TMaterial : Material<TMaterial, TSelf>
 {
     private readonly IHostScreen _screen;
     private readonly Own<ShaderModule> _module;

@@ -4,12 +4,12 @@ using System.Diagnostics;
 
 namespace Elffy;
 
-public abstract class Renderable<TLayer, TVertex, TShader, TMaterial, TMatArg>
-    : Positionable<TLayer, TVertex, TShader, TMaterial, TMatArg>
-    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg>
+public abstract class Renderable<TLayer, TVertex, TShader, TMaterial>
+    : Positionable<TLayer, TVertex, TShader, TMaterial>
+    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial>
     where TVertex : unmanaged
-    where TShader : Shader<TShader, TMaterial, TMatArg>
-    where TMaterial : Material<TMaterial, TShader, TMatArg>
+    where TShader : Shader<TShader, TMaterial>
+    where TMaterial : Material<TMaterial, TShader>
 {
     private readonly Own<TMaterial> _material;
     private readonly Own<Mesh> _mesh;
@@ -47,12 +47,12 @@ public abstract class Renderable<TLayer, TVertex, TShader, TMaterial, TMatArg>
     }
 }
 
-public abstract class Positionable<TLayer, TVertex, TShader, TMaterial, TMatArg>
-    : FrameObject<TLayer, TVertex, TShader, TMaterial, TMatArg>
-    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg>
+public abstract class Positionable<TLayer, TVertex, TShader, TMaterial>
+    : FrameObject<TLayer, TVertex, TShader, TMaterial>
+    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial>
     where TVertex : unmanaged
-    where TShader : Shader<TShader, TMaterial, TMatArg>
-    where TMaterial : Material<TMaterial, TShader, TMatArg>
+    where TShader : Shader<TShader, TMaterial>
+    where TMaterial : Material<TMaterial, TShader>
 {
     private Vector3 _position;
     private Quaternion _rotation;
@@ -101,11 +101,11 @@ public abstract class FrameObject
     }
 }
 
-public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial, TMatArg> : FrameObject
-    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg>
+public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameObject
+    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial>
     where TVertex : unmanaged
-    where TShader : Shader<TShader, TMaterial, TMatArg>
-    where TMaterial : Material<TMaterial, TShader, TMatArg>
+    where TShader : Shader<TShader, TMaterial>
+    where TMaterial : Material<TMaterial, TShader>
 {
     private readonly IHostScreen _screen;
     private readonly TLayer _layer;

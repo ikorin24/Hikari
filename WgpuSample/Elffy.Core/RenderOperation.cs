@@ -85,10 +85,10 @@ public abstract class RenderOperation
 //    }
 //}
 
-public abstract class RenderOperation<TShader, TMaterial, TMatArg>
+public abstract class RenderOperation<TShader, TMaterial>
     : RenderOperation
-    where TShader : Shader<TShader, TMaterial, TMatArg>
-    where TMaterial : Material<TMaterial, TShader, TMatArg>
+    where TShader : Shader<TShader, TMaterial>
+    where TMaterial : Material<TMaterial, TShader>
 {
     private readonly Own<TShader> _shaderOwn;
 
@@ -101,16 +101,16 @@ public abstract class RenderOperation<TShader, TMaterial, TMatArg>
     }
 }
 
-public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
-    : RenderOperation<TShader, TMaterial, TMatArg>
-    where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
+public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
+    : RenderOperation<TShader, TMaterial>
+    where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial>
     where TVertex : unmanaged
-    where TShader : Shader<TShader, TMaterial, TMatArg>
-    where TMaterial : Material<TMaterial, TShader, TMatArg>
+    where TShader : Shader<TShader, TMaterial>
+    where TMaterial : Material<TMaterial, TShader>
 {
-    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg>> _list;
-    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg>> _addedList;
-    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg>> _removedList;
+    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial>> _list;
+    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial>> _addedList;
+    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial>> _removedList;
     private readonly object _sync = new object();
 
     protected ObjectLayer(Own<TShader> shader, Func<TShader, RenderPipelineDescriptor> pipelineDescGen)
@@ -130,7 +130,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
         Screen.RenderOperations.Add(this);
     }
 
-    internal void Add(FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg> frameObject)
+    internal void Add(FrameObject<TSelf, TVertex, TShader, TMaterial> frameObject)
     {
         lock(_sync) {
             _addedList.Add(frameObject);
@@ -157,7 +157,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
         }
     }
 
-    internal void Remove(FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg> frameObject)
+    internal void Remove(FrameObject<TSelf, TVertex, TShader, TMaterial> frameObject)
     {
         lock(_sync) {
             Debug.Assert(frameObject.LifeState == LifeState.Terminating);
@@ -192,7 +192,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
     {
         renderPass.SetPipeline(Pipeline);
         foreach(var obj in _list.AsSpan()) {
-            if(obj is Renderable<TSelf, TVertex, TShader, TMaterial, TMatArg> renderable) {
+            if(obj is Renderable<TSelf, TVertex, TShader, TMaterial> renderable) {
                 renderable.Render(renderPass);
             }
         }

@@ -50,14 +50,14 @@ internal class Program
 }
 //internal record struct InstanceData(Vector3 Offset);
 
-public sealed class MyModel : Renderable<MyObjectLayer, MyVertex, MyShader, MyMaterial, MyMaterial.Arg>
+public sealed class MyModel : Renderable<MyObjectLayer, MyVertex, MyShader, MyMaterial>
 {
     public MyModel(MyObjectLayer layer, Own<Mesh> mesh, Own<Texture> texture) : base(layer, mesh, MyMaterial.Create(layer.Shader, texture))
     {
     }
 }
 
-public sealed class MyShader : Shader<MyShader, MyMaterial, MyMaterial.Arg>
+public sealed class MyShader : Shader<MyShader, MyMaterial>
 {
     private static ReadOnlySpan<byte> ShaderSource => """
         struct Vertex {
@@ -132,10 +132,8 @@ public sealed class MyShader : Shader<MyShader, MyMaterial, MyMaterial.Arg>
     }
 }
 
-public sealed class MyMaterial : Material<MyMaterial, MyShader, MyMaterial.Arg>
+public sealed class MyMaterial : Material<MyMaterial, MyShader>
 {
-    public record struct Arg(Own<Texture> Texture, Own<Sampler> Sampler, Own<Buffer> Uniform);
-
     private readonly Own<Texture> _texture;
     private readonly Own<Sampler> _sampler;
     private readonly Own<Uniform<Vector3>> _uniform;
@@ -193,7 +191,7 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader, MyMaterial.Arg>
     }
 }
 
-public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShader, MyMaterial, MyMaterial.Arg>
+public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShader, MyMaterial>
 {
     public MyObjectLayer(IHostScreen screen)
         : base(MyShader.Create(screen), static shader => BuildPipeline(shader))
