@@ -200,6 +200,59 @@ extern "cdecl" fn elffy_screen_get_inner_size(screen: &HostScreen) -> ApiValueRe
     make_value_result(size.into())
 }
 
+#[no_mangle]
+extern "cdecl" fn elffy_screen_set_location(
+    screen: &HostScreen,
+    x: i32,
+    y: i32,
+    relative: ScreenLocationRelative,
+) -> ApiResult {
+    use ScreenLocationRelative::{CurrentMonitor, FullArea, PrimaryMonitor};
+
+    let f = |window: &window::Window,
+             x: i32,
+             y: i32,
+             relative: &ScreenLocationRelative|
+     -> Result<(), &'static str> {
+        let offset = match relative {
+            PrimaryMonitor => window.primary_monitor().ok_or("no monitors")?.position(),
+            CurrentMonitor => window.current_monitor().ok_or("no monitors")?.position(),
+            FullArea => (0, 0).into(),
+        };
+        let p: winit::dpi::PhysicalPosition<i32> = (offset.x + x, offset.y + y).into();
+        window.set_outer_position(p);
+        Ok(())
+    };
+    if let Err(err) = f(&screen.window, x, y, &relative) {
+        Engine::dispatch_err(err);
+    }
+    make_result()
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_screen_get_location(
+    screen: &HostScreen,
+    relative: ScreenLocationRelative,
+) -> ApiValueResult<Tuple<i32, i32>> {
+    use ScreenLocationRelative::{CurrentMonitor, FullArea, PrimaryMonitor};
+
+    let f =
+        |window: &window::Window, relative: &ScreenLocationRelative| -> Result<_, Box<dyn Error>> {
+            let offset = match relative {
+                PrimaryMonitor => window.primary_monitor().ok_or("no monitors")?.position(),
+                CurrentMonitor => window.current_monitor().ok_or("no monitors")?.position(),
+                FullArea => (0, 0).into(),
+            };
+            let p = window.outer_position()?;
+            Ok((p.x - offset.x, p.y - offset.y))
+        };
+
+    match f(&screen.window, &relative) {
+        Ok(value) => make_value_result(value.into()),
+        Err(err) => error_value_result(err),
+    }
+}
+
 /// # Thread Safety
 /// ## OK
 /// - called from any thread

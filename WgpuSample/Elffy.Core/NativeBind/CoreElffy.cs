@@ -179,6 +179,13 @@ internal static class CoreElffy
         Fullscreen = 2,
     }
 
+    internal enum ScreenLocationRelative : u32
+    {
+        PrimaryMonitor = 0,
+        CurrentMonitor = 1,
+        FullArea = 2,
+    }
+
     internal unsafe struct EngineCoreConfig
     {
         public required DispatchErrFn err_dispatcher;

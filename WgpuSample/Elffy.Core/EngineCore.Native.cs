@@ -67,6 +67,18 @@ static unsafe partial class EngineCore
         Rust.Ref<CE.HostScreen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_screen_set_location(
+        Rust.Ref<CE.HostScreen> screen,
+        i32 x,
+        i32 y,
+        CE.ScreenLocationRelative relative);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiValueResult<Vector2i> elffy_screen_get_location(
+        Rust.Ref<CE.HostScreen> screen,
+        CE.ScreenLocationRelative relative);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_write_texture(
         Rust.Ref<CE.HostScreen> screen,
         CE.ImageCopyTexture* texture,

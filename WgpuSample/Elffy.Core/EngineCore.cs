@@ -220,6 +220,22 @@ internal unsafe static partial class EngineCore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
+    public static void ScreenSetLocation(
+        this Rust.Ref<CE.HostScreen> screen,
+        i32 x,
+        i32 y,
+        CE.ScreenLocationRelative relative)
+        => elffy_screen_set_location(screen, x, y, relative).Validate();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
+    public static Vector2i ScreenGetLocation(
+        this Rust.Ref<CE.HostScreen> screen,
+        CE.ScreenLocationRelative relative)
+        => elffy_screen_get_location(screen, relative).Validate();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
     public static void ScreenSetInnerSize(
         this Rust.Ref<CE.HostScreen> screen,
         u32 width,

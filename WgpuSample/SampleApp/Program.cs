@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Elffy.Effective;
 using System;
+using System.Diagnostics;
 
 namespace Elffy;
 
@@ -28,6 +29,9 @@ internal class Program
     {
         screen.Resized += OnResized;
         screen.Title = "sample";
+        var location = screen.Location;
+        Debug.WriteLine(location);
+        screen.Location = new Vector2i(100, 100);
 
         var layer = new MyObjectLayer(screen);
         using var image = SampleData.LoadImage("pic.png");

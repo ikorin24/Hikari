@@ -11,6 +11,7 @@ public interface IHostScreen
     Mouse Mouse { get; }
     Keyboard Keyboard { get; }
     Vector2i ClientSize { get; set; }
+    Vector2i Location { get; set; }
     ulong FrameNum { get; }
     RenderOperations RenderOperations { get; }
 

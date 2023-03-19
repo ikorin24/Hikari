@@ -80,6 +80,23 @@ internal sealed class HostScreen : IHostScreen
         }
     }
 
+    public Vector2i Location
+    {
+        get
+        {
+            var screenRef = Ref.AsRefUnchecked();
+            if(screenRef.IsInvalid) {
+                return Vector2i.Zero;
+            }
+            return screenRef.ScreenGetLocation(CE.ScreenLocationRelative.FullArea);
+        }
+        set
+        {
+            var screenRef = Ref.AsRefUnchecked();
+            screenRef.ScreenSetLocation(value.X, value.Y, CE.ScreenLocationRelative.FullArea);
+        }
+    }
+
     public string Title
     {
         get => _title;

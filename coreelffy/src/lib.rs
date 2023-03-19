@@ -49,6 +49,15 @@ pub(crate) enum WindowStyle {
     Fullscreen = 2,
 }
 
+#[repr(u32)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[allow(dead_code)] // because values are from FFI
+pub(crate) enum ScreenLocationRelative {
+    PrimaryMonitor = 0,
+    CurrentMonitor = 1,
+    FullArea = 2,
+}
+
 #[repr(C)]
 pub(crate) struct RenderPassDescriptor<'tex, 'desc> {
     pub color_attachments_clear: Slice<'desc, Opt<RenderPassColorAttachment<'tex>>>,
@@ -1222,6 +1231,29 @@ impl From<(u32, u32)> for SizeU32 {
         Self {
             width: value.0,
             height: value.1,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Default)]
+pub(crate) struct Tuple<T0, T1> {
+    pub v0: T0,
+    pub v1: T1,
+}
+
+impl<T0: Copy, T1: Copy> Tuple<T0, T1> {
+    #[allow(dead_code)]
+    pub const fn to_tuple(&self) -> (T0, T1) {
+        (self.v0, self.v1)
+    }
+}
+
+impl<T1, T2> From<(T1, T2)> for Tuple<T1, T2> {
+    fn from(value: (T1, T2)) -> Self {
+        Self {
+            v0: value.0,
+            v1: value.1,
         }
     }
 }
