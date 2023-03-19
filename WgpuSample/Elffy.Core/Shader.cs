@@ -3,7 +3,7 @@ using System;
 
 namespace Elffy;
 
-public class Shader
+public abstract class Shader
 {
     private readonly IHostScreen _screen;
     private readonly Own<ShaderModule> _module;
@@ -49,12 +49,6 @@ public class Shader
         }
     }
 
-    public static Own<Shader> Create(IHostScreen screen, in BindGroupLayoutDescriptor bindGroupLayoutDesc, ReadOnlySpan<byte> shaderSource)
-    {
-        var shader = new Shader(screen, bindGroupLayoutDesc, shaderSource);
-        return Own.RefType(shader, static x => SafeCast.As<Shader>(x).Release());
-    }
-
     protected static Own<TShader> CreateOwn<TShader>(TShader shader) where TShader : Shader
     {
         ArgumentNullException.ThrowIfNull(shader);
@@ -66,10 +60,10 @@ public class Shader
         return _bindGroupLayouts[index];
     }
 
-    internal Own<Material> CreateMaterial(ReadOnlySpan<BindGroupDescriptor> bindGroupDescs, IDisposable?[]? associates)
-    {
-        return Material.Create(this, bindGroupDescs, associates);
-    }
+    //internal Own<Material> CreateMaterial(ReadOnlySpan<BindGroupDescriptor> bindGroupDescs, IDisposable?[]? associates)
+    //{
+    //    return Material.Create(this, bindGroupDescs, associates);
+    //}
 }
 
 public interface IShader<TSelf, TMaterial, TMatArg>

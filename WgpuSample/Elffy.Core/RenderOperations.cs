@@ -69,9 +69,7 @@ public sealed class RenderOperations
         }
 
         foreach(var operation in list.AsSpan()) {
-            if(operation is ObjectLayer objectLayer) {
-                objectLayer.ApplyAdd();
-            }
+            operation.FrameInit();
         }
 
         if(isAdded) {
@@ -106,9 +104,7 @@ public sealed class RenderOperations
         }
 
         foreach(var operation in list.AsSpan()) {
-            if(operation is ObjectLayer objectLayer) {
-                objectLayer.ApplyRemove();
-            }
+            operation.FrameEnd();
         }
 
         if(isRemoved) {

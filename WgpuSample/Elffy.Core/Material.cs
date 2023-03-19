@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Elffy;
 
-public class Material
+public abstract class Material
 {
     private readonly Shader _shader;
     private readonly Own<BindGroup>[] _bindGroupOwns;
@@ -46,17 +46,17 @@ public class Material
         }
     }
 
-    internal static Own<Material> Create(Shader shader, ReadOnlySpan<BindGroupDescriptor> bindGroupDescs, IDisposable?[]? associates)
-    {
-        ArgumentNullException.ThrowIfNull(shader);
+    //internal static Own<Material> Create(Shader shader, ReadOnlySpan<BindGroupDescriptor> bindGroupDescs, IDisposable?[]? associates)
+    //{
+    //    ArgumentNullException.ThrowIfNull(shader);
 
-        var bindGroupOwns = new Own<BindGroup>[bindGroupDescs.Length];
-        for(int i = 0; i < bindGroupDescs.Length; i++) {
-            bindGroupOwns[i] = BindGroup.Create(shader.Screen, bindGroupDescs[i]);
-        }
-        var material = new Material(shader, bindGroupOwns, associates);
-        return Own.RefType(material, static x => SafeCast.As<Material>(x).Release());
-    }
+    //    var bindGroupOwns = new Own<BindGroup>[bindGroupDescs.Length];
+    //    for(int i = 0; i < bindGroupDescs.Length; i++) {
+    //        bindGroupOwns[i] = BindGroup.Create(shader.Screen, bindGroupDescs[i]);
+    //    }
+    //    var material = new Material(shader, bindGroupOwns, associates);
+    //    return Own.RefType(material, static x => SafeCast.As<Material>(x).Release());
+    //}
 
     protected static Own<TMaterial> CreateOwn<TMaterial>(TMaterial self) where TMaterial : Material
     {

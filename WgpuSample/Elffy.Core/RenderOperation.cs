@@ -11,31 +11,33 @@ public abstract class RenderOperation
 {
     private readonly IHostScreen _screen;
     private readonly Own<RenderPipeline> _pipelineOwn;
-    private readonly Own<Shader> _shaderOwn;
     private LifeState _lifeState;
 
     public IHostScreen Screen => _screen;
-    public Shader Shader => _shaderOwn.AsValue();
     public RenderPipeline Pipeline => _pipelineOwn.AsValue();
     public LifeState LifeState => _lifeState;
 
-    protected RenderOperation(Own<Shader> shaderOwn, Own<RenderPipeline> pipelineOwn)
+    //internal virtual RenderOperationKind Kind => RenderOperationKind.None;
+
+    protected RenderOperation(IHostScreen screen, Own<RenderPipeline> pipelineOwn)
     {
-        shaderOwn.ThrowArgumentExceptionIfNone();
-        _screen = shaderOwn.AsValue().Screen;
-        _shaderOwn = shaderOwn;
+        _screen = screen;
         _pipelineOwn = pipelineOwn;
         _lifeState = LifeState.New;
     }
+
+    internal abstract void FrameInit();
+
+    protected abstract void Render(RenderPass renderPass);
+
+    internal abstract void FrameEnd();
+
+    internal void InvokeRender(RenderPass renderPass) => Render(renderPass);
 
     internal void Release()
     {
         _pipelineOwn.Dispose();
     }
-
-    protected abstract void Render(RenderPass renderPass);
-
-    internal void InvokeRender(RenderPass renderPass) => Render(renderPass);
 
     public bool Terminate()
     {
@@ -43,7 +45,7 @@ public abstract class RenderOperation
         if(currentState != LifeState.Alive) {
             return false;
         }
-        _screen.RenderOperations.Remove(this);
+        Screen.RenderOperations.Remove(this);
         return true;
     }
 
@@ -62,38 +64,85 @@ public abstract class RenderOperation
     }
 }
 
-public class ObjectLayer : RenderOperation
+//internal readonly struct RenderOperationKind
+//{
+//    private readonly RenderOperation? _value;
+//    //None = 0,
+//    //ObjectLayer,
+//    private RenderOperationKind(RenderOperation value)
+//    {
+//        _value = value;
+//    }
+
+//    public static RenderOperationKind None => default;
+//    public static RenderOperationKind ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg>(ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg> objectLayer)
+//        where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TMatArg>
+//        where TVertex : unmanaged
+//        where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
+//        where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
+//    {
+//        return new RenderOperationKind(objectLayer);
+//    }
+//}
+
+public abstract class RenderOperation<TShader, TMaterial, TMatArg>
+    : RenderOperation
+    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
+    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
 {
-    private readonly List<FrameObject> _list;
-    private readonly List<FrameObject> _addedList;
-    private readonly List<FrameObject> _removedList;
+    private readonly Own<TShader> _shaderOwn;
+
+    public TShader Shader => _shaderOwn.AsValue();
+
+    protected RenderOperation(Own<TShader> shaderOwn, Own<RenderPipeline> pipelineOwn) : base(shaderOwn.AsValue().Screen, pipelineOwn)
+    {
+        shaderOwn.ThrowArgumentExceptionIfNone();
+        _shaderOwn = shaderOwn;
+    }
+}
+
+public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
+    : RenderOperation<TShader, TMaterial, TMatArg>
+    where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
+    where TVertex : unmanaged
+    where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
+    where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>
+{
+    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg>> _list;
+    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg>> _addedList;
+    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg>> _removedList;
     private readonly object _sync = new object();
 
-    protected ObjectLayer(Own<Shader> shaderOwn, Own<RenderPipeline> pipelineOwn) : base(shaderOwn, pipelineOwn)
+    protected ObjectLayer(Own<TShader> shader, Func<TShader, RenderPipelineDescriptor> pipelineDescGen)
+        : this(shader, pipelineDescGen(shader.AsValue())) { }
+
+    protected ObjectLayer(Own<TShader> shader, Func<TShader, Own<RenderPipeline>> pipelineGen)
+        : this(shader, pipelineGen(shader.AsValue())) { }
+
+    protected ObjectLayer(Own<TShader> shader, in RenderPipelineDescriptor pipelineDesc)
+        : this(shader, RenderPipeline.Create(shader.AsValue().Screen, pipelineDesc)) { }
+
+    protected ObjectLayer(Own<TShader> shader, Own<RenderPipeline> pipeline) : base(shader, pipeline)
     {
-        _list = new List<FrameObject>();
-        _addedList = new List<FrameObject>();
-        _removedList = new List<FrameObject>();
+        _list = new();
+        _addedList = new();
+        _removedList = new();
+        Screen.RenderOperations.Add(this);
     }
 
-    public static ObjectLayer Create(Own<Shader> shader, in RenderPipelineDescriptor pipelineDesc)
-    {
-        shader.ThrowArgumentExceptionIfNone();
-        var screen = shader.AsValue().Screen;
-        var pipeline = RenderPipeline.Create(screen, in pipelineDesc);
-        var self = new ObjectLayer(shader, pipeline);
-        screen.RenderOperations.Add(self);
-        return self;
-    }
-
-    internal void Add(FrameObject frameObject)
+    internal void Add(FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg> frameObject)
     {
         lock(_sync) {
             _addedList.Add(frameObject);
         }
     }
 
-    internal void ApplyAdd()
+    internal override void FrameInit()
+    {
+        ApplyAdd();
+    }
+
+    private void ApplyAdd()
     {
         var addedList = _addedList;
         lock(_sync) {
@@ -108,7 +157,7 @@ public class ObjectLayer : RenderOperation
         }
     }
 
-    internal void Remove(FrameObject frameObject)
+    internal void Remove(FrameObject<TSelf, TVertex, TShader, TMaterial, TMatArg> frameObject)
     {
         lock(_sync) {
             Debug.Assert(frameObject.LifeState == LifeState.Terminating);
@@ -116,7 +165,12 @@ public class ObjectLayer : RenderOperation
         }
     }
 
-    internal void ApplyRemove()
+    internal override void FrameEnd()
+    {
+        ApplyRemove();
+    }
+
+    private void ApplyRemove()
     {
         var list = _list;
         var removedList = _removedList;
@@ -138,7 +192,7 @@ public class ObjectLayer : RenderOperation
     {
         renderPass.SetPipeline(Pipeline);
         foreach(var obj in _list.AsSpan()) {
-            if(obj is Renderable renderable) {
+            if(obj is Renderable<TSelf, TVertex, TShader, TMaterial, TMatArg> renderable) {
                 renderable.Render(renderPass);
             }
         }
@@ -146,7 +200,7 @@ public class ObjectLayer : RenderOperation
 }
 
 public interface IObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
-    where TSelf : ObjectLayer, IObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
+    where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>, IObjectLayer<TSelf, TVertex, TShader, TMaterial, TMatArg>
     where TVertex : unmanaged
     where TShader : Shader, IShader<TShader, TMaterial, TMatArg>
     where TMaterial : Material, IMaterial<TMaterial, TShader, TMatArg>

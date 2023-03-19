@@ -30,120 +30,7 @@ internal class Program
         screen.Resized += OnResized;
         screen.Title = "sample";
 
-        var shader = Shader.Create(
-            screen,
-            new BindGroupLayoutDescriptor
-            {
-                Entries = new[]
-                {
-                    BindGroupLayoutEntry.Texture(
-                        binding: 0,
-                        visibility: ShaderStages.Fragment,
-                        type: new TextureBindingData
-                        {
-                            Multisampled = false,
-                            ViewDimension = TextureViewDimension.D2,
-                            SampleType = TextureSampleType.FloatFilterable,
-                        },
-                        count: 0),
-                    BindGroupLayoutEntry.Sampler(
-                        binding: 1,
-                        visibility: ShaderStages.Fragment,
-                        type: SamplerBindingType.Filtering,
-                        count: 0),
-                    BindGroupLayoutEntry.Buffer(
-                        binding: 2,
-                        visibility: ShaderStages.Vertex,
-                        type: new BufferBindingData
-                        {
-                            HasDynamicOffset = false,
-                            MinBindingSize = 0,
-                            Type = BufferBindingType.Uniform,
-                        },
-                        count: 0),
-                },
-            },
-            ShaderSource)
-            .AsValue(out var shaderOwn);
-        //var shader = MyShader.Create(screen).AsValue(out var shaderOwn);
-        var layer = ObjectLayer.Create(shaderOwn, new RenderPipelineDescriptor
-        {
-            Layout = shader.PipelineLayout,
-            Vertex = new VertexState
-            {
-                Module = shader.Module,
-                EntryPoint = "vs_main"u8.ToArray(),
-                Buffers = new VertexBufferLayout[]
-                {
-                    new VertexBufferLayout
-                    {
-                        ArrayStride = MyVertex.TypeSize,
-                        StepMode = VertexStepMode.Vertex,
-                        Attributes = new[]
-                        {
-                            new VertexAttr
-                            {
-                                Offset = 0,
-                                ShaderLocation = 0,
-                                Format = VertexFormat.Float32x3,
-                            },
-                            new VertexAttr
-                            {
-                                Offset = 12,
-                                ShaderLocation = 1,
-                                Format = VertexFormat.Float32x2,
-                            },
-                        },
-                    },
-                    //new VertexBufferLayout
-                    //{
-                    //    ArrayStride = (ulong)Unsafe.SizeOf<InstanceData>(),
-                    //    StepMode = VertexStepMode.Instance,
-                    //    Attributes = new[]
-                    //    {
-                    //        new VertexAttribute
-                    //        {
-                    //            Offset = 0,
-                    //            ShaderLocation = 5,
-                    //            Format = VertexFormat.Float32x3,
-                    //        }
-                    //    },
-                    //},
-                },
-            },
-            Fragment = new FragmentState
-            {
-                Module = shader.Module,
-                EntryPoint = "fs_main"u8.ToArray(),
-                Targets = new ColorTargetState?[]
-                {
-                    new ColorTargetState
-                    {
-                        Format = screen.SurfaceFormat,
-                        Blend = BlendState.Replace,
-                        WriteMask = ColorWrites.All,
-                    },
-                },
-            },
-            Primitive = new PrimitiveState
-            {
-                Topology = PrimitiveTopology.TriangleList,
-                StripIndexFormat = null,
-                FrontFace = FrontFace.Ccw,
-                CullMode = Face.Back,
-                PolygonMode = PolygonMode.Fill,
-            },
-            DepthStencil = new DepthStencilState
-            {
-                Format = screen.DepthTexture.Format,
-                DepthWriteEnabled = true,
-                DepthCompare = CompareFunction.Less,
-                Stencil = StencilState.Default,
-                Bias = DepthBiasState.Default,
-            },
-            Multisample = MultisampleState.Default,
-            Multiview = 0,
-        });
+        var layer = new MyObjectLayer(screen);
 
         var (pixelData, width, height) = SamplePrimitives.LoadImagePixels("pic.png");
         var texture = Texture.Create(screen, new TextureDescriptor
@@ -162,16 +49,7 @@ internal class Program
         var uniformBuffer = Buffer.CreateUniformBuffer(screen, new Vector3(0, 0, 0));
         uniformBuffer.AsValue().Write(0, new Vector3(0.1f, 0.4f, 0));
 
-        var model = Model3D.Create(layer, mesh, new BindGroupDescriptor
-        {
-            Layout = layer.Shader.GetBindGroupLayout(0),
-            Entries = new[]
-            {
-                BindGroupEntry.TextureView(0, texture.AsValue().View),
-                BindGroupEntry.Sampler(1, sampler.AsValue()),
-                BindGroupEntry.Buffer(2, uniformBuffer.AsValue()),
-            },
-        }, texture, sampler, uniformBuffer);
+        var model = new MyModel(layer, mesh, new(texture, sampler, uniformBuffer));
     }
 
     private unsafe static ReadOnlySpan<byte> ShaderSource => """
@@ -205,6 +83,13 @@ internal class Program
         """u8;
 }
 //internal record struct InstanceData(Vector3 Offset);
+
+public sealed class MyModel : Renderable<MyObjectLayer, MyVertex, MyShader, MyMaterial, MyMaterial.Arg>
+{
+    public MyModel(MyObjectLayer layer, Own<Mesh> mesh, in MyMaterial.Arg arg) : base(layer, mesh, MyMaterial.Create(layer.Shader, arg))
+    {
+    }
+}
 
 public sealed class MyShader : Shader, IShader<MyShader, MyMaterial, MyMaterial.Arg>
 {
@@ -328,9 +213,94 @@ public sealed class MyMaterial : Material, IMaterial<MyMaterial, MyShader, MyMat
 }
 
 
-public sealed class MyObjectLayer : ObjectLayer, IObjectLayer<MyObjectLayer, MyVertex, MyShader, MyMaterial, MyMaterial.Arg>
+public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShader, MyMaterial, MyMaterial.Arg>
 {
-    private MyObjectLayer(Own<Shader> shaderOwn, Own<RenderPipeline> pipelineOwn) : base(shaderOwn, pipelineOwn)
+    public MyObjectLayer(IHostScreen screen)
+        : base(MyShader.Create(screen), static shader => BuildPipeline(shader))
     {
+    }
+
+    private static Own<RenderPipeline> BuildPipeline(MyShader shader)
+    {
+        var screen = shader.Screen;
+        var desc = new RenderPipelineDescriptor
+        {
+            Layout = shader.PipelineLayout,
+            Vertex = new VertexState
+            {
+                Module = shader.Module,
+                EntryPoint = "vs_main"u8.ToArray(),
+                Buffers = new VertexBufferLayout[]
+                {
+                    new VertexBufferLayout
+                    {
+                        ArrayStride = MyVertex.TypeSize,
+                        StepMode = VertexStepMode.Vertex,
+                        Attributes = new[]
+                        {
+                            new VertexAttr
+                            {
+                                Offset = 0,
+                                ShaderLocation = 0,
+                                Format = VertexFormat.Float32x3,
+                            },
+                            new VertexAttr
+                            {
+                                Offset = 12,
+                                ShaderLocation = 1,
+                                Format = VertexFormat.Float32x2,
+                            },
+                        },
+                    },
+                    //new VertexBufferLayout
+                    //{
+                    //    ArrayStride = (ulong)Unsafe.SizeOf<InstanceData>(),
+                    //    StepMode = VertexStepMode.Instance,
+                    //    Attributes = new[]
+                    //    {
+                    //        new VertexAttribute
+                    //        {
+                    //            Offset = 0,
+                    //            ShaderLocation = 5,
+                    //            Format = VertexFormat.Float32x3,
+                    //        }
+                    //    },
+                    //},
+                },
+            },
+            Fragment = new FragmentState
+            {
+                Module = shader.Module,
+                EntryPoint = "fs_main"u8.ToArray(),
+                Targets = new ColorTargetState?[]
+                {
+                    new ColorTargetState
+                    {
+                        Format = screen.SurfaceFormat,
+                        Blend = BlendState.Replace,
+                        WriteMask = ColorWrites.All,
+                    },
+                },
+            },
+            Primitive = new PrimitiveState
+            {
+                Topology = PrimitiveTopology.TriangleList,
+                StripIndexFormat = null,
+                FrontFace = FrontFace.Ccw,
+                CullMode = Face.Back,
+                PolygonMode = PolygonMode.Fill,
+            },
+            DepthStencil = new DepthStencilState
+            {
+                Format = screen.DepthTexture.Format,
+                DepthWriteEnabled = true,
+                DepthCompare = CompareFunction.Less,
+                Stencil = StencilState.Default,
+                Bias = DepthBiasState.Default,
+            },
+            Multisample = MultisampleState.Default,
+            Multiview = 0,
+        };
+        return RenderPipeline.Create(screen, in desc);
     }
 }
