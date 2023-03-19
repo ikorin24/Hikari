@@ -1,7 +1,6 @@
 ﻿#nullable enable
+using Elffy.Effective;
 using System;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
@@ -31,19 +30,18 @@ internal class Program
         screen.Title = "sample";
 
         var layer = new MyObjectLayer(screen);
-
-        var (pixelData, width, height) = SamplePrimitives.LoadImagePixels("pic.png");
+        using var image = SampleData.LoadImage("pic.png");
         var texture = Texture.Create(screen, new TextureDescriptor
         {
-            Size = new Vector3i(width, height, 1),
+            Size = new Vector3i(image.Width, image.Height, 1),
             MipLevelCount = 1,
             SampleCount = 1,
             Dimension = TextureDimension.D2,
             Format = TextureFormat.Rgba8UnormSrgb,
             Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
         });
-        texture.AsValue().Write(0, pixelData.AsSpan());
-        var mesh = SamplePrimitives.SampleMesh(screen);
+        texture.AsValue().Write(0, image.GetPixels().AsReadOnly());
+        var mesh = SampleData.SampleMesh(screen);
         var model = new MyModel(layer, mesh, texture);
         model.Material.SetUniform(new Vector3(0.1f, 0.4f, 0));
     }

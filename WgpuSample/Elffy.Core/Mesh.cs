@@ -29,6 +29,22 @@ public sealed class Mesh
         _indexBuffer.Dispose();
     }
 
+    public static Own<Mesh> Create<TVertex>(IHostScreen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u16> indices)
+        where TVertex : unmanaged, IVertex<TVertex>
+    {
+        var vb = Buffer.CreateVertexBuffer(screen, vertices);
+        var ib = Buffer.CreateIndexBuffer(screen, indices);
+        return Create(screen, vb, ib, (u32)indices.Length, IndexFormat.Uint16);
+    }
+
+    public static Own<Mesh> Create<TVertex>(IHostScreen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u32> indices)
+    where TVertex : unmanaged, IVertex<TVertex>
+    {
+        var vb = Buffer.CreateVertexBuffer(screen, vertices);
+        var ib = Buffer.CreateIndexBuffer(screen, indices);
+        return Create(screen, vb, ib, (u32)indices.Length, IndexFormat.Uint32);
+    }
+
     public static Own<Mesh> Create(IHostScreen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat)
     {
         ArgumentNullException.ThrowIfNull(screen);

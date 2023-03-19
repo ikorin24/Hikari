@@ -74,11 +74,6 @@ public sealed class Texture : IEngineManaged
         return Own.RefType(texture, static x => SafeCast.As<Texture>(x).Release());
     }
 
-    public void Write<TPixel>(u32 mipLevel, Span<TPixel> pixelData) where TPixel : unmanaged
-    {
-        Write(mipLevel, (ReadOnlySpan<TPixel>)pixelData);
-    }
-
     public unsafe void Write<TPixel>(u32 mipLevel, ReadOnlySpan<TPixel> pixelData) where TPixel : unmanaged
     {
         var screenRef = this.GetScreen().AsRefChecked();
