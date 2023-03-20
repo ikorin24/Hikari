@@ -2,7 +2,6 @@
 using Elffy.NativeBind;
 using System;
 using System.Buffers;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -26,8 +25,6 @@ public sealed class HostScreen
     private bool _isCloseRequested;
 
     public event Action<HostScreen, Vector2i>? Resized;
-
-    //public HostScreenRef Ref => new HostScreenRef(_native.Unwrap());
 
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
 
@@ -113,18 +110,13 @@ public sealed class HostScreen
         }
     }
 
-    private HostScreen(Rust.Box<CE.HostScreen> screen)
+    internal HostScreen(Rust.Box<CE.HostScreen> screen)
     {
         _native = screen;
         _surfaceTexView = new SurfaceTextureView(this, Environment.CurrentManagedThreadId);
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
         _renderOperations = new RenderOperations(this);
-    }
-
-    internal static HostScreen Create(Rust.Box<CE.HostScreen> screen)
-    {
-        return new HostScreen(screen);
     }
 
     private void UpdateDepthTexture(Vector2u size)
@@ -250,7 +242,7 @@ public sealed class HostScreen
     }
 }
 
-public readonly ref struct HostScreenConfig
+public readonly struct HostScreenConfig
 {
     public required WindowStyle Style { get; init; }
     public required u32 Width { get; init; }

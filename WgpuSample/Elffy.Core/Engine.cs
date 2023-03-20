@@ -37,7 +37,7 @@ public static class Engine
     private static readonly Func<Rust.Box<CE.HostScreen>, CE.HostScreenInfo, CE.ScreenId> _onStart =
         (Rust.Box<CE.HostScreen> screenHandle, CE.HostScreenInfo info) =>
         {
-            var screen = HostScreen.Create(screenHandle);
+            var screen = new HostScreen(screenHandle);
             var id = screen.ScreenId;
             _screens.Add(id, screen);
             screen.OnInitialize(info);
