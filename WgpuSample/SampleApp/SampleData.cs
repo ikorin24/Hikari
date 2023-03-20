@@ -7,7 +7,7 @@ namespace Elffy;
 
 public static class SampleData
 {
-    public static Own<Mesh> SampleMesh(IHostScreen screen)
+    public static Own<Mesh> SampleMesh(HostScreen screen)
     {
         const float A = 0.3f;
         ReadOnlySpan<MyVertex> vertices = stackalloc MyVertex[4]

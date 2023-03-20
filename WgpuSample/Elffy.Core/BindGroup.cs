@@ -9,13 +9,13 @@ namespace Elffy;
 
 public sealed class BindGroup : IEngineManaged
 {
-    private IHostScreen? _screen;
+    private HostScreen? _screen;
     private Rust.OptionBox<Wgpu.BindGroup> _native;
     internal Rust.Ref<Wgpu.BindGroup> NativeRef => _native.Unwrap();
 
-    public IHostScreen? Screen => _screen;
+    public HostScreen? Screen => _screen;
 
-    private BindGroup(IHostScreen screen, Rust.Box<Wgpu.BindGroup> native)
+    private BindGroup(HostScreen screen, Rust.Box<Wgpu.BindGroup> native)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _native = native;
@@ -40,7 +40,7 @@ public sealed class BindGroup : IEngineManaged
         }
     }
 
-    public static Own<BindGroup> Create(IHostScreen screen, in BindGroupDescriptor desc)
+    public static Own<BindGroup> Create(HostScreen screen, in BindGroupDescriptor desc)
     {
         using var pins = new PinHandleHolder();
         var bindGroupNative = screen.AsRefChecked().CreateBindGroup(desc.ToNative(pins));

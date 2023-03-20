@@ -10,9 +10,9 @@ public static class Engine
 {
     private static readonly Dictionary<CE.ScreenId, HostScreen> _screens = new();
 
-    private static Action<IHostScreen>? _onInitialized;
+    private static Action<HostScreen>? _onInitialized;
 
-    public static void Run(in HostScreenConfig screenConfig, Action<IHostScreen> onInitialized)
+    public static void Run(in HostScreenConfig screenConfig, Action<HostScreen> onInitialized)
     {
         ArgumentNullException.ThrowIfNull(onInitialized);
         _onInitialized = onInitialized;

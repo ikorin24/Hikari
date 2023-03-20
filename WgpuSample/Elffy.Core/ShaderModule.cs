@@ -6,13 +6,13 @@ namespace Elffy;
 
 public sealed class ShaderModule : IEngineManaged
 {
-    private IHostScreen? _screen;
+    private HostScreen? _screen;
     private Rust.OptionBox<Wgpu.ShaderModule> _native;
 
-    public IHostScreen? Screen => _screen;
+    public HostScreen? Screen => _screen;
     internal Rust.Ref<Wgpu.ShaderModule> NativeRef => _native.Unwrap();
 
-    private ShaderModule(IHostScreen screen, Rust.Box<Wgpu.ShaderModule> native)
+    private ShaderModule(HostScreen screen, Rust.Box<Wgpu.ShaderModule> native)
     {
         _screen = screen;
         _native = native;
@@ -36,7 +36,7 @@ public sealed class ShaderModule : IEngineManaged
         }
     }
 
-    public static Own<ShaderModule> Create(IHostScreen screen, ReadOnlySpan<byte> shaderSource)
+    public static Own<ShaderModule> Create(HostScreen screen, ReadOnlySpan<byte> shaderSource)
     {
         ArgumentNullException.ThrowIfNull(screen);
         var shaderModuleNative = screen.AsRefChecked().CreateShaderModule(shaderSource);

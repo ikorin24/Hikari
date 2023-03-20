@@ -83,10 +83,10 @@ public abstract class Positionable<TLayer, TVertex, TShader, TMaterial>
 
 public abstract class FrameObject
 {
-    private readonly IHostScreen _screen;
+    private readonly HostScreen _screen;
     private string? _name;
 
-    public IHostScreen Screen => _screen;
+    public HostScreen Screen => _screen;
 
     public string? Name
     {
@@ -94,7 +94,7 @@ public abstract class FrameObject
         set => _name = value;
     }
 
-    protected FrameObject(IHostScreen screen)
+    protected FrameObject(HostScreen screen)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _screen = screen;
@@ -107,7 +107,7 @@ public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameOb
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
-    private readonly IHostScreen _screen;
+    private readonly HostScreen _screen;
     private readonly TLayer _layer;
     private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
     private string? _name;

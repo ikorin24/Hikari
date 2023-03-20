@@ -10,7 +10,7 @@ internal unsafe sealed class ImeState : IImePreeditState
 {
     private static readonly Encoding _utf8 = Encoding.UTF8;
 
-    private readonly IHostScreen _screen;
+    private readonly HostScreen _screen;
     private byte* _buf;
     private int _bufCapacity;
     private int _len;
@@ -21,12 +21,12 @@ internal unsafe sealed class ImeState : IImePreeditState
     private ReadOnlySpan<byte> TextUtf8Span => new ReadOnlySpan<byte>(_buf, _len);
     private ReadOnlySpan<byte> CursorTextUtf8Span => _cursorBufRange.HasValue ? TextUtf8Span[_cursorBufRange.Value] : ReadOnlySpan<byte>.Empty;
 
-    public event Action<IHostScreen>? Start;
-    public event Action<IHostScreen>? End;
-    public event Action<IImePreeditState, IHostScreen>? Preedit;
-    public event ReadOnlySpanAction<byte, IHostScreen>? Commit;
+    public event Action<HostScreen>? Start;
+    public event Action<HostScreen>? End;
+    public event Action<IImePreeditState, HostScreen>? Preedit;
+    public event ReadOnlySpanAction<byte, HostScreen>? Commit;
 
-    internal ImeState(IHostScreen screen)
+    internal ImeState(HostScreen screen)
     {
         _screen = screen;
     }

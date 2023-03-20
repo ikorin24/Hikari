@@ -7,21 +7,21 @@ namespace Elffy;
 
 internal interface IEngineManaged
 {
-    IHostScreen? Screen { get; }
+    HostScreen? Screen { get; }
     bool IsManaged => Screen is not null;
 }
 
 internal static class EngineManagedExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryGetScreen(this IEngineManaged self, [MaybeNullWhen(false)] out IHostScreen screen)
+    public static bool TryGetScreen(this IEngineManaged self, [MaybeNullWhen(false)] out HostScreen screen)
     {
         screen = self.Screen;
         return screen is not null;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static IHostScreen GetScreen(this IEngineManaged self)
+    public static HostScreen GetScreen(this IEngineManaged self)
     {
         var screen = self.Screen;
         if(screen == null) {

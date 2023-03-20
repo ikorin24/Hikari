@@ -6,12 +6,12 @@ namespace Elffy;
 
 public sealed class Texture : IEngineManaged
 {
-    private IHostScreen? _screen;
+    private HostScreen? _screen;
     private Rust.OptionBox<Wgpu.Texture> _native;
     private TextureDescriptor? _desc;
     private Own<TextureView> _defaultView;
 
-    public IHostScreen? Screen => _screen;
+    public HostScreen? Screen => _screen;
 
     internal Rust.Ref<Wgpu.Texture> NativeRef => _native.Unwrap();
     internal Rust.MutRef<Wgpu.Texture> NativeMut => _native.Unwrap();
@@ -36,7 +36,7 @@ public sealed class Texture : IEngineManaged
         }
     }
 
-    private Texture(IHostScreen screen, Rust.Box<Wgpu.Texture> native, in TextureDescriptor desc)
+    private Texture(HostScreen screen, Rust.Box<Wgpu.Texture> native, in TextureDescriptor desc)
     {
         _screen = screen;
         _native = native;
@@ -65,7 +65,7 @@ public sealed class Texture : IEngineManaged
         }
     }
 
-    public static Own<Texture> Create(IHostScreen screen, in TextureDescriptor desc)
+    public static Own<Texture> Create(HostScreen screen, in TextureDescriptor desc)
     {
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();

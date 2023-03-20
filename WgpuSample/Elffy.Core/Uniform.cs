@@ -14,7 +14,7 @@ public readonly struct Uniform<T> where T : unmanaged
     [Obsolete("Don't use default constructor.", true)]
     public Uniform() => throw new NotSupportedException("Don't use default constructor.");
 
-    private Uniform(IHostScreen screen, in T value)
+    private Uniform(HostScreen screen, in T value)
     {
         _buffer = Buffer.CreateUniformBuffer(screen, in value);
     }
@@ -30,7 +30,7 @@ public readonly struct Uniform<T> where T : unmanaged
         buffer.Write(0, value);
     }
 
-    public static Own<Uniform<T>> Create(IHostScreen screen, in T value)
+    public static Own<Uniform<T>> Create(HostScreen screen, in T value)
     {
         return Own.ValueType(new Uniform<T>(screen, value), static x => x.Release());
     }
@@ -38,7 +38,7 @@ public readonly struct Uniform<T> where T : unmanaged
 
 public static class Uniform
 {
-    public static Own<Uniform<T>> Create<T>(IHostScreen screen, in T value) where T : unmanaged
+    public static Own<Uniform<T>> Create<T>(HostScreen screen, in T value) where T : unmanaged
     {
         return Uniform<T>.Create(screen, value);
     }

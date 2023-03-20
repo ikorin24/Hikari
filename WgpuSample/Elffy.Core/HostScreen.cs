@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Elffy;
 
-internal sealed class HostScreen : IHostScreen
+public sealed class HostScreen
 {
     private Rust.OptionBox<CE.HostScreen> _native;
     private TextureFormat _surfaceFormat;
@@ -23,12 +23,11 @@ internal sealed class HostScreen : IHostScreen
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
     private readonly RenderOperations _renderOperations;
-
     private bool _isCloseRequested;
 
-    public event Action<IHostScreen, Vector2i>? Resized;
+    public event Action<HostScreen, Vector2i>? Resized;
 
-    public HostScreenRef Ref => new HostScreenRef(_native.Unwrap());
+    //public HostScreenRef Ref => new HostScreenRef(_native.Unwrap());
 
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
 
@@ -64,19 +63,16 @@ internal sealed class HostScreen : IHostScreen
     {
         get
         {
-            var screenRef = Ref.AsRefUnchecked();
-            if(screenRef.IsInvalid) {
-                return Vector2i.Zero;
-            }
-            var (width, height) = screenRef.ScreenGetInnerSize();
+            var native = _native.Unwrap().AsRef();
+            var (width, height) = native.ScreenGetInnerSize();
             return new Vector2i(checked((int)width), checked((int)height));
         }
         set
         {
-            var screenRef = Ref.AsRefChecked();
+            var native = _native.Unwrap().AsRef();
             var width = checked((uint)value.X);
             var height = checked((uint)value.Y);
-            screenRef.ScreenSetInnerSize(width, height);
+            native.ScreenSetInnerSize(width, height);
         }
     }
 
@@ -84,16 +80,13 @@ internal sealed class HostScreen : IHostScreen
     {
         get
         {
-            var screenRef = Ref.AsRefUnchecked();
-            if(screenRef.IsInvalid) {
-                return Vector2i.Zero;
-            }
-            return screenRef.ScreenGetLocation(CE.ScreenLocationRelative.FullArea);
+            var native = _native.Unwrap().AsRef();
+            return native.ScreenGetLocation(CE.ScreenLocationRelative.FullArea);
         }
         set
         {
-            var screenRef = Ref.AsRefUnchecked();
-            screenRef.ScreenSetLocation(value.X, value.Y, CE.ScreenLocationRelative.FullArea);
+            var native = _native.Unwrap().AsRef();
+            native.ScreenSetLocation(value.X, value.Y, CE.ScreenLocationRelative.FullArea);
         }
     }
 
@@ -245,36 +238,18 @@ internal sealed class HostScreen : IHostScreen
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal Rust.Ref<CE.HostScreen> AsRefChecked()
+    {
+        return _native.Unwrap().AsRef();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ThrowIfNotInit()
     {
         if(_initialized == false) {
             Throw();
             static void Throw() => throw new InvalidOperationException("not initialized");
         }
-    }
-}
-
-//public delegate void RedrawRequestedAction(IHostScreen screen, RenderPass renderPass);
-
-public readonly ref struct HostScreenRef
-{
-    private readonly Rust.Ref<CE.HostScreen> _ref;
-
-    [Obsolete("Don't use default constructor.", true)]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public HostScreenRef() => throw new NotSupportedException("Don't use default constructor.");
-
-    internal HostScreenRef(Rust.Ref<CE.HostScreen> screen) => _ref = screen;
-
-    internal Rust.Ref<CE.HostScreen> AsRefChecked()
-    {
-        _ref.ThrowIfInvalid();
-        return _ref;
-    }
-
-    internal Rust.Ref<CE.HostScreen> AsRefUnchecked()
-    {
-        return _ref;
     }
 }
 
