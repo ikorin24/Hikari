@@ -24,7 +24,7 @@ public sealed class HostScreen
     private readonly RenderOperations _renderOperations;
     private bool _isCloseRequested;
 
-    public event Action<HostScreen, Vector2i>? Resized;
+    public event Action<HostScreen, Vector2u>? Resized;
 
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
 
@@ -70,20 +70,6 @@ public sealed class HostScreen
         }
     }
 
-    public Vector2i Location
-    {
-        get
-        {
-            var native = _native.Unwrap().AsRef();
-            return native.ScreenGetLocation(CE.ScreenLocationRelative.FullArea);
-        }
-        set
-        {
-            var native = _native.Unwrap().AsRef();
-            native.ScreenSetLocation(value.X, value.Y, CE.ScreenLocationRelative.FullArea);
-        }
-    }
-
     public string Title
     {
         get => _title;
@@ -119,6 +105,27 @@ public sealed class HostScreen
         _renderOperations = new RenderOperations(this);
     }
 
+    public void Close()
+    {
+        _isCloseRequested = true;
+    }
+
+    public Vector2i GetLocation(uint? monitorIndex)
+    {
+        var native = _native.Unwrap().AsRef();
+        return native.ScreenGetLocation(monitorIndex);
+    }
+
+    public void SetLocation(uint? monitorIndex, Vector2i location)
+    {
+        var native = _native.Unwrap().AsRef();
+        native.ScreenSetLocation(location.X, location.Y, monitorIndex);
+    }
+
+    public uint MonitorIndex => _native.Unwrap().AsRef().ScreenMonitorIndex().ToUInt32();
+
+    public uint MonitorCount => _native.Unwrap().AsRef().ScreenAllMonitorCount().ToUInt32();
+
     private void UpdateDepthTexture(Vector2u size)
     {
         var depth = Texture.Create(this, new TextureDescriptor
@@ -136,11 +143,6 @@ public sealed class HostScreen
         _depthTexture.Dispose();
         _depthTexture = depthOwn;
         _depthTextureView = view;
-    }
-
-    public void Close()
-    {
-        _isCloseRequested = true;
     }
 
     internal void OnInitialize(in CE.HostScreenInfo info)
@@ -206,7 +208,7 @@ public sealed class HostScreen
             UpdateDepthTexture(new Vector2u(width, height));
         }
 
-        Resized?.Invoke(this, checked(new Vector2i((int)width, (int)height)));
+        Resized?.Invoke(this, new Vector2u(width, height));
     }
 
     internal void OnClosing(ref bool cancel)
@@ -260,3 +262,7 @@ public readonly struct HostScreenConfig
         };
     }
 }
+
+//public readonly struct Monitor
+//{
+//}

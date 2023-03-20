@@ -224,15 +224,37 @@ internal unsafe static partial class EngineCore
         this Rust.Ref<CE.HostScreen> screen,
         i32 x,
         i32 y,
-        CE.ScreenLocationRelative relative)
-        => elffy_screen_set_location(screen, x, y, relative).Validate();
+        usize? monitorIndex)
+    {
+        var i = monitorIndex.HasValue ? CE.Opt<usize>.Some(monitorIndex.Value) : CE.Opt<usize>.None;
+        elffy_screen_set_location(screen, x, y, i).Validate();
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Vector2i ScreenGetLocation(
         this Rust.Ref<CE.HostScreen> screen,
-        CE.ScreenLocationRelative relative)
-        => elffy_screen_get_location(screen, relative).Validate();
+        usize? monitorIndex)
+    {
+        var i = monitorIndex.HasValue ? CE.Opt<usize>.Some(monitorIndex.Value) : CE.Opt<usize>.None;
+        return elffy_screen_get_location(screen, i).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
+    public static usize ScreenMonitorIndex(
+        this Rust.Ref<CE.HostScreen> screen)
+    {
+        return elffy_screen_monitor_index(screen).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
+    public static usize ScreenAllMonitorCount(
+        this Rust.Ref<CE.HostScreen> screen)
+    {
+        return elffy_screen_all_monitor_count(screen).Validate();
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]

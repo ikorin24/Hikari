@@ -21,7 +21,7 @@ internal class Program
         Engine.Run(screenConfig, OnInitialized);
     }
 
-    private static void OnResized(HostScreen screen, Vector2i newSize)
+    private static void OnResized(HostScreen screen, Vector2u newSize)
     {
     }
 
@@ -29,9 +29,11 @@ internal class Program
     {
         screen.Resized += OnResized;
         screen.Title = "sample";
-        var location = screen.Location;
+        var location = screen.GetLocation(null);
+        var m = screen.MonitorCount;
+        var index = screen.MonitorIndex;
         Debug.WriteLine(location);
-        screen.Location = new Vector2i(100, 100);
+        screen.SetLocation(null, new Vector2i(100, 100));
 
         var layer = new MyObjectLayer(screen);
         using var image = SampleData.LoadImage("pic.png");

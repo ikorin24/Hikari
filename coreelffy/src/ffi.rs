@@ -205,52 +205,85 @@ extern "cdecl" fn elffy_screen_set_location(
     screen: &HostScreen,
     x: i32,
     y: i32,
-    relative: ScreenLocationRelative,
+    monitor_index: Opt<usize>,
 ) -> ApiResult {
-    use ScreenLocationRelative::{CurrentMonitor, FullArea, PrimaryMonitor};
-
-    let f = |window: &window::Window,
-             x: i32,
-             y: i32,
-             relative: &ScreenLocationRelative|
-     -> Result<(), &'static str> {
-        let offset = match relative {
-            PrimaryMonitor => window.primary_monitor().ok_or("no monitors")?.position(),
-            CurrentMonitor => window.current_monitor().ok_or("no monitors")?.position(),
-            FullArea => (0, 0).into(),
+    let f = || -> Result<_, Box<dyn Error>> {
+        let window = &screen.window;
+        let monitor = if let Some(monitor_index) = monitor_index.to_option() {
+            window
+                .available_monitors()
+                .enumerate()
+                .find(|(i, _)| *i == monitor_index)
+                .map(|(_, x)| x)
+                .ok_or(format!("monitor[{}] is not found.", monitor_index))?
+        } else {
+            window.current_monitor().ok_or("no monitors")?
         };
+        let offset = monitor.position();
         let p: winit::dpi::PhysicalPosition<i32> = (offset.x + x, offset.y + y).into();
         window.set_outer_position(p);
         Ok(())
     };
-    if let Err(err) = f(&screen.window, x, y, &relative) {
-        Engine::dispatch_err(err);
-    }
+    match f() {
+        Ok(_) => {}
+        Err(err) => Engine::dispatch_err(err),
+    };
     make_result()
 }
 
 #[no_mangle]
 extern "cdecl" fn elffy_screen_get_location(
     screen: &HostScreen,
-    relative: ScreenLocationRelative,
+    monitor_index: Opt<usize>,
 ) -> ApiValueResult<Tuple<i32, i32>> {
-    use ScreenLocationRelative::{CurrentMonitor, FullArea, PrimaryMonitor};
-
-    let f =
-        |window: &window::Window, relative: &ScreenLocationRelative| -> Result<_, Box<dyn Error>> {
-            let offset = match relative {
-                PrimaryMonitor => window.primary_monitor().ok_or("no monitors")?.position(),
-                CurrentMonitor => window.current_monitor().ok_or("no monitors")?.position(),
-                FullArea => (0, 0).into(),
-            };
-            let p = window.outer_position()?;
-            Ok((p.x - offset.x, p.y - offset.y))
+    let f = || -> Result<_, Box<dyn Error>> {
+        let window = &screen.window;
+        let monitor = if let Some(monitor_index) = monitor_index.to_option() {
+            window
+                .available_monitors()
+                .enumerate()
+                .find(|(i, _)| *i == monitor_index)
+                .map(|(_, x)| x)
+                .ok_or(format!("monitor[{}] is not found.", monitor_index))?
+        } else {
+            window.current_monitor().ok_or("no monitors")?
         };
+        let offset = monitor.position();
+        let p = window.outer_position()?;
+        Ok((p.x - offset.x, p.y - offset.y))
+    };
 
-    match f(&screen.window, &relative) {
-        Ok(value) => make_value_result(value.into()),
+    match f() {
+        Ok(location) => make_value_result(location.into()),
         Err(err) => error_value_result(err),
     }
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_screen_monitor_index(screen: &HostScreen) -> ApiValueResult<usize> {
+    let f = || -> Result<_, Box<&'static str>> {
+        let window = &screen.window;
+        let monitor = &window.current_monitor().ok_or("no monitors")?;
+        let index = window
+            .available_monitors()
+            .enumerate()
+            .filter(|(_, x)| x == monitor)
+            .map(|(i, _)| i)
+            .next()
+            .ok_or("no monitors")?;
+        Ok(index)
+    };
+
+    match f() {
+        Ok(index) => make_value_result(index),
+        Err(err) => error_value_result(err),
+    }
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_screen_all_monitor_count(screen: &HostScreen) -> ApiValueResult<usize> {
+    let count = screen.window.available_monitors().count();
+    make_value_result(count)
 }
 
 /// # Thread Safety

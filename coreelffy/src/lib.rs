@@ -49,15 +49,6 @@ pub(crate) enum WindowStyle {
     Fullscreen = 2,
 }
 
-#[repr(u32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-#[allow(dead_code)] // because values are from FFI
-pub(crate) enum ScreenLocationRelative {
-    PrimaryMonitor = 0,
-    CurrentMonitor = 1,
-    FullArea = 2,
-}
-
 #[repr(C)]
 pub(crate) struct RenderPassDescriptor<'tex, 'desc> {
     pub color_attachments_clear: Slice<'desc, Opt<RenderPassColorAttachment<'tex>>>,
@@ -1587,7 +1578,14 @@ pub(crate) struct HostScreenInfo {
     pub surface_format: Opt<TextureFormat>,
 }
 
+// To be used as a value type without release outside of Rust, the following conditions must be met.
+// - The type does not implement `Drop` trait
+// - The type has `'static` lifetime
+// - The type implements `Sized` trait
 static_assertions::assert_eq_size!(window::WindowId, usize);
+static_assertions::assert_not_impl_any!(window::WindowId: Drop);
+static_assertions::assert_eq_size!(winit::monitor::MonitorHandle, usize);
+static_assertions::assert_not_impl_any!(winit::monitor::MonitorHandle: Drop);
 
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
