@@ -37,7 +37,7 @@ internal class Program
         using var image = SampleData.LoadImage("pic.png");
         var texture = Texture.Create(screen, new TextureDescriptor
         {
-            Size = new Vector3i(image.Width, image.Height, 1),
+            Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
             MipLevelCount = 1,
             SampleCount = 1,
             Dimension = TextureDimension.D2,

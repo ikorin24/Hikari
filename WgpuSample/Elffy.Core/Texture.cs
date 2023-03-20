@@ -16,9 +16,9 @@ public sealed class Texture : IEngineManaged
     internal Rust.Ref<Wgpu.Texture> NativeRef => _native.Unwrap();
     internal Rust.MutRef<Wgpu.Texture> NativeMut => _native.Unwrap();
 
-    public int Width => _desc.GetOrThrow().Size.X;
-    public int Height => _desc.GetOrThrow().Size.Y;
-    public int Depth => _desc.GetOrThrow().Size.Z;
+    public uint Width => _desc.GetOrThrow().Size.X;
+    public uint Height => _desc.GetOrThrow().Size.Y;
+    public uint Depth => _desc.GetOrThrow().Size.Z;
     public u32 MipLevelCount => _desc.GetOrThrow().MipLevelCount;
     public u32 SampleCount => _desc.GetOrThrow().SampleCount;
     public TextureFormat Format => _desc.GetOrThrow().Format;
@@ -27,14 +27,16 @@ public sealed class Texture : IEngineManaged
 
     public TextureView View => _defaultView.AsValue();
 
-    public Vector2i Size
+    public Vector2u Size
     {
         get
         {
             var size3d = _desc.GetOrThrow().Size;
-            return new Vector2i(size3d.X, size3d.Y);
+            return new Vector2u(size3d.X, size3d.Y);
         }
     }
+
+    public Vector3u Extent => _desc.GetOrThrow().Size;
 
     private Texture(HostScreen screen, Rust.Box<Wgpu.Texture> native, in TextureDescriptor desc)
     {

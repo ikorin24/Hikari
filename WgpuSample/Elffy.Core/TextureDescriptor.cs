@@ -6,7 +6,7 @@ namespace Elffy;
 
 public readonly struct TextureDescriptor
 {
-    public required Vector3i Size { get; init; }
+    public required Vector3u Size { get; init; }
     public required u32 MipLevelCount { get; init; }
     public required u32 SampleCount { get; init; }
     public required TextureDimension Dimension { get; init; }
@@ -23,9 +23,9 @@ public readonly struct TextureDescriptor
         {
             size = new Wgpu.Extent3d
             {
-                width = checked((u32)Size.X),
-                height = checked((u32)Size.Y),
-                depth_or_array_layers = checked((u32)Size.Z),
+                width = Size.X,
+                height = Size.Y,
+                depth_or_array_layers = Size.Z,
             },
             mip_level_count = MipLevelCount,
             sample_count = SampleCount,

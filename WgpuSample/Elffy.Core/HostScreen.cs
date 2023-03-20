@@ -59,20 +59,17 @@ public sealed class HostScreen
         }
     }
 
-    public Vector2i ClientSize
+    public Vector2u ClientSize
     {
         get
         {
             var native = _native.Unwrap().AsRef();
-            var (width, height) = native.ScreenGetInnerSize();
-            return new Vector2i(checked((int)width), checked((int)height));
+            return native.ScreenGetInnerSize();
         }
         set
         {
             var native = _native.Unwrap().AsRef();
-            var width = checked((uint)value.X);
-            var height = checked((uint)value.Y);
-            native.ScreenSetInnerSize(width, height);
+            native.ScreenSetInnerSize(value.X, value.Y);
         }
     }
 
@@ -130,11 +127,11 @@ public sealed class HostScreen
         return new HostScreen(screen);
     }
 
-    private void UpdateDepthTexture(Vector2i size)
+    private void UpdateDepthTexture(Vector2u size)
     {
         var depth = Texture.Create(this, new TextureDescriptor
         {
-            Size = new Vector3i(size.X, size.Y, 1),
+            Size = new Vector3u(size.X, size.Y, 1),
             MipLevelCount = 1,
             SampleCount = 1,
             Dimension = TextureDimension.D2,
@@ -214,7 +211,7 @@ public sealed class HostScreen
     {
         if(width != 0 && height != 0) {
             _native.Unwrap().AsRef().ScreenResizeSurface(width, height);
-            UpdateDepthTexture(new Vector2i((i32)width, (i32)height));
+            UpdateDepthTexture(new Vector2u(width, height));
         }
 
         Resized?.Invoke(this, checked(new Vector2i((int)width, (int)height)));

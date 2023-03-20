@@ -211,11 +211,11 @@ internal unsafe static partial class EngineCore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
-    public static (u32 Width, u32 Height) ScreenGetInnerSize(
+    public static Vector2u ScreenGetInnerSize(
         this Rust.Ref<CE.HostScreen> screen)
     {
         var size = elffy_screen_get_inner_size(screen).Validate();
-        return (size.width, size.height);
+        return new Vector2u(size.width, size.height);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
