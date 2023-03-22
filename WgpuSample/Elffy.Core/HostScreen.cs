@@ -110,21 +110,41 @@ public sealed class HostScreen
         _isCloseRequested = true;
     }
 
-    public Vector2i GetLocation(uint? monitorIndex)
+    public Vector2i GetLocation(MonitorId? monitorId = null)
     {
         var native = _native.Unwrap().AsRef();
-        return native.ScreenGetLocation(monitorIndex);
+        return native.ScreenGetLocation(monitorId);
     }
 
-    public void SetLocation(uint? monitorIndex, Vector2i location)
+    public void SetLocation(Vector2i location, MonitorId? monitorId = null)
     {
         var native = _native.Unwrap().AsRef();
-        native.ScreenSetLocation(location.X, location.Y, monitorIndex);
+        native.ScreenSetLocation(location.X, location.Y, monitorId);
     }
 
-    public uint MonitorIndex => _native.Unwrap().AsRef().ScreenMonitorIndex().ToUInt32();
+    public uint MonitorCount => _native.Unwrap().AsRef().MonitorCount().ToUInt32();
 
-    public uint MonitorCount => _native.Unwrap().AsRef().ScreenAllMonitorCount().ToUInt32();
+    public unsafe MonitorId[] GetMonitors()
+    {
+        var native = _native.Unwrap().AsRef();
+        const int Buflen = 16;
+        var buf = stackalloc CE.MonitorId[Buflen];
+        var count = native.Monitors(buf, Buflen);
+        if(count == 0) {
+            return Array.Empty<MonitorId>();
+        }
+        var monitors = new MonitorId[count];
+        for(int i = 0; i < monitors.Length; i++) {
+            monitors[i] = new MonitorId(buf[i]);
+        }
+        return monitors;
+    }
+
+    public MonitorId? CurrentMonitor()
+    {
+        var native = _native.Unwrap().AsRef();
+        return native.CurrentMonitor();
+    }
 
     private void UpdateDepthTexture(Vector2u size)
     {
@@ -263,6 +283,23 @@ public readonly struct HostScreenConfig
     }
 }
 
-//public readonly struct Monitor
-//{
-//}
+public readonly struct MonitorId : IEquatable<MonitorId>
+{
+    private readonly CE.MonitorId _id;
+    internal CE.MonitorId Id => _id;
+
+    internal MonitorId(CE.MonitorId id)
+    {
+        _id = id;
+    }
+
+    public override bool Equals(object? obj) => obj is MonitorId handle && Equals(handle);
+
+    public bool Equals(MonitorId other) => _id.Equals(other._id);
+
+    public override int GetHashCode() => _id.GetHashCode();
+
+    public static bool operator ==(MonitorId left, MonitorId right) => left.Equals(right);
+
+    public static bool operator !=(MonitorId left, MonitorId right) => !(left == right);
+}

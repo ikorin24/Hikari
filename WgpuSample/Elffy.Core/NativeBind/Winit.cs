@@ -200,5 +200,4 @@ internal static class Winit
         [EnumMapTo(Keys.Paste)] Paste,
         [EnumMapTo(Keys.Cut)] Cut,
     }
-
 }

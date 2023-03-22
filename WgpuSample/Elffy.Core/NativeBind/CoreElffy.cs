@@ -212,6 +212,17 @@ internal static class CoreElffy
         public required Opt<Wgpu.TextureFormat> surface_format;
     }
 
+    internal readonly struct MonitorId : IEquatable<MonitorId>
+    {
+        private readonly usize _v;
+
+        public override bool Equals(object? obj) => obj is MonitorId id && Equals(id);
+
+        public bool Equals(MonitorId other) => _v.Equals(other._v);
+
+        public override int GetHashCode() => _v.GetHashCode();
+    }
+
     internal unsafe readonly struct HostScreenInitFn
     {
         private readonly delegate* unmanaged[Cdecl]<Rust.Box<HostScreen>, HostScreenInfo*, ScreenId> _func;

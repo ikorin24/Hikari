@@ -224,36 +224,45 @@ internal unsafe static partial class EngineCore
         this Rust.Ref<CE.HostScreen> screen,
         i32 x,
         i32 y,
-        usize? monitorIndex)
+        MonitorId? monitorId)
     {
-        var i = monitorIndex.HasValue ? CE.Opt<usize>.Some(monitorIndex.Value) : CE.Opt<usize>.None;
-        elffy_screen_set_location(screen, x, y, i).Validate();
+        var id = monitorId.HasValue ? CE.Opt<CE.MonitorId>.Some(monitorId.Value.Id) : CE.Opt<CE.MonitorId>.None;
+        elffy_screen_set_location(screen, x, y, id).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Vector2i ScreenGetLocation(
         this Rust.Ref<CE.HostScreen> screen,
-        usize? monitorIndex)
+        MonitorId? monitorId)
     {
-        var i = monitorIndex.HasValue ? CE.Opt<usize>.Some(monitorIndex.Value) : CE.Opt<usize>.None;
-        return elffy_screen_get_location(screen, i).Validate();
+        var id = monitorId.HasValue ? CE.Opt<CE.MonitorId>.Some(monitorId.Value.Id) : CE.Opt<CE.MonitorId>.None;
+        return elffy_screen_get_location(screen, id).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
-    public static usize ScreenMonitorIndex(
+    public static usize MonitorCount(
         this Rust.Ref<CE.HostScreen> screen)
     {
-        return elffy_screen_monitor_index(screen).Validate();
+        return elffy_monitor_count(screen).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
-    public static usize ScreenAllMonitorCount(
-        this Rust.Ref<CE.HostScreen> screen)
+    public static usize Monitors(
+        this Rust.Ref<CE.HostScreen> screen,
+        CE.MonitorId* buf_out,
+        usize buflen)
     {
-        return elffy_screen_all_monitor_count(screen).Validate();
+        return elffy_monitors(screen, buf_out, buflen).Validate();
+    }
+
+    public static MonitorId? CurrentMonitor(this Rust.Ref<CE.HostScreen> screen)
+    {
+        return elffy_current_monitor(screen)
+            .Validate()
+            .TryGetValue(out var monitor) ? new MonitorId(monitor) : null;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -200,24 +200,48 @@ extern "cdecl" fn elffy_screen_get_inner_size(screen: &HostScreen) -> ApiValueRe
     make_value_result(size.into())
 }
 
+// #[no_mangle]
+// extern "cdecl" fn elffy_screen_set_location(
+//     screen: &HostScreen,
+//     x: i32,
+//     y: i32,
+//     monitor_index: Opt<usize>,
+// ) -> ApiResult {
+//     let f = || -> Result<_, Box<dyn Error>> {
+//         let window = &screen.window;
+//         let monitor = if let Some(monitor_index) = monitor_index.to_option() {
+//             window
+//                 .available_monitors()
+//                 .enumerate()
+//                 .find(|(i, _)| *i == monitor_index)
+//                 .map(|(_, x)| x)
+//                 .ok_or(format!("monitor[{}] is not found.", monitor_index))?
+//         } else {
+//             window.current_monitor().ok_or("no monitors")?
+//         };
+//         let offset = monitor.position();
+//         let p: winit::dpi::PhysicalPosition<i32> = (offset.x + x, offset.y + y).into();
+//         window.set_outer_position(p);
+//         Ok(())
+//     };
+//     match f() {
+//         Ok(_) => {}
+//         Err(err) => Engine::dispatch_err(err),
+//     };
+//     make_result()
+// }
 #[no_mangle]
 extern "cdecl" fn elffy_screen_set_location(
     screen: &HostScreen,
     x: i32,
     y: i32,
-    monitor_index: Opt<usize>,
+    monitor_id: Opt<MonitorId>,
 ) -> ApiResult {
     let f = || -> Result<_, Box<dyn Error>> {
         let window = &screen.window;
-        let monitor = if let Some(monitor_index) = monitor_index.to_option() {
-            window
-                .available_monitors()
-                .enumerate()
-                .find(|(i, _)| *i == monitor_index)
-                .map(|(_, x)| x)
-                .ok_or(format!("monitor[{}] is not found.", monitor_index))?
-        } else {
-            window.current_monitor().ok_or("no monitors")?
+        let monitor = match monitor_id.to_option() {
+            Some(id) => id.monitor(),
+            None => window.current_monitor().ok_or("no monitors")?,
         };
         let offset = monitor.position();
         let p: winit::dpi::PhysicalPosition<i32> = (offset.x + x, offset.y + y).into();
@@ -231,22 +255,44 @@ extern "cdecl" fn elffy_screen_set_location(
     make_result()
 }
 
+// #[no_mangle]
+// extern "cdecl" fn elffy_screen_get_location(
+//     screen: &HostScreen,
+//     monitor_index: Opt<usize>,
+// ) -> ApiValueResult<Tuple<i32, i32>> {
+//     let f = || -> Result<_, Box<dyn Error>> {
+//         let window = &screen.window;
+//         let monitor = if let Some(monitor_index) = monitor_index.to_option() {
+//             window
+//                 .available_monitors()
+//                 .enumerate()
+//                 .find(|(i, _)| *i == monitor_index)
+//                 .map(|(_, x)| x)
+//                 .ok_or(format!("monitor[{}] is not found.", monitor_index))?
+//         } else {
+//             window.current_monitor().ok_or("no monitors")?
+//         };
+//         let offset = monitor.position();
+//         let p = window.outer_position()?;
+//         Ok((p.x - offset.x, p.y - offset.y))
+//     };
+
+//     match f() {
+//         Ok(location) => make_value_result(location.into()),
+//         Err(err) => error_value_result(err),
+//     }
+// }
+
 #[no_mangle]
 extern "cdecl" fn elffy_screen_get_location(
     screen: &HostScreen,
-    monitor_index: Opt<usize>,
+    monitor_id: Opt<MonitorId>,
 ) -> ApiValueResult<Tuple<i32, i32>> {
     let f = || -> Result<_, Box<dyn Error>> {
         let window = &screen.window;
-        let monitor = if let Some(monitor_index) = monitor_index.to_option() {
-            window
-                .available_monitors()
-                .enumerate()
-                .find(|(i, _)| *i == monitor_index)
-                .map(|(_, x)| x)
-                .ok_or(format!("monitor[{}] is not found.", monitor_index))?
-        } else {
-            window.current_monitor().ok_or("no monitors")?
+        let monitor = match monitor_id.to_option() {
+            Some(id) => id.monitor(),
+            None => window.current_monitor().ok_or("no monitors")?,
         };
         let offset = monitor.position();
         let p = window.outer_position()?;
@@ -259,31 +305,54 @@ extern "cdecl" fn elffy_screen_get_location(
     }
 }
 
-#[no_mangle]
-extern "cdecl" fn elffy_screen_monitor_index(screen: &HostScreen) -> ApiValueResult<usize> {
-    let f = || -> Result<_, Box<&'static str>> {
-        let window = &screen.window;
-        let monitor = &window.current_monitor().ok_or("no monitors")?;
-        let index = window
-            .available_monitors()
-            .enumerate()
-            .filter(|(_, x)| x == monitor)
-            .map(|(i, _)| i)
-            .next()
-            .ok_or("no monitors")?;
-        Ok(index)
-    };
+// #[no_mangle]
+// extern "cdecl" fn elffy_screen_monitor_index(screen: &HostScreen) -> ApiValueResult<usize> {
+//     let f = || -> Result<_, Box<&'static str>> {
+//         let window = &screen.window;
+//         let monitor = &window.current_monitor().ok_or("no monitors")?;
+//         let index = window
+//             .available_monitors()
+//             .enumerate()
+//             .filter(|(_, x)| x == monitor)
+//             .map(|(i, _)| i)
+//             .next()
+//             .ok_or("no monitors")?;
+//         Ok(index)
+//     };
 
-    match f() {
-        Ok(index) => make_value_result(index),
+//     match f() {
+//         Ok(index) => make_value_result(index),
+//         Err(err) => error_value_result(err),
+//     }
+// }
+
+#[no_mangle]
+extern "cdecl" fn elffy_current_monitor(screen: &HostScreen) -> ApiValueResult<Opt<MonitorId>> {
+    match screen.window.current_monitor().ok_or("no monitors") {
+        Ok(monitor) => make_value_result(Some(MonitorId::new(monitor)).into()),
         Err(err) => error_value_result(err),
     }
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_screen_all_monitor_count(screen: &HostScreen) -> ApiValueResult<usize> {
+extern "cdecl" fn elffy_monitor_count(screen: &HostScreen) -> ApiValueResult<usize> {
     let count = screen.window.available_monitors().count();
     make_value_result(count)
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_monitors(
+    screen: &HostScreen,
+    buf: *mut MonitorId,
+    buflen: usize,
+) -> ApiValueResult<usize> {
+    let mut i: usize = 0;
+    let buf = unsafe { std::slice::from_raw_parts_mut(buf, buflen) };
+    for monitor in screen.window.available_monitors().take(buflen) {
+        buf[i] = MonitorId::new(monitor);
+        i += 1;
+    }
+    make_value_result(i)
 }
 
 /// # Thread Safety

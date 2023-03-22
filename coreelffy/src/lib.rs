@@ -1584,8 +1584,31 @@ pub(crate) struct HostScreenInfo {
 // - The type implements `Sized` trait
 static_assertions::assert_eq_size!(window::WindowId, usize);
 static_assertions::assert_not_impl_any!(window::WindowId: Drop);
+
 static_assertions::assert_eq_size!(winit::monitor::MonitorHandle, usize);
 static_assertions::assert_not_impl_any!(winit::monitor::MonitorHandle: Drop);
+static_assertions::assert_eq_size!(MonitorId, winit::monitor::MonitorHandle);
+static_assertions::assert_not_impl_any!(MonitorId: Drop);
+
+#[repr(C)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct MonitorId {
+    monitor: usize,
+    _ghost: std::marker::PhantomData<winit::monitor::MonitorHandle>,
+}
+
+impl MonitorId {
+    pub fn new(monitor: winit::monitor::MonitorHandle) -> Self {
+        Self {
+            monitor: unsafe { std::mem::transmute(monitor) },
+            _ghost: Default::default(),
+        }
+    }
+
+    pub fn monitor(&self) -> winit::monitor::MonitorHandle {
+        unsafe { std::mem::transmute(self.monitor) }
+    }
+}
 
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]

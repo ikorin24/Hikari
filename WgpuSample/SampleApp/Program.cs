@@ -29,11 +29,11 @@ internal class Program
     {
         screen.Resized += OnResized;
         screen.Title = "sample";
-        var location = screen.GetLocation(null);
-        var m = screen.MonitorCount;
-        var index = screen.MonitorIndex;
+        var location = screen.GetLocation();
+        var monitors = screen.GetMonitors();
         Debug.WriteLine(location);
-        screen.SetLocation(null, new Vector2i(100, 100));
+        screen.SetLocation(new Vector2i(100, 100));
+
 
         var layer = new MyObjectLayer(screen);
         using var image = SampleData.LoadImage("pic.png");

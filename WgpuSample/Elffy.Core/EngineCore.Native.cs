@@ -71,20 +71,26 @@ static unsafe partial class EngineCore
         Rust.Ref<CE.HostScreen> screen,
         i32 x,
         i32 y,
-        CE.Opt<usize> monitor_index);
+        CE.Opt<CE.MonitorId> monitor_id);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiValueResult<Vector2i> elffy_screen_get_location(
         Rust.Ref<CE.HostScreen> screen,
-        CE.Opt<usize> monitor_index);
+        CE.Opt<CE.MonitorId> monitor_id);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiValueResult<usize> elffy_screen_monitor_index(
+    private static partial ApiValueResult<CE.Opt<CE.MonitorId>> elffy_current_monitor(
         Rust.Ref<CE.HostScreen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiValueResult<usize> elffy_screen_all_monitor_count(
+    private static partial ApiValueResult<usize> elffy_monitor_count(
         Rust.Ref<CE.HostScreen> screen);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiValueResult<usize> elffy_monitors(
+        Rust.Ref<CE.HostScreen> screen,
+        CE.MonitorId* buf_out,
+        usize buflen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_write_texture(
