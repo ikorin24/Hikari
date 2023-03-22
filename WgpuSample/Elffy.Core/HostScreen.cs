@@ -96,6 +96,10 @@ public sealed class HostScreen
         }
     }
 
+    public uint MonitorCount => _native.Unwrap().AsRef().MonitorCount().ToUInt32();
+
+    public MonitorId? CurrentMonitor => _native.Unwrap().AsRef().CurrentMonitor();
+
     internal HostScreen(Rust.Box<CE.HostScreen> screen)
     {
         _native = screen;
@@ -122,8 +126,6 @@ public sealed class HostScreen
         native.ScreenSetLocation(location.X, location.Y, monitorId);
     }
 
-    public uint MonitorCount => _native.Unwrap().AsRef().MonitorCount().ToUInt32();
-
     public unsafe MonitorId[] GetMonitors()
     {
         var native = _native.Unwrap().AsRef();
@@ -138,12 +140,6 @@ public sealed class HostScreen
             monitors[i] = new MonitorId(buf[i]);
         }
         return monitors;
-    }
-
-    public MonitorId? CurrentMonitor()
-    {
-        var native = _native.Unwrap().AsRef();
-        return native.CurrentMonitor();
     }
 
     private void UpdateDepthTexture(Vector2u size)
