@@ -7,7 +7,7 @@ namespace Elffy;
 
 public static class SampleData
 {
-    public static Own<Mesh> SampleMesh(HostScreen screen)
+    public static Own<Mesh<MyVertex>> SampleMesh(HostScreen screen)
     {
         const float A = 0.3f;
         ReadOnlySpan<MyVertex> vertices = stackalloc MyVertex[4]
@@ -34,7 +34,7 @@ public static class SampleData
             },
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
-        return Mesh.Create(screen, vertices, indices);
+        return Mesh<MyVertex>.Create(screen, vertices, indices);
     }
 
     public static Image LoadImage(string filepath)

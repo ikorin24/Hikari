@@ -10,12 +10,12 @@ public abstract class Renderable<TLayer, TVertex, TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
     private readonly Own<TMaterial> _material;
-    private readonly Own<Mesh> _mesh;
+    private readonly Own<Mesh<TVertex>> _mesh;
 
     public TMaterial Material => _material.AsValue();
-    public Mesh Mesh => _mesh.AsValue();
+    public Mesh<TVertex> Mesh => _mesh.AsValue();
 
-    protected Renderable(TLayer layer, Own<Mesh> mesh, Own<TMaterial> material) : base(layer)
+    protected Renderable(TLayer layer, Own<Mesh<TVertex>> mesh, Own<TMaterial> material) : base(layer)
     {
         material.ThrowArgumentExceptionIfNone();
         mesh.ThrowArgumentExceptionIfNone();

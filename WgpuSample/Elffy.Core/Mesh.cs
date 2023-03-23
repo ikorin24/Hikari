@@ -3,12 +3,13 @@ using System;
 
 namespace Elffy;
 
-public sealed class Mesh
+public sealed class Mesh<TVertex>
+    where TVertex : unmanaged, IVertex<TVertex>
 {
-    private Own<Buffer> _vertexBuffer;
-    private Own<Buffer> _indexBuffer;
-    private uint _indexCount;
-    private IndexFormat _indexFormat;
+    private readonly Own<Buffer> _vertexBuffer;
+    private readonly Own<Buffer> _indexBuffer;
+    private readonly uint _indexCount;
+    private readonly IndexFormat _indexFormat;
 
     public Buffer VertexBuffer => _vertexBuffer.AsValue();
     public Buffer IndexBuffer => _indexBuffer.AsValue();
@@ -29,28 +30,26 @@ public sealed class Mesh
         _indexBuffer.Dispose();
     }
 
-    public static Own<Mesh> Create<TVertex>(HostScreen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u16> indices)
-        where TVertex : unmanaged, IVertex<TVertex>
+    public static Own<Mesh<TVertex>> Create(HostScreen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u16> indices)
     {
         var vb = Buffer.CreateVertexBuffer(screen, vertices);
         var ib = Buffer.CreateIndexBuffer(screen, indices);
         return Create(screen, vb, ib, (u32)indices.Length, IndexFormat.Uint16);
     }
 
-    public static Own<Mesh> Create<TVertex>(HostScreen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u32> indices)
-    where TVertex : unmanaged, IVertex<TVertex>
+    public static Own<Mesh<TVertex>> Create(HostScreen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u32> indices)
     {
         var vb = Buffer.CreateVertexBuffer(screen, vertices);
         var ib = Buffer.CreateIndexBuffer(screen, indices);
         return Create(screen, vb, ib, (u32)indices.Length, IndexFormat.Uint32);
     }
 
-    public static Own<Mesh> Create(HostScreen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat)
+    public static Own<Mesh<TVertex>> Create(HostScreen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat)
     {
         ArgumentNullException.ThrowIfNull(screen);
         vertexBuffer.ThrowArgumentExceptionIfNone();
         indexBuffer.ThrowArgumentExceptionIfNone();
-        var mesh = new Mesh(vertexBuffer, indexBuffer, indexCount, indexFormat);
-        return Own.RefType(mesh, static x => SafeCast.As<Mesh>(x).Release());
+        var mesh = new Mesh<TVertex>(vertexBuffer, indexBuffer, indexCount, indexFormat);
+        return Own.RefType(mesh, static x => SafeCast.As<Mesh<TVertex>>(x).Release());
     }
 }

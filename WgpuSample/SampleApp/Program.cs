@@ -44,13 +44,14 @@ internal class Program
         var mesh = SampleData.SampleMesh(screen);
         var model = new MyModel(layer, mesh, texture);
         model.Material.SetUniform(new Vector3(0.1f, 0.4f, 0));
+        //model.Mesh.VertexBuffer
     }
 }
 //internal record struct InstanceData(Vector3 Offset);
 
 public sealed class MyModel : Renderable<MyObjectLayer, MyVertex, MyShader, MyMaterial>
 {
-    public MyModel(MyObjectLayer layer, Own<Mesh> mesh, Own<Texture> texture) : base(layer, mesh, MyMaterial.Create(layer.Shader, texture))
+    public MyModel(MyObjectLayer layer, Own<Mesh<MyVertex>> mesh, Own<Texture> texture) : base(layer, mesh, MyMaterial.Create(layer.Shader, texture))
     {
     }
 }
