@@ -85,6 +85,7 @@ public abstract class FrameObject
 {
     private readonly HostScreen _screen;
     private string? _name;
+    private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
 
     public HostScreen Screen => _screen;
 
@@ -93,6 +94,11 @@ public abstract class FrameObject
         get => _name;
         set => _name = value;
     }
+
+    public SubscriptionRegister Subscriptions => _subscriptions.Register;
+
+    public abstract bool IsFrozen { get; set; }
+    public abstract LifeState LifeState { get; }
 
     protected FrameObject(HostScreen screen)
     {
@@ -107,18 +113,14 @@ public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameOb
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
-    private readonly HostScreen _screen;
     private readonly TLayer _layer;
-    private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
-    private string? _name;
     private LifeState _state;
     private bool _isFrozen;
 
     public TLayer Layer => _layer;
-    public SubscriptionRegister Subscriptions => _subscriptions.Register;
-    public LifeState LifeState => _state;
+    public sealed override LifeState LifeState => _state;
 
-    public bool IsFrozen
+    public sealed override bool IsFrozen
     {
         get => _isFrozen;
         set => _isFrozen = value;
@@ -126,7 +128,6 @@ public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameOb
 
     protected FrameObject(TLayer layer) : base(layer.Screen)
     {
-        _screen = layer.Screen;
         _layer = layer;
         _isFrozen = false;
         _state = LifeState.New;

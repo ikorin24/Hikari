@@ -12,6 +12,7 @@ public sealed class HostScreen
 {
     private Rust.OptionBox<CE.HostScreen> _native;
     private readonly ThreadId _mainThread;
+    private readonly SubscriptionBag _subscriptions;
     private TextureFormat _surfaceFormat;
     private GraphicsBackend _backend;
     private bool _initialized;
@@ -24,11 +25,13 @@ public sealed class HostScreen
     private ulong _frameNum;
     private readonly RenderOperations _renderOperations;
     private bool _isCloseRequested;
+    private EventSource<(HostScreen Screen, Vector2u Size)> _resized;
 
-    public event Action<HostScreen, Vector2u>? Resized;
+    public Event<(HostScreen Screen, Vector2u Size)> Resized => _resized.Event;
 
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
 
+    public SubscriptionRegister Subscriptions => _subscriptions.Register;
     public Mouse Mouse => _mouse;
     public Keyboard Keyboard => _keyboard;
     public ulong FrameNum => _frameNum;
@@ -109,6 +112,7 @@ public sealed class HostScreen
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
         _renderOperations = new RenderOperations(this);
+        _subscriptions = new SubscriptionBag();
     }
 
     public void Close()
@@ -224,12 +228,13 @@ public sealed class HostScreen
 
     internal void OnResized(uint width, uint height)
     {
-        if(width != 0 && height != 0) {
-            _native.Unwrap().AsRef().ScreenResizeSurface(width, height);
-            UpdateDepthTexture(new Vector2u(width, height));
+        var size = new Vector2u(width, height);
+        if(size.X != 0 && size.Y != 0) {
+            _native.Unwrap().AsRef().ScreenResizeSurface(size.X, size.Y);
+            UpdateDepthTexture(size);
         }
 
-        Resized?.Invoke(this, new Vector2u(width, height));
+        _resized.Invoke((this, size));
     }
 
     internal void OnClosing(ref bool cancel)
@@ -244,8 +249,8 @@ public sealed class HostScreen
         _depthTextureView.Dispose();
         _depthTexture = Own<Texture>.None;
         _depthTextureView = Own<TextureView>.None;
-        Resized = null;
-        //RedrawRequested = null;
+        _resized.Clear();
+        _subscriptions.Dispose();
         return native;
     }
 

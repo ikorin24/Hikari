@@ -27,14 +27,8 @@ internal class Program
 
     private static void OnInitialized(HostScreen screen)
     {
-        screen.Resized += OnResized;
+        screen.Resized.Subscribe(x => OnResized(x.Screen, x.Size)).AddTo(screen.Subscriptions);
         screen.Title = "sample";
-        var location = screen.GetLocation();
-        var monitors = screen.GetMonitors();
-        Debug.WriteLine(location);
-        screen.SetLocation(new Vector2i(100, 100));
-
-
         var layer = new MyObjectLayer(screen);
         using var image = SampleData.LoadImage("pic.png");
         var texture = Texture.Create(screen, new TextureDescriptor
