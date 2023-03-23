@@ -44,7 +44,6 @@ internal class Program
         var mesh = SampleData.SampleMesh(screen);
         var model = new MyModel(layer, mesh, texture);
         model.Material.SetUniform(new Vector3(0.1f, 0.4f, 0));
-        //model.Mesh.VertexBuffer
     }
 }
 //internal record struct InstanceData(Vector3 Offset);

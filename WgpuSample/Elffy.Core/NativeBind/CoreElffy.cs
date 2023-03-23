@@ -93,10 +93,10 @@ internal static class CoreElffy
         private readonly bool _has_start;
         private readonly bool _has_end_excluded;
 
-        public required u64 start { get => start; init => start = value; }
-        public required u64 end_excluded { get => end_excluded; init => end_excluded = value; }
-        public required bool has_start { get => has_start; init => has_start = value; }
-        public required bool has_end_excluded { get => has_end_excluded; init => has_end_excluded = value; }
+        public required u64 start { get => _start; init => _start = value; }
+        public required u64 end_excluded { get => _end_excluded; init => _end_excluded = value; }
+        public required bool has_start { get => _has_start; init => _has_start = value; }
+        public required bool has_end_excluded { get => _has_end_excluded; init => _has_end_excluded = value; }
 
         public static RangeBoundsU64 RangeFull => default;
 

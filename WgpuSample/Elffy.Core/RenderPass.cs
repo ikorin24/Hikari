@@ -68,11 +68,36 @@ public readonly struct RenderPass
         var bufferSlice = new CE.BufferSlice(buffer.NativeRef, CE.RangeBoundsU64.RangeFull);
         _native.AsMut().SetVertexBuffer(slot, bufferSlice);
     }
+    public void SetVertexBuffer<T>(u32 slot, in BufferSlice<T> bufferSlice) where T : unmanaged
+    {
+        _native.AsMut().SetVertexBuffer(slot, bufferSlice.Native());
+    }
+    public void SetVertexBuffer<T>(u32 slot, in BufferSlice bufferSlice)
+    {
+        _native.AsMut().SetVertexBuffer(slot, bufferSlice.Native());
+    }
+
     public void SetIndexBuffer(Buffer buffer, IndexFormat indexFormat)
     {
         var bufferSlice = new CE.BufferSlice(buffer.NativeRef, CE.RangeBoundsU64.RangeFull);
         _native.AsMut().SetIndexBuffer(bufferSlice, indexFormat.MapOrThrow());
     }
+
+    public void SetIndexBuffer(in BufferSlice bufferSlice, IndexFormat indexFormat)
+    {
+        _native.AsMut().SetIndexBuffer(bufferSlice.Native(), indexFormat.MapOrThrow());
+    }
+
+    public void SetIndexBuffer(in BufferSlice<u32> bufferSlice)
+    {
+        _native.AsMut().SetIndexBuffer(bufferSlice.Native(), Wgpu.IndexFormat.Uint32);
+    }
+
+    public void SetIndexBuffer(in BufferSlice<u16> bufferSlice)
+    {
+        _native.AsMut().SetIndexBuffer(bufferSlice.Native(), Wgpu.IndexFormat.Uint16);
+    }
+
     public void DrawIndexed(u32 indexStart, u32 indexCount, i32 baseVertex, u32 instanceStart, u32 instanceCount)
     {
         var indexRange = new CE.RangeU32(indexStart, checked(indexStart + indexCount));

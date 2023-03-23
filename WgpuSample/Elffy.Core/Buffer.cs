@@ -1,6 +1,9 @@
 ﻿#nullable enable
 using Elffy.NativeBind;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
@@ -94,6 +97,18 @@ public sealed class Buffer : IEngineManaged
         return Own.RefType(buffer, static x => SafeCast.As<Buffer>(x).Release());
     }
 
+    public BufferSlice Slice()
+        => BufferSlice.Full(this);
+
+    public BufferSlice Slice(u64? start, u64? end)
+        => BufferSlice.Range(this, start, end);
+
+    public BufferSlice<T> Slice<T>() where T : unmanaged
+        => BufferSlice<T>.Full(this);
+
+    public BufferSlice<T> Slice<T>(u64? start, u64? end) where T : unmanaged
+        => BufferSlice<T>.Range(this, start, end);
+
     public unsafe void Write<T>(u64 offset, in T data) where T : unmanaged
     {
         fixed(T* p = &data) {
@@ -126,4 +141,162 @@ public sealed class Buffer : IEngineManaged
         var slice = new CE.Slice<byte>(data, dataLen);
         screen.AsRefChecked().WriteBuffer(native, offset, slice);
     }
+}
+
+public readonly struct BufferSlice<T> : IEquatable<BufferSlice<T>> where T : unmanaged
+{
+    private readonly BufferSlice _inner;
+
+    internal Buffer Buffer => _inner.Buffer;
+    internal u64? Start => _inner.Start;
+    internal u64? End => _inner.End;
+
+    internal BufferSlice(in BufferSlice slice)
+    {
+        _inner = slice;
+    }
+
+    public static BufferSlice<T> Full(Buffer buffer)
+        => BufferSlice.Full(buffer).OfType<T>();
+
+    public static BufferSlice<T> StartAt(Buffer buffer, u64 start)
+        => BufferSlice.StartAt(buffer, start).OfType<T>();
+
+    public static BufferSlice<T> EndAt(Buffer buffer, u64 end)
+        => BufferSlice.EndAt(buffer, end).OfType<T>();
+
+    public static BufferSlice<T> Range(Buffer buffer, u64 start, u64 end)
+        => BufferSlice.Range(buffer, start, end).OfType<T>();
+
+    public static BufferSlice<T> Range(Buffer buffer, u64? start, u64? end)
+        => BufferSlice.Range(buffer, start, end).OfType<T>();
+
+    public BufferSlice Untyped() => _inner;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal CE.BufferSlice Native() => _inner.Native();
+
+    public override bool Equals(object? obj) => obj is BufferSlice<T> slice && Equals(slice);
+
+    public bool Equals(BufferSlice<T> other) => _inner.Equals(other._inner);
+
+    public override int GetHashCode() => HashCode.Combine(_inner);
+
+    public static implicit operator BufferSlice(BufferSlice<T> self) => self._inner;
+
+    public static bool operator ==(BufferSlice<T> left, BufferSlice<T> right) => left.Equals(right);
+
+    public static bool operator !=(BufferSlice<T> left, BufferSlice<T> right) => !(left == right);
+}
+
+public readonly struct BufferSlice : IEquatable<BufferSlice>
+{
+    private readonly Buffer? _buffer;
+    private readonly u64? _start;
+    private readonly u64? _end;
+
+    internal Buffer Buffer
+    {
+        get
+        {
+            ArgumentNullException.ThrowIfNull(_buffer);
+            return _buffer;
+        }
+    }
+    internal u64? Start => _start;
+    internal u64? End => _end;
+
+    private BufferSlice(Buffer buffer, u64? start, u64? end)
+    {
+        _buffer = buffer;
+        _start = start;
+        _end = end;
+    }
+
+    public BufferSlice<T> OfType<T>() where T : unmanaged
+        => new BufferSlice<T>(this);
+
+    public static BufferSlice Full(Buffer buffer)
+        => new BufferSlice(buffer, null, null);
+
+    public static BufferSlice StartAt(Buffer buffer, u64 start)
+    {
+        ArgumentNullException.ThrowIfNull(buffer);
+        if(start > buffer.ByteLength) {
+            ThrowOutOfRange(nameof(start));
+        }
+        return new BufferSlice(buffer, start, null);
+    }
+
+    public static BufferSlice EndAt(Buffer buffer, u64 end)
+    {
+        ArgumentNullException.ThrowIfNull(buffer);
+        if(end > buffer.ByteLength) {
+            ThrowOutOfRange(nameof(end));
+        }
+        return new BufferSlice(buffer, null, end);
+    }
+
+    public static BufferSlice Range(Buffer buffer, u64 start, u64 end)
+    {
+        ArgumentNullException.ThrowIfNull(buffer);
+        if(start > buffer.ByteLength) {
+            ThrowOutOfRange(nameof(start));
+        }
+        if(start > end) {
+            ThrowOutOfRange(nameof(end));
+        }
+        if(end > buffer.ByteLength) {
+            ThrowOutOfRange(nameof(end));
+        }
+        return new BufferSlice(buffer, start, end);
+    }
+
+    public static BufferSlice Range(Buffer buffer, u64? start, u64? end)
+    {
+        return (start, end) switch
+        {
+            (u64 s, u64 e) => Range(buffer, s, e),
+            (u64 s, null) => StartAt(buffer, s),
+            (null, u64 e) => EndAt(buffer, e),
+            (null, null) => Full(buffer),
+        };
+    }
+
+    [DoesNotReturn]
+    private static void ThrowOutOfRange(string paramName) => throw new ArgumentOutOfRangeException(paramName);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal CE.BufferSlice Native()
+    {
+        ArgumentNullException.ThrowIfNull(_buffer);
+        var start = _start;
+        var end = _end;
+        return new CE.BufferSlice
+        {
+            buffer = _buffer.NativeRef,
+            range = new()
+            {
+                start = start ?? default,
+                has_start = start.HasValue,
+                end_excluded = end ?? default,
+                has_end_excluded = end.HasValue,
+            },
+        };
+    }
+
+    public override bool Equals(object? obj) => obj is BufferSlice slice && Equals(slice);
+
+    public bool Equals(BufferSlice other)
+    {
+        return EqualityComparer<Buffer?>.Default.Equals(_buffer, other._buffer) &&
+               _start == other._start &&
+               _end == other._end;
+    }
+
+    public override int GetHashCode() => HashCode.Combine(_buffer, _start, _end);
+
+    public static bool operator ==(BufferSlice left, BufferSlice right) => left.Equals(right);
+
+    public static bool operator !=(BufferSlice left, BufferSlice right) => !(left == right);
 }

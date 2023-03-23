@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
@@ -11,8 +12,31 @@ public sealed class Mesh<TVertex>
     private readonly uint _indexCount;
     private readonly IndexFormat _indexFormat;
 
-    public Buffer VertexBuffer => _vertexBuffer.AsValue();
-    public Buffer IndexBuffer => _indexBuffer.AsValue();
+    public BufferSlice<TVertex> VertexBuffer => _vertexBuffer.AsValue().Slice<TVertex>();
+    public BufferSlice IndexBuffer => _indexBuffer.AsValue().Slice();
+    public BufferSlice<u32> IndexBufferU32
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get
+        {
+            if(_indexFormat != IndexFormat.Uint32) {
+                throw new InvalidOperationException("index format is not uint32");
+            }
+            return IndexBuffer.OfType<u32>();
+        }
+    }
+
+    public BufferSlice<u16> IndexBufferU16
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get
+        {
+            if(_indexFormat != IndexFormat.Uint16) {
+                throw new InvalidOperationException("index format is not uint16");
+            }
+            return IndexBuffer.OfType<u16>();
+        }
+    }
     public IndexFormat IndexFormat => _indexFormat;
     public uint IndexCount => _indexCount;
 
