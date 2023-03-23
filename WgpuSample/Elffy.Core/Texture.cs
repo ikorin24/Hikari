@@ -6,24 +6,25 @@ namespace Elffy;
 
 public sealed class Texture : IEngineManaged
 {
-    private HostScreen? _screen;
+    private readonly HostScreen _screen;
     private Rust.OptionBox<Wgpu.Texture> _native;
-    private TextureDescriptor? _desc;
-    private Own<TextureView> _defaultView;
+    private readonly TextureDescriptor _desc;
+    private readonly Own<TextureView> _defaultView;
 
-    public HostScreen? Screen => _screen;
+    public HostScreen Screen => _screen;
+    public bool IsManaged => _native.IsNone == false;
 
     internal Rust.Ref<Wgpu.Texture> NativeRef => _native.Unwrap();
     internal Rust.MutRef<Wgpu.Texture> NativeMut => _native.Unwrap();
 
-    public uint Width => _desc.GetOrThrow().Size.X;
-    public uint Height => _desc.GetOrThrow().Size.Y;
-    public uint Depth => _desc.GetOrThrow().Size.Z;
-    public u32 MipLevelCount => _desc.GetOrThrow().MipLevelCount;
-    public u32 SampleCount => _desc.GetOrThrow().SampleCount;
-    public TextureFormat Format => _desc.GetOrThrow().Format;
-    public TextureUsages Usage => _desc.GetOrThrow().Usage;
-    public TextureDimension Dimension => _desc.GetOrThrow().Dimension;
+    public uint Width => _desc.Size.X;
+    public uint Height => _desc.Size.Y;
+    public uint Depth => _desc.Size.Z;
+    public u32 MipLevelCount => _desc.MipLevelCount;
+    public u32 SampleCount => _desc.SampleCount;
+    public TextureFormat Format => _desc.Format;
+    public TextureUsages Usage => _desc.Usage;
+    public TextureDimension Dimension => _desc.Dimension;
 
     public TextureView View => _defaultView.AsValue();
 
@@ -31,12 +32,12 @@ public sealed class Texture : IEngineManaged
     {
         get
         {
-            var size3d = _desc.GetOrThrow().Size;
+            var size3d = _desc.Size;
             return new Vector2u(size3d.X, size3d.Y);
         }
     }
 
-    public Vector3u Extent => _desc.GetOrThrow().Size;
+    public Vector3u Extent => _desc.Size;
 
     private Texture(HostScreen screen, Rust.Box<Wgpu.Texture> native, in TextureDescriptor desc)
     {
@@ -60,9 +61,6 @@ public sealed class Texture : IEngineManaged
             native.DestroyTexture();
             if(manualRelease) {
                 _defaultView.Dispose();
-                _defaultView = Own<TextureView>.None;
-                _screen = null;
-                _desc = null;
             }
         }
     }
@@ -78,9 +76,9 @@ public sealed class Texture : IEngineManaged
 
     public unsafe void Write<TPixel>(u32 mipLevel, ReadOnlySpan<TPixel> pixelData) where TPixel : unmanaged
     {
-        var screenRef = this.GetScreen().AsRefChecked();
+        var screenRef = _screen.AsRefChecked();
         var texture = NativeRef;
-        var size = new Wgpu.Extent3d((u32)Width, (u32)Height, (u32)Depth);
+        var size = new Wgpu.Extent3d(Width, Height, Depth);
         u32 bytesPerPixel = (u32)sizeof(TPixel);
 
         fixed(TPixel* p = pixelData) {

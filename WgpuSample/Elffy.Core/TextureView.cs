@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Elffy;
 using Elffy.NativeBind;
 using System;
 
@@ -7,16 +6,18 @@ namespace Elffy;
 
 public sealed class TextureView : IEngineManaged, ITextureView
 {
-    private HostScreen? _screen;
+    private readonly HostScreen _screen;
     private Rust.OptionBox<Wgpu.TextureView> _native;
 
-    public HostScreen? Screen => _screen;
+    public HostScreen Screen => _screen;
+
+    public bool IsManaged => _native.IsNone == false;
 
     internal Rust.Ref<Wgpu.TextureView> NativeRef => _native.Unwrap();
 
     public TextureViewHandle Handle => new TextureViewHandle(_native.Unwrap());
 
-    private TextureView(HostScreen screen, Rust.Box<Wgpu.TextureView> native, Texture texture)
+    private TextureView(HostScreen screen, Rust.Box<Wgpu.TextureView> native)
     {
         _screen = screen;
         _native = native;
@@ -35,7 +36,6 @@ public sealed class TextureView : IEngineManaged, ITextureView
         if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.TextureView>.None).IsSome(out var native)) {
             native.DestroyTextureView();
             if(manualRelease) {
-                _screen = null;
             }
         }
     }
@@ -44,9 +44,9 @@ public sealed class TextureView : IEngineManaged, ITextureView
     {
         ArgumentNullException.ThrowIfNull(texture);
         texture.ThrowIfNotEngineManaged();
-        var screen = texture.GetScreen();
+        var screen = texture.Screen;
         var textureViewNative = texture.NativeRef.CreateTextureView(CE.TextureViewDescriptor.Default);
-        var textureView = new TextureView(screen, textureViewNative, texture);
+        var textureView = new TextureView(screen, textureViewNative);
         return Own.RefType(textureView, static x => SafeCast.As<TextureView>(x).Release());
     }
 }

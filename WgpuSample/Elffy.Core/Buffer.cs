@@ -9,18 +9,20 @@ namespace Elffy;
 
 public sealed class Buffer : IEngineManaged
 {
-    private HostScreen? _screen;
+    private readonly HostScreen _screen;
     private Rust.OptionBox<Wgpu.Buffer> _native;
-    private BufferUsages? _usage;
-    private usize _byteLen;
+    private readonly BufferUsages? _usage;
+    private readonly usize _byteLen;
 
-    public HostScreen? Screen => _screen;
+    public HostScreen Screen => _screen;
 
     public BufferUsages Usage => _usage.GetOrThrow();
 
     public usize ByteLength => _byteLen;
 
     internal Rust.Ref<Wgpu.Buffer> NativeRef => _native.Unwrap();
+
+    public bool IsManaged => _native.IsNone == false;
 
     private Buffer(HostScreen screen, Rust.Box<Wgpu.Buffer> native, BufferUsages usage, usize byteLen)
     {
@@ -43,9 +45,6 @@ public sealed class Buffer : IEngineManaged
         if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.Buffer>.None).IsSome(out var native)) {
             native.DestroyBuffer();
             if(disposing) {
-                _screen = null;
-                _usage = null;
-                _byteLen = 0;
             }
         }
     }

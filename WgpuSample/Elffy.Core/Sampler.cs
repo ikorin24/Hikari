@@ -6,12 +6,14 @@ namespace Elffy;
 
 public sealed class Sampler : IEngineManaged
 {
-    private HostScreen? _screen;
+    private readonly HostScreen _screen;
     private Rust.OptionBox<Wgpu.Sampler> _native;
 
-    public HostScreen? Screen => _screen;
+    public HostScreen Screen => _screen;
 
     internal Rust.Ref<Wgpu.Sampler> NativeRef => _native.Unwrap();
+
+    public bool IsManaged => _native.IsNone == false;
 
     private Sampler(HostScreen screen, Rust.Box<Wgpu.Sampler> native)
     {
@@ -32,7 +34,6 @@ public sealed class Sampler : IEngineManaged
         if(InterlockedEx.Exchange(ref _native, Rust.OptionBox<Wgpu.Sampler>.None).IsSome(out var native)) {
             native.DestroySampler();
             if(disposing) {
-                _screen = null;
             }
         }
     }
