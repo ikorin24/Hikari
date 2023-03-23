@@ -21,11 +21,11 @@ internal class Program
         Engine.Run(screenConfig, OnInitialized);
     }
 
-    private static void OnResized(HostScreen screen, Vector2u newSize)
+    private static void OnResized(Screen screen, Vector2u newSize)
     {
     }
 
-    private static void OnInitialized(HostScreen screen)
+    private static void OnInitialized(Screen screen)
     {
         screen.Resized.Subscribe(x => OnResized(x.Screen, x.Size)).AddTo(screen.Subscriptions);
         screen.Title = "sample";
@@ -119,11 +119,11 @@ public sealed class MyShader : Shader<MyShader, MyMaterial>
         },
     };
 
-    private MyShader(HostScreen screen) : base(screen, in _groupDesc0, ShaderSource)
+    private MyShader(Screen screen) : base(screen, in _groupDesc0, ShaderSource)
     {
     }
 
-    public static Own<MyShader> Create(HostScreen screen)
+    public static Own<MyShader> Create(Screen screen)
     {
         var self = new MyShader(screen);
         return CreateOwn(self);
@@ -191,7 +191,7 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
 
 public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShader, MyMaterial>
 {
-    public MyObjectLayer(HostScreen screen)
+    public MyObjectLayer(Screen screen)
         : base(MyShader.Create(screen), static shader => BuildPipeline(shader))
     {
     }

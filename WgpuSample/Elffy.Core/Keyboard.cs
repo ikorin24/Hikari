@@ -7,14 +7,14 @@ namespace Elffy;
 
 public sealed class Keyboard
 {
-    private readonly HostScreen _screen;
+    private readonly Screen _screen;
     private readonly ImeState _imeState;
     private KeyActionFlag[] _prevAction;
     private bool[] _prevState;
     private KeyActionFlag[] _currentAction;
     private bool[] _currentState;
 
-    internal Keyboard(HostScreen screen)
+    internal Keyboard(Screen screen)
     {
         _screen = screen;
         _imeState = new ImeState(screen);

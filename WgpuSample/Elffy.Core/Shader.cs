@@ -7,18 +7,18 @@ public abstract class Shader<TSelf, TMaterial>
     where TSelf : Shader<TSelf, TMaterial>
     where TMaterial : Material<TMaterial, TSelf>
 {
-    private readonly HostScreen _screen;
+    private readonly Screen _screen;
     private readonly Own<ShaderModule> _module;
     private readonly Own<BindGroupLayout>[] _bindGroupLayoutOwns;
     private readonly Own<PipelineLayout> _pipelineLayoutOwn;
     private readonly BindGroupLayout[] _bindGroupLayouts;
 
-    public HostScreen Screen => _screen;
+    public Screen Screen => _screen;
     public ShaderModule Module => _module.AsValue();
     public ReadOnlyMemory<BindGroupLayout> BindGroupLayouts => _bindGroupLayouts;
     public PipelineLayout PipelineLayout => _pipelineLayoutOwn.AsValue();
 
-    protected Shader(HostScreen screen, in BindGroupLayoutDescriptor bindGroupLayoutDesc, ReadOnlySpan<byte> shaderSource)
+    protected Shader(Screen screen, in BindGroupLayoutDescriptor bindGroupLayoutDesc, ReadOnlySpan<byte> shaderSource)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _screen = screen;

@@ -7,7 +7,7 @@ namespace Elffy;
 
 internal interface IEngineManaged
 {
-    HostScreen Screen { get; }
+    Screen Screen { get; }
     bool IsManaged { get; }
 }
 

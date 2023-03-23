@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Elffy;
 
-public sealed class HostScreen
+public sealed class Screen
 {
     private Rust.OptionBox<CE.HostScreen> _native;
     private readonly ThreadId _mainThread;
@@ -25,9 +25,9 @@ public sealed class HostScreen
     private ulong _frameNum;
     private readonly RenderOperations _renderOperations;
     private bool _isCloseRequested;
-    private EventSource<(HostScreen Screen, Vector2u Size)> _resized;
+    private EventSource<(Screen Screen, Vector2u Size)> _resized;
 
-    public Event<(HostScreen Screen, Vector2u Size)> Resized => _resized.Event;
+    public Event<(Screen Screen, Vector2u Size)> Resized => _resized.Event;
 
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
 
@@ -104,7 +104,7 @@ public sealed class HostScreen
 
     public MonitorId? CurrentMonitor => _native.Unwrap().AsRef().CurrentMonitor();
 
-    internal HostScreen(Rust.Box<CE.HostScreen> screen, ThreadId mainThread)
+    internal Screen(Rust.Box<CE.HostScreen> screen, ThreadId mainThread)
     {
         _native = screen;
         _mainThread = mainThread;

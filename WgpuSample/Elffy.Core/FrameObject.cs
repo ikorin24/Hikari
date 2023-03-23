@@ -6,11 +6,11 @@ namespace Elffy;
 
 public abstract class FrameObject
 {
-    private readonly HostScreen _screen;
+    private readonly Screen _screen;
     private string? _name;
     private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
 
-    public HostScreen Screen => _screen;
+    public Screen Screen => _screen;
 
     public string? Name
     {
@@ -23,7 +23,7 @@ public abstract class FrameObject
     public abstract bool IsFrozen { get; set; }
     public abstract LifeState LifeState { get; }
 
-    protected FrameObject(HostScreen screen)
+    protected FrameObject(Screen screen)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _screen = screen;

@@ -54,21 +54,21 @@ public sealed class Mesh<TVertex>
         _indexBuffer.Dispose();
     }
 
-    public static Own<Mesh<TVertex>> Create(HostScreen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u16> indices)
+    public static Own<Mesh<TVertex>> Create(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u16> indices)
     {
         var vb = Buffer.CreateVertexBuffer(screen, vertices);
         var ib = Buffer.CreateIndexBuffer(screen, indices);
         return Create(screen, vb, ib, (u32)indices.Length, IndexFormat.Uint16);
     }
 
-    public static Own<Mesh<TVertex>> Create(HostScreen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u32> indices)
+    public static Own<Mesh<TVertex>> Create(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u32> indices)
     {
         var vb = Buffer.CreateVertexBuffer(screen, vertices);
         var ib = Buffer.CreateIndexBuffer(screen, indices);
         return Create(screen, vb, ib, (u32)indices.Length, IndexFormat.Uint32);
     }
 
-    public static Own<Mesh<TVertex>> Create(HostScreen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat)
+    public static Own<Mesh<TVertex>> Create(Screen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat)
     {
         ArgumentNullException.ThrowIfNull(screen);
         vertexBuffer.ThrowArgumentExceptionIfNone();

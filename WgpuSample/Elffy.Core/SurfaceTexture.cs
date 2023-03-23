@@ -5,7 +5,7 @@ namespace Elffy;
 
 public sealed class SurfaceTextureView : IEngineManaged, ITextureView
 {
-    private readonly HostScreen _screen;
+    private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.TextureView> _native;
     private readonly ThreadId _threadId;
 
@@ -18,11 +18,11 @@ public sealed class SurfaceTextureView : IEngineManaged, ITextureView
         }
     }
 
-    public HostScreen Screen => _screen;
+    public Screen Screen => _screen;
 
     public bool IsManaged => _native.IsNone == false;
 
-    internal SurfaceTextureView(HostScreen screen, ThreadId threadId)
+    internal SurfaceTextureView(Screen screen, ThreadId threadId)
     {
         _screen = screen;
         _native = Rust.OptionBox<Wgpu.TextureView>.None;

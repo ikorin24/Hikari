@@ -9,15 +9,15 @@ namespace Elffy;
 
 public abstract class RenderOperation
 {
-    private readonly HostScreen _screen;
+    private readonly Screen _screen;
     private readonly Own<RenderPipeline> _pipelineOwn;
     private LifeState _lifeState;
 
-    public HostScreen Screen => _screen;
+    public Screen Screen => _screen;
     public RenderPipeline Pipeline => _pipelineOwn.AsValue();
     public LifeState LifeState => _lifeState;
 
-    protected RenderOperation(HostScreen screen, Own<RenderPipeline> pipelineOwn)
+    protected RenderOperation(Screen screen, Own<RenderPipeline> pipelineOwn)
     {
         _screen = screen;
         _pipelineOwn = pipelineOwn;

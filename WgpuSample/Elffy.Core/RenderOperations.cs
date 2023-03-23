@@ -11,7 +11,7 @@ public sealed class RenderOperations
     // [NOTE]
     // The order of the elements in the list is not guaranteed.
 
-    private readonly HostScreen _screen;
+    private readonly Screen _screen;
     private readonly List<RenderOperation> _list;
     private readonly List<RenderOperation> _addedList;
     private readonly List<RenderOperation> _removedList;
@@ -19,12 +19,12 @@ public sealed class RenderOperations
     private EventSource<RenderOperations> _removed;
     private readonly object _sync = new object();
 
-    public HostScreen Screen => _screen;
+    public Screen Screen => _screen;
 
     public Event<RenderOperations> Added => _added.Event;
     public Event<RenderOperations> Removed => _removed.Event;
 
-    internal RenderOperations(HostScreen screen)
+    internal RenderOperations(Screen screen)
     {
         _screen = screen;
         _list = new();

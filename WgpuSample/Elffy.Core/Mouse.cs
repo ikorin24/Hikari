@@ -6,7 +6,7 @@ namespace Elffy;
 
 public sealed class Mouse
 {
-    private readonly HostScreen _screen;
+    private readonly Screen _screen;
     private Vector2 _pos;
 
     private bool _onScreen;
@@ -23,7 +23,7 @@ public sealed class Mouse
     /// <summary>Get wheel value difference from previouse frame.</summary>
     public float WheelDelta => throw new NotImplementedException();
 
-    internal Mouse(HostScreen screen)
+    internal Mouse(Screen screen)
     {
         _screen = screen;
     }

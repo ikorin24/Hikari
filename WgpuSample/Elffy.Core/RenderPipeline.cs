@@ -8,15 +8,15 @@ namespace Elffy;
 
 public sealed class RenderPipeline : IEngineManaged
 {
-    private readonly HostScreen _screen;
+    private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.RenderPipeline> _native;
     internal Rust.Ref<Wgpu.RenderPipeline> NativeRef => _native.Unwrap();
 
-    public HostScreen Screen => _screen;
+    public Screen Screen => _screen;
 
     public bool IsManaged => _native.IsNone == false;
 
-    private RenderPipeline(HostScreen screen, Rust.Box<Wgpu.RenderPipeline> native)
+    private RenderPipeline(Screen screen, Rust.Box<Wgpu.RenderPipeline> native)
     {
         _screen = screen;
         _native = native;
@@ -39,7 +39,7 @@ public sealed class RenderPipeline : IEngineManaged
         }
     }
 
-    public unsafe static Own<RenderPipeline> Create(HostScreen screen, in RenderPipelineDescriptor desc)
+    public unsafe static Own<RenderPipeline> Create(Screen screen, in RenderPipelineDescriptor desc)
     {
         var pins = new PinHandleHolder();
         try {

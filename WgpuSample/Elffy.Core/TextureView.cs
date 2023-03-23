@@ -6,10 +6,10 @@ namespace Elffy;
 
 public sealed class TextureView : IEngineManaged, ITextureView
 {
-    private readonly HostScreen _screen;
+    private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.TextureView> _native;
 
-    public HostScreen Screen => _screen;
+    public Screen Screen => _screen;
 
     public bool IsManaged => _native.IsNone == false;
 
@@ -17,7 +17,7 @@ public sealed class TextureView : IEngineManaged, ITextureView
 
     public TextureViewHandle Handle => new TextureViewHandle(_native.Unwrap());
 
-    private TextureView(HostScreen screen, Rust.Box<Wgpu.TextureView> native)
+    private TextureView(Screen screen, Rust.Box<Wgpu.TextureView> native)
     {
         _screen = screen;
         _native = native;

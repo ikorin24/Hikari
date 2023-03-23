@@ -6,16 +6,16 @@ namespace Elffy;
 
 public sealed class Sampler : IEngineManaged
 {
-    private readonly HostScreen _screen;
+    private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Sampler> _native;
 
-    public HostScreen Screen => _screen;
+    public Screen Screen => _screen;
 
     internal Rust.Ref<Wgpu.Sampler> NativeRef => _native.Unwrap();
 
     public bool IsManaged => _native.IsNone == false;
 
-    private Sampler(HostScreen screen, Rust.Box<Wgpu.Sampler> native)
+    private Sampler(Screen screen, Rust.Box<Wgpu.Sampler> native)
     {
         _screen = screen;
         _native = native;
@@ -38,7 +38,7 @@ public sealed class Sampler : IEngineManaged
         }
     }
 
-    public static Own<Sampler> Create(HostScreen screen, in SamplerDescriptor desc)
+    public static Own<Sampler> Create(Screen screen, in SamplerDescriptor desc)
     {
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
@@ -47,7 +47,7 @@ public sealed class Sampler : IEngineManaged
         return Own.RefType(sampler, static x => SafeCast.As<Sampler>(x).Release());
     }
 
-    public static Own<Sampler> NoMipmap(HostScreen screen, AddressMode addressMode, FilterMode magFilter, FilterMode minFilter)
+    public static Own<Sampler> NoMipmap(Screen screen, AddressMode addressMode, FilterMode magFilter, FilterMode minFilter)
     {
         return Create(screen, new SamplerDescriptor
         {

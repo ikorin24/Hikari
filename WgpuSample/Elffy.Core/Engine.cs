@@ -8,11 +8,11 @@ namespace Elffy;
 
 public static class Engine
 {
-    private static readonly Dictionary<CE.ScreenId, HostScreen> _screens = new();
+    private static readonly Dictionary<CE.ScreenId, Screen> _screens = new();
 
-    private static Action<HostScreen>? _onInitialized;
+    private static Action<Screen>? _onInitialized;
 
-    public static void Run(in HostScreenConfig screenConfig, Action<HostScreen> onInitialized)
+    public static void Run(in HostScreenConfig screenConfig, Action<Screen> onInitialized)
     {
         ArgumentNullException.ThrowIfNull(onInitialized);
         _onInitialized = onInitialized;
@@ -38,7 +38,7 @@ public static class Engine
         (Rust.Box<CE.HostScreen> screenHandle, CE.HostScreenInfo info) =>
         {
             var mainThread = ThreadId.CurrentThread();
-            var screen = new HostScreen(screenHandle, mainThread);
+            var screen = new Screen(screenHandle, mainThread);
             var id = screen.ScreenId;
             _screens.Add(id, screen);
             screen.OnInitialize(info);
