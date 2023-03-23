@@ -11,6 +11,7 @@ namespace Elffy;
 public sealed class HostScreen
 {
     private Rust.OptionBox<CE.HostScreen> _native;
+    private readonly ThreadId _mainThread;
     private TextureFormat _surfaceFormat;
     private GraphicsBackend _backend;
     private bool _initialized;
@@ -100,10 +101,11 @@ public sealed class HostScreen
 
     public MonitorId? CurrentMonitor => _native.Unwrap().AsRef().CurrentMonitor();
 
-    internal HostScreen(Rust.Box<CE.HostScreen> screen)
+    internal HostScreen(Rust.Box<CE.HostScreen> screen, ThreadId mainThread)
     {
         _native = screen;
-        _surfaceTexView = new SurfaceTextureView(this, Environment.CurrentManagedThreadId);
+        _mainThread = mainThread;
+        _surfaceTexView = new SurfaceTextureView(this, mainThread);
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
         _renderOperations = new RenderOperations(this);
@@ -116,25 +118,28 @@ public sealed class HostScreen
 
     public Vector2i GetLocation(MonitorId? monitorId = null)
     {
+        _mainThread.ThrowIfNotMatched();
         var native = _native.Unwrap().AsRef();
         return native.ScreenGetLocation(monitorId);
     }
 
     public void SetLocation(Vector2i location, MonitorId? monitorId = null)
     {
+        _mainThread.ThrowIfNotMatched();
         var native = _native.Unwrap().AsRef();
         native.ScreenSetLocation(location.X, location.Y, monitorId);
     }
 
     public unsafe MonitorId[] GetMonitors()
     {
+        _mainThread.ThrowIfNotMatched();
         var native = _native.Unwrap().AsRef();
-        const int Buflen = 16;
-        var buf = stackalloc CE.MonitorId[Buflen];
-        var count = native.Monitors(buf, Buflen);
+        var count = native.MonitorCount().ToUInt32();
         if(count == 0) {
             return Array.Empty<MonitorId>();
         }
+        Span<CE.MonitorId> buf = stackalloc CE.MonitorId[(int)count];
+        native.Monitors(buf);
         var monitors = new MonitorId[count];
         for(int i = 0; i < monitors.Length; i++) {
             monitors[i] = new MonitorId(buf[i]);

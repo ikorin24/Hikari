@@ -200,36 +200,6 @@ extern "cdecl" fn elffy_screen_get_inner_size(screen: &HostScreen) -> ApiValueRe
     make_value_result(size.into())
 }
 
-// #[no_mangle]
-// extern "cdecl" fn elffy_screen_set_location(
-//     screen: &HostScreen,
-//     x: i32,
-//     y: i32,
-//     monitor_index: Opt<usize>,
-// ) -> ApiResult {
-//     let f = || -> Result<_, Box<dyn Error>> {
-//         let window = &screen.window;
-//         let monitor = if let Some(monitor_index) = monitor_index.to_option() {
-//             window
-//                 .available_monitors()
-//                 .enumerate()
-//                 .find(|(i, _)| *i == monitor_index)
-//                 .map(|(_, x)| x)
-//                 .ok_or(format!("monitor[{}] is not found.", monitor_index))?
-//         } else {
-//             window.current_monitor().ok_or("no monitors")?
-//         };
-//         let offset = monitor.position();
-//         let p: winit::dpi::PhysicalPosition<i32> = (offset.x + x, offset.y + y).into();
-//         window.set_outer_position(p);
-//         Ok(())
-//     };
-//     match f() {
-//         Ok(_) => {}
-//         Err(err) => Engine::dispatch_err(err),
-//     };
-//     make_result()
-// }
 #[no_mangle]
 extern "cdecl" fn elffy_screen_set_location(
     screen: &HostScreen,
@@ -255,34 +225,12 @@ extern "cdecl" fn elffy_screen_set_location(
     make_result()
 }
 
-// #[no_mangle]
-// extern "cdecl" fn elffy_screen_get_location(
-//     screen: &HostScreen,
-//     monitor_index: Opt<usize>,
-// ) -> ApiValueResult<Tuple<i32, i32>> {
-//     let f = || -> Result<_, Box<dyn Error>> {
-//         let window = &screen.window;
-//         let monitor = if let Some(monitor_index) = monitor_index.to_option() {
-//             window
-//                 .available_monitors()
-//                 .enumerate()
-//                 .find(|(i, _)| *i == monitor_index)
-//                 .map(|(_, x)| x)
-//                 .ok_or(format!("monitor[{}] is not found.", monitor_index))?
-//         } else {
-//             window.current_monitor().ok_or("no monitors")?
-//         };
-//         let offset = monitor.position();
-//         let p = window.outer_position()?;
-//         Ok((p.x - offset.x, p.y - offset.y))
-//     };
-
-//     match f() {
-//         Ok(location) => make_value_result(location.into()),
-//         Err(err) => error_value_result(err),
-//     }
-// }
-
+/// # Thread Safety
+/// (iOS) Only from main thread.
+/// (`winit::monitor::MonitorHandle` can only be used on the main thread in iOS.)
+/// ## NG
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_screen_get_location(
     screen: &HostScreen,
@@ -305,27 +253,12 @@ extern "cdecl" fn elffy_screen_get_location(
     }
 }
 
-// #[no_mangle]
-// extern "cdecl" fn elffy_screen_monitor_index(screen: &HostScreen) -> ApiValueResult<usize> {
-//     let f = || -> Result<_, Box<&'static str>> {
-//         let window = &screen.window;
-//         let monitor = &window.current_monitor().ok_or("no monitors")?;
-//         let index = window
-//             .available_monitors()
-//             .enumerate()
-//             .filter(|(_, x)| x == monitor)
-//             .map(|(i, _)| i)
-//             .next()
-//             .ok_or("no monitors")?;
-//         Ok(index)
-//     };
-
-//     match f() {
-//         Ok(index) => make_value_result(index),
-//         Err(err) => error_value_result(err),
-//     }
-// }
-
+/// # Thread Safety
+/// (iOS) Only from main thread.
+/// (`Window::current_monitor` can only be called on the main thread in iOS.)
+/// ## NG
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_current_monitor(screen: &HostScreen) -> ApiValueResult<Opt<MonitorId>> {
     match screen.window.current_monitor().ok_or("no monitors") {
@@ -334,12 +267,24 @@ extern "cdecl" fn elffy_current_monitor(screen: &HostScreen) -> ApiValueResult<O
     }
 }
 
+/// # Thread Safety
+/// (iOS) Only from main thread.
+/// (`Window::available_monitors` can only be called on the main thread in iOS.)
+/// ## NG
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_monitor_count(screen: &HostScreen) -> ApiValueResult<usize> {
     let count = screen.window.available_monitors().count();
     make_value_result(count)
 }
 
+/// # Thread Safety
+/// (iOS) Only from main thread.
+/// (`Window::available_monitors` can only be called on the main thread in iOS.)
+/// ## NG
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_monitors(
     screen: &HostScreen,

@@ -252,10 +252,11 @@ internal unsafe static partial class EngineCore
     [DebuggerHidden]
     public static usize Monitors(
         this Rust.Ref<CE.HostScreen> screen,
-        CE.MonitorId* buf_out,
-        usize buflen)
+        Span<CE.MonitorId> buf)
     {
-        return elffy_monitors(screen, buf_out, buflen).Validate();
+        fixed(CE.MonitorId* p = buf) {
+            return elffy_monitors(screen, p, (usize)buf.Length).Validate();
+        }
     }
 
     public static MonitorId? CurrentMonitor(this Rust.Ref<CE.HostScreen> screen)
