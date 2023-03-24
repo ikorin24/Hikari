@@ -18,7 +18,7 @@ internal class Program
             Height = 720,
             Style = WindowStyle.Default,
         };
-        Engine.Run(screenConfig, OnInitialized);
+        Engine.Run(screenConfig, OnInitialized2);
     }
 
     private static void OnResized(Screen screen, Vector2u newSize)
@@ -44,6 +44,16 @@ internal class Program
         var mesh = SampleData.SampleMesh(screen);
         var model = new MyModel(layer, mesh, texture);
         model.Material.SetUniform(new Vector3(0.1f, 0.4f, 0));
+    }
+
+    private static void OnInitialized2(Screen screen)
+    {
+        screen.Resized.Subscribe(x => OnResized(x.Screen, x.Size)).AddTo(screen.Subscriptions);
+        screen.Title = "sample";
+        var layer = new PbrLayer(screen);
+        var mesh = SampleData.SampleMesh(screen);
+        var model = new PbrModel(layer, mesh);
+        model.Material.SetUniform(new(Color4.Red, Color4.Green, Color4.Blue));
     }
 }
 //internal record struct InstanceData(Vector3 Offset);
@@ -145,7 +155,7 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
         Own<Sampler> sampler,
         Own<Uniform<Vector3>> uniform,
         Own<BindGroup> bindGroup)
-        : base(shader, new[] { bindGroup }, null)
+        : base(shader, new[] { bindGroup })
     {
         _texture = texture;
         _sampler = sampler;
@@ -197,6 +207,182 @@ public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShade
     }
 
     private static Own<RenderPipeline> BuildPipeline(MyShader shader)
+    {
+        var screen = shader.Screen;
+        var desc = new RenderPipelineDescriptor
+        {
+            Layout = shader.PipelineLayout,
+            Vertex = new VertexState
+            {
+                Module = shader.Module,
+                EntryPoint = "vs_main"u8.ToArray(),
+                Buffers = new VertexBufferLayout[]
+                {
+                    VertexBufferLayout.FromVertex<MyVertex>(stackalloc[]
+                    {
+                        (0u, VertexFieldSemantics.Position),
+                        (1u, VertexFieldSemantics.UV),
+                    }),
+                },
+            },
+            Fragment = new FragmentState
+            {
+                Module = shader.Module,
+                EntryPoint = "fs_main"u8.ToArray(),
+                Targets = new ColorTargetState?[]
+                {
+                    new ColorTargetState
+                    {
+                        Format = screen.SurfaceFormat,
+                        Blend = BlendState.Replace,
+                        WriteMask = ColorWrites.All,
+                    },
+                },
+            },
+            Primitive = new PrimitiveState
+            {
+                Topology = PrimitiveTopology.TriangleList,
+                StripIndexFormat = null,
+                FrontFace = FrontFace.Ccw,
+                CullMode = Face.Back,
+                PolygonMode = PolygonMode.Fill,
+            },
+            DepthStencil = new DepthStencilState
+            {
+                Format = screen.DepthTexture.Format,
+                DepthWriteEnabled = true,
+                DepthCompare = CompareFunction.Less,
+                Stencil = StencilState.Default,
+                Bias = DepthBiasState.Default,
+            },
+            Multisample = MultisampleState.Default,
+            Multiview = 0,
+        };
+        return RenderPipeline.Create(screen, in desc);
+    }
+}
+
+// --------
+
+public sealed class PbrModel : Renderable<PbrLayer, MyVertex, PbrShader, PbrMaterial>
+{
+    public PbrModel(PbrLayer layer, Own<Mesh<MyVertex>> mesh) : base(layer, mesh, PbrMaterial.Create(layer.Shader))
+    {
+    }
+}
+
+public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
+{
+    private static ReadOnlySpan<byte> ShaderSource => """
+        struct MyVertex {
+            @location(0) pos: vec3<f32>,
+            @location(1) uv: vec2<f32>,
+        }
+        struct V2F {
+            @builtin(position) clip_pos: vec4<f32>,
+        }
+        struct GBuffer {
+            @location(0) g0 : vec4<f32>,
+            @location(1) g1 : vec4<f32>,
+            @location(2) g2 : vec4<f32>,
+        }
+        struct UniformValue {
+            c0: vec4<f32>,
+            c1: vec4<f32>,
+            c2: vec4<f32>,
+        }
+
+        @group(0) @binding(0) var<uniform> uniform: UniformValue;
+
+        @vertex fn vs_main(
+            v: MyVertex,
+        ) -> V2F {
+            var output: V2F;
+            output.clip_pos = vec4(v.pos, 1.0);
+            return output;
+        }
+
+        @fragment fn fs_main(in: V2F) -> GBuffer {
+            var output: GBuffer;
+            output.g0 = uniform.c0;
+            output.g1 = uniform.c1;
+            output.g2 = uniform.c2;
+            return output;
+        }
+        """u8;
+
+    private static readonly BindGroupLayoutDescriptor _bglDesc = new()
+    {
+        Entries = new[]
+        {
+            BindGroupLayoutEntry.Buffer(
+                binding: 0,
+                visibility: ShaderStages.Fragment,
+                type: new BufferBindingData
+                {
+                    HasDynamicOffset = false,
+                    MinBindingSize = 0,
+                    Type = BufferBindingType.Uniform,
+                },
+                count: 0),
+        },
+    };
+
+    private PbrShader(Screen screen) : base(screen, in _bglDesc, ShaderSource)
+    {
+    }
+
+    public static Own<PbrShader> Create(Screen screen)
+    {
+        var self = new PbrShader(screen);
+        return CreateOwn(self);
+    }
+}
+
+public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
+{
+    private readonly Own<Uniform<UniformValue>> _uniform;
+
+    private PbrMaterial(PbrShader shader, Own<Uniform<UniformValue>> uniform, Own<BindGroup> bindGroup)
+        : base(shader, new[] { bindGroup })
+    {
+        _uniform = uniform;
+    }
+
+    public static Own<PbrMaterial> Create(PbrShader shader, in UniformValue uniformValue = default)
+    {
+        var screen = shader.Screen;
+        var uniform = Uniform<UniformValue>.Create(screen, in uniformValue);
+        var desc = new BindGroupDescriptor
+        {
+            Layout = shader.GetBindGroupLayout(0),
+            Entries = new BindGroupEntry[1]
+            {
+                BindGroupEntry.Buffer(0, uniform.AsValue().Buffer),
+            },
+        };
+        var bindGroup = BindGroup.Create(screen, in desc);
+        var material = new PbrMaterial(shader, uniform, bindGroup);
+        return CreateOwn(material);
+    }
+
+    public void SetUniform(in UniformValue value) => _uniform.AsValue().Set(in value);
+
+    public record struct UniformValue(
+        Color4 C0,
+        Color4 C1,
+        Color4 C2
+    );
+}
+
+public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMaterial>
+{
+    public PbrLayer(Screen screen)
+        : base(PbrShader.Create(screen), static shader => BuildPipeline(shader))
+    {
+    }
+
+    private static Own<RenderPipeline> BuildPipeline(PbrShader shader)
     {
         var screen = shader.Screen;
         var desc = new RenderPipelineDescriptor
