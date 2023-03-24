@@ -4,7 +4,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class PipelineLayout : IEngineManaged
+public sealed class PipelineLayout : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.PipelineLayout> _native;

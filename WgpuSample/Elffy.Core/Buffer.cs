@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-public sealed class Buffer : IEngineManaged
+public sealed class Buffer : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Buffer> _native;

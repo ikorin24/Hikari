@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-internal interface IEngineManaged
+internal interface IScreenManaged
 {
     Screen Screen { get; }
     bool IsManaged { get; }
@@ -14,7 +14,7 @@ internal interface IEngineManaged
 internal static class EngineManagedExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void ThrowIfNotEngineManaged(this IEngineManaged self)
+    public static void ThrowIfNotEngineManaged(this IScreenManaged self)
     {
         if(self.IsManaged == false) {
             Throw();

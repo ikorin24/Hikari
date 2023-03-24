@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-public sealed class RenderPipeline : IEngineManaged
+public sealed class RenderPipeline : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.RenderPipeline> _native;

@@ -3,7 +3,7 @@ using Elffy.NativeBind;
 
 namespace Elffy;
 
-public sealed class SurfaceTextureView : IEngineManaged, ITextureView
+public sealed class SurfaceTextureView : IScreenManaged, ITextureView
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.TextureView> _native;

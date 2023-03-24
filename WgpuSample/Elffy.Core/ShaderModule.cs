@@ -4,7 +4,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class ShaderModule : IEngineManaged
+public sealed class ShaderModule : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.ShaderModule> _native;

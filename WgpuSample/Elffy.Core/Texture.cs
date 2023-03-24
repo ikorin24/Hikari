@@ -4,7 +4,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class Texture : IEngineManaged
+public sealed class Texture : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Texture> _native;

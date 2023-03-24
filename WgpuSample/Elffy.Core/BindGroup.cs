@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Elffy;
 
-public sealed class BindGroup : IEngineManaged
+public sealed class BindGroup : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.BindGroup> _native;

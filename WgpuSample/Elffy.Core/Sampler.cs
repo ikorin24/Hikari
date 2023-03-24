@@ -4,7 +4,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class Sampler : IEngineManaged
+public sealed class Sampler : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Sampler> _native;
