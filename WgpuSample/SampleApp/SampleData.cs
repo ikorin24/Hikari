@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.IO;
+using Elffy.Effective;
 using Elffy.Imaging;
 
 namespace Elffy;
@@ -37,9 +38,22 @@ public static class SampleData
         return Mesh<MyVertex>.Create(screen, vertices, indices);
     }
 
-    public static Image LoadImage(string filepath)
+    public static Own<Texture> SampleTexture(Screen screen)
     {
+        var filepath = "pic.png";
         using var stream = File.OpenRead(filepath);
-        return Image.FromStream(stream, Path.GetExtension(filepath));
+        using var image = Image.FromStream(stream, Path.GetExtension(filepath));
+
+        var texture = Texture.Create(screen, new TextureDescriptor
+        {
+            Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Dimension = TextureDimension.D2,
+            Format = TextureFormat.Rgba8UnormSrgb,
+            Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
+        });
+        texture.AsValue().Write(0, image.GetPixels().AsReadOnly());
+        return texture;
     }
 }

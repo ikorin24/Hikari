@@ -30,19 +30,7 @@ internal class Program
         screen.Resized.Subscribe(x => OnResized(x.Screen, x.Size)).AddTo(screen.Subscriptions);
         screen.Title = "sample";
         var layer = new MyObjectLayer(screen);
-        using var image = SampleData.LoadImage("pic.png");
-        var texture = Texture.Create(screen, new TextureDescriptor
-        {
-            Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = TextureDimension.D2,
-            Format = TextureFormat.Rgba8UnormSrgb,
-            Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
-        });
-        texture.AsValue().Write(0, image.GetPixels().AsReadOnly());
-        var mesh = SampleData.SampleMesh(screen);
-        var model = new MyModel(layer, mesh, texture);
+        var model = new MyModel(layer, SampleData.SampleMesh(screen), SampleData.SampleTexture(screen));
         model.Material.SetUniform(new Vector3(0.1f, 0.4f, 0));
     }
 
@@ -51,8 +39,7 @@ internal class Program
         screen.Resized.Subscribe(x => OnResized(x.Screen, x.Size)).AddTo(screen.Subscriptions);
         screen.Title = "sample";
         var layer = new PbrLayer(screen);
-        var mesh = SampleData.SampleMesh(screen);
-        var model = new PbrModel(layer, mesh);
+        var model = new PbrModel(layer, SampleData.SampleMesh(screen));
         model.Material.SetUniform(new(Color4.Red, Color4.Green, Color4.Blue));
     }
 }
@@ -408,19 +395,37 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
 
     private readonly Own<GBuffer> _gBuffer;
 
+    public int GBufferTargetCount => _gBuffer.AsValue().ColorAttachmentCount;
+
     public PbrLayer(Screen screen)
         : base(PbrShader.Create(screen), static shader => BuildPipeline(shader))
     {
         _gBuffer = GBuffer.Create(screen, screen.ClientSize, _formats);
+        screen.Resized.Subscribe(x =>
+        {
+            _gBuffer.AsValue().Resize(x.Size);
+        }).AddTo(Subscriptions);
         Dead.Subscribe(static x =>
         {
             ((PbrLayer)x)._gBuffer.Dispose();
-        });
+        }).AddTo(Subscriptions);
+    }
+
+    public Texture GBufferTarget(int index)
+    {
+        return _gBuffer.AsValue().ColorAttachment(index);
     }
 
     protected override Own<RenderPass> CreateRenderPass(in CommandEncoder encoder)
     {
         return _gBuffer.AsValue().CreateRenderPass(encoder);
+    }
+
+    protected override void Render(RenderPass renderPass)
+    {
+        base.Render(renderPass);
+
+        // TODO: gbuffer -> surface
     }
 
     private static Own<RenderPipeline> BuildPipeline(PbrShader shader)

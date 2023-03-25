@@ -12,11 +12,13 @@ public abstract class RenderOperation
     private readonly Screen _screen;
     private readonly Own<RenderPipeline> _pipelineOwn;
     private LifeState _lifeState;
+    private readonly SubscriptionBag _subscriptions = new();
     private EventSource<RenderOperation> _onDead = new();
 
     public Screen Screen => _screen;
     public RenderPipeline Pipeline => _pipelineOwn.AsValue();
     public LifeState LifeState => _lifeState;
+    public SubscriptionRegister Subscriptions => _subscriptions.Register;
     public Event<RenderOperation> Dead => _onDead.Event;
 
     protected RenderOperation(Screen screen, Own<RenderPipeline> pipelineOwn)
@@ -46,7 +48,7 @@ public abstract class RenderOperation
     {
         _pipelineOwn.Dispose();
         _onDead.Invoke(this);
-        _onDead.Clear();
+        _subscriptions.Dispose();
     }
 
     public bool Terminate()
