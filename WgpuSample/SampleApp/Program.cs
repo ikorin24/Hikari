@@ -18,7 +18,7 @@ internal class Program
             Height = 720,
             Style = WindowStyle.Default,
         };
-        Engine.Run(screenConfig, OnInitialized2);
+        Engine.Run(screenConfig, OnInitialized);
     }
 
     private static void OnResized(Screen screen, Vector2u newSize)
@@ -201,8 +201,6 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
 
 public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShader, MyMaterial>
 {
-    public override RenderTarget RenderTarget => RenderTarget.Surface;
-
     public MyObjectLayer(Screen screen)
         : base(MyShader.Create(screen), static shader => BuildPipeline(shader))
     {
@@ -379,12 +377,51 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 
 public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMaterial>
 {
+    private const int MrtCount = 3;
+    private static readonly TextureFormat[] _formats = new TextureFormat[MrtCount]
+    {
+        TextureFormat.Rgba32Float,
+        TextureFormat.Rgba16Float,
+        TextureFormat.Rgba32Float,
+    };
+    private static readonly ReadOnlyMemory<ColorTargetState?> _targets = new ColorTargetState?[MrtCount]
+    {
+        new ColorTargetState
+        {
+            Format = _formats[0],
+            Blend = null,
+            WriteMask = ColorWrites.All,
+        },
+        new ColorTargetState
+        {
+            Format = _formats[1],
+            Blend = null,
+            WriteMask = ColorWrites.All,
+        },
+        new ColorTargetState
+        {
+            Format = _formats[2],
+            Blend = null,
+            WriteMask = ColorWrites.All,
+        },
+    };
+
+    private readonly Own<GBuffer> _gBuffer;
+
     public PbrLayer(Screen screen)
         : base(PbrShader.Create(screen), static shader => BuildPipeline(shader))
     {
+        _gBuffer = GBuffer.Create(screen, screen.ClientSize, _formats);
+        Dead.Subscribe(static x =>
+        {
+            ((PbrLayer)x)._gBuffer.Dispose();
+        });
     }
 
-    public override RenderTarget RenderTarget => RenderTarget.GBuffer;
+    protected override Own<RenderPass> CreateRenderPass(in CommandEncoder encoder)
+    {
+        return _gBuffer.AsValue().CreateRenderPass(encoder);
+    }
 
     private static Own<RenderPipeline> BuildPipeline(PbrShader shader)
     {
@@ -409,15 +446,7 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
             {
                 Module = shader.Module,
                 EntryPoint = "fs_main"u8.ToArray(),
-                Targets = new ColorTargetState?[]
-                {
-                    new ColorTargetState
-                    {
-                        Format = screen.SurfaceFormat,
-                        Blend = BlendState.Replace,
-                        WriteMask = ColorWrites.All,
-                    },
-                },
+                Targets = _targets,
             },
             Primitive = new PrimitiveState
             {

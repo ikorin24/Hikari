@@ -12,21 +12,29 @@ public abstract class RenderOperation
     private readonly Screen _screen;
     private readonly Own<RenderPipeline> _pipelineOwn;
     private LifeState _lifeState;
+    private EventSource<RenderOperation> _onDead = new();
 
     public Screen Screen => _screen;
     public RenderPipeline Pipeline => _pipelineOwn.AsValue();
     public LifeState LifeState => _lifeState;
-
-    public abstract RenderTarget RenderTarget { get; }
+    public Event<RenderOperation> Dead => _onDead.Event;
 
     protected RenderOperation(Screen screen, Own<RenderPipeline> pipelineOwn)
     {
         _screen = screen;
         _pipelineOwn = pipelineOwn;
         _lifeState = LifeState.New;
+        screen.RenderOperations.Add(this);
     }
 
     internal abstract void FrameInit();
+
+    internal Own<RenderPass> GetRenderPass(in CommandEncoder encoder) => CreateRenderPass(encoder);
+
+    protected virtual Own<RenderPass> CreateRenderPass(in CommandEncoder encoder)
+    {
+        return RenderPass.SurfaceRenderPass(in encoder);
+    }
 
     protected abstract void Render(RenderPass renderPass);
 
@@ -37,6 +45,8 @@ public abstract class RenderOperation
     internal void Release()
     {
         _pipelineOwn.Dispose();
+        _onDead.Invoke(this);
+        _onDead.Clear();
     }
 
     public bool Terminate()
@@ -62,12 +72,6 @@ public abstract class RenderOperation
         Debug.Assert(_lifeState == LifeState.Terminating);
         _lifeState = LifeState.Dead;
     }
-}
-
-public enum RenderTarget
-{
-    Surface = 0,
-    GBuffer = 1,
 }
 
 public abstract class RenderOperation<TShader, TMaterial>
@@ -112,7 +116,6 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
         _list = new();
         _addedList = new();
         _removedList = new();
-        Screen.RenderOperations.Add(this);
     }
 
     internal void Add(FrameObject<TSelf, TVertex, TShader, TMaterial> frameObject)

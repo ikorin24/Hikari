@@ -4,7 +4,7 @@ using System;
 
 namespace Elffy;
 
-internal sealed class GBuffer
+public sealed class GBuffer
 {
     private readonly Screen _screen;
     private readonly Own<Texture>[] _colors;
@@ -12,11 +12,11 @@ internal sealed class GBuffer
 
     public int ColorAttachmentCount => _colors.Length;
 
-    private GBuffer(Screen screen, Vector2u size)
+    private GBuffer(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
-        var colors = new Own<Texture>[2];
-        var colorsNative = new CE.Opt<CE.RenderPassColorAttachment>[colors.Length];
-        Prepare(screen, size, colors, colorsNative);
+        var colors = new Own<Texture>[formats.Length];
+        var colorsNative = new CE.Opt<CE.RenderPassColorAttachment>[formats.Length];
+        Prepare(screen, size, formats, colors, colorsNative);
 
         _screen = screen;
         _colors = colors;
@@ -30,9 +30,13 @@ internal sealed class GBuffer
         }
     }
 
-    public static Own<GBuffer> Create(Screen screen, Vector2u size)
+    public static Own<GBuffer> Create(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
-        var gbuffer = new GBuffer(screen, size);
+        if(formats.IsEmpty) {
+            throw new ArgumentException("formats is empty", nameof(formats));
+        }
+
+        var gbuffer = new GBuffer(screen, size, formats);
         return Own.RefType(gbuffer, static x => SafeCast.As<GBuffer>(x).Release());
     }
 
@@ -43,34 +47,28 @@ internal sealed class GBuffer
 
     public void Resize(Vector2u size)
     {
+        Span<TextureFormat> formats = stackalloc TextureFormat[_colors.Length];
+        for(int i = 0; i < _colors.Length; i++) {
+            formats[i] = _colors[i].AsValue().Format;
+        }
         foreach(var color in _colors) {
             color.Dispose();
         }
-        Prepare(_screen, size, _colors, _colorsNative);
+        Prepare(_screen, size, formats, _colors, _colorsNative);
     }
 
-    private static void Prepare(Screen screen, Vector2u size, Span<Own<Texture>> colors, Span<CE.Opt<CE.RenderPassColorAttachment>> colorsNative)
+    private static void Prepare(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats, Span<Own<Texture>> colors, Span<CE.Opt<CE.RenderPassColorAttachment>> colorsNative)
     {
-        colors[0] = Texture.Create(screen, new()
-        {
-            Size = new Vector3u(size.X, size.Y, 1),
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = TextureDimension.D2,
-            Format = TextureFormat.Rgba32Float,
-            Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
-        });
-        colors[1] = Texture.Create(screen, new()
-        {
-            Size = new Vector3u(size.X, size.Y, 1),
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Dimension = TextureDimension.D2,
-            Format = TextureFormat.Rgba32Float,
-            Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
-        });
-
-        for(int i = 0; i < colorsNative.Length; i++) {
+        for(int i = 0; i < formats.Length; i++) {
+            colors[i] = Texture.Create(screen, new()
+            {
+                Size = new Vector3u(size.X, size.Y, 1),
+                MipLevelCount = 1,
+                SampleCount = 1,
+                Dimension = TextureDimension.D2,
+                Format = formats[i],
+                Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
+            });
             colorsNative[i] = new(new()
             {
                 view = colors[i].AsValue().View.NativeRef,

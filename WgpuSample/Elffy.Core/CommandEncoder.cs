@@ -5,16 +5,16 @@ using System.ComponentModel;
 
 namespace Elffy;
 
-internal readonly ref struct CommandEncoder
+public readonly ref struct CommandEncoder
 {
     private readonly Screen _screen;
-    private readonly Rust.Box<Wgpu.CommandEncoder> _encoder;
-    private readonly Rust.Box<Wgpu.SurfaceTexture> _surfaceTexture;
-    private readonly Rust.Box<Wgpu.TextureView> _surfaceTextureView;
+    private readonly Rust.OptionBox<Wgpu.CommandEncoder> _encoder;
+    private readonly Rust.OptionBox<Wgpu.SurfaceTexture> _surfaceTexture;
+    private readonly Rust.OptionBox<Wgpu.TextureView> _surfaceTextureView;
 
-    public Rust.MutRef<Wgpu.CommandEncoder> NativeMut => _encoder;
-    public Rust.Ref<Wgpu.SurfaceTexture> Surface => _surfaceTexture;
-    public Rust.Ref<Wgpu.TextureView> SurfaceView => _surfaceTextureView;
+    internal Rust.MutRef<Wgpu.CommandEncoder> NativeMut => _encoder.Unwrap();
+    internal Rust.Ref<Wgpu.SurfaceTexture> Surface => _surfaceTexture.Unwrap();
+    internal Rust.Ref<Wgpu.TextureView> SurfaceView => _surfaceTextureView.Unwrap();
     public Screen Screen => _screen;
 
     public static CommandEncoder Invalid => default;
@@ -35,7 +35,7 @@ internal readonly ref struct CommandEncoder
         _surfaceTextureView = surfaceTextureView;
     }
 
-    public void Deconstruct(
+    internal void Deconstruct(
         out Screen screen,
         out Rust.Box<Wgpu.CommandEncoder> encoder,
         out Rust.Box<Wgpu.SurfaceTexture> surfaceTexture,
@@ -43,8 +43,8 @@ internal readonly ref struct CommandEncoder
         )
     {
         screen = _screen;
-        encoder = _encoder;
-        surfaceTexture = _surfaceTexture;
-        surfaceTextureView = _surfaceTextureView;
+        encoder = _encoder.Unwrap();
+        surfaceTexture = _surfaceTexture.Unwrap();
+        surfaceTextureView = _surfaceTextureView.Unwrap();
     }
 }
