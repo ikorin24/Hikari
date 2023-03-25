@@ -5,25 +5,46 @@ using System.ComponentModel;
 
 namespace Elffy;
 
-public readonly ref struct CommandEncoder
+internal readonly ref struct CommandEncoder
 {
-    private readonly Rust.OptionBox<Wgpu.CommandEncoder> _native;
+    private readonly Screen _screen;
+    private readonly Rust.Box<Wgpu.CommandEncoder> _encoder;
+    private readonly Rust.Box<Wgpu.SurfaceTexture> _surfaceTexture;
+    private readonly Rust.Box<Wgpu.TextureView> _surfaceTextureView;
 
-    internal Rust.MutRef<Wgpu.CommandEncoder> NativeMut => _native.Unwrap();
+    public Rust.MutRef<Wgpu.CommandEncoder> NativeMut => _encoder;
+    public Rust.Ref<Wgpu.SurfaceTexture> Surface => _surfaceTexture;
+    public Rust.Ref<Wgpu.TextureView> SurfaceView => _surfaceTextureView;
+    public Screen Screen => _screen;
 
-    public static CommandEncoder None => default;
+    public static CommandEncoder Invalid => default;
 
     [Obsolete("Don't use default constructor.", true)]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public CommandEncoder() => throw new NotSupportedException("Don't use default constructor.");
 
-    internal CommandEncoder(Rust.Box<Wgpu.CommandEncoder> native)
+    internal CommandEncoder(
+        Screen screen,
+        Rust.Box<Wgpu.CommandEncoder> encoder,
+        Rust.Box<Wgpu.SurfaceTexture> surfaceTexture,
+        Rust.Box<Wgpu.TextureView> surfaceTextureView)
     {
-        _native = native;
+        _screen = screen;
+        _encoder = encoder;
+        _surfaceTexture = surfaceTexture;
+        _surfaceTextureView = surfaceTextureView;
     }
 
-    public unsafe Own<RenderPass> CreateSurfaceRenderPass(SurfaceTextureView surface, TextureView? depth)
+    public void Deconstruct(
+        out Screen screen,
+        out Rust.Box<Wgpu.CommandEncoder> encoder,
+        out Rust.Box<Wgpu.SurfaceTexture> surfaceTexture,
+        out Rust.Box<Wgpu.TextureView> surfaceTextureView
+        )
     {
-        return RenderPass.CreateSurfaceRenderPass(this, surface, depth);
+        screen = _screen;
+        encoder = _encoder;
+        surfaceTexture = _surfaceTexture;
+        surfaceTextureView = _surfaceTextureView;
     }
 }

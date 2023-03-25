@@ -17,6 +17,8 @@ public abstract class RenderOperation
     public RenderPipeline Pipeline => _pipelineOwn.AsValue();
     public LifeState LifeState => _lifeState;
 
+    public abstract RenderTarget RenderTarget { get; }
+
     protected RenderOperation(Screen screen, Own<RenderPipeline> pipelineOwn)
     {
         _screen = screen;
@@ -60,6 +62,12 @@ public abstract class RenderOperation
         Debug.Assert(_lifeState == LifeState.Terminating);
         _lifeState = LifeState.Dead;
     }
+}
+
+public enum RenderTarget
+{
+    Surface = 0,
+    GBuffer = 1,
 }
 
 public abstract class RenderOperation<TShader, TMaterial>

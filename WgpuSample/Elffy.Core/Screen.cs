@@ -19,8 +19,6 @@ public sealed class Screen
     private string _title = "";
     private Mouse _mouse;
     private Own<Texture> _depthTexture;
-    private Own<TextureView> _depthTextureView;
-    private SurfaceTextureView _surfaceTexView;
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
     private readonly RenderOperations _renderOperations;
@@ -37,10 +35,14 @@ public sealed class Screen
     public ulong FrameNum => _frameNum;
     public RenderOperations RenderOperations => _renderOperations;
 
-    public Texture DepthTexture => _depthTexture.AsValue();
-    public TextureView DepthTextureView => _depthTextureView.AsValue();
-
-    public SurfaceTextureView SurfaceTextureView => _surfaceTexView;
+    public Texture DepthTexture
+    {
+        get
+        {
+            ThrowIfNotInit();
+            return _depthTexture.AsValue();
+        }
+    }
 
     public TextureFormat SurfaceFormat
     {
@@ -108,7 +110,6 @@ public sealed class Screen
     {
         _native = screen;
         _mainThread = mainThread;
-        _surfaceTexView = new SurfaceTextureView(this, mainThread);
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
         _renderOperations = new RenderOperations(this);
@@ -161,13 +162,9 @@ public sealed class Screen
             Dimension = TextureDimension.D2,
             Format = TextureFormat.Depth32Float,
             Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
-        }).AsValue(out var depthOwn);
-        var view = TextureView.Create(depth);
-
-        _depthTextureView.Dispose();
+        });
         _depthTexture.Dispose();
-        _depthTexture = depthOwn;
-        _depthTextureView = view;
+        _depthTexture = depth;
     }
 
     internal void OnInitialize(in CE.HostScreenInfo info)
@@ -187,41 +184,25 @@ public sealed class Screen
 
     internal unsafe bool OnRedrawRequested()
     {
-        var depthTextureView = _depthTextureView;
-        if(depthTextureView.IsNone) {
+        if(EngineCore.ScreenBeginCommand(this, out var encoder) == false) {
             return true;
         }
-
-        var screenRef = _native.Unwrap().AsRef();
-        Rust.Box<Wgpu.CommandEncoder> encoderNative;
-        Rust.Box<Wgpu.SurfaceTexture> surfaceTexNative;
-        {
-            if(screenRef.ScreenBeginCommand(out encoderNative, out surfaceTexNative, out var surfaceViewNative) == false) {
-                return true;
-            }
-            var oldSurfaceView = _surfaceTexView.Replace(surfaceViewNative);
-            Debug.Assert(oldSurfaceView.IsNone);
-        }
         try {
-            Render(new CommandEncoder(encoderNative));
+            Render(in encoder);
             var isCloseRequested = _isCloseRequested;
             _isCloseRequested = false;
             return !isCloseRequested;
         }
         finally {
-            var surfaceViewNative = _surfaceTexView.Replace(Rust.OptionBox<Wgpu.TextureView>.None);
-            screenRef.ScreenFinishCommand(encoderNative, surfaceTexNative, surfaceViewNative.Unwrap());
+            EngineCore.ScreenFinishCommand(encoder);
             _frameNum++;
         }
     }
 
-    private void Render(CommandEncoder encoder)
+    private void Render(in CommandEncoder encoder)
     {
-        using var renderPassOwn = encoder.CreateSurfaceRenderPass(SurfaceTextureView, DepthTextureView);
-        var renderPass = renderPassOwn.AsValue();
-
         _renderOperations.ApplyAdd();
-        RenderOperations.Render(renderPass);
+        RenderOperations.Render(in encoder);
         _renderOperations.ApplyRemove();
         _keyboard.PrepareNextFrame();
     }
@@ -246,9 +227,7 @@ public sealed class Screen
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
         _renderOperations.DisposeInternal();
         _depthTexture.Dispose();
-        _depthTextureView.Dispose();
         _depthTexture = Own<Texture>.None;
-        _depthTextureView = Own<TextureView>.None;
         _resized.Clear();
         _subscriptions.Dispose();
         return native;

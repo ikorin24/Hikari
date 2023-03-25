@@ -1,8 +1,10 @@
 ﻿#nullable enable
 using Elffy.NativeBind;
+using System;
 
 namespace Elffy;
 
+[Obsolete("", true)]
 public sealed class SurfaceTextureView : IScreenManaged, ITextureView
 {
     private readonly Screen _screen;

@@ -24,35 +24,24 @@ public readonly struct RenderPass
         return Own.ValueType(new(native), _release);
     }
 
-    public static unsafe Own<RenderPass> CreateSurfaceRenderPass(CommandEncoder encoder, SurfaceTextureView surface, TextureView? depth)
+    internal static unsafe Own<RenderPass> CreateSurfaceRenderPass(in CommandEncoder encoder)
     {
-        ArgumentNullException.ThrowIfNull(surface);
-        var encoderMut = encoder.NativeMut;
-
-        CE.RenderPassDescriptor desc;
+        var colorAttachment = new CE.Opt<CE.RenderPassColorAttachment>(new()
         {
-            var colorAttachment = new CE.Opt<CE.RenderPassColorAttachment>(new()
+            view = encoder.SurfaceView,
+            clear = new Wgpu.Color(0, 0, 0, 0),
+        });
+        var desc = new CE.RenderPassDescriptor
+        {
+            color_attachments_clear = new() { data = &colorAttachment, len = 1 },
+            depth_stencil_attachment_clear = new(new()
             {
-                view = surface.Handle.AsRef(),
-                clear = new Wgpu.Color(0, 0, 0, 0),
-            });
-            var depthStencilAttachment = depth switch
-            {
-                null => CE.Opt<CE.RenderPassDepthStencilAttachment>.None,
-                not null => new(new()
-                {
-                    view = depth.NativeRef,
-                    depth_clear = CE.Opt<float>.Some(1f),
-                    stencil_clear = CE.Opt<uint>.None,
-                }),
-            };
-            desc = new CE.RenderPassDescriptor
-            {
-                color_attachments_clear = new() { data = &colorAttachment, len = 1 },
-                depth_stencil_attachment_clear = depthStencilAttachment,
-            };
-        }
-        return Create(encoderMut, desc);
+                view = encoder.Screen.DepthTexture.View.NativeRef,
+                depth_clear = CE.Opt<float>.Some(1f),
+                stencil_clear = CE.Opt<uint>.None,
+            }),
+        };
+        return Create(encoder.NativeMut, desc);
     }
 
     public void SetPipeline(RenderPipeline renderPipeline)

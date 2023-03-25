@@ -38,10 +38,15 @@ public sealed class RenderOperations
 
     }
 
-    internal void Render(RenderPass renderPass)
+    internal void Render(in CommandEncoder encoder)
     {
         foreach(var op in _list.AsSpan()) {
-            op.InvokeRender(renderPass);
+            using var renderPass = op.RenderTarget switch
+            {
+                RenderTarget.Surface => RenderPass.CreateSurfaceRenderPass(in encoder),
+                RenderTarget.GBuffer => RenderPass.CreateSurfaceRenderPass(in encoder),     // TODO:
+            };
+            op.InvokeRender(renderPass.AsValue());
         }
     }
 

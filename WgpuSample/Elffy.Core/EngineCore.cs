@@ -164,26 +164,30 @@ internal unsafe static partial class EngineCore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool ScreenBeginCommand(
-        this Rust.Ref<CE.HostScreen> screen,
-        out Rust.Box<Wgpu.CommandEncoder> commandEncoder,
-        out Rust.Box<Wgpu.SurfaceTexture> surfaceTexture,
-        out Rust.Box<Wgpu.TextureView> surfaceTextureView)
+        Screen screen,
+        out CommandEncoder encoder)
     {
-        ref readonly var data = ref elffy_screen_begin_command(screen).Validate();
-        commandEncoder = data.command_encoder.UnwrapUnchecked();
-        surfaceTexture = data.surface_texture.UnwrapUnchecked();
-        surfaceTextureView = data.surface_texture_view.UnwrapUnchecked();
-        return data.success;
+        ref readonly var data = ref elffy_screen_begin_command(screen.AsRefChecked()).Validate();
+        if(data.success) {
+            encoder = new CommandEncoder(
+                screen,
+                data.command_encoder.Unwrap(),
+                data.surface_texture.Unwrap(),
+                data.surface_texture_view.Unwrap());
+            return true;
+        }
+        else {
+            encoder = CommandEncoder.Invalid;
+            return false;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void ScreenFinishCommand(
-        this Rust.Ref<CE.HostScreen> screen,
-        Rust.Box<Wgpu.CommandEncoder> commandEncoder,
-        Rust.Box<Wgpu.SurfaceTexture> surfaceTexture,
-        Rust.Box<Wgpu.TextureView> surfaceTextureView)
+        CommandEncoder encoder)
     {
-        elffy_screen_finish_command(screen, commandEncoder, surfaceTexture, surfaceTextureView).Validate();
+        var (screen, commandEncoder, surfaceTexture, surfaceTextureView) = encoder;
+        elffy_screen_finish_command(screen.AsRefChecked(), commandEncoder, surfaceTexture, surfaceTextureView).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

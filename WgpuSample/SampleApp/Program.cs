@@ -201,6 +201,8 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
 
 public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShader, MyMaterial>
 {
+    public override RenderTarget RenderTarget => RenderTarget.Surface;
+
     public MyObjectLayer(Screen screen)
         : base(MyShader.Create(screen), static shader => BuildPipeline(shader))
     {
@@ -381,6 +383,8 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
         : base(PbrShader.Create(screen), static shader => BuildPipeline(shader))
     {
     }
+
+    public override RenderTarget RenderTarget => RenderTarget.GBuffer;
 
     private static Own<RenderPipeline> BuildPipeline(PbrShader shader)
     {
