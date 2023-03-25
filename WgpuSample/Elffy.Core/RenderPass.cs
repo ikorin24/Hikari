@@ -24,7 +24,7 @@ public readonly struct RenderPass
         return Own.ValueType(new(native), _release);
     }
 
-    internal static unsafe Own<RenderPass> CreateSurfaceRenderPass(in CommandEncoder encoder)
+    internal static unsafe Own<RenderPass> SurfaceRenderPass(in CommandEncoder encoder)
     {
         var colorAttachment = new CE.Opt<CE.RenderPassColorAttachment>(new()
         {

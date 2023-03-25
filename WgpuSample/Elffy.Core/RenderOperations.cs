@@ -43,8 +43,8 @@ public sealed class RenderOperations
         foreach(var op in _list.AsSpan()) {
             using var renderPass = op.RenderTarget switch
             {
-                RenderTarget.Surface => RenderPass.CreateSurfaceRenderPass(in encoder),
-                RenderTarget.GBuffer => RenderPass.CreateSurfaceRenderPass(in encoder),     // TODO:
+                RenderTarget.Surface => RenderPass.SurfaceRenderPass(in encoder),
+                RenderTarget.GBuffer => RenderPass.SurfaceRenderPass(in encoder),     // TODO:
             };
             op.InvokeRender(renderPass.AsValue());
         }
