@@ -12,7 +12,7 @@ public static class Engine
 
     private static Action<Screen>? _onInitialized;
 
-    public static void Run(in HostScreenConfig screenConfig, Action<Screen> onInitialized)
+    public static void Run(in ScreenConfig screenConfig, Action<Screen> onInitialized)
     {
         ArgumentNullException.ThrowIfNull(onInitialized);
         _onInitialized = onInitialized;

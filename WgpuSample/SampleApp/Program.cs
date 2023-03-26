@@ -11,7 +11,7 @@ internal class Program
     private static void Main(string[] args)
     {
         Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1");
-        var screenConfig = new HostScreenConfig
+        var screenConfig = new ScreenConfig
         {
             Backend = GraphicsBackend.Dx12,
             Width = 1280,
@@ -21,13 +21,8 @@ internal class Program
         Engine.Run(screenConfig, OnInitialized);
     }
 
-    private static void OnResized(Screen screen, Vector2u newSize)
-    {
-    }
-
     private static void OnInitialized(Screen screen)
     {
-        screen.Resized.Subscribe(x => OnResized(x.Screen, x.Size)).AddTo(screen.Subscriptions);
         screen.Title = "sample";
         var layer = new MyObjectLayer(screen);
         var model = new MyModel(layer, SampleData.SampleMesh(screen), SampleData.SampleTexture(screen));
@@ -36,9 +31,9 @@ internal class Program
 
     private static void OnInitialized2(Screen screen)
     {
-        screen.Resized.Subscribe(x => OnResized(x.Screen, x.Size)).AddTo(screen.Subscriptions);
         screen.Title = "sample";
         var layer = new PbrLayer(screen);
+        var deferredProcess = new DeferredProcess(layer.GBuffer);
         var model = new PbrModel(layer, SampleData.SampleMesh(screen));
         model.Material.SetUniform(new(Color4.Red, Color4.Green, Color4.Blue));
     }
@@ -395,7 +390,7 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
 
     private readonly Own<GBuffer> _gBuffer;
 
-    public int GBufferTargetCount => _gBuffer.AsValue().ColorAttachmentCount;
+    public GBuffer GBuffer => _gBuffer.AsValue();
 
     public PbrLayer(Screen screen)
         : base(PbrShader.Create(screen), static shader => BuildPipeline(shader))
@@ -411,10 +406,10 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
         }).AddTo(Subscriptions);
     }
 
-    public Texture GBufferTarget(int index)
-    {
-        return _gBuffer.AsValue().ColorAttachment(index);
-    }
+    //public Texture GBufferTarget(int index)
+    //{
+    //    return _gBuffer.AsValue().ColorAttachment(index);
+    //}
 
     protected override Own<RenderPass> CreateRenderPass(in CommandEncoder encoder)
     {
@@ -473,5 +468,219 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
             Multiview = 0,
         };
         return RenderPipeline.Create(screen, in desc);
+    }
+}
+
+public sealed partial class DeferredProcess : RenderOperation<DeferredProcessShader, DeferredProcessMaterial>
+{
+    private record struct PosUV(Vector3 Position, Vector2 UV) : IVertex<PosUV>
+    {
+        public static unsafe uint VertexSize => (uint)sizeof(PosUV);
+
+        public static unsafe ReadOnlyMemory<VertexField> Fields => new[]
+        {
+            new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
+            new VertexField(12, 8, VertexFormat.Float32x2, VertexFieldSemantics.UV),
+        };
+    }
+
+    private readonly GBuffer _gBuffer;
+    private readonly Own<DeferredProcessMaterial> _material;
+    private readonly Own<Mesh<PosUV>> _rectMesh;
+
+    public GBuffer GBuffer => _gBuffer;
+
+    public DeferredProcess(GBuffer gBuffer)
+        : base(CreateShader(gBuffer, out var pipeline), pipeline)
+    {
+        _gBuffer = gBuffer;
+
+        _material = DeferredProcessMaterial.Create(Shader, gBuffer);
+
+        ReadOnlySpan<PosUV> vertices = stackalloc PosUV[]
+        {
+            new(new(-1, -1, 0), new(0, 0)),
+            new(new(1, -1, 0), new(1, 0)),
+            new(new(1, 1, 0), new(1, 1)),
+            new(new(-1, 1, 0), new(0, 1)),
+        };
+        ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
+        _rectMesh = Mesh<PosUV>.Create(Screen, vertices, indices);
+
+        Dead.Subscribe(static x =>
+        {
+            var self = ((DeferredProcess)x);
+            self._material.Dispose();
+        }).AddTo(Subscriptions);
+    }
+
+    private static Own<DeferredProcessShader> CreateShader(GBuffer gBuffer, out Own<RenderPipeline> pipeline)
+    {
+        ArgumentNullException.ThrowIfNull(gBuffer);
+        var screen = gBuffer.Screen;
+        var shader = DeferredProcessShader.Create(screen);
+
+        var desc = new RenderPipelineDescriptor
+        {
+            Layout = shader.AsValue().PipelineLayout,
+            Vertex = new VertexState
+            {
+                Module = shader.AsValue().Module,
+                EntryPoint = "vs_main"u8.ToArray(),
+                Buffers = new VertexBufferLayout[]
+                {
+                    VertexBufferLayout.FromVertex<MyVertex>(stackalloc[]
+                    {
+                        (0u, VertexFieldSemantics.Position),
+                        (1u, VertexFieldSemantics.UV),
+                    }),
+                },
+            },
+            Fragment = new FragmentState
+            {
+                Module = shader.AsValue().Module,
+                EntryPoint = "fs_main"u8.ToArray(),
+                Targets = new ColorTargetState?[]
+                {
+                    new ColorTargetState
+                    {
+                        Format = screen.SurfaceFormat,
+                        Blend = null,
+                        WriteMask = ColorWrites.All,
+                    }
+                },
+            },
+            Primitive = new PrimitiveState
+            {
+                Topology = PrimitiveTopology.TriangleList,
+                StripIndexFormat = null,
+                FrontFace = FrontFace.Ccw,
+                CullMode = Face.Back,
+                PolygonMode = PolygonMode.Fill,
+            },
+            DepthStencil = new DepthStencilState
+            {
+                Format = screen.DepthTexture.Format,
+                DepthWriteEnabled = true,
+                DepthCompare = CompareFunction.Less,
+                Stencil = StencilState.Default,
+                Bias = DepthBiasState.Default,
+            },
+            Multisample = MultisampleState.Default,
+            Multiview = 0,
+        };
+        pipeline = RenderPipeline.Create(screen, desc);
+        return shader;
+    }
+
+    protected override void Render(RenderPass renderPass)
+    {
+        var mesh = _rectMesh.AsValue();
+        var material = _material.AsValue();
+        var bindGroups = material.BindGroups.Span;
+
+        renderPass.SetPipeline(Pipeline);
+        renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+        renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+        renderPass.SetBindGroup(0, bindGroups[0]);
+        renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
+    }
+}
+
+public sealed class DeferredProcessShader : Shader<DeferredProcessShader, DeferredProcessMaterial>
+{
+    private static ReadOnlySpan<byte> ShaderSource => """
+        struct Vin {
+            @location(0) pos: vec3<f32>,
+            @location(1) uv: vec2<f32>,
+        }
+        struct V2F {
+            @builtin(position) clip_pos: vec4<f32>,
+            @location(0) uv: vec2<f32>,
+        }
+        @group(0) @binding(0) var g_sampler: sampler;
+        @group(0) @binding(1) var g0: texture_2d<f32>;
+        @group(0) @binding(2) var g1: texture_2d<f32>;
+        @group(0) @binding(3) var g2: texture_2d<f32>;
+
+        @vertex fn vs_main(
+            v: Vin,
+        ) -> V2F {
+            var output: V2F;
+            output.clip_pos = vec4(v.pos, 1.0);
+            output.uv = v.uv;
+            return output;
+        }
+
+        @fragment fn fs_main(in: V2F) -> @location(0) vec4<f32> {
+            var c0: vec3<f32> = textureSample(g0, g_sampler, in.uv).xyz;
+            var c1: vec3<f32> = textureSample(g1, g_sampler, in.uv).xyz;
+            var c2: vec3<f32> = textureSample(g2, g_sampler, in.uv).xyz;
+            var c = c0 + c1 + c2;
+            return vec4(c, 1.0);
+        }
+        """u8;
+
+    private static readonly BindGroupLayoutDescriptor _bindGroupLayoutDesc = new()
+    {
+        Entries = new BindGroupLayoutEntry[]
+        {
+            BindGroupLayoutEntry.Sampler(0, ShaderStages.Fragment, SamplerBindingType.NonFiltering, 0),
+            BindGroupLayoutEntry.Texture(1, ShaderStages.Fragment, new TextureBindingData
+            {
+                Multisampled = false,
+                ViewDimension = TextureViewDimension.D2,
+                SampleType = TextureSampleType.FloatNotFilterable,
+            }, 0),
+            BindGroupLayoutEntry.Texture(2, ShaderStages.Fragment, new TextureBindingData
+            {
+                Multisampled = false,
+                ViewDimension = TextureViewDimension.D2,
+                SampleType = TextureSampleType.FloatNotFilterable,
+            }, 0),
+            BindGroupLayoutEntry.Texture(3, ShaderStages.Fragment, new TextureBindingData
+            {
+                Multisampled = false,
+                ViewDimension = TextureViewDimension.D2,
+                SampleType = TextureSampleType.FloatNotFilterable,
+            }, 0),
+        }
+    };
+
+    private DeferredProcessShader(Screen screen) : base(screen, _bindGroupLayoutDesc, ShaderSource)
+    {
+    }
+
+    public static Own<DeferredProcessShader> Create(Screen screen)
+    {
+        var shader = new DeferredProcessShader(screen);
+        return CreateOwn(shader);
+    }
+}
+
+public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, DeferredProcessShader>
+{
+    private DeferredProcessMaterial(DeferredProcessShader shader, Own<BindGroup>[] bindGroupOwns) : base(shader, bindGroupOwns)
+    {
+    }
+
+    public static Own<DeferredProcessMaterial> Create(DeferredProcessShader shader, GBuffer gBuffer)
+    {
+        var screen = shader.Screen;
+        var sampler = Sampler.NoMipmap(screen, AddressMode.ClampToEdge, FilterMode.Nearest, FilterMode.Nearest);
+        var desc = new BindGroupDescriptor
+        {
+            Layout = shader.GetBindGroupLayout(0),
+            Entries = new BindGroupEntry[]
+            {
+                BindGroupEntry.Sampler(0, sampler.AsValue()),
+                BindGroupEntry.TextureView(1, gBuffer.ColorAttachment(0).View),
+                BindGroupEntry.TextureView(2, gBuffer.ColorAttachment(1).View),
+                BindGroupEntry.TextureView(3, gBuffer.ColorAttachment(2).View),
+            },
+        };
+        var bg = BindGroup.Create(screen, desc);
+        var material = new DeferredProcessMaterial(shader, new[] { bg });
+        return CreateOwn(material);
     }
 }

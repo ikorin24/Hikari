@@ -20,7 +20,7 @@ internal unsafe static partial class EngineCore
 
     public static bool IsStarted => _isStarted == 1;
 
-    public static void EngineStart(in EngineCoreConfig config, in HostScreenConfig screenConfig)
+    public static void EngineStart(in EngineCoreConfig config, in ScreenConfig screenConfig)
     {
         if(Interlocked.CompareExchange(ref _isStarted, 1, 0) == 1) {
             throw new InvalidOperationException("The engine is already running.");
@@ -144,7 +144,7 @@ internal unsafe static partial class EngineCore
         }
     }
 
-    public static void CreateScreen(in HostScreenConfig config)
+    public static void CreateScreen(in ScreenConfig config)
     {
         var screenConfig = config.ToCoreType();
         elffy_create_screen(&screenConfig).Validate();

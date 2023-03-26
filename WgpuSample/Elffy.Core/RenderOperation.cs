@@ -29,7 +29,7 @@ public abstract class RenderOperation
         screen.RenderOperations.Add(this);
     }
 
-    internal abstract void FrameInit();
+    protected virtual void FrameInit() { }  // nop
 
     internal Own<RenderPass> GetRenderPass(in CommandEncoder encoder) => CreateRenderPass(encoder);
 
@@ -40,7 +40,10 @@ public abstract class RenderOperation
 
     protected abstract void Render(RenderPass renderPass);
 
-    internal abstract void FrameEnd();
+    protected virtual void FrameEnd() { }   // nop
+
+    internal void InvokeFrameInit() => FrameInit();
+    internal void InvokeFrameEnd() => FrameEnd();
 
     internal void InvokeRender(RenderPass renderPass) => Render(renderPass);
 
@@ -127,7 +130,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
         }
     }
 
-    internal override void FrameInit()
+    protected sealed override void FrameInit()
     {
         ApplyAdd();
     }
@@ -155,7 +158,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
         }
     }
 
-    internal override void FrameEnd()
+    protected sealed override void FrameEnd()
     {
         ApplyRemove();
     }

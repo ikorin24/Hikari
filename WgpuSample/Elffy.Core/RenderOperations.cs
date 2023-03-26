@@ -70,7 +70,7 @@ public sealed class RenderOperations
         }
 
         foreach(var operation in list.AsSpan()) {
-            operation.FrameInit();
+            operation.InvokeFrameInit();
         }
 
         if(isAdded) {
@@ -105,7 +105,7 @@ public sealed class RenderOperations
         }
 
         foreach(var operation in list.AsSpan()) {
-            operation.FrameEnd();
+            operation.InvokeFrameEnd();
         }
 
         if(isRemoved) {

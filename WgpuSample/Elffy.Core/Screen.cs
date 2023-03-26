@@ -248,7 +248,7 @@ public sealed class Screen
     }
 }
 
-public readonly struct HostScreenConfig
+public readonly struct ScreenConfig
 {
     public required WindowStyle Style { get; init; }
     public required u32 Width { get; init; }

@@ -12,6 +12,8 @@ public sealed class GBuffer
 
     public int ColorAttachmentCount => _colors.Length;
 
+    public Screen Screen => _screen;
+
     private GBuffer(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
         var colors = new Own<Texture>[formats.Length];
