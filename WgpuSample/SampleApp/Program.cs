@@ -18,7 +18,7 @@ internal class Program
             Height = 720,
             Style = WindowStyle.Default,
         };
-        Engine.Run(screenConfig, OnInitialized);
+        Engine.Run(screenConfig, OnInitialized2);
     }
 
     private static void OnInitialized(Screen screen)
@@ -202,8 +202,8 @@ public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShade
                 {
                     VertexBufferLayout.FromVertex<MyVertex>(stackalloc[]
                     {
-                        (0u, VertexFieldSemantics.Position),
-                        (1u, VertexFieldSemantics.UV),
+                        (0, VertexFieldSemantics.Position),
+                        (1, VertexFieldSemantics.UV),
                     }),
                 },
             },
@@ -363,7 +363,7 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
     private static readonly TextureFormat[] _formats = new TextureFormat[MrtCount]
     {
         TextureFormat.Rgba32Float,
-        TextureFormat.Rgba16Float,
+        TextureFormat.Rgba32Float,
         TextureFormat.Rgba32Float,
     };
     private static readonly ReadOnlyMemory<ColorTargetState?> _targets = new ColorTargetState?[MrtCount]
@@ -406,21 +406,9 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
         }).AddTo(Subscriptions);
     }
 
-    //public Texture GBufferTarget(int index)
-    //{
-    //    return _gBuffer.AsValue().ColorAttachment(index);
-    //}
-
     protected override Own<RenderPass> CreateRenderPass(in CommandEncoder encoder)
     {
         return _gBuffer.AsValue().CreateRenderPass(encoder);
-    }
-
-    protected override void Render(RenderPass renderPass)
-    {
-        base.Render(renderPass);
-
-        // TODO: gbuffer -> surface
     }
 
     private static Own<RenderPipeline> BuildPipeline(PbrShader shader)
@@ -437,8 +425,8 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
                 {
                     VertexBufferLayout.FromVertex<MyVertex>(stackalloc[]
                     {
-                        (0u, VertexFieldSemantics.Position),
-                        (1u, VertexFieldSemantics.UV),
+                        (0, VertexFieldSemantics.Position),
+                        (1, VertexFieldSemantics.UV),
                     }),
                 },
             },
@@ -471,7 +459,9 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
     }
 }
 
-public sealed partial class DeferredProcess : RenderOperation<DeferredProcessShader, DeferredProcessMaterial>
+// --------
+
+public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, DeferredProcessMaterial>
 {
     private record struct PosUV(Vector3 Position, Vector2 UV) : IVertex<PosUV>
     {
@@ -494,9 +484,7 @@ public sealed partial class DeferredProcess : RenderOperation<DeferredProcessSha
         : base(CreateShader(gBuffer, out var pipeline), pipeline)
     {
         _gBuffer = gBuffer;
-
         _material = DeferredProcessMaterial.Create(Shader, gBuffer);
-
         ReadOnlySpan<PosUV> vertices = stackalloc PosUV[]
         {
             new(new(-1, -1, 0), new(0, 0)),
@@ -531,8 +519,8 @@ public sealed partial class DeferredProcess : RenderOperation<DeferredProcessSha
                 {
                     VertexBufferLayout.FromVertex<MyVertex>(stackalloc[]
                     {
-                        (0u, VertexFieldSemantics.Position),
-                        (1u, VertexFieldSemantics.UV),
+                        (0, VertexFieldSemantics.Position),
+                        (1, VertexFieldSemantics.UV),
                     }),
                 },
             },

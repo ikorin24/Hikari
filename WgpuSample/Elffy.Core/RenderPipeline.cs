@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Elffy.Effective;
 using Elffy.NativeBind;
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -358,6 +359,12 @@ public readonly struct VertexBufferLayout
             step_mode = StepMode.MapOrThrow(),
             attributes = Attributes.SelectToArray(static x => x.ToNative()).AsFixedSlice(pins),
         };
+    }
+
+    public static VertexBufferLayout FromVertex<TVertex>(ReadOnlySpan<(int Location, VertexFieldSemantics Semantics)> mapping)
+        where TVertex : unmanaged, IVertex<TVertex>
+    {
+        return FromVertex<TVertex>(mapping.MarshalCast<(int Location, VertexFieldSemantics Semantics), (uint Location, VertexFieldSemantics Semantics)>());
     }
 
     public static VertexBufferLayout FromVertex<TVertex>(ReadOnlySpan<(uint Location, VertexFieldSemantics Semantics)> mapping)

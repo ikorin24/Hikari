@@ -7,6 +7,7 @@ namespace Elffy;
 public sealed class GBuffer
 {
     private readonly Screen _screen;
+    private Vector2u _size;
     private readonly Own<Texture>[] _colors;
     private readonly CE.Opt<CE.RenderPassColorAttachment>[] _colorsNative;
 
@@ -49,6 +50,9 @@ public sealed class GBuffer
 
     public void Resize(Vector2u size)
     {
+        if(_size == size) {
+            return;
+        }
         Span<TextureFormat> formats = stackalloc TextureFormat[_colors.Length];
         for(int i = 0; i < _colors.Length; i++) {
             formats[i] = _colors[i].AsValue().Format;
