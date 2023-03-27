@@ -501,32 +501,36 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
     {
         _gBufferProvider = gBufferProvider;
 
-        _material = DeferredProcessMaterial.Create(Shader, gBuffer);
-        gBufferProvider.GBufferChanged.Subscribe(gBuffer =>
-        {
-            _material.Dispose();
-            _material = DeferredProcessMaterial.Create(Shader, gBuffer);
-        });
-
+        RecreateMaterial(gBuffer);
+        gBufferProvider.GBufferChanged.Subscribe(RecreateMaterial).AddTo(Subscriptions);
+        const float Z = 0;
         ReadOnlySpan<PosUV> vertices = stackalloc PosUV[]
         {
-            new(new(-1, -1, 0.5f), new(0, 0)),
-            new(new(1, -1, 0.5f), new(1, 0)),
-            new(new(1, 1, 0.5f), new(1, 1)),
-            new(new(-1, 1, 0.5f), new(0, 1)),
+            new(new(-1, -1, Z), new(0, 0)),
+            new(new(1, -1, Z), new(1, 0)),
+            new(new(1, 1, Z), new(1, 1)),
+            new(new(-1, 1, Z), new(0, 1)),
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
         _rectMesh = Mesh<PosUV>.Create(Screen, vertices, indices);
+        Dead.Subscribe(static x => ((DeferredProcess)x).OnDead()).AddTo(Subscriptions);
+    }
 
-        Dead.Subscribe(static x =>
-        {
-            var self = ((DeferredProcess)x);
-            self._material.Dispose();
-        }).AddTo(Subscriptions);
+    private void OnDead()
+    {
+        _material.Dispose();
+        _rectMesh.Dispose();
+    }
+
+    private void RecreateMaterial(GBuffer gBuffer)
+    {
+        _material.Dispose();
+        _material = DeferredProcessMaterial.Create(Shader, gBuffer);
     }
 
     private static Own<DeferredProcessShader> CreateShader(IGBufferProvider gBufferProvider, out GBuffer gBuffer, out Own<RenderPipeline> pipeline)
     {
+        ArgumentNullException.ThrowIfNull(gBufferProvider);
         gBuffer = gBufferProvider.CurrentGBuffer;
         var screen = gBuffer.Screen;
         var shader = DeferredProcessShader.Create(screen);
