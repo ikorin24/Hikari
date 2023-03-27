@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -14,11 +15,14 @@ internal interface IScreenManaged
 internal static class EngineManagedExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void ThrowIfNotEngineManaged(this IScreenManaged self)
+    [DebuggerHidden]
+    public static void ThrowIfNotScreenManaged(this IScreenManaged self)
     {
         if(self.IsManaged == false) {
             Throw();
-            [DoesNotReturn] static void Throw() => throw new InvalidOperationException("The object is not managed by the engine.");
+            [DoesNotReturn]
+            [DebuggerHidden]
+            static void Throw() => throw new InvalidOperationException("The object is not managed by the engine.");
         }
     }
 }

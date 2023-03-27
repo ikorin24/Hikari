@@ -43,7 +43,7 @@ public sealed class TextureView : IScreenManaged, ITextureView
     public static Own<TextureView> Create(Texture texture)
     {
         ArgumentNullException.ThrowIfNull(texture);
-        texture.ThrowIfNotEngineManaged();
+        texture.ThrowIfNotScreenManaged();
         var screen = texture.Screen;
         var textureViewNative = texture.NativeRef.CreateTextureView(CE.TextureViewDescriptor.Default);
         var textureView = new TextureView(screen, textureViewNative);

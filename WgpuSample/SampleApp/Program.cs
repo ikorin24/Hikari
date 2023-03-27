@@ -33,7 +33,7 @@ internal class Program
     {
         screen.Title = "sample";
         var layer = new PbrLayer(screen);
-        var deferredProcess = new DeferredProcess(layer.GBuffer);
+        var deferredProcess = new DeferredProcess(layer);
         var model = new PbrModel(layer, SampleData.SampleMesh(screen));
         model.Material.SetUniform(new(Color4.Red, Color4.Green, Color4.Blue));
     }
@@ -357,7 +357,9 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
     );
 }
 
-public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMaterial>
+public sealed class PbrLayer
+    : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMaterial>,
+    IGBufferProvider
 {
     private const int MrtCount = 3;
     private static readonly TextureFormat[] _formats = new TextureFormat[MrtCount]
@@ -388,22 +390,32 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
         },
     };
 
-    private readonly Own<GBuffer> _gBuffer;
+    private Own<GBuffer> _gBuffer;
+    private EventSource<GBuffer> _gBufferChanged = new();
 
-    public GBuffer GBuffer => _gBuffer.AsValue();
+    public GBuffer CurrentGBuffer => _gBuffer.AsValue();
+
+    public Event<GBuffer> GBufferChanged => _gBufferChanged.Event;
 
     public PbrLayer(Screen screen)
         : base(PbrShader.Create(screen), static shader => BuildPipeline(shader))
     {
-        _gBuffer = GBuffer.Create(screen, screen.ClientSize, _formats);
-        screen.Resized.Subscribe(x =>
-        {
-            _gBuffer.AsValue().Resize(x.Size);
-        }).AddTo(Subscriptions);
+        RecreateGBuffer(screen, screen.ClientSize);
+        screen.Resized.Subscribe(x => RecreateGBuffer(x.Screen, x.Size)).AddTo(Subscriptions);
         Dead.Subscribe(static x =>
         {
             ((PbrLayer)x)._gBuffer.Dispose();
         }).AddTo(Subscriptions);
+    }
+
+    private void RecreateGBuffer(Screen screen, Vector2u newSize)
+    {
+        if(_gBuffer.TryAsValue(out var gBuffer) && gBuffer.Size == newSize) {
+            return;
+        }
+        _gBuffer.Dispose();
+        _gBuffer = GBuffer.Create(screen, newSize, _formats);
+        _gBufferChanged.Invoke(_gBuffer.AsValue());
     }
 
     protected override Own<RenderPass> CreateRenderPass(in CommandEncoder encoder)
@@ -459,6 +471,12 @@ public sealed class PbrLayer : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMat
     }
 }
 
+public interface IGBufferProvider
+{
+    GBuffer CurrentGBuffer { get; }
+    Event<GBuffer> GBufferChanged { get; }
+}
+
 // --------
 
 public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, DeferredProcessMaterial>
@@ -474,23 +492,28 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
         };
     }
 
-    private readonly GBuffer _gBuffer;
-    private readonly Own<DeferredProcessMaterial> _material;
+    private readonly IGBufferProvider _gBufferProvider;
+    private Own<DeferredProcessMaterial> _material;
     private readonly Own<Mesh<PosUV>> _rectMesh;
 
-    public GBuffer GBuffer => _gBuffer;
-
-    public DeferredProcess(GBuffer gBuffer)
-        : base(CreateShader(gBuffer, out var pipeline), pipeline)
+    public DeferredProcess(IGBufferProvider gBufferProvider)
+        : base(CreateShader(gBufferProvider, out var gBuffer, out var pipeline), pipeline)
     {
-        _gBuffer = gBuffer;
+        _gBufferProvider = gBufferProvider;
+
         _material = DeferredProcessMaterial.Create(Shader, gBuffer);
+        gBufferProvider.GBufferChanged.Subscribe(gBuffer =>
+        {
+            _material.Dispose();
+            _material = DeferredProcessMaterial.Create(Shader, gBuffer);
+        });
+
         ReadOnlySpan<PosUV> vertices = stackalloc PosUV[]
         {
-            new(new(-1, -1, 0), new(0, 0)),
-            new(new(1, -1, 0), new(1, 0)),
-            new(new(1, 1, 0), new(1, 1)),
-            new(new(-1, 1, 0), new(0, 1)),
+            new(new(-1, -1, 0.5f), new(0, 0)),
+            new(new(1, -1, 0.5f), new(1, 0)),
+            new(new(1, 1, 0.5f), new(1, 1)),
+            new(new(-1, 1, 0.5f), new(0, 1)),
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
         _rectMesh = Mesh<PosUV>.Create(Screen, vertices, indices);
@@ -502,12 +525,11 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
         }).AddTo(Subscriptions);
     }
 
-    private static Own<DeferredProcessShader> CreateShader(GBuffer gBuffer, out Own<RenderPipeline> pipeline)
+    private static Own<DeferredProcessShader> CreateShader(IGBufferProvider gBufferProvider, out GBuffer gBuffer, out Own<RenderPipeline> pipeline)
     {
-        ArgumentNullException.ThrowIfNull(gBuffer);
+        gBuffer = gBufferProvider.CurrentGBuffer;
         var screen = gBuffer.Screen;
         var shader = DeferredProcessShader.Create(screen);
-
         var desc = new RenderPipelineDescriptor
         {
             Layout = shader.AsValue().PipelineLayout,
@@ -606,6 +628,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             var c2: vec3<f32> = textureSample(g2, g_sampler, in.uv).xyz;
             var c = c0 + c1 + c2;
             return vec4(c, 1.0);
+            //return vec4(1.0, 0.5, 1.0, 1.0);
         }
         """u8;
 

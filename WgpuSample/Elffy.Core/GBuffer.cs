@@ -1,19 +1,22 @@
 ﻿#nullable enable
 using Elffy.NativeBind;
 using System;
+using System.Threading;
 
 namespace Elffy;
 
-public sealed class GBuffer
+public sealed class GBuffer : IScreenManaged
 {
     private readonly Screen _screen;
-    private Vector2u _size;
-    private readonly Own<Texture>[] _colors;
+    private readonly Vector2u _size;
+    private Own<Texture>[] _colors;
     private readonly CE.Opt<CE.RenderPassColorAttachment>[] _colorsNative;
+    private readonly int _colorAttachmentCount;
 
-    public int ColorAttachmentCount => _colors.Length;
-
+    public int ColorAttachmentCount => _colorAttachmentCount;
     public Screen Screen => _screen;
+    public bool IsManaged => _colors.Length != 0;
+    public Vector2u Size => _size;
 
     private GBuffer(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
@@ -21,6 +24,7 @@ public sealed class GBuffer
         var colorsNative = new CE.Opt<CE.RenderPassColorAttachment>[formats.Length];
         Prepare(screen, size, formats, colors, colorsNative);
 
+        _colorAttachmentCount = formats.Length;
         _screen = screen;
         _colors = colors;
         _colorsNative = colorsNative;
@@ -28,7 +32,11 @@ public sealed class GBuffer
 
     private void Release()
     {
-        foreach(var color in _colors) {
+        var colors = Interlocked.Exchange(ref _colors, Array.Empty<Own<Texture>>());
+        if(colors.Length == 0) {
+            return;
+        }
+        foreach(var color in colors) {
             color.Dispose();
         }
     }
@@ -45,22 +53,8 @@ public sealed class GBuffer
 
     public Texture ColorAttachment(int index)
     {
+        this.ThrowIfNotScreenManaged();
         return _colors[index].AsValue();
-    }
-
-    public void Resize(Vector2u size)
-    {
-        if(_size == size) {
-            return;
-        }
-        Span<TextureFormat> formats = stackalloc TextureFormat[_colors.Length];
-        for(int i = 0; i < _colors.Length; i++) {
-            formats[i] = _colors[i].AsValue().Format;
-        }
-        foreach(var color in _colors) {
-            color.Dispose();
-        }
-        Prepare(_screen, size, formats, _colors, _colorsNative);
     }
 
     private static void Prepare(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats, Span<Own<Texture>> colors, Span<CE.Opt<CE.RenderPassColorAttachment>> colorsNative)
@@ -85,6 +79,7 @@ public sealed class GBuffer
 
     public unsafe Own<RenderPass> CreateRenderPass(in CommandEncoder encoder)
     {
+        this.ThrowIfNotScreenManaged();
         var attachmentsNative = _colorsNative;
         fixed(CE.Opt<CE.RenderPassColorAttachment>* p = attachmentsNative) {
             var desc = new CE.RenderPassDescriptor

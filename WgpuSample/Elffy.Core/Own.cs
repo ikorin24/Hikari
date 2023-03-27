@@ -79,6 +79,7 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
     public static explicit operator T(Own<T> own) => own.AsValue();
 
     [DoesNotReturn]
+    [DebuggerHidden]
     private static void ThrowNoValue() => throw new InvalidOperationException("no value exists");
 
     public override bool Equals(object? obj) => obj is Own<T> own && Equals(own);
