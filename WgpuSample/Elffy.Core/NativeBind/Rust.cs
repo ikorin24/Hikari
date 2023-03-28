@@ -51,7 +51,7 @@ internal static class Rust
         {
             var p = _p;
             box = Unsafe.As<NativePointer, Box<T>>(ref p);
-            return (void*)p == null;
+            return (void*)p != null;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
