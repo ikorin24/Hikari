@@ -64,7 +64,6 @@ public static class Engine
         {
             Debug.Assert(width != 0);
             Debug.Assert(height != 0);
-            Debug.WriteLine($"({width}, {height})");
             _screens[id].OnResized(width, height);
         };
 
