@@ -24,7 +24,7 @@ internal class Program
     private static void OnInitialized(Screen screen)
     {
         screen.Title = "sample";
-        var layer = new MyObjectLayer(screen);
+        var layer = new MyObjectLayer(screen, 0);
         var model = new MyModel(layer, SampleData.SampleMesh(screen), SampleData.SampleTexture(screen));
         model.Material.SetUniform(new Vector3(0.1f, 0.4f, 0));
     }
@@ -32,11 +32,8 @@ internal class Program
     private static void OnInitialized2(Screen screen)
     {
         screen.Title = "sample";
-
-        // TODO: render op order
-
-        var layer = new PbrLayer(screen);
-        var deferredProcess = new DeferredProcess(layer);
+        var layer = new PbrLayer(screen, 0);
+        var deferredProcess = new DeferredProcess(layer, 1);
         var model = new PbrModel(layer, SampleData.SampleMesh(screen));
         model.Material.SetUniform(new(Color4.Red, Color4.Green, Color4.Blue));
     }
@@ -186,8 +183,8 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
 
 public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShader, MyMaterial>
 {
-    public MyObjectLayer(Screen screen)
-        : base(MyShader.Create(screen), static shader => BuildPipeline(shader))
+    public MyObjectLayer(Screen screen, int sortOrder)
+        : base(MyShader.Create(screen), static shader => BuildPipeline(shader), sortOrder)
     {
     }
 
@@ -400,8 +397,8 @@ public sealed class PbrLayer
 
     public Event<GBuffer> GBufferChanged => _gBufferChanged.Event;
 
-    public PbrLayer(Screen screen)
-        : base(PbrShader.Create(screen), static shader => BuildPipeline(shader))
+    public PbrLayer(Screen screen, int sortOrder)
+        : base(PbrShader.Create(screen), static shader => BuildPipeline(shader), sortOrder)
     {
         RecreateGBuffer(screen, screen.ClientSize);
         screen.Resized.Subscribe(x => RecreateGBuffer(x.Screen, x.Size)).AddTo(Subscriptions);
@@ -499,8 +496,8 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
     private Own<DeferredProcessMaterial> _material;
     private readonly Own<Mesh<PosUV>> _rectMesh;
 
-    public DeferredProcess(IGBufferProvider gBufferProvider)
-        : base(CreateShader(gBufferProvider, out var gBuffer, out var pipeline), pipeline)
+    public DeferredProcess(IGBufferProvider gBufferProvider, int sortOrder)
+        : base(CreateShader(gBufferProvider, out var gBuffer, out var pipeline), pipeline, sortOrder)
     {
         _gBufferProvider = gBufferProvider;
 

@@ -12,6 +12,7 @@ public abstract class RenderOperation
     private readonly Screen _screen;
     private readonly Own<RenderPipeline> _pipeline;
     private LifeState _lifeState;
+    private readonly int _sortOrder;
     private readonly SubscriptionBag _subscriptions = new();
     private EventSource<RenderOperation> _onDead = new();
 
@@ -19,13 +20,15 @@ public abstract class RenderOperation
     public RenderPipeline Pipeline => _pipeline.AsValue();
     public LifeState LifeState => _lifeState;
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
+    public int SortOrder => _sortOrder;
     public Event<RenderOperation> Dead => _onDead.Event;
 
-    protected RenderOperation(Screen screen, Own<RenderPipeline> pipeline)
+    protected RenderOperation(Screen screen, Own<RenderPipeline> pipeline, int sortOrder)
     {
         _screen = screen;
         _pipeline = pipeline;
         _lifeState = LifeState.New;
+        _sortOrder = sortOrder;
         screen.RenderOperations.Add(this);
     }
 
@@ -88,7 +91,8 @@ public abstract class RenderOperation<TShader, TMaterial>
 
     public TShader Shader => _shader.AsValue();
 
-    protected RenderOperation(Own<TShader> shader, Own<RenderPipeline> pipeline) : base(shader.AsValue().Screen, pipeline)
+    protected RenderOperation(Own<TShader> shader, Own<RenderPipeline> pipeline, int sortOrder)
+        : base(shader.AsValue().Screen, pipeline, sortOrder)
     {
         shader.ThrowArgumentExceptionIfNone();
         _shader = shader;
@@ -107,16 +111,17 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
     private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial>> _removedList;
     private readonly object _sync = new object();
 
-    protected ObjectLayer(Own<TShader> shader, Func<TShader, RenderPipelineDescriptor> pipelineDescGen)
-        : this(shader, pipelineDescGen(shader.AsValue())) { }
+    protected ObjectLayer(Own<TShader> shader, Func<TShader, RenderPipelineDescriptor> pipelineDescGen, int sortOrder)
+        : this(shader, pipelineDescGen(shader.AsValue()), sortOrder) { }
 
-    protected ObjectLayer(Own<TShader> shader, Func<TShader, Own<RenderPipeline>> pipelineGen)
-        : this(shader, pipelineGen(shader.AsValue())) { }
+    protected ObjectLayer(Own<TShader> shader, Func<TShader, Own<RenderPipeline>> pipelineGen, int sortOrder)
+        : this(shader, pipelineGen(shader.AsValue()), sortOrder) { }
 
-    protected ObjectLayer(Own<TShader> shader, in RenderPipelineDescriptor pipelineDesc)
-        : this(shader, RenderPipeline.Create(shader.AsValue().Screen, pipelineDesc)) { }
+    protected ObjectLayer(Own<TShader> shader, in RenderPipelineDescriptor pipelineDesc, int sortOrder)
+        : this(shader, RenderPipeline.Create(shader.AsValue().Screen, pipelineDesc), sortOrder) { }
 
-    protected ObjectLayer(Own<TShader> shader, Own<RenderPipeline> pipeline) : base(shader, pipeline)
+    protected ObjectLayer(Own<TShader> shader, Own<RenderPipeline> pipeline, int sortOrder)
+        : base(shader, pipeline, sortOrder)
     {
         _list = new();
         _addedList = new();

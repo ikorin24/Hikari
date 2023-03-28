@@ -61,6 +61,7 @@ public sealed class RenderOperations
         lock(_sync) {
             if(addedList.Count > 0) {
                 list.AddRange(addedList);
+                list.Sort((x, y) => x.SortOrder - y.SortOrder);
                 foreach(var addedItem in addedList.AsSpan()) {
                     addedItem.SetLifeStateAlive();
                 }
@@ -99,6 +100,7 @@ public sealed class RenderOperations
                         removedItem.Release();
                     }
                 }
+                list.Sort((x, y) => x.SortOrder - y.SortOrder);
                 removedList.Clear();
                 isRemoved = true;
             }
