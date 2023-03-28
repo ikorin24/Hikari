@@ -23,17 +23,13 @@ public abstract class Renderable<TLayer, TVertex, TShader, TMaterial>
         _mesh = mesh;
     }
 
-    internal void Render(RenderPass renderPass)
-    {
-        var material = Material;
-        var bindGroups = material.BindGroups.Span;
-        var mesh = _mesh.AsValue();
-        for(int i = 0; i < bindGroups.Length; i++) {
-            renderPass.SetBindGroup((uint)i, bindGroups[i]);
-        }
+    internal void InvokeRender(RenderPass renderPass) => Render(renderPass);
 
-        renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
-        renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+    protected virtual void Render(RenderPass renderPass)
+    {
+        var mesh = Mesh;
+        renderPass.SetMaterial(Material);
+        renderPass.SetMesh(0, mesh);
         renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
     }
 

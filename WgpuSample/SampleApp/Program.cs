@@ -32,6 +32,9 @@ internal class Program
     private static void OnInitialized2(Screen screen)
     {
         screen.Title = "sample";
+
+        // TODO: render op order
+
         var layer = new PbrLayer(screen);
         var deferredProcess = new DeferredProcess(layer);
         var model = new PbrModel(layer, SampleData.SampleMesh(screen));

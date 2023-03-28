@@ -52,6 +52,33 @@ public readonly struct RenderPass
     {
         _native.AsMut().SetBindGroup(index, bindGroup.NativeRef);
     }
+
+    public void SetBindGroups(ReadOnlySpan<BindGroup> bindGroups)
+    {
+        var native = _native.AsMut();
+        for(int i = 0; i < bindGroups.Length; i++) {
+            native.SetBindGroup((u32)i, bindGroups[i].NativeRef);
+        }
+    }
+
+    public void SetMaterial<TMaterial, TShader>(Material<TMaterial, TShader> material)
+        where TMaterial : Material<TMaterial, TShader>
+        where TShader : Shader<TShader, TMaterial>
+    {
+        var native = _native.AsMut();
+        var bindGroups = material.BindGroups.Span;
+        for(int i = 0; i < bindGroups.Length; i++) {
+            native.SetBindGroup((u32)i, bindGroups[i].NativeRef);
+        }
+    }
+
+    public void SetMesh<TVertex>(u32 slot, Mesh<TVertex> mesh) where TVertex : unmanaged, IVertex<TVertex>
+    {
+        var native = _native.AsMut();
+        native.SetVertexBuffer(slot, mesh.VertexBuffer.Native());
+        native.SetIndexBuffer(mesh.IndexBuffer.Native(), mesh.IndexFormat.MapOrThrow());
+    }
+
     public void SetVertexBuffer(u32 slot, Buffer buffer)
     {
         var bufferSlice = new CE.BufferSlice(buffer.NativeRef, CE.RangeBoundsU64.RangeFull);

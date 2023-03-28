@@ -4,13 +4,13 @@ using System.Diagnostics;
 
 namespace Elffy;
 
-public abstract class FrameObject
+public abstract class FrameObject : IScreenManaged
 {
     private readonly Screen _screen;
     private string? _name;
-    private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
 
     public Screen Screen => _screen;
+    public abstract LifeState LifeState { get; }
 
     public string? Name
     {
@@ -18,10 +18,9 @@ public abstract class FrameObject
         set => _name = value;
     }
 
-    public SubscriptionRegister Subscriptions => _subscriptions.Register;
+    public abstract SubscriptionRegister Subscriptions { get; }
 
-    public abstract bool IsFrozen { get; set; }
-    public abstract LifeState LifeState { get; }
+    public bool IsManaged => LifeState != LifeState.Dead;
 
     protected FrameObject(Screen screen)
     {
@@ -37,13 +36,14 @@ public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameOb
     where TMaterial : Material<TMaterial, TShader>
 {
     private readonly TLayer _layer;
+    private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
     private LifeState _state;
     private bool _isFrozen;
 
     public TLayer Layer => _layer;
     public sealed override LifeState LifeState => _state;
-
-    public sealed override bool IsFrozen
+    public sealed override SubscriptionRegister Subscriptions => _subscriptions.Register;
+    public bool IsFrozen
     {
         get => _isFrozen;
         set => _isFrozen = value;
@@ -72,5 +72,6 @@ public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameOb
     internal virtual void OnDead()
     {
         Debug.Assert(_state == LifeState.Dead);
+        _subscriptions.Dispose();
     }
 }

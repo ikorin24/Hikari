@@ -10,21 +10,21 @@ namespace Elffy;
 public abstract class RenderOperation
 {
     private readonly Screen _screen;
-    private readonly Own<RenderPipeline> _pipelineOwn;
+    private readonly Own<RenderPipeline> _pipeline;
     private LifeState _lifeState;
     private readonly SubscriptionBag _subscriptions = new();
     private EventSource<RenderOperation> _onDead = new();
 
     public Screen Screen => _screen;
-    public RenderPipeline Pipeline => _pipelineOwn.AsValue();
+    public RenderPipeline Pipeline => _pipeline.AsValue();
     public LifeState LifeState => _lifeState;
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
     public Event<RenderOperation> Dead => _onDead.Event;
 
-    protected RenderOperation(Screen screen, Own<RenderPipeline> pipelineOwn)
+    protected RenderOperation(Screen screen, Own<RenderPipeline> pipeline)
     {
         _screen = screen;
-        _pipelineOwn = pipelineOwn;
+        _pipeline = pipeline;
         _lifeState = LifeState.New;
         screen.RenderOperations.Add(this);
     }
@@ -49,7 +49,7 @@ public abstract class RenderOperation
 
     internal void Release()
     {
-        _pipelineOwn.Dispose();
+        _pipeline.Dispose();
         _onDead.Invoke(this);
         _subscriptions.Dispose();
     }
@@ -84,14 +84,14 @@ public abstract class RenderOperation<TShader, TMaterial>
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
-    private readonly Own<TShader> _shaderOwn;
+    private readonly Own<TShader> _shader;
 
-    public TShader Shader => _shaderOwn.AsValue();
+    public TShader Shader => _shader.AsValue();
 
-    protected RenderOperation(Own<TShader> shaderOwn, Own<RenderPipeline> pipelineOwn) : base(shaderOwn.AsValue().Screen, pipelineOwn)
+    protected RenderOperation(Own<TShader> shader, Own<RenderPipeline> pipeline) : base(shader.AsValue().Screen, pipeline)
     {
-        shaderOwn.ThrowArgumentExceptionIfNone();
-        _shaderOwn = shaderOwn;
+        shader.ThrowArgumentExceptionIfNone();
+        _shader = shader;
     }
 }
 
@@ -186,7 +186,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
         renderPass.SetPipeline(Pipeline);
         foreach(var obj in _list.AsSpan()) {
             if(obj is Renderable<TSelf, TVertex, TShader, TMaterial> renderable) {
-                renderable.Render(renderPass);
+                renderable.InvokeRender(renderPass);
             }
         }
     }
