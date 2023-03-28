@@ -1,6 +1,7 @@
 #![cfg(target_os = "windows")]
 
 use crate::screen::*;
+use dpi::{PhysicalSize, Size};
 use winit::window::{Fullscreen, WindowButtons};
 
 pub(crate) fn create_window(
@@ -9,10 +10,11 @@ pub(crate) fn create_window(
 ) -> Result<window::Window, Box<dyn Error>> {
     let window = window::WindowBuilder::new()
         .with_title("")
-        .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(
+        .with_inner_size(Size::Physical(dpi::PhysicalSize::new(
             config.width,
             config.height,
         )))
+        .with_min_inner_size(Size::Physical(PhysicalSize::new(1, 1)))
         .with_theme(None)
         .build(event_loop)?;
     match config.style {
