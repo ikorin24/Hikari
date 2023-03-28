@@ -2,6 +2,7 @@
 using Elffy.NativeBind;
 using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -208,12 +209,11 @@ public sealed class Screen
 
     internal void OnResized(uint width, uint height)
     {
+        Debug.Assert(width != 0);
+        Debug.Assert(height != 0);
         var size = new Vector2u(width, height);
-        if(size.X != 0 && size.Y != 0) {
-            _native.Unwrap().AsRef().ScreenResizeSurface(size.X, size.Y);
-            UpdateDepthTexture(size);
-        }
-
+        _native.Unwrap().AsRef().ScreenResizeSurface(size.X, size.Y);
+        UpdateDepthTexture(size);
         _resized.Invoke((this, size));
     }
 

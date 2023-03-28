@@ -2,6 +2,7 @@
 using Elffy.NativeBind;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace Elffy;
@@ -61,6 +62,9 @@ public static class Engine
     private static readonly Action<CE.ScreenId, uint, uint> _onResized =
         (CE.ScreenId id, uint width, uint height) =>
         {
+            Debug.Assert(width != 0);
+            Debug.Assert(height != 0);
+            Debug.WriteLine($"({width}, {height})");
             _screens[id].OnResized(width, height);
         };
 
