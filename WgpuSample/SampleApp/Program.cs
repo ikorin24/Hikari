@@ -256,7 +256,7 @@ public sealed class PbrModel : Renderable<PbrLayer, MyVertex, PbrShader, PbrMate
 public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
 {
     private static ReadOnlySpan<byte> ShaderSource => """
-        struct MyVertex {
+        struct Vin {
             @location(0) pos: vec3<f32>,
             @location(1) uv: vec2<f32>,
         }
@@ -267,6 +267,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             @location(0) g0 : vec4<f32>,
             @location(1) g1 : vec4<f32>,
             @location(2) g2 : vec4<f32>,
+            @location(3) g3 : vec4<f32>,
         }
         struct UniformValue {
             c0: vec4<f32>,
@@ -277,7 +278,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         @group(0) @binding(0) var<uniform> uniform: UniformValue;
 
         @vertex fn vs_main(
-            v: MyVertex,
+            v: Vin,
         ) -> V2F {
             var output: V2F;
             output.clip_pos = vec4(v.pos, 1.0);
@@ -289,6 +290,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             output.g0 = uniform.c0;
             output.g1 = uniform.c1;
             output.g2 = uniform.c2;
+            output.g3 = vec4(1.0, 1.0, 1.0, 1.0);
             return output;
         }
         """u8;
@@ -361,9 +363,10 @@ public sealed class PbrLayer
     : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMaterial>,
     IGBufferProvider
 {
-    private const int MrtCount = 3;
+    private const int MrtCount = 4;
     private static readonly TextureFormat[] _formats = new TextureFormat[MrtCount]
     {
+        TextureFormat.Rgba32Float,
         TextureFormat.Rgba32Float,
         TextureFormat.Rgba32Float,
         TextureFormat.Rgba32Float,
@@ -385,6 +388,12 @@ public sealed class PbrLayer
         new ColorTargetState
         {
             Format = _formats[2],
+            Blend = null,
+            WriteMask = ColorWrites.All,
+        },
+        new ColorTargetState
+        {
+            Format = _formats[3],
             Blend = null,
             WriteMask = ColorWrites.All,
         },
@@ -616,6 +625,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         @group(0) @binding(1) var g0: texture_2d<f32>;
         @group(0) @binding(2) var g1: texture_2d<f32>;
         @group(0) @binding(3) var g2: texture_2d<f32>;
+        @group(0) @binding(4) var g3: texture_2d<f32>;
 
         @vertex fn vs_main(
             v: Vin,
@@ -659,6 +669,12 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                 ViewDimension = TextureViewDimension.D2,
                 SampleType = TextureSampleType.FloatNotFilterable,
             }, 0),
+            BindGroupLayoutEntry.Texture(4, ShaderStages.Fragment, new TextureBindingData
+            {
+                Multisampled = false,
+                ViewDimension = TextureViewDimension.D2,
+                SampleType = TextureSampleType.FloatNotFilterable,
+            }, 0),
         }
     };
 
@@ -692,6 +708,7 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
                 BindGroupEntry.TextureView(1, gBuffer.ColorAttachment(0).View),
                 BindGroupEntry.TextureView(2, gBuffer.ColorAttachment(1).View),
                 BindGroupEntry.TextureView(3, gBuffer.ColorAttachment(2).View),
+                BindGroupEntry.TextureView(4, gBuffer.ColorAttachment(3).View),
             },
         };
         var bg = BindGroup.Create(screen, desc);
