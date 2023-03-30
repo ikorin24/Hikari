@@ -1,7 +1,5 @@
 ﻿#nullable enable
-using Elffy.Effective;
 using System;
-using System.Diagnostics;
 
 namespace Elffy;
 
@@ -40,9 +38,9 @@ internal class Program
 }
 //internal record struct InstanceData(Vector3 Offset);
 
-public sealed class MyModel : Renderable<MyObjectLayer, MyVertex, MyShader, MyMaterial>
+public sealed class MyModel : Renderable<MyObjectLayer, VertexSlim, MyShader, MyMaterial>
 {
-    public MyModel(MyObjectLayer layer, Own<Mesh<MyVertex>> mesh, Own<Texture> texture) : base(layer, mesh, MyMaterial.Create(layer.Shader, texture))
+    public MyModel(MyObjectLayer layer, Own<Mesh<VertexSlim>> mesh, Own<Texture> texture) : base(layer, mesh, MyMaterial.Create(layer.Shader, texture))
     {
     }
 }
@@ -181,7 +179,7 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
     }
 }
 
-public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShader, MyMaterial>
+public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, VertexSlim, MyShader, MyMaterial>
 {
     public MyObjectLayer(Screen screen, int sortOrder)
         : base(MyShader.Create(screen), static shader => BuildPipeline(shader), sortOrder)
@@ -200,7 +198,7 @@ public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShade
                 EntryPoint = "vs_main"u8.ToArray(),
                 Buffers = new VertexBufferLayout[]
                 {
-                    VertexBufferLayout.FromVertex<MyVertex>(stackalloc[]
+                    VertexBufferLayout.FromVertex<VertexSlim>(stackalloc[]
                     {
                         (0, VertexFieldSemantics.Position),
                         (1, VertexFieldSemantics.UV),
@@ -246,9 +244,9 @@ public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, MyVertex, MyShade
 
 // --------
 
-public sealed class PbrModel : Renderable<PbrLayer, MyVertex, PbrShader, PbrMaterial>
+public sealed class PbrModel : Renderable<PbrLayer, VertexSlim, PbrShader, PbrMaterial>
 {
-    public PbrModel(PbrLayer layer, Own<Mesh<MyVertex>> mesh) : base(layer, mesh, PbrMaterial.Create(layer.Shader))
+    public PbrModel(PbrLayer layer, Own<Mesh<VertexSlim>> mesh) : base(layer, mesh, PbrMaterial.Create(layer.Shader))
     {
     }
 }
@@ -360,7 +358,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 }
 
 public sealed class PbrLayer
-    : ObjectLayer<PbrLayer, MyVertex, PbrShader, PbrMaterial>,
+    : ObjectLayer<PbrLayer, VertexSlim, PbrShader, PbrMaterial>,
     IGBufferProvider
 {
     private const int MrtCount = 4;
@@ -444,7 +442,7 @@ public sealed class PbrLayer
                 EntryPoint = "vs_main"u8.ToArray(),
                 Buffers = new VertexBufferLayout[]
                 {
-                    VertexBufferLayout.FromVertex<MyVertex>(stackalloc[]
+                    VertexBufferLayout.FromVertex<VertexSlim>(stackalloc[]
                     {
                         (0, VertexFieldSemantics.Position),
                         (1, VertexFieldSemantics.UV),
@@ -552,7 +550,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
                 EntryPoint = "vs_main"u8.ToArray(),
                 Buffers = new VertexBufferLayout[]
                 {
-                    VertexBufferLayout.FromVertex<MyVertex>(stackalloc[]
+                    VertexBufferLayout.FromVertex<VertexSlim>(stackalloc[]
                     {
                         (0, VertexFieldSemantics.Position),
                         (1, VertexFieldSemantics.UV),
