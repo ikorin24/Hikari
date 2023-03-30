@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 namespace Elffy;
 
 public sealed class Mesh<TVertex>
-    where TVertex : unmanaged, IVertex<TVertex>
+    where TVertex : unmanaged, IVertex
 {
     private readonly Own<Buffer> _vertexBuffer;
     private readonly Own<Buffer> _indexBuffer;

@@ -362,13 +362,13 @@ public readonly struct VertexBufferLayout
     }
 
     public static VertexBufferLayout FromVertex<TVertex>(ReadOnlySpan<(int Location, VertexFieldSemantics Semantics)> mapping)
-        where TVertex : unmanaged, IVertex<TVertex>
+        where TVertex : unmanaged, IVertex
     {
         return FromVertex<TVertex>(mapping.MarshalCast<(int Location, VertexFieldSemantics Semantics), (uint Location, VertexFieldSemantics Semantics)>());
     }
 
     public static VertexBufferLayout FromVertex<TVertex>(ReadOnlySpan<(uint Location, VertexFieldSemantics Semantics)> mapping)
-        where TVertex : unmanaged, IVertex<TVertex>
+        where TVertex : unmanaged, IVertex
     {
         var fields = TVertex.Fields.Span;
         var attrs = new VertexAttr[mapping.Length];

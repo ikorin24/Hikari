@@ -490,7 +490,7 @@ public interface IGBufferProvider
 
 public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, DeferredProcessMaterial>
 {
-    private record struct PosUV(Vector3 Position, Vector2 UV) : IVertex<PosUV>
+    private record struct PosUV(Vector3 Position, Vector2 UV) : IVertex
     {
         public static unsafe uint VertexSize => (uint)sizeof(PosUV);
 

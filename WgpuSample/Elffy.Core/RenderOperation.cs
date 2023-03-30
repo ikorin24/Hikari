@@ -102,7 +102,7 @@ public abstract class RenderOperation<TShader, TMaterial>
 public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
     : RenderOperation<TShader, TMaterial>
     where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial>
-    where TVertex : unmanaged, IVertex<TVertex>
+    where TVertex : unmanaged, IVertex
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {

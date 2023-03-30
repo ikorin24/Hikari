@@ -72,7 +72,7 @@ public readonly struct RenderPass
         }
     }
 
-    public void SetMesh<TVertex>(u32 slot, Mesh<TVertex> mesh) where TVertex : unmanaged, IVertex<TVertex>
+    public void SetMesh<TVertex>(u32 slot, Mesh<TVertex> mesh) where TVertex : unmanaged, IVertex
     {
         var native = _native.AsMut();
         native.SetVertexBuffer(slot, mesh.VertexBuffer.Native());

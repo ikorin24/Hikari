@@ -31,7 +31,7 @@ public abstract class FrameObject : IScreenManaged
 
 public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameObject
     where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial>
-    where TVertex : unmanaged, IVertex<TVertex>
+    where TVertex : unmanaged, IVertex
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {

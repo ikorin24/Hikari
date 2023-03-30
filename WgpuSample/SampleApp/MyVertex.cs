@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace Elffy;
 
 [StructLayout(LayoutKind.Explicit)]
-public unsafe struct MyVertex : IVertex<MyVertex>
+public unsafe struct MyVertex : IVertex
 {
     [FieldOffset(0)]
     public Vector3 Pos;

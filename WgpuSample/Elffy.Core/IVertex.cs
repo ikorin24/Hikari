@@ -3,8 +3,7 @@ using System;
 
 namespace Elffy;
 
-public interface IVertex<TSelf>
-    where TSelf : unmanaged, IVertex<TSelf>
+public interface IVertex
 {
     abstract static u32 VertexSize { get; }
     abstract static ReadOnlyMemory<VertexField> Fields { get; }
