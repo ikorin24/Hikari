@@ -1,5 +1,9 @@
 ﻿#nullable enable
+using Elffy.Effective;
+using Elffy.Imaging;
 using System;
+using System.Diagnostics;
+using System.IO;
 
 namespace Elffy;
 
@@ -32,8 +36,55 @@ internal class Program
         screen.Title = "sample";
         var layer = new PbrLayer(screen, 0);
         var deferredProcess = new DeferredProcess(layer, 1);
-        var model = new PbrModel(layer, SampleData.SampleMesh(screen));
-        model.Material.SetUniform(new(Color4.Red, Color4.Green, Color4.Blue));
+
+
+        var sampler = Sampler.Create(screen, new()
+        {
+            AddressModeU = AddressMode.ClampToEdge,
+            AddressModeV = AddressMode.ClampToEdge,
+            AddressModeW = AddressMode.ClampToEdge,
+            MagFilter = FilterMode.Linear,
+            MinFilter = FilterMode.Linear,
+            MipmapFilter = FilterMode.Linear,
+            LodMinClamp = 0,
+            LodMaxClamp = float.MaxValue,
+            AnisotropyClamp = 0,
+            BorderColor = null,
+            Compare = null,
+        });
+        var albedo = LoadImage(screen, "pic.png", TextureFormat.Rgba8UnormSrgb);
+        var mr = LoadImage(screen, "pic.png", TextureFormat.Rgba8Unorm);
+
+        var model = new PbrModel(layer, SampleData.SampleMesh(screen), sampler, albedo, mr);
+        model.Material.SetUniform(new(Matrix4.Identity, Matrix4.Identity, Matrix4.Identity));
+    }
+
+    private static Own<Texture> LoadImage(Screen screen, string filepath, TextureFormat format)
+    {
+        Own<Texture> texture;
+        using(var stream = File.OpenRead(filepath)) {
+            using var image = Image.FromStream(stream, Path.GetExtension(filepath));
+            Debug.Assert(image.Width == 2048);
+            Debug.Assert(image.Height == 2048);
+            texture = Texture.Create(screen, new TextureDescriptor
+            {
+                Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
+                MipLevelCount = 6,
+                SampleCount = 1,
+                Dimension = TextureDimension.D2,
+                Format = format,
+                Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
+            });
+            var tex = texture.AsValue();
+            tex.Write<ColorByte>(0, image.GetPixels());
+            for(uint i = 1; i < tex.MipLevelCount; i++) {
+                var w = (image.Width >> (int)i);
+                var h = (image.Height >> (int)i);
+                using var curuent = image.Resized(new Vector2i(w, h));
+                tex.Write<ColorByte>(i, curuent.GetPixels());
+            }
+        }
+        return texture;
     }
 }
 //internal record struct InstanceData(Vector3 Offset);
@@ -246,7 +297,13 @@ public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, VertexSlim, MySha
 
 public sealed class PbrModel : Renderable<PbrLayer, VertexSlim, PbrShader, PbrMaterial>
 {
-    public PbrModel(PbrLayer layer, Own<Mesh<VertexSlim>> mesh) : base(layer, mesh, PbrMaterial.Create(layer.Shader))
+    public PbrModel(
+        PbrLayer layer,
+        Own<Mesh<VertexSlim>> mesh,
+        Own<Sampler> sampler,
+        Own<Texture> albedo,
+        Own<Texture> metallicRoughness)
+        : base(layer, mesh, PbrMaterial.Create(layer.Shader, sampler, albedo, metallicRoughness))
     {
     }
 }
@@ -260,6 +317,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         }
         struct V2F {
             @builtin(position) clip_pos: vec4<f32>,
+            @location(0) uv: vec2<f32>,
         }
         struct GBuffer {
             @location(0) g0 : vec4<f32>,
@@ -268,27 +326,31 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             @location(3) g3 : vec4<f32>,
         }
         struct UniformValue {
-            c0: vec4<f32>,
-            c1: vec4<f32>,
-            c2: vec4<f32>,
+            model: mat4x4<f32>,
+            view: mat4x4<f32>,
+            proj: mat4x4<f32>,
         }
 
-        @group(0) @binding(0) var<uniform> uniform: UniformValue;
+        @group(0) @binding(0) var<uniform> u: UniformValue;
+        @group(0) @binding(1) var tex_sampler: sampler;
+        @group(0) @binding(2) var albedo: texture_2d<f32>;
+        @group(0) @binding(3) var mr: texture_2d<f32>;
 
         @vertex fn vs_main(
             v: Vin,
         ) -> V2F {
             var output: V2F;
-            output.clip_pos = vec4(v.pos, 1.0);
+            output.clip_pos = u.proj * u.view * u.model * vec4(v.pos, 1.0);
+            output.uv = v.uv;
             return output;
         }
 
         @fragment fn fs_main(in: V2F) -> GBuffer {
             var output: GBuffer;
-            output.g0 = uniform.c0;
-            output.g1 = uniform.c1;
-            output.g2 = uniform.c2;
-            output.g3 = vec4(1.0, 1.0, 1.0, 1.0);
+            output.g0 = vec4(1.0, 1.0, 1.0, 1.0);
+            output.g1 = vec4(1.0, 1.0, 1.0, 1.0);
+            output.g2 = textureSample(albedo, tex_sampler, in.uv);
+            output.g3 = textureSample(mr, tex_sampler, in.uv);
             return output;
         }
         """u8;
@@ -299,7 +361,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         {
             BindGroupLayoutEntry.Buffer(
                 binding: 0,
-                visibility: ShaderStages.Fragment,
+                visibility: ShaderStages.Vertex,
                 type: new BufferBindingData
                 {
                     HasDynamicOffset = false,
@@ -307,11 +369,25 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
                     Type = BufferBindingType.Uniform,
                 },
                 count: 0),
+            BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Filtering, 0),
+            BindGroupLayoutEntry.Texture(2, ShaderStages.Fragment, new TextureBindingData
+            {
+                ViewDimension = TextureViewDimension.D2,
+                Multisampled = false,
+                SampleType = TextureSampleType.FloatFilterable,
+            }, 0),
+            BindGroupLayoutEntry.Texture(3, ShaderStages.Fragment, new TextureBindingData
+            {
+                ViewDimension = TextureViewDimension.D2,
+                Multisampled = false,
+                SampleType = TextureSampleType.FloatFilterable,
+            }, 0),
         },
     };
 
     private PbrShader(Screen screen) : base(screen, in _bglDesc, ShaderSource)
     {
+
     }
 
     public static Own<PbrShader> Create(Screen screen)
@@ -323,37 +399,73 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
 
 public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 {
+    private readonly Own<Sampler> _sampler;
+    private readonly Own<Texture> _albedo;
+    private readonly Own<Texture> _metallicRoughness;
     private readonly Own<Uniform<UniformValue>> _uniform;
 
-    private PbrMaterial(PbrShader shader, Own<Uniform<UniformValue>> uniform, Own<BindGroup> bindGroup)
+    public Texture Albedo => _albedo.AsValue();
+    public Texture MetallicRoughness => _metallicRoughness.AsValue();
+
+    private PbrMaterial(
+        PbrShader shader,
+        Own<Uniform<UniformValue>> uniform,
+        Own<Sampler> sampler,
+        Own<Texture> albedo,
+        Own<Texture> metallicRoughness,
+        Own<BindGroup> bindGroup)
         : base(shader, new[] { bindGroup })
     {
         _uniform = uniform;
+        _sampler = sampler;
     }
 
-    public static Own<PbrMaterial> Create(PbrShader shader, in UniformValue uniformValue = default)
+    protected override void Release(bool manualRelease)
     {
+        base.Release(manualRelease);
+        if(manualRelease) {
+            _uniform.Dispose();
+            _sampler.Dispose();
+            _albedo.Dispose();
+            _metallicRoughness.Dispose();
+        }
+    }
+
+    public static Own<PbrMaterial> Create(
+        PbrShader shader,
+        Own<Sampler> sampler,
+        Own<Texture> albedo,
+        Own<Texture> metallicRoughness)
+    {
+        ArgumentNullException.ThrowIfNull(shader);
+        sampler.ThrowArgumentExceptionIfNone();
+        albedo.ThrowArgumentExceptionIfNone();
+        metallicRoughness.ThrowArgumentExceptionIfNone();
+
         var screen = shader.Screen;
-        var uniform = Uniform<UniformValue>.Create(screen, in uniformValue);
+        var uniform = Uniform<UniformValue>.Create(screen, default);
         var desc = new BindGroupDescriptor
         {
             Layout = shader.GetBindGroupLayout(0),
-            Entries = new BindGroupEntry[1]
+            Entries = new BindGroupEntry[]
             {
                 BindGroupEntry.Buffer(0, uniform.AsValue().Buffer),
+                BindGroupEntry.Sampler(1, sampler.AsValue()),
+                BindGroupEntry.TextureView(2, albedo.AsValue().View),
+                BindGroupEntry.TextureView(3, metallicRoughness.AsValue().View),
             },
         };
         var bindGroup = BindGroup.Create(screen, in desc);
-        var material = new PbrMaterial(shader, uniform, bindGroup);
+        var material = new PbrMaterial(shader, uniform, sampler, albedo, metallicRoughness, bindGroup);
         return CreateOwn(material);
     }
 
     public void SetUniform(in UniformValue value) => _uniform.AsValue().Set(in value);
 
     public record struct UniformValue(
-        Color4 C0,
-        Color4 C1,
-        Color4 C2
+        Matrix4 Model,
+        Matrix4 View,
+        Matrix4 Projection
     );
 }
 
@@ -488,20 +600,9 @@ public interface IGBufferProvider
 
 public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, DeferredProcessMaterial>
 {
-    private record struct PosUV(Vector3 Position, Vector2 UV) : IVertex
-    {
-        public static unsafe uint VertexSize => (uint)sizeof(PosUV);
-
-        public static unsafe ReadOnlyMemory<VertexField> Fields => new[]
-        {
-            new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
-            new VertexField(12, 8, VertexFormat.Float32x2, VertexFieldSemantics.UV),
-        };
-    }
-
     private readonly IGBufferProvider _gBufferProvider;
     private Own<DeferredProcessMaterial> _material;
-    private readonly Own<Mesh<PosUV>> _rectMesh;
+    private readonly Own<Mesh<VertexSlim>> _rectMesh;
 
     public DeferredProcess(IGBufferProvider gBufferProvider, int sortOrder)
         : base(CreateShader(gBufferProvider, out var gBuffer, out var pipeline), pipeline, sortOrder)
@@ -511,7 +612,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
         RecreateMaterial(gBuffer);
         gBufferProvider.GBufferChanged.Subscribe(RecreateMaterial).AddTo(Subscriptions);
         const float Z = 0;
-        ReadOnlySpan<PosUV> vertices = stackalloc PosUV[]
+        ReadOnlySpan<VertexSlim> vertices = stackalloc VertexSlim[]
         {
             new(new(-1, -1, Z), new(0, 0)),
             new(new(1, -1, Z), new(1, 0)),
@@ -519,7 +620,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
             new(new(-1, 1, Z), new(0, 1)),
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
-        _rectMesh = Mesh<PosUV>.Create(Screen, vertices, indices);
+        _rectMesh = Mesh<VertexSlim>.Create(Screen, vertices, indices);
         Dead.Subscribe(static x => ((DeferredProcess)x).OnDead()).AddTo(Subscriptions);
     }
 
@@ -638,9 +739,8 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             var c0: vec3<f32> = textureSample(g0, g_sampler, in.uv).xyz;
             var c1: vec3<f32> = textureSample(g1, g_sampler, in.uv).xyz;
             var c2: vec3<f32> = textureSample(g2, g_sampler, in.uv).xyz;
-            var c = c0 + c1 + c2;
-            return vec4(c, 1.0);
-            //return vec4(1.0, 0.5, 1.0, 1.0);
+            var c3: vec3<f32> = textureSample(g3, g_sampler, in.uv).xyz;
+            return vec4(c2, 1.0);
         }
         """u8;
 

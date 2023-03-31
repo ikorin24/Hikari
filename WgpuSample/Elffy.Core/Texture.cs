@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Elffy.Imaging;
 using Elffy.NativeBind;
 using System;
 
@@ -78,8 +79,12 @@ public sealed class Texture : IScreenManaged
     {
         var screenRef = _screen.AsRefChecked();
         var texture = NativeRef;
-        var size = new Wgpu.Extent3d(Width, Height, Depth);
+        var size = new Wgpu.Extent3d((Width >> (int)mipLevel), (Height >> (int)mipLevel), Depth);
         u32 bytesPerPixel = (u32)sizeof(TPixel);
+
+        if((ulong)size.width * (ulong)size.height != (ulong)pixelData.Length) {
+            throw new ArgumentException($"length of {nameof(pixelData)} is invalid");
+        }
 
         fixed(TPixel* p = pixelData) {
             screenRef.WriteTexture(
