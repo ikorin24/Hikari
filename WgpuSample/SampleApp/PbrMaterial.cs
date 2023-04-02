@@ -26,6 +26,9 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
     {
         _uniform = uniform;
         _sampler = sampler;
+        _albedo = albedo;
+        _metallicRoughness = metallicRoughness;
+        _normal = normal;
     }
 
     protected override void Release(bool manualRelease)
