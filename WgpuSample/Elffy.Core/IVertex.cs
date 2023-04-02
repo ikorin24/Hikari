@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Elffy;
@@ -11,7 +12,91 @@ public interface IVertex
     abstract static VertexFields Fields { get; }
 }
 
+public static class VertexAccessor
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly Vector3 Position<TVertex>(in TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexPosition
+    {
+        return ref Unsafe.As<TVertex, Vector3>(
+            ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in v), TVertex.PositionOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref Vector3 RefPosition<TVertex>(ref TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexPosition
+    {
+        return ref Unsafe.As<TVertex, Vector3>(
+            ref Unsafe.AddByteOffset(ref v, TVertex.PositionOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly Vector2 UV<TVertex>(in TVertex v)
+    where TVertex : unmanaged, IVertex, IVertexUV
+    {
+        return ref Unsafe.As<TVertex, Vector2>(
+            ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in v), TVertex.UVOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref Vector2 RefUV<TVertex>(ref TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexUV
+    {
+        return ref Unsafe.As<TVertex, Vector2>(
+            ref Unsafe.AddByteOffset(ref v, TVertex.UVOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly Vector3 Normal<TVertex>(in TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexNormal
+    {
+        return ref Unsafe.As<TVertex, Vector3>(
+            ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in v), TVertex.NormalOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref Vector3 RefNormal<TVertex>(ref TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexNormal
+    {
+        return ref Unsafe.As<TVertex, Vector3>(
+            ref Unsafe.AddByteOffset(ref v, TVertex.NormalOffset));
+    }
+}
+
 public record struct VertexField(u32 Offset, u32 Size, VertexFormat Format, VertexFieldSemantics Semantics);
+
+public interface IVertexPosition
+{
+    abstract static uint PositionOffset { get; }
+}
+public interface IVertexUV
+{
+    abstract static uint UVOffset { get; }
+}
+public interface IVertexNormal
+{
+    abstract static uint NormalOffset { get; }
+}
+public interface IVertexColor
+{
+    abstract static uint ColorOffset { get; }
+}
+public interface IVertexTextureIndex
+{
+    abstract static uint TextureIndexOffset { get; }
+}
+public interface IVertexBone
+{
+    abstract static uint BoneOffset { get; }
+}
+public interface IVertexWeight
+{
+    abstract static uint WeightOffset { get; }
+}
+public interface IVertexTangent
+{
+    abstract static uint TangentOffset { get; }
+}
 
 public sealed class VertexFields
 {
@@ -100,7 +185,7 @@ public enum VertexFieldSemantics
 }
 
 [StructLayout(LayoutKind.Explicit, Size = 32)]
-public struct Vertex : IEquatable<Vertex>, IVertex
+public struct Vertex : IEquatable<Vertex>, IVertex, IVertexPosition, IVertexNormal, IVertexUV
 {
     [FieldOffset(0)] public Vector3 Position;
     [FieldOffset(12)] public Vector3 Normal;
@@ -114,6 +199,12 @@ public struct Vertex : IEquatable<Vertex>, IVertex
         new VertexField(12, 12, VertexFormat.Float32x3, VertexFieldSemantics.Normal),
         new VertexField(24, 8, VertexFormat.Float32x2, VertexFieldSemantics.UV),
     });
+
+    public static uint PositionOffset => 0;
+
+    public static uint NormalOffset => 12;
+
+    public static uint UVOffset => 24;
 
     public Vertex(Vector3 position, Vector3 normal, Vector2 uv)
     {
@@ -144,7 +235,10 @@ public struct Vertex : IEquatable<Vertex>, IVertex
 }
 
 [StructLayout(LayoutKind.Explicit, Size = 20)]
-public struct VertexSlim : IEquatable<VertexSlim>, IVertex
+public struct VertexSlim
+    : IEquatable<VertexSlim>,
+    IVertex,
+    IVertexPosition, IVertexUV
 {
     [FieldOffset(0)] public Vector3 Position;
     [FieldOffset(12)] public Vector2 UV;
@@ -156,6 +250,10 @@ public struct VertexSlim : IEquatable<VertexSlim>, IVertex
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
         new VertexField(12, 8, VertexFormat.Float32x2, VertexFieldSemantics.UV),
     });
+
+    public static uint PositionOffset => 0;
+
+    public static uint UVOffset => 12;
 
     public VertexSlim(Vector3 position, Vector2 uv)
     {
@@ -183,7 +281,11 @@ public struct VertexSlim : IEquatable<VertexSlim>, IVertex
 }
 
 [StructLayout(LayoutKind.Explicit, Size = 24)]
-public struct VertexPosNormal : IEquatable<VertexPosNormal>, IVertex
+public struct VertexPosNormal
+    : IEquatable<VertexPosNormal>,
+    IVertex,
+    IVertexPosition,
+    IVertexNormal
 {
     [FieldOffset(0)] public Vector3 Position;
     [FieldOffset(12)] public Vector3 Normal;
@@ -195,6 +297,10 @@ public struct VertexPosNormal : IEquatable<VertexPosNormal>, IVertex
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
         new VertexField(12, 12, VertexFormat.Float32x3, VertexFieldSemantics.Normal),
     });
+
+    public static uint PositionOffset => 0;
+
+    public static uint NormalOffset => 12;
 
     public VertexPosNormal(Vector3 position, Vector3 normal)
     {
@@ -216,7 +322,10 @@ public struct VertexPosNormal : IEquatable<VertexPosNormal>, IVertex
 }
 
 [StructLayout(LayoutKind.Explicit, Size = 12)]
-public struct VertexPosOnly : IEquatable<VertexPosOnly>, IVertex
+public struct VertexPosOnly
+    : IEquatable<VertexPosOnly>,
+    IVertex,
+    IVertexPosition
 {
     [FieldOffset(0)] public Vector3 Position;
 
@@ -234,6 +343,8 @@ public struct VertexPosOnly : IEquatable<VertexPosOnly>, IVertex
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
     });
 
+    public static uint PositionOffset => 0;
+
     public override bool Equals(object? obj) => obj is VertexPosOnly only && Equals(only);
 
     public bool Equals(VertexPosOnly other) => Position.Equals(other.Position);
@@ -246,7 +357,15 @@ public struct VertexPosOnly : IEquatable<VertexPosOnly>, IVertex
 }
 
 [StructLayout(LayoutKind.Explicit, Size = 68)]
-public struct SkinnedVertex : IVertex, IEquatable<SkinnedVertex>
+public struct SkinnedVertex
+    : IEquatable<SkinnedVertex>,
+    IVertex,
+    IVertexPosition,
+    IVertexNormal,
+    IVertexUV,
+    IVertexBone,
+    IVertexWeight,
+    IVertexTextureIndex
 {
     [FieldOffset(0)] public Vector3 Position;
     [FieldOffset(12)] public Vector3 Normal;
@@ -266,6 +385,14 @@ public struct SkinnedVertex : IVertex, IEquatable<SkinnedVertex>
         new VertexField(48, 16, VertexFormat.Float32x4, VertexFieldSemantics.Weight),
         new VertexField(64, 4, VertexFormat.Uint32, VertexFieldSemantics.TextureIndex),
     });
+
+    public static uint PositionOffset => 0;
+    public static uint NormalOffset => 12;
+    public static uint UVOffset => 24;
+    public static uint BoneOffset => 32;
+    public static uint WeightOffset => 48;
+    public static uint TextureIndexOffset => 64;
+
 
     public override bool Equals(object? obj)
     {
