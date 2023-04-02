@@ -88,17 +88,22 @@ public readonly struct BindGroupLayoutEntry
         _count = count;
     }
 
-    public static BindGroupLayoutEntry Buffer(u32 binding, ShaderStages visibility, BufferBindingData type, u32 count)
+    public static BindGroupLayoutEntry Buffer(u32 binding, ShaderStages visibility, BufferBindingData type)
     {
-        return new BindGroupLayoutEntry(binding, visibility, type, count);
+        return new BindGroupLayoutEntry(binding, visibility, type, 0);
     }
 
-    public static BindGroupLayoutEntry Sampler(u32 binding, ShaderStages visibility, SamplerBindingType type, u32 count)
+    public static BindGroupLayoutEntry Sampler(u32 binding, ShaderStages visibility, SamplerBindingType type)
     {
-        return new BindGroupLayoutEntry(binding, visibility, new SamplerBindingTypeWrap(type), count);
+        return new BindGroupLayoutEntry(binding, visibility, new SamplerBindingTypeWrap(type), 0);
     }
 
-    public static BindGroupLayoutEntry Texture(u32 binding, ShaderStages visibility, TextureBindingData type, u32 count)
+    public static BindGroupLayoutEntry Texture(u32 binding, ShaderStages visibility, TextureBindingData type)
+    {
+        return new BindGroupLayoutEntry(binding, visibility, type, 0);
+    }
+
+    public static BindGroupLayoutEntry TextureArray(u32 binding, ShaderStages visibility, TextureBindingData type, u32 count)
     {
         return new BindGroupLayoutEntry(binding, visibility, type, count);
     }

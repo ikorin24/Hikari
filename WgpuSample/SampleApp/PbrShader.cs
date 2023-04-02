@@ -55,28 +55,27 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         Entries = new[]
         {
             BindGroupLayoutEntry.Buffer(
-                binding: 0,
-                visibility: ShaderStages.Vertex,
-                type: new BufferBindingData
+                0,
+                ShaderStages.Vertex,
+                new BufferBindingData
                 {
                     HasDynamicOffset = false,
                     MinBindingSize = 0,
                     Type = BufferBindingType.Uniform,
-                },
-                count: 0),
-            BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Filtering, 0),
+                }),
+            BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Filtering),
             BindGroupLayoutEntry.Texture(2, ShaderStages.Fragment, new TextureBindingData
             {
                 ViewDimension = TextureViewDimension.D2,
                 Multisampled = false,
                 SampleType = TextureSampleType.FloatFilterable,
-            }, 0),
+            }),
             BindGroupLayoutEntry.Texture(3, ShaderStages.Fragment, new TextureBindingData
             {
                 ViewDimension = TextureViewDimension.D2,
                 Multisampled = false,
                 SampleType = TextureSampleType.FloatFilterable,
-            }, 0),
+            }),
         },
     };
 

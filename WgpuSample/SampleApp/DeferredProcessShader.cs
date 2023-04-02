@@ -42,31 +42,31 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
     {
         Entries = new BindGroupLayoutEntry[]
         {
-            BindGroupLayoutEntry.Sampler(0, ShaderStages.Fragment, SamplerBindingType.NonFiltering, 0),
+            BindGroupLayoutEntry.Sampler(0, ShaderStages.Fragment, SamplerBindingType.NonFiltering),
             BindGroupLayoutEntry.Texture(1, ShaderStages.Fragment, new TextureBindingData
             {
                 Multisampled = false,
                 ViewDimension = TextureViewDimension.D2,
                 SampleType = TextureSampleType.FloatNotFilterable,
-            }, 0),
+            }),
             BindGroupLayoutEntry.Texture(2, ShaderStages.Fragment, new TextureBindingData
             {
                 Multisampled = false,
                 ViewDimension = TextureViewDimension.D2,
                 SampleType = TextureSampleType.FloatNotFilterable,
-            }, 0),
+            }),
             BindGroupLayoutEntry.Texture(3, ShaderStages.Fragment, new TextureBindingData
             {
                 Multisampled = false,
                 ViewDimension = TextureViewDimension.D2,
                 SampleType = TextureSampleType.FloatNotFilterable,
-            }, 0),
+            }),
             BindGroupLayoutEntry.Texture(4, ShaderStages.Fragment, new TextureBindingData
             {
                 Multisampled = false,
                 ViewDimension = TextureViewDimension.D2,
                 SampleType = TextureSampleType.FloatNotFilterable,
-            }, 0),
+            }),
         }
     };
 

@@ -133,30 +133,27 @@ public sealed class MyShader : Shader<MyShader, MyMaterial>
         Entries = new[]
         {
             BindGroupLayoutEntry.Texture(
-                binding: 0,
-                visibility: ShaderStages.Fragment,
-                type: new TextureBindingData
+                0,
+                ShaderStages.Fragment,
+                new TextureBindingData
                 {
                     Multisampled = false,
                     ViewDimension = TextureViewDimension.D2,
                     SampleType = TextureSampleType.FloatFilterable,
-                },
-                count: 0),
+                }),
             BindGroupLayoutEntry.Sampler(
-                binding: 1,
-                visibility: ShaderStages.Fragment,
-                type: SamplerBindingType.Filtering,
-                count: 0),
+                1,
+                ShaderStages.Fragment,
+                SamplerBindingType.Filtering),
             BindGroupLayoutEntry.Buffer(
-                binding: 2,
-                visibility: ShaderStages.Vertex,
-                type: new BufferBindingData
+                2,
+                ShaderStages.Vertex,
+                new BufferBindingData
                 {
                     HasDynamicOffset = false,
                     MinBindingSize = 0,
                     Type = BufferBindingType.Uniform,
-                },
-                count: 0),
+                }),
         },
     };
 
