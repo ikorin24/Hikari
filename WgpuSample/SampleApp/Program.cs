@@ -46,11 +46,6 @@ internal class Program
             MagFilter = FilterMode.Linear,
             MinFilter = FilterMode.Linear,
             MipmapFilter = FilterMode.Linear,
-            LodMinClamp = 0,
-            LodMaxClamp = float.MaxValue,
-            AnisotropyClamp = 0,
-            BorderColor = null,
-            Compare = null,
         });
         var albedo = LoadImage(screen, "pic.png", TextureFormat.Rgba8UnormSrgb);
         var mr = LoadImage(screen, "pic.png", TextureFormat.Rgba8Unorm);

@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Elffy.NativeBind;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
@@ -57,11 +58,6 @@ public sealed class Sampler : IScreenManaged
             MagFilter = magFilter,
             MinFilter = minFilter,
             MipmapFilter = FilterMode.Nearest,
-            AnisotropyClamp = 0,
-            LodMaxClamp = 0,
-            LodMinClamp = 0,
-            BorderColor = null,
-            Compare = null,
         });
     }
 }
@@ -74,11 +70,36 @@ public readonly struct SamplerDescriptor
     public required FilterMode MagFilter { get; init; }
     public required FilterMode MinFilter { get; init; }
     public required FilterMode MipmapFilter { get; init; }
-    public required f32 LodMinClamp { get; init; }
-    public required f32 LodMaxClamp { get; init; }
-    public required CompareFunction? Compare { get; init; }
-    public required u8 AnisotropyClamp { get; init; }
-    public required SamplerBorderColor? BorderColor { get; init; }
+
+    public f32 LodMinClamp { get; init; }
+    public f32 LodMaxClamp { get; init; }
+
+    public CompareFunction? Compare { get; init; }
+
+    private readonly u8? _anisotropyClamp;
+    public u8? AnisotropyClamp
+    {
+        get => _anisotropyClamp;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        init
+        {
+            _anisotropyClamp = value switch
+            {
+                null or 1 or 2 or 4 or 8 or 16 => value,
+                _ => throw new ArgumentException($"{value} is invalid. Valid values are null, 1, 2, 4, 8, and 16."),
+            };
+        }
+    }
+    public SamplerBorderColor? BorderColor { get; init; }
+
+    public SamplerDescriptor()
+    {
+        LodMinClamp = 0;
+        LodMaxClamp = f32.MaxValue;
+        AnisotropyClamp = null;
+        BorderColor = null;
+        Compare = null;
+    }
 
     internal CE.SamplerDescriptor ToNative()
     {
@@ -93,7 +114,7 @@ public readonly struct SamplerDescriptor
             lod_min_clamp = LodMinClamp,
             lod_max_clamp = LodMaxClamp,
             compare = Compare.ToNative(x => x.MapOrThrow()),
-            anisotropy_clamp = AnisotropyClamp,
+            anisotropy_clamp = (_anisotropyClamp == null) ? (u8)0 : _anisotropyClamp.Value,
             border_color = BorderColor.ToNative(x => x.MapOrThrow()),
         };
     }

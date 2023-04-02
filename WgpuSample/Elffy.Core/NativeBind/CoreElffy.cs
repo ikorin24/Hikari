@@ -413,7 +413,7 @@ internal static class CoreElffy
         public required f32 lod_min_clamp;
         public required f32 lod_max_clamp;
         public required Opt<Wgpu.CompareFunction> compare;
-        public u8 anisotropy_clamp;
+        public u8 anisotropy_clamp;     // Option<NonZeroU8> in Rust
         public Opt<SamplerBorderColor> border_color;
     }
 
@@ -668,7 +668,9 @@ internal static class CoreElffy
 
         public unsafe static BindingType Sampler(SamplerBindingType* payload) => new(BindingTypeTag.Sampler, payload);
 
-        private enum BindingTypeTag
+        public unsafe static BindingType StorageTexture(StorageTextureBindingData* payload) => new(BindingTypeTag.StorageTexture, payload);
+
+        private enum BindingTypeTag : u32
         {
             Buffer = 0,
             Sampler = 1,

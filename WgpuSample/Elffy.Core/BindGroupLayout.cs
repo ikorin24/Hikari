@@ -108,6 +108,11 @@ public readonly struct BindGroupLayoutEntry
         return new BindGroupLayoutEntry(binding, visibility, type, count);
     }
 
+    public static BindGroupLayoutEntry StorageTexture(u32 binding, ShaderStages visibility, StorageTextureBindingData type)
+    {
+        return new BindGroupLayoutEntry(binding, visibility, type, 0);
+    }
+
     private sealed class SamplerBindingTypeWrap : IBindingTypeData
     {
         private CE.SamplerBindingType _ty;
@@ -222,4 +227,56 @@ public sealed class TextureBindingData : IBindingTypeData
         var payload = (CE.TextureBindingData*)Unsafe.AsPointer(ref _native);
         return CE.BindingType.Texture(payload);
     }
+}
+
+public sealed class StorageTextureBindingData : IBindingTypeData
+{
+    private CE.StorageTextureBindingData _payload;
+    private StorageTextureAccess _access;
+    private TextureFormat _format;
+    private TextureViewDimension _viewDimension;
+
+    public required StorageTextureAccess Access
+    {
+        get => _access;
+        init
+        {
+            _access = value;
+            _payload.access = value.MapOrThrow();
+        }
+    }
+
+    public TextureFormat Format
+    {
+        get => _format;
+        init
+        {
+            _format = value;
+            _payload.format = value.MapOrThrow();
+        }
+    }
+
+    public TextureViewDimension ViewDimension
+    {
+        get => _viewDimension;
+        init
+        {
+            _viewDimension = value;
+            _payload.view_dimension = value.MapOrThrow();
+        }
+    }
+
+    unsafe CE.BindingType IBindingTypeData.ToNative(PinHandleHolder holder)
+    {
+        holder.Add(GCHandle.Alloc(this, GCHandleType.Pinned));
+        var payload = (CE.StorageTextureBindingData*)Unsafe.AsPointer(ref _payload);
+        return CE.BindingType.StorageTexture(payload);
+    }
+}
+
+public enum StorageTextureAccess
+{
+    [EnumMapTo(CE.StorageTextureAccess.WriteOnly)] WriteOnly,
+    [EnumMapTo(CE.StorageTextureAccess.ReadOnly)] ReadOnly,
+    [EnumMapTo(CE.StorageTextureAccess.ReadWrite)] ReadWrite,
 }
