@@ -370,20 +370,15 @@ public readonly struct VertexBufferLayout
     public static VertexBufferLayout FromVertex<TVertex>(ReadOnlySpan<(uint Location, VertexFieldSemantics Semantics)> mapping)
         where TVertex : unmanaged, IVertex
     {
-        var fields = TVertex.Fields.Span;
         var attrs = new VertexAttr[mapping.Length];
         for(int i = 0; i < mapping.Length; i++) {
-            foreach(var field in fields) {
-                if(field.Semantics == mapping[i].Semantics) {
-                    attrs[i] = new VertexAttr
-                    {
-                        Format = field.Format,
-                        Offset = field.Offset,
-                        ShaderLocation = mapping[i].Location,
-                    };
-                    break;
-                }
-            }
+            var f = TVertex.Fields.GetField(mapping[i].Semantics);
+            attrs[i] = new VertexAttr
+            {
+                Format = f.Format,
+                Offset = f.Offset,
+                ShaderLocation = mapping[i].Location,
+            };
         }
         return new VertexBufferLayout
         {

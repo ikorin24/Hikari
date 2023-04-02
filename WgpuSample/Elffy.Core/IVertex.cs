@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace Elffy;
@@ -7,10 +8,76 @@ namespace Elffy;
 public interface IVertex
 {
     abstract static u32 VertexSize { get; }
-    abstract static ReadOnlyMemory<VertexField> Fields { get; }
+    abstract static VertexFields Fields { get; }
 }
 
 public record struct VertexField(u32 Offset, u32 Size, VertexFormat Format, VertexFieldSemantics Semantics);
+
+public sealed class VertexFields
+{
+    private readonly VertexField[] _fields;
+
+    public VertexFields(ReadOnlySpan<VertexField> fields)
+    {
+        Validate(fields);
+        _fields = fields.ToArray();
+    }
+
+    private static void Validate(ReadOnlySpan<VertexField> fields)
+    {
+        for(int i = 0; i < fields.Length; i++) {
+            var (validFormat, validSize) = fields[i].Semantics switch
+            {
+                VertexFieldSemantics.Position => (VertexFormat.Float32x3, 12u),
+                VertexFieldSemantics.UV => (VertexFormat.Float32x2, 8u),
+                VertexFieldSemantics.Normal => (VertexFormat.Float32x3, 12u),
+                VertexFieldSemantics.Color => (VertexFormat.Float32x4, 16u),
+                VertexFieldSemantics.TextureIndex => (VertexFormat.Uint32, 4u),
+                VertexFieldSemantics.Bone => (VertexFormat.Uint32x4, 16u),
+                VertexFieldSemantics.Weight => (VertexFormat.Float32x4, 16u),
+                VertexFieldSemantics.Tangent => (VertexFormat.Float32x3, 12u),
+                _ => throw new ArgumentException($"field[{i}] has invalid semantics"),
+            };
+            if(fields[i].Format != validFormat) {
+                throw new ArgumentException($"field[{i}] has invalid format. Format of '{fields[i].Semantics}' field should be '{validFormat}'.");
+            }
+            if(fields[i].Size != validSize) {
+                throw new ArgumentException($"field[{i}] has invalid size. Size of '{fields[i].Semantics}' field should be '{validSize}'.");
+            }
+        }
+    }
+
+    public bool TryGetField(VertexFieldSemantics semantics, out VertexField f)
+    {
+        foreach(var field in _fields) {
+            if(field.Semantics == semantics) {
+                f = field;
+                return true;
+            }
+        }
+        f = default;
+        return false;
+    }
+
+    public VertexField GetField(VertexFieldSemantics semantics)
+    {
+        if(TryGetField(semantics, out var field) == false) {
+            ThrowNotFound(semantics);
+
+            [DoesNotReturn]
+            static void ThrowNotFound(VertexFieldSemantics semantics) => throw new ArgumentException($"vertex field not found: {semantics}");
+        }
+        return field;
+    }
+
+    public bool Contains(VertexFieldSemantics semantics)
+    {
+        return TryGetField(semantics, out _);
+    }
+
+    public ReadOnlyMemory<VertexField> AsMemory() => _fields;
+    public ReadOnlySpan<VertexField> AsSpan() => _fields;
+}
 
 public enum VertexFieldSemantics
 {
@@ -41,12 +108,12 @@ public struct Vertex : IEquatable<Vertex>, IVertex
 
     public static uint VertexSize => 32;
 
-    public static ReadOnlyMemory<VertexField> Fields { get; } = new[]
+    public static VertexFields Fields { get; } = new VertexFields(stackalloc[]
     {
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
         new VertexField(12, 12, VertexFormat.Float32x3, VertexFieldSemantics.Normal),
-        new VertexField(24, 32, VertexFormat.Float32x2, VertexFieldSemantics.UV),
-    };
+        new VertexField(24, 8, VertexFormat.Float32x2, VertexFieldSemantics.UV),
+    });
 
     public Vertex(Vector3 position, Vector3 normal, Vector2 uv)
     {
@@ -84,11 +151,11 @@ public struct VertexSlim : IEquatable<VertexSlim>, IVertex
 
     public static uint VertexSize => 20;
 
-    public static ReadOnlyMemory<VertexField> Fields { get; } = new[]
+    public static VertexFields Fields { get; } = new VertexFields(stackalloc[]
     {
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
         new VertexField(12, 8, VertexFormat.Float32x2, VertexFieldSemantics.UV),
-    };
+    });
 
     public VertexSlim(Vector3 position, Vector2 uv)
     {
@@ -123,11 +190,11 @@ public struct VertexPosNormal : IEquatable<VertexPosNormal>, IVertex
 
     public static uint VertexSize => 24;
 
-    public static ReadOnlyMemory<VertexField> Fields { get; } = new[]
+    public static VertexFields Fields { get; } = new VertexFields(stackalloc[]
     {
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
         new VertexField(12, 12, VertexFormat.Float32x3, VertexFieldSemantics.Normal),
-    };
+    });
 
     public VertexPosNormal(Vector3 position, Vector3 normal)
     {
@@ -162,10 +229,10 @@ public struct VertexPosOnly : IEquatable<VertexPosOnly>, IVertex
 
     public static uint VertexSize => 12;
 
-    public static ReadOnlyMemory<VertexField> Fields { get; } = new[]
+    public static VertexFields Fields { get; } = new VertexFields(stackalloc[]
     {
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
-    };
+    });
 
     public override bool Equals(object? obj) => obj is VertexPosOnly only && Equals(only);
 
@@ -190,7 +257,7 @@ public struct SkinnedVertex : IVertex, IEquatable<SkinnedVertex>
 
     public static uint VertexSize => 68;
 
-    public static ReadOnlyMemory<VertexField> Fields { get; } = new[]
+    public static VertexFields Fields { get; } = new VertexFields(stackalloc[]
     {
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
         new VertexField(12, 12, VertexFormat.Float32x3, VertexFieldSemantics.Normal),
@@ -198,7 +265,7 @@ public struct SkinnedVertex : IVertex, IEquatable<SkinnedVertex>
         new VertexField(32, 16, VertexFormat.Uint32x4, VertexFieldSemantics.Bone),
         new VertexField(48, 16, VertexFormat.Float32x4, VertexFieldSemantics.Weight),
         new VertexField(64, 4, VertexFormat.Uint32, VertexFieldSemantics.TextureIndex),
-    };
+    });
 
     public override bool Equals(object? obj)
     {
