@@ -8,18 +8,18 @@ namespace Elffy;
 
 public static class SampleData
 {
-    public static Own<Mesh<VertexSlim>> SampleMesh(Screen screen)
+    public static Own<Mesh<Vertex>> SampleMesh(Screen screen)
     {
         const float A = 0.3f;
-        ReadOnlySpan<VertexSlim> vertices = stackalloc VertexSlim[4]
+        ReadOnlySpan<Vertex> vertices = stackalloc Vertex[4]
         {
-            new VertexSlim(new(-A, A, 0.0f), new(0f, 0f)),
-            new VertexSlim(new(-A, -A, 0.0f), new(0f, 1f)),
-            new VertexSlim(new(A, -A, 0.0f), new(1f, 1f)),
-            new VertexSlim(new(A, A, 0.0f), new(1f, 0f)),
+            new Vertex(new(-A, A, 0.0f), new(0, 0, 1), new(0f, 0f)),
+            new Vertex(new(-A, -A, 0.0f), new(0, 0, 1), new(0f, 1f)),
+            new Vertex(new(A, -A, 0.0f), new(0, 0, 1), new(1f, 1f)),
+            new Vertex(new(A, A, 0.0f), new(0, 0, 1), new(1f, 0f)),
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
-        return Mesh<VertexSlim>.Create(screen, vertices, indices);
+        return Mesh<Vertex>.Create(screen, vertices, indices);
     }
 
     public static Own<Texture> SampleTexture(Screen screen)
