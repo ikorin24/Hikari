@@ -93,7 +93,8 @@ public sealed class PbrLayer
                     VertexBufferLayout.FromVertex<V>(stackalloc[]
                     {
                         (0, VertexFieldSemantics.Position),
-                        (1, VertexFieldSemantics.UV),
+                        (1, VertexFieldSemantics.Normal),
+                        (2, VertexFieldSemantics.UV),
                     }),
                 },
             },

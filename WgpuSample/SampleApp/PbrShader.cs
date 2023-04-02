@@ -8,11 +8,14 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
     private static ReadOnlySpan<byte> ShaderSource => """
         struct Vin {
             @location(0) pos: vec3<f32>,
-            @location(1) uv: vec2<f32>,
+            @location(1) normal: vec3<f32>,
+            @location(2) uv: vec2<f32>,
         }
         struct V2F {
             @builtin(position) clip_pos: vec4<f32>,
-            @location(0) uv: vec2<f32>,
+            @location(0) pos_camera_coord: vec3<f32>,
+            @location(1) normal: vec3<f32>,
+            @location(2) uv: vec2<f32>,
         }
         struct GBuffer {
             @location(0) g0 : vec4<f32>,
@@ -28,24 +31,28 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
 
         @group(0) @binding(0) var<uniform> u: UniformValue;
         @group(0) @binding(1) var tex_sampler: sampler;
-        @group(0) @binding(2) var albedo: texture_2d<f32>;
-        @group(0) @binding(3) var mr: texture_2d<f32>;
+        @group(0) @binding(2) var albedo_tex: texture_2d<f32>;
+        @group(0) @binding(3) var mr_tex: texture_2d<f32>;
 
         @vertex fn vs_main(
             v: Vin,
         ) -> V2F {
             var output: V2F;
-            output.clip_pos = u.proj * u.view * u.model * vec4(v.pos, 1.0);
+            var pos4: vec4<f32> = u.view * u.model * vec4(v.pos, 1.0);
+            output.pos_camera_coord = pos4.xyz / pos4.w;
+            output.clip_pos = u.proj * pos4;
+            output.normal = v.normal;
             output.uv = v.uv;
             return output;
         }
 
         @fragment fn fs_main(in: V2F) -> GBuffer {
+            var mr: vec2<f32> = textureSample(mr_tex, tex_sampler, in.uv).rg;
             var output: GBuffer;
-            output.g0 = vec4(1.0, 1.0, 1.0, 1.0);
-            output.g1 = vec4(1.0, 1.0, 1.0, 1.0);
-            output.g2 = textureSample(albedo, tex_sampler, in.uv);
-            output.g3 = textureSample(mr, tex_sampler, in.uv);
+            output.g0 = vec4(in.pos_camera_coord, mr.r);
+            output.g1 = vec4(1.0, 1.0, 1.0, mr.g);
+            output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
+            output.g3 = vec4(1.0, 1.0, 1.0, 1.0);
             return output;
         }
         """u8;
