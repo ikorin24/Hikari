@@ -8,6 +8,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
     private readonly Own<Sampler> _sampler;
     private readonly Own<Texture> _albedo;
     private readonly Own<Texture> _metallicRoughness;
+    private readonly Own<Texture> _normal;
     private readonly Own<Uniform<UniformValue>> _uniform;
 
     public Texture Albedo => _albedo.AsValue();
@@ -19,6 +20,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         Own<Sampler> sampler,
         Own<Texture> albedo,
         Own<Texture> metallicRoughness,
+        Own<Texture> normal,
         Own<BindGroup> bindGroup)
         : base(shader, new[] { bindGroup })
     {
@@ -34,6 +36,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
             _sampler.Dispose();
             _albedo.Dispose();
             _metallicRoughness.Dispose();
+            _normal.Dispose();
         }
     }
 
@@ -41,12 +44,14 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         PbrShader shader,
         Own<Sampler> sampler,
         Own<Texture> albedo,
-        Own<Texture> metallicRoughness)
+        Own<Texture> metallicRoughness,
+        Own<Texture> normal)
     {
         ArgumentNullException.ThrowIfNull(shader);
         sampler.ThrowArgumentExceptionIfNone();
         albedo.ThrowArgumentExceptionIfNone();
         metallicRoughness.ThrowArgumentExceptionIfNone();
+        normal.ThrowArgumentExceptionIfNone();
 
         var screen = shader.Screen;
         var uniform = Uniform<UniformValue>.Create(screen, default);
@@ -59,10 +64,11 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
                 BindGroupEntry.Sampler(1, sampler.AsValue()),
                 BindGroupEntry.TextureView(2, albedo.AsValue().View),
                 BindGroupEntry.TextureView(3, metallicRoughness.AsValue().View),
+                BindGroupEntry.TextureView(4, normal.AsValue().View),
             },
         };
         var bindGroup = BindGroup.Create(screen, in desc);
-        var material = new PbrMaterial(shader, uniform, sampler, albedo, metallicRoughness, bindGroup);
+        var material = new PbrMaterial(shader, uniform, sampler, albedo, metallicRoughness, normal, bindGroup);
         return CreateOwn(material);
     }
 

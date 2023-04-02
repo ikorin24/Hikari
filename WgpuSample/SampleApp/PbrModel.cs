@@ -10,8 +10,9 @@ public sealed class PbrModel : Renderable<PbrLayer, V, PbrShader, PbrMaterial>
         Own<Mesh<V>> mesh,
         Own<Sampler> sampler,
         Own<Texture> albedo,
-        Own<Texture> metallicRoughness)
-        : base(layer, mesh, PbrMaterial.Create(layer.Shader, sampler, albedo, metallicRoughness))
+        Own<Texture> metallicRoughness,
+        Own<Texture> normal)
+        : base(layer, mesh, PbrMaterial.Create(layer.Shader, sampler, albedo, metallicRoughness, normal))
     {
     }
 }

@@ -49,8 +49,9 @@ internal class Program
         });
         var albedo = LoadImage(screen, "pic.png", TextureFormat.Rgba8UnormSrgb);
         var mr = LoadImage(screen, "pic.png", TextureFormat.Rgba8Unorm);
+        var normal = LoadImage(screen, "pic.png", TextureFormat.Rgba8Unorm);
 
-        var model = new PbrModel(layer, SampleData.SampleMesh(screen), sampler, albedo, mr);
+        var model = new PbrModel(layer, SampleData.SampleMesh(screen), sampler, albedo, mr, normal);
         model.Material.SetUniform(new(Matrix4.Identity, Matrix4.Identity, Matrix4.Identity));
     }
 
