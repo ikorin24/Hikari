@@ -56,6 +56,7 @@ public sealed class Mesh<TVertex>
 
     public static Own<Mesh<TVertex>> Create(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u16> indices)
     {
+        ArgumentNullException.ThrowIfNull(screen);
         var vb = Buffer.CreateVertexBuffer(screen, vertices);
         var ib = Buffer.CreateIndexBuffer(screen, indices);
         return Create(screen, vb, ib, (u32)indices.Length, IndexFormat.Uint16);
@@ -63,16 +64,14 @@ public sealed class Mesh<TVertex>
 
     public static Own<Mesh<TVertex>> Create(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u32> indices)
     {
+        ArgumentNullException.ThrowIfNull(screen);
         var vb = Buffer.CreateVertexBuffer(screen, vertices);
         var ib = Buffer.CreateIndexBuffer(screen, indices);
         return Create(screen, vb, ib, (u32)indices.Length, IndexFormat.Uint32);
     }
 
-    public static Own<Mesh<TVertex>> Create(Screen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat)
+    private static Own<Mesh<TVertex>> Create(Screen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat)
     {
-        ArgumentNullException.ThrowIfNull(screen);
-        vertexBuffer.ThrowArgumentExceptionIfNone();
-        indexBuffer.ThrowArgumentExceptionIfNone();
         var mesh = new Mesh<TVertex>(vertexBuffer, indexBuffer, indexCount, indexFormat);
         return Own.RefType(mesh, static x => SafeCast.As<Mesh<TVertex>>(x).Release());
     }
