@@ -11,7 +11,7 @@ public abstract class Positionable<TLayer, TVertex, TShader, TMaterial>
 {
     private Vector3 _position;
     private Quaternion _rotation;
-    private Vector3 _scale;
+    private float _scale;
 
     public Vector3 Position
     {
@@ -25,7 +25,7 @@ public abstract class Positionable<TLayer, TVertex, TShader, TMaterial>
         set => _rotation = value;
     }
 
-    public Vector3 Scale
+    public float Scale
     {
         get => _scale;
         set => _scale = value;

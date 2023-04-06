@@ -15,13 +15,10 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         struct V2F {
             @builtin(position) clip_pos: vec4<f32>,
             @location(0) pos_camera_coord: vec3<f32>,
-            @location(1) normal: vec3<f32>,
-            @location(2) uv: vec2<f32>,
-
-            // TBN matrix: tangent space -> camera space
-            @location(3) tbn_t: vec3<f32>,
-            @location(4) tbn_b: vec3<f32>,
-            @location(5) tbn_n: vec3<f32>,
+            @location(1) uv: vec2<f32>,
+            @location(2) tangent_camera_coord: vec3<f32>,
+            @location(3) bitangent_camera_coord: vec3<f32>,
+            @location(4) normal_camera_coord: vec3<f32>,
         }
         struct GBuffer {
             @location(0) g0 : vec4<f32>,
@@ -48,18 +45,24 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             var mv33 = mat44_to_33(model_view);
             var output: V2F;
             var pos4: vec4<f32> = model_view * vec4(v.pos, 1.0);
-            output.pos_camera_coord = pos4.xyz / pos4.w;
             output.clip_pos = u.proj * pos4;
-            output.normal = v.normal;
+            output.pos_camera_coord = pos4.xyz / pos4.w;
             output.uv = v.uv;
+            output.tangent_camera_coord = normalize(mv33 * v.tangent);
+            output.bitangent_camera_coord = normalize(mv33 * cross(v.normal, v.tangent));
+            output.normal_camera_coord = normalize(mv33 * v.normal);
             return output;
         }
 
         @fragment fn fs_main(in: V2F) -> GBuffer {
+            // TBN matrix: tangent space -> camera space
+            var tbn = mat3x3<f32>(in.tangent_camera_coord, in.bitangent_camera_coord, in.normal_camera_coord);
+
             var mr: vec2<f32> = textureSample(mr_tex, tex_sampler, in.uv).rg;
+            var normal_camera_coord: vec3<f32> = tbn * textureSample(normal_tex, tex_sampler, in.uv).rgb * 2.0 - 1.0;
             var output: GBuffer;
             output.g0 = vec4(in.pos_camera_coord, mr.r);
-            output.g1 = vec4(1.0, 1.0, 1.0, mr.g);
+            output.g1 = vec4(normal_camera_coord, mr.g);
             output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
             output.g3 = vec4(1.0, 1.0, 1.0, 1.0);
             return output;

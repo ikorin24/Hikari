@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Runtime.InteropServices;
 
 namespace Elffy;
 
@@ -77,9 +78,21 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 
     public void SetUniform(in UniformValue value) => _uniform.AsValue().Set(in value);
 
-    public record struct UniformValue(
-        Matrix4 Model,
-        Matrix4 View,
-        Matrix4 Projection
-    );
+    [StructLayout(LayoutKind.Explicit)]
+    public struct UniformValue
+    {
+        [FieldOffset(0)]    // 0 ~ 63   (size: 64)
+        private Matrix4 _model;
+        [FieldOffset(64)]   // 64 ~ 127 (size: 64)
+        private Matrix4 _view;
+        [FieldOffset(128)]  // 127 ~ 191 (size: 64)
+        private Matrix4 _projection;
+
+        public UniformValue(Matrix4 model, Matrix4 view, Matrix4 projection)
+        {
+            _model = model;
+            _view = view;
+            _projection = projection;
+        }
+    }
 }
