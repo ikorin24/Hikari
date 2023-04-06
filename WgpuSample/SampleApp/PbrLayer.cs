@@ -96,6 +96,20 @@ public sealed class PbrLayer
                         (1, VertexFieldSemantics.Normal),
                         (2, VertexFieldSemantics.UV),
                     }),
+                    new VertexBufferLayout
+                    {
+                        ArrayStride = (ulong)Vector3.SizeInBytes,
+                        Attributes = new VertexAttr[]
+                        {
+                            new VertexAttr
+                            {
+                                Format = VertexFormat.Float32x3,
+                                Offset = 0,
+                                ShaderLocation = 3,
+                            },
+                        },
+                        StepMode = VertexStepMode.Vertex,
+                    },
                 },
             },
             Fragment = new FragmentState
