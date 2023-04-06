@@ -27,7 +27,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
             new(new(-1, 1, Z), new(0, 1)),
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
-        _rectMesh = Mesh<V>.Create(Screen, vertices, indices);
+        _rectMesh = Mesh.Create(Screen, vertices, indices);
         Dead.Subscribe(static x => ((DeferredProcess)x).OnDead()).AddTo(Subscriptions);
     }
 

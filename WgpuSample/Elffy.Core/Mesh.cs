@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Elffy;
 
@@ -13,6 +14,7 @@ public sealed class Mesh<TVertex>
     private readonly Own<Buffer> _indexBuffer;
     private readonly uint _indexCount;
     private readonly IndexFormat _indexFormat;
+    private Own<Buffer> _optTangent;
     private bool _isReleased;
 
     public BufferSlice<TVertex> VertexBuffer => _vertexBuffer.AsValue().Slice<TVertex>();
@@ -43,79 +45,198 @@ public sealed class Mesh<TVertex>
     public IndexFormat IndexFormat => _indexFormat;
     public uint IndexCount => _indexCount;
 
-    public bool HasPosition => typeof(TVertex).IsAssignableTo(typeof(IVertexPosition));
-    public bool HasUV => typeof(TVertex).IsAssignableTo(typeof(IVertexUV));
-    public bool HasNormal => typeof(TVertex).IsAssignableTo(typeof(IVertexNormal));
-    public bool HasColor => typeof(TVertex).IsAssignableTo(typeof(IVertexColor));
-    public bool HasTextureIndex => typeof(TVertex).IsAssignableTo(typeof(IVertexTextureIndex));
-    public bool HasBone => typeof(TVertex).IsAssignableTo(typeof(IVertexBone));
-    public bool HasWeight => typeof(TVertex).IsAssignableTo(typeof(IVertexWeight));
-    public bool HasTangent => typeof(TVertex).IsAssignableTo(typeof(IVertexTangent));
+    public bool TryGetOptionalTangent(out BufferSlice<Vector3> tangent)
+    {
+        if(_optTangent.TryAsValue(out var tan)) {
+            tangent = tan.Slice<Vector3>();
+            return true;
+        }
+        tangent = default;
+        return false;
+    }
+
+    public bool HasOptionalTangent => TryGetOptionalTangent(out _);
 
     public Screen Screen => _screen;
 
     public bool IsManaged => _isReleased == false;
 
-    private Mesh(Screen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat)
+    private Mesh(Screen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat, Own<Buffer> optTangent)
     {
         _screen = screen;
         _vertexBuffer = vertexBuffer;
         _indexBuffer = indexBuffer;
         _indexCount = indexCount;
         _indexFormat = indexFormat;
+        _optTangent = optTangent;
+        _isReleased = false;
     }
 
     private void Release()
     {
+        if(_isReleased) {
+            return;
+        }
         _vertexBuffer.Dispose();
         _indexBuffer.Dispose();
+        _optTangent.Dispose();
         _isReleased = true;
     }
 
-    public static Own<Mesh<TVertex>> Create(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u16> indices)
+    internal unsafe static Own<Mesh<TVertex>> Create<TIndex>(
+        Screen screen,
+        TVertex* vertices, usize vertexLen,
+        TIndex* indices, u32 indexLen,
+        Vector3* tangents, usize tangentLen)
+        where TIndex : unmanaged
     {
         ArgumentNullException.ThrowIfNull(screen);
-        var vb = Buffer.CreateVertexBuffer(screen, vertices);
-        var ib = Buffer.CreateIndexBuffer(screen, indices);
-        return Create(screen, vb, ib, (u32)indices.Length, IndexFormat.Uint16);
-    }
+        IndexFormat indexFormat;
+        if(typeof(TIndex) == typeof(u32)) {
+            indexFormat = IndexFormat.Uint32;
+        }
+        else if(typeof(TIndex) == typeof(u16)) {
+            indexFormat = IndexFormat.Uint16;
+        }
+        else {
+            throw new ArgumentException("index type should be u32 or u16.");
+        }
 
-    public static Own<Mesh<TVertex>> Create(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u32> indices)
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        var vb = Buffer.CreateVertexBuffer(screen, vertices);
-        var ib = Buffer.CreateIndexBuffer(screen, indices);
-        return Create(screen, vb, ib, (u32)indices.Length, IndexFormat.Uint32);
-    }
+        var vertexBuffer = Buffer.Create(screen, (u8*)vertices, vertexLen * (usize)sizeof(TVertex), BufferUsages.Vertex | BufferUsages.CopyDst);
+        var indexBuffer = Buffer.Create(screen, (u8*)indices, indexLen * (usize)sizeof(TIndex), BufferUsages.Index | BufferUsages.CopyDst);
+        Own<Buffer> tangentBuffer;
+        if(tangentLen == 0) {
+            tangentBuffer = Own<Buffer>.None;
+        }
+        else {
+            tangentBuffer = Buffer.Create(screen, (u8*)tangents, tangentLen * (usize)sizeof(Vector3), BufferUsages.Vertex | BufferUsages.CopyDst);
+        }
 
-    private static Own<Mesh<TVertex>> Create(Screen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat)
-    {
-        var mesh = new Mesh<TVertex>(screen, vertexBuffer, indexBuffer, indexCount, indexFormat);
+        var mesh = new Mesh<TVertex>(screen, vertexBuffer, indexBuffer, indexLen, indexFormat, tangentBuffer);
         return Own.RefType(mesh, static x => SafeCast.As<Mesh<TVertex>>(x).Release());
+    }
+}
+
+public static class Mesh
+{
+    public unsafe static Own<Mesh<TVertex>> Create<TVertex>(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u16> indices)
+        where TVertex : unmanaged, IVertex, IVertexUV
+    {
+        fixed(TVertex* vp = vertices)
+        fixed(u16* ip = indices) {
+            return Mesh<TVertex>.Create<u16>(screen, vp, (usize)vertices.Length, ip, (u32)indices.Length, null, 0);
+        }
+    }
+
+    public unsafe static Own<Mesh<TVertex>> Create<TVertex>(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u32> indices)
+        where TVertex : unmanaged, IVertex, IVertexUV
+    {
+        fixed(TVertex* vp = vertices)
+        fixed(u32* ip = indices) {
+            return Mesh<TVertex>.Create<u32>(screen, vp, (usize)vertices.Length, ip, (u32)indices.Length, null, 0);
+        }
+    }
+
+    public unsafe static Own<Mesh<TVertex>> CreateWithTangent<TVertex>(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u16> indices)
+        where TVertex : unmanaged, IVertex, IVertexUV
+    {
+        var tangentLen = (usize)vertices.Length;
+        var tangents = (Vector3*)NativeMemory.Alloc((usize)sizeof(Vector3) * tangentLen);
+        try {
+            fixed(TVertex* vp = vertices)
+            fixed(u16* ip = indices) {
+                MeshHelper.CalcTangentsU16(vp, (u32)vertices.Length, ip, (u64)indices.Length, tangents);
+                return Mesh<TVertex>.Create<u16>(screen, vp, (usize)vertices.Length, ip, (u32)indices.Length, tangents, tangentLen);
+            }
+        }
+        finally {
+            NativeMemory.Free(tangents);
+        }
+    }
+
+    public unsafe static Own<Mesh<TVertex>> CreateWithTangent<TVertex>(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u32> indices)
+        where TVertex : unmanaged, IVertex, IVertexUV
+    {
+        var tangentLen = (usize)vertices.Length;
+        var tangents = (Vector3*)NativeMemory.Alloc((usize)sizeof(Vector3) * tangentLen);
+        try {
+            fixed(TVertex* vp = vertices)
+            fixed(u32* ip = indices) {
+                MeshHelper.CalcTangentsU32(vp, (u32)vertices.Length, ip, (u64)indices.Length, tangents);
+                return Mesh<TVertex>.Create<u32>(screen, vp, (usize)vertices.Length, ip, (u32)indices.Length, tangents, tangentLen);
+            }
+        }
+        finally {
+            NativeMemory.Free(tangents);
+        }
     }
 }
 
 internal static class MeshHelper
 {
-    private unsafe static void CalcTangents<TVertex>(TVertex* vertices, u32 verticesLen, u32* indices, u64 indicesLen, Vector3* tangents)
-        where TVertex : unmanaged, IVertex, IVertexPosition, IVertexUV
+    public unsafe static void CalcTangentsU32<TVertex>(TVertex* vertices, u32 verticesLen, u32* indices, u64 indicesLen, Vector3* tangents)
+        where TVertex : unmanaged, IVertex, IVertexUV
     {
-        // TODO:
+        CalcTangentsU32(vertices, verticesLen, indices, indicesLen, tangents, TVertex.UVOffset);
+    }
 
+    public unsafe static void CalcTangentsU16<TVertex>(TVertex* vertices, u32 verticesLen, u16* indices, u64 indicesLen, Vector3* tangents)
+        where TVertex : unmanaged, IVertex, IVertexUV
+    {
+        CalcTangentsU16(vertices, verticesLen, indices, indicesLen, tangents, TVertex.UVOffset);
+    }
+
+    public unsafe static void CalcTangentsU32<TVertex>(TVertex* vertices, u32 verticesLen, u32* indices, u64 indicesLen, Vector3* tangents, uint uvOffset)
+        where TVertex : unmanaged, IVertex
+    {
         Vector3u* triangles = (Vector3u*)indices;
         u64 trianglesLen = indicesLen / 3;
         for(u64 i = 0; i < trianglesLen; i++) {
             var (i0, i1, i2) = triangles[i];
             ref readonly var p0 = ref VertexAccessor.Position(vertices[i0]);
-            ref readonly var uv0 = ref VertexAccessor.UV(vertices[i0]);
+            ref readonly var uv0 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i0], uvOffset);
             ref readonly var p1 = ref VertexAccessor.Position(vertices[i1]);
-            ref readonly var uv1 = ref VertexAccessor.UV(vertices[i1]);
+            ref readonly var uv1 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i1], uvOffset);
             ref readonly var p2 = ref VertexAccessor.Position(vertices[i2]);
-            ref readonly var uv2 = ref VertexAccessor.UV(vertices[i2]);
+            ref readonly var uv2 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i2], uvOffset);
+
+            var deltaUV1 = uv1 - uv0;
+            var deltaUV2 = uv2 - uv0;
+            var deltaPos1 = p1 - p0;
+            var deltaPos2 = p2 - p0;
+            var d = 1f / (deltaUV1.X * deltaUV2.Y - deltaUV1.Y * deltaUV2.X);
+            tangents[i] = d * (deltaUV2.Y * deltaPos1 - deltaUV1.Y * deltaPos2);
+#if DEBUG
+            var bitangent = d * (deltaUV1.X * deltaPos2 - deltaUV2.X * deltaPos1);
+#endif
         }
-
-        throw new NotImplementedException();
     }
-}
 
-public record struct MeshOptions(bool CalcTangentIfNeeded);
+    public unsafe static void CalcTangentsU16<TVertex>(TVertex* vertices, u32 verticesLen, u16* indices, u64 indicesLen, Vector3* tangents, uint uvOffset)
+        where TVertex : unmanaged, IVertex
+    {
+        U16x3* triangles = (U16x3*)indices;
+        u64 trianglesLen = indicesLen / 3;
+        for(u64 i = 0; i < trianglesLen; i++) {
+            var (i0, i1, i2) = triangles[i];
+            ref readonly var p0 = ref VertexAccessor.Position(vertices[i0]);
+            ref readonly var uv0 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i0], uvOffset);
+            ref readonly var p1 = ref VertexAccessor.Position(vertices[i1]);
+            ref readonly var uv1 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i1], uvOffset);
+            ref readonly var p2 = ref VertexAccessor.Position(vertices[i2]);
+            ref readonly var uv2 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i2], uvOffset);
+
+            var deltaUV1 = uv1 - uv0;
+            var deltaUV2 = uv2 - uv0;
+            var deltaPos1 = p1 - p0;
+            var deltaPos2 = p2 - p0;
+            var d = 1f / (deltaUV1.X * deltaUV2.Y - deltaUV1.Y * deltaUV2.X);
+            tangents[i] = d * (deltaUV2.Y * deltaPos1 - deltaUV1.Y * deltaPos2);
+#if DEBUG
+            var bitangent = d * (deltaUV1.X * deltaPos2 - deltaUV2.X * deltaPos1);
+#endif
+        }
+    }
+
+    private record struct U16x3(u16 X, u16 Y, u16 Z);
+}

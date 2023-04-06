@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace Elffy;
 
-public interface IVertex
+public interface IVertex : IVertexPosition
 {
     abstract static u32 VertexSize { get; }
     abstract static VertexFields Fields { get; }
@@ -14,6 +14,24 @@ public interface IVertex
 
 public static class VertexAccessor
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly TField GetField<TVertex, TField>(in TVertex v, uint offset)
+        where TVertex : unmanaged, IVertex
+        where TField : unmanaged
+    {
+        return ref Unsafe.As<TVertex, TField>(
+            ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in v), offset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref TField GetRefField<TVertex, TField>(ref TVertex v, uint offset)
+        where TVertex : unmanaged, IVertex
+        where TField : unmanaged
+    {
+        return ref Unsafe.As<TVertex, TField>(
+            ref Unsafe.AddByteOffset(ref v, offset));
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ref readonly Vector3 Position<TVertex>(in TVertex v)
         where TVertex : unmanaged, IVertex, IVertexPosition

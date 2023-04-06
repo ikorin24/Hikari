@@ -19,7 +19,7 @@ public static class SampleData
             new Vertex(new(A, A, 0.0f), new(0, 0, 1), new(1f, 0f)),
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
-        return Mesh<Vertex>.Create(screen, vertices, indices);
+        return Mesh.CreateWithTangent(screen, vertices, indices);
     }
 
     public static Own<Texture> SampleTexture(Screen screen)
