@@ -34,4 +34,15 @@ public abstract class Positionable<TLayer, TVertex, TShader, TMaterial>
     protected Positionable(TLayer layer) : base(layer)
     {
     }
+
+    private Matrix4 CalcModel()
+    {
+        var s = _scale;
+        var scaleMat = new Matrix4(
+            s, 0, 0, 0,
+            0, s, 0, 0,
+            0, 0, s, 0,
+            0, 0, 0, 1);
+        return _position.ToTranslationMatrix4() * _rotation.ToMatrix4() * scaleMat;
+    }
 }
