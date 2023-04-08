@@ -73,6 +73,12 @@ public sealed class Buffer : IScreenManaged
         return CreateFromSpan(screen, data, usage);
     }
 
+    public unsafe static Own<Buffer> Create<T>(Screen screen, in T data, BufferUsages usage) where T : unmanaged
+    {
+        ArgumentNullException.ThrowIfNull(screen);
+        return CreateFromSpan(screen, new ReadOnlySpan<T>(in data), usage);
+    }
+
     public unsafe static Own<Buffer> Create(Screen screen, byte* ptr, usize byteLength, BufferUsages usage)
     {
         ArgumentNullException.ThrowIfNull(screen);

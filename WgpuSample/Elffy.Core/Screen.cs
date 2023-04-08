@@ -28,6 +28,7 @@ public sealed class Screen
     public Event<(Screen Screen, Vector2u Size)> Resized => _resized.Event;
 
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
+    internal ThreadId MainThread => _mainThread;
 
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
     public Mouse Mouse => _mouse;
