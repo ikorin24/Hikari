@@ -13,6 +13,7 @@ public sealed class Screen
     private Rust.OptionBox<CE.HostScreen> _native;
     private readonly ThreadId _mainThread;
     private readonly SubscriptionBag _subscriptions;
+    private readonly Camera _camera;
     private TextureFormat _surfaceFormat;
     private GraphicsBackend _backend;
     private bool _initialized;
@@ -107,10 +108,13 @@ public sealed class Screen
 
     public MonitorId? CurrentMonitor => _native.Unwrap().AsRef().CurrentMonitor();
 
+    public Camera Camera => _camera;
+
     internal Screen(Rust.Box<CE.HostScreen> screen, ThreadId mainThread)
     {
         _native = screen;
         _mainThread = mainThread;
+        _camera = new Camera(this);
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
         _renderOperations = new RenderOperations(this);
@@ -215,6 +219,7 @@ public sealed class Screen
         var size = new Vector2u(width, height);
         _native.Unwrap().AsRef().ScreenResizeSurface(size.X, size.Y);
         UpdateDepthTexture(size);
+        _camera.ChangeScreenSize(size);
         _resized.Invoke((this, size));
     }
 
