@@ -20,6 +20,8 @@ public sealed class Camera
 
     private readonly Screen _screen;
     private readonly Own<Buffer> _uniformBuffer;
+    private readonly Own<BindGroupLayout> _bindGroupLayout;
+    private readonly Own<BindGroup> _bindGroup;
     private readonly object _sync = new object();
     private Matrix4 _view;
     private Matrix4 _projection;
@@ -36,6 +38,9 @@ public sealed class Camera
     private EventSource<Camera> _matrixChanged;
 
     public Event<Camera> MatrixChanged => _matrixChanged.Event;
+
+    public BindGroupLayout CameraDataBindGroupLayout => _bindGroupLayout.AsValue();
+    public BindGroup CameraDataBindGroup => _bindGroup.AsValue();
 
     public CameraProjectionMode ProjectionMode
     {
@@ -180,6 +185,45 @@ public sealed class Camera
         CalcProjection(_mode, _near, _far, _aspect, out _projection);
         CalcView(_position, _direction, _up, out _view);
         Frustum.FromMatrix(_projection, _view, out _frustum);
+
+        _uniformBuffer = Buffer.Create(
+            screen,
+            new UniformValue
+            {
+                Projection = _projection,
+                View = _view,
+            },
+            BufferUsages.Uniform | BufferUsages.CopyDst);
+        _bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
+        {
+            Entries = new[]
+            {
+                BindGroupLayoutEntry.Buffer(
+                    0,
+                    ShaderStages.Vertex | ShaderStages.Fragment | ShaderStages.Compute,
+                    new BufferBindingData
+                    {
+                        Type = BufferBindingType.Uniform,
+                        HasDynamicOffset = false,
+                        MinBindingSize = 0,
+                    }),
+            },
+        });
+        _bindGroup = BindGroup.Create(screen, new BindGroupDescriptor
+        {
+            Layout = _bindGroupLayout.AsValue(),
+            Entries = new[]
+            {
+                BindGroupEntry.Buffer(0, _uniformBuffer.AsValue()),
+            },
+        });
+    }
+
+    internal void DisposeInternal()
+    {
+        _bindGroup.Dispose();
+        _bindGroupLayout.Dispose();
+        _uniformBuffer.Dispose();
     }
 
     public void SetNearFar(float near, float far)
@@ -244,10 +288,9 @@ public sealed class Camera
         _matrixChanged.Invoke(this);
     }
 
-    internal void WriteUniform(out Buffer uniformBuffer)
+    internal void UpdateUniformBuffer()
     {
-        Debug.Assert(ThreadId.CurrentThread() == _screen.MainThread);
-        uniformBuffer = _uniformBuffer.AsValue();
+        var uniformBuffer = _uniformBuffer.AsValue();
         lock(_sync) {
             if(_isUniformChanged) {
                 _isUniformChanged = false;

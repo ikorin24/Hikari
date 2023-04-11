@@ -207,6 +207,9 @@ public sealed class Screen
     private void Render(in CommandEncoder encoder)
     {
         _renderOperations.ApplyAdd();
+        // TODO: update
+
+        _camera.UpdateUniformBuffer();
         RenderOperations.Render(in encoder);
         _renderOperations.ApplyRemove();
         _keyboard.PrepareNextFrame();
@@ -231,6 +234,7 @@ public sealed class Screen
     {
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
         _renderOperations.DisposeInternal();
+        _camera.DisposeInternal();
         _depthTexture.Dispose();
         _depthTexture = Own<Texture>.None;
         _resized.Clear();
