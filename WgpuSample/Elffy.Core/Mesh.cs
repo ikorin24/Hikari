@@ -18,31 +18,8 @@ public sealed class Mesh<TVertex>
     private bool _isReleased;
 
     public BufferSlice<TVertex> VertexBuffer => _vertexBuffer.AsValue().Slice<TVertex>();
-    public BufferSlice IndexBuffer => _indexBuffer.AsValue().Slice();
-    public BufferSlice<u32> IndexBufferU32
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get
-        {
-            if(_indexFormat != IndexFormat.Uint32) {
-                throw new InvalidOperationException("index format is not uint32");
-            }
-            return IndexBuffer.OfType<u32>();
-        }
-    }
+    public IndexBufferSlice IndexBuffer => new IndexBufferSlice(_indexFormat, _indexBuffer.AsValue().Slice());
 
-    public BufferSlice<u16> IndexBufferU16
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get
-        {
-            if(_indexFormat != IndexFormat.Uint16) {
-                throw new InvalidOperationException("index format is not uint16");
-            }
-            return IndexBuffer.OfType<u16>();
-        }
-    }
-    public IndexFormat IndexFormat => _indexFormat;
     public uint IndexCount => _indexCount;
 
     public bool TryGetOptionalTangent(out BufferSlice<Vector3> tangent)
@@ -239,4 +216,42 @@ internal static class MeshHelper
     }
 
     private record struct U16x3(u16 X, u16 Y, u16 Z);
+}
+
+public readonly struct IndexBufferSlice
+{
+    private readonly IndexFormat _format;
+    private readonly BufferSlice<u8> _byteSlice;
+
+    public IndexBufferSlice(IndexFormat format, BufferSlice<u8> byteSlice)
+    {
+        _format = format;
+        _byteSlice = byteSlice;
+    }
+
+    public IndexFormat Format => _format;
+    public bool IsUint16(out BufferSlice<u16> bufferSlice)
+    {
+        if(_format == IndexFormat.Uint16) {
+            bufferSlice = _byteSlice.Cast<u16>();
+            return true;
+        }
+        bufferSlice = default;
+        return false;
+    }
+
+    public bool IsUint32(out BufferSlice<u32> bufferSlice)
+    {
+        if(_format == IndexFormat.Uint32) {
+            bufferSlice = _byteSlice.Cast<u32>();
+            return true;
+        }
+        bufferSlice = default;
+        return false;
+    }
+
+    internal CE.BufferSlice BufferSliceNative()
+    {
+        return _byteSlice.Native();
+    }
 }

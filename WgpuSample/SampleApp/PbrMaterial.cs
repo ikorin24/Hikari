@@ -12,8 +12,8 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
     private readonly Own<Texture> _normal;
     private readonly Own<Uniform<UniformValue>> _uniform;
 
-    public Texture Albedo => _albedo.AsValue();
-    public Texture MetallicRoughness => _metallicRoughness.AsValue();
+    public TextureView Albedo => _albedo.AsValue().View;
+    public TextureView MetallicRoughness => _metallicRoughness.AsValue().View;
 
     private PbrMaterial(
         PbrShader shader,

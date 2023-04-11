@@ -75,8 +75,9 @@ public readonly struct RenderPass
     public void SetMesh<TVertex>(u32 slot, Mesh<TVertex> mesh) where TVertex : unmanaged, IVertex
     {
         var native = _native.AsMut();
+        var indexBuffer = mesh.IndexBuffer;
         native.SetVertexBuffer(slot, mesh.VertexBuffer.Native());
-        native.SetIndexBuffer(mesh.IndexBuffer.Native(), mesh.IndexFormat.MapOrThrow());
+        native.SetIndexBuffer(indexBuffer.BufferSliceNative(), indexBuffer.Format.MapOrThrow());
     }
 
     public void SetVertexBuffer(u32 slot, Buffer buffer)
@@ -88,10 +89,6 @@ public readonly struct RenderPass
     {
         _native.AsMut().SetVertexBuffer(slot, bufferSlice.Native());
     }
-    public void SetVertexBuffer<T>(u32 slot, in BufferSlice bufferSlice)
-    {
-        _native.AsMut().SetVertexBuffer(slot, bufferSlice.Native());
-    }
 
     public void SetIndexBuffer(Buffer buffer, IndexFormat indexFormat)
     {
@@ -99,9 +96,9 @@ public readonly struct RenderPass
         _native.AsMut().SetIndexBuffer(bufferSlice, indexFormat.MapOrThrow());
     }
 
-    public void SetIndexBuffer(in BufferSlice bufferSlice, IndexFormat indexFormat)
+    public void SetIndexBuffer(in IndexBufferSlice slice)
     {
-        _native.AsMut().SetIndexBuffer(bufferSlice.Native(), indexFormat.MapOrThrow());
+        _native.AsMut().SetIndexBuffer(slice.BufferSliceNative(), slice.Format.MapOrThrow());
     }
 
     public void SetIndexBuffer(in BufferSlice<u32> bufferSlice)

@@ -110,7 +110,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
 
         renderPass.SetPipeline(Pipeline);
         renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
-        renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+        renderPass.SetIndexBuffer(mesh.IndexBuffer);
         renderPass.SetBindGroup(0, bindGroups[0]);
         renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
     }

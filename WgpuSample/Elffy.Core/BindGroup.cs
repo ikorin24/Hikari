@@ -103,6 +103,12 @@ public readonly struct BindGroupEntry
         return new BindGroupEntry(binding, resource);
     }
 
+    public static BindGroupEntry Buffer<T>(u32 binding, BufferSlice<T> bufferSlice) where T : unmanaged
+    {
+        var resource = new BufferBinding(bufferSlice.Cast<u8>());
+        return new BindGroupEntry(binding, resource);
+    }
+
     public static BindGroupEntry TextureView(u32 binding, TextureView textureView)
     {
         ArgumentNullException.ThrowIfNull(textureView);
@@ -118,6 +124,10 @@ public readonly struct BindGroupEntry
     internal sealed class BufferBinding
     {
         private CE.BufferBinding _native;
+
+        public BufferBinding(BufferSlice<u8> bufferSlice) : this(bufferSlice.Buffer, bufferSlice.StartByteOffset, bufferSlice.ByteLength)
+        {
+        }
 
         public BufferBinding(Buffer buffer, u64 offset, u64 size)
         {
