@@ -11,9 +11,12 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
     private readonly Own<Texture> _metallicRoughness;
     private readonly Own<Texture> _normal;
     private readonly Own<Uniform<UniformValue>> _uniform;
+    private readonly Own<BindGroup> _bindGroup0;
 
     public TextureView Albedo => _albedo.AsValue().View;
     public TextureView MetallicRoughness => _metallicRoughness.AsValue().View;
+
+    public BindGroup BindGroup0 => _bindGroup0.AsValue();
 
     private PbrMaterial(
         PbrShader shader,
@@ -23,13 +26,14 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         Own<Texture> metallicRoughness,
         Own<Texture> normal,
         Own<BindGroup> bindGroup)
-        : base(shader, new[] { bindGroup })
+        : base(shader)
     {
         _uniform = uniform;
         _sampler = sampler;
         _albedo = albedo;
         _metallicRoughness = metallicRoughness;
         _normal = normal;
+        _bindGroup0 = bindGroup;
     }
 
     protected override void Release(bool manualRelease)
@@ -41,6 +45,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
             _albedo.Dispose();
             _metallicRoughness.Dispose();
             _normal.Dispose();
+            _bindGroup0.Dispose();
         }
     }
 

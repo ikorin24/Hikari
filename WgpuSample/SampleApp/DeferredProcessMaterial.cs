@@ -4,8 +4,21 @@ namespace Elffy;
 
 public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, DeferredProcessShader>
 {
-    private DeferredProcessMaterial(DeferredProcessShader shader, Own<BindGroup>[] bindGroupOwns) : base(shader, bindGroupOwns)
+    private readonly Own<BindGroup> _bindGroup0;
+
+    public BindGroup BindGroup0 => _bindGroup0.AsValue();
+
+    private DeferredProcessMaterial(DeferredProcessShader shader, Own<BindGroup> bindGroup0) : base(shader)
     {
+        _bindGroup0 = bindGroup0;
+    }
+
+    protected override void Release(bool manualRelease)
+    {
+        base.Release(manualRelease);
+        if(manualRelease) {
+            _bindGroup0.Dispose();
+        }
     }
 
     public static Own<DeferredProcessMaterial> Create(DeferredProcessShader shader, GBuffer gBuffer)
@@ -24,8 +37,8 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
                 BindGroupEntry.TextureView(4, gBuffer.ColorAttachment(3).View),
             },
         };
-        var bg = BindGroup.Create(screen, desc);
-        var material = new DeferredProcessMaterial(shader, new[] { bg });
+        var bindGroup0 = BindGroup.Create(screen, desc);
+        var material = new DeferredProcessMaterial(shader, bindGroup0);
         return CreateOwn(material);
     }
 }

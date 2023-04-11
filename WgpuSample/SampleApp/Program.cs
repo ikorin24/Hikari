@@ -90,6 +90,16 @@ public sealed class MyModel : Renderable<MyObjectLayer, VertexSlim, MyShader, My
     public MyModel(MyObjectLayer layer, Own<Mesh<VertexSlim>> mesh, Own<Texture> texture) : base(layer, mesh, MyMaterial.Create(layer.Shader, texture))
     {
     }
+
+    protected override void Render(RenderPass renderPass)
+    {
+        var mesh = Mesh;
+        var material = Material;
+        renderPass.SetBindGroup(0, material.BindGroup0);
+        renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+        renderPass.SetIndexBuffer(mesh.IndexBuffer);
+        renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
+    }
 }
 
 public sealed class MyShader : Shader<MyShader, MyMaterial>
@@ -169,7 +179,9 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
     private readonly Own<Texture> _texture;
     private readonly Own<Sampler> _sampler;
     private readonly Own<Uniform<Vector3>> _uniform;
+    private readonly Own<BindGroup> _bindGroup;
 
+    public BindGroup BindGroup0 => _bindGroup.AsValue();
     public Texture Texture => _texture.AsValue();
     public Sampler Sampler => _sampler.AsValue();
 
@@ -179,11 +191,12 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
         Own<Sampler> sampler,
         Own<Uniform<Vector3>> uniform,
         Own<BindGroup> bindGroup)
-        : base(shader, new[] { bindGroup })
+        : base(shader)
     {
         _texture = texture;
         _sampler = sampler;
         _uniform = uniform;
+        _bindGroup = bindGroup;
     }
 
     protected override void Release(bool manualRelease)
@@ -193,6 +206,7 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
             _texture.Dispose();
             _sampler.Dispose();
             _uniform.Dispose();
+            _bindGroup.Dispose();
         }
     }
 

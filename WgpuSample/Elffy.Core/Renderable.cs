@@ -25,13 +25,7 @@ public abstract class Renderable<TLayer, TVertex, TShader, TMaterial>
 
     internal void InvokeRender(RenderPass renderPass) => Render(renderPass);
 
-    protected virtual void Render(RenderPass renderPass)
-    {
-        var mesh = Mesh;
-        renderPass.SetMaterial(Material);
-        renderPass.SetMesh(0, mesh);
-        renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
-    }
+    protected abstract void Render(RenderPass renderPass);
 
     internal override void OnDead()
     {

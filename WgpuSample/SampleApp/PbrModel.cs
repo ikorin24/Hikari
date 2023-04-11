@@ -33,7 +33,12 @@ public sealed class PbrModel : Renderable<PbrLayer, V, PbrShader, PbrMaterial>
 
     protected override void Render(RenderPass renderPass)
     {
+        var material = Material;
+        var mesh = Mesh;
+        renderPass.SetBindGroup(0, material.BindGroup0);
+        renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
         renderPass.SetVertexBuffer(1, _tangent);
-        base.Render(renderPass);
+        renderPass.SetIndexBuffer(mesh.IndexBuffer);
+        renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
     }
 }
