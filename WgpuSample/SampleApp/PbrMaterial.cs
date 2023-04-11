@@ -10,7 +10,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
     private readonly Own<Texture> _albedo;
     private readonly Own<Texture> _metallicRoughness;
     private readonly Own<Texture> _normal;
-    private readonly Own<Uniform<UniformValue>> _uniform;
+    private readonly Own<Buffer> _uniform;
     private readonly Own<BindGroup> _bindGroup0;
 
     public TextureView Albedo => _albedo.AsValue().View;
@@ -21,7 +21,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 
     private PbrMaterial(
         PbrShader shader,
-        Own<Uniform<UniformValue>> uniform,
+        Own<Buffer> uniform,
         Own<Sampler> sampler,
         Own<Texture> albedo,
         Own<Texture> metallicRoughness,
@@ -64,14 +64,13 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         normal.ThrowArgumentExceptionIfNone();
 
         var screen = shader.Screen;
-        //var uniform = Buffer.Create(screen, Matrix4.Identity, BufferUsages.Uniform | BufferUsages.CopyDst);
-        var uniform = Uniform<UniformValue>.Create(screen, default);
+        var uniform = Buffer.Create(screen, default(UniformValue), BufferUsages.Uniform | BufferUsages.CopyDst);
         var desc = new BindGroupDescriptor
         {
             Layout = shader.BindGroupLayout0,
             Entries = new BindGroupEntry[]
             {
-                BindGroupEntry.Buffer(0, uniform.AsValue().Buffer),
+                BindGroupEntry.Buffer(0, uniform.AsValue()),
                 BindGroupEntry.Sampler(1, sampler.AsValue()),
                 BindGroupEntry.TextureView(2, albedo.AsValue().View),
                 BindGroupEntry.TextureView(3, metallicRoughness.AsValue().View),
@@ -83,7 +82,10 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         return CreateOwn(material);
     }
 
-    public void SetUniform(in UniformValue value) => _uniform.AsValue().Set(in value);
+    public void SetUniform(in UniformValue value)
+    {
+        _uniform.AsValue().Write(0, value);
+    }
 
     [StructLayout(LayoutKind.Explicit)]
     public struct UniformValue

@@ -204,7 +204,7 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
 {
     private readonly Own<Texture> _texture;
     private readonly Own<Sampler> _sampler;
-    private readonly Own<Uniform<Vector3>> _uniform;
+    private readonly Own<Buffer> _uniform;
     private readonly Own<BindGroup> _bindGroup;
 
     public BindGroup BindGroup0 => _bindGroup.AsValue();
@@ -215,7 +215,7 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
         MyShader shader,
         Own<Texture> texture,
         Own<Sampler> sampler,
-        Own<Uniform<Vector3>> uniform,
+        Own<Buffer> uniform,
         Own<BindGroup> bindGroup)
         : base(shader)
     {
@@ -243,7 +243,7 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
 
         var screen = shader.Screen;
         var sampler = Sampler.NoMipmap(screen, AddressMode.ClampToEdge, FilterMode.Linear, FilterMode.Nearest);
-        var uniform = Uniform.Create(screen, default(Vector3));
+        var uniform = Buffer.Create(screen, default(Vector3), BufferUsages.Uniform | BufferUsages.CopyDst);
         var bindGroup = BindGroup.Create(shader.Screen, new BindGroupDescriptor
         {
             Layout = shader.BindGroupLayout0,
@@ -251,7 +251,7 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
             {
                 BindGroupEntry.TextureView(0, texture.AsValue().View),
                 BindGroupEntry.Sampler(1, sampler.AsValue()),
-                BindGroupEntry.Buffer(2, uniform.AsValue().Buffer),
+                BindGroupEntry.Buffer(2, uniform.AsValue()),
             },
         });
         return CreateOwn(new MyMaterial(shader, texture, sampler, uniform, bindGroup));
@@ -259,7 +259,7 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
 
     public void SetUniform(in Vector3 value)
     {
-        _uniform.AsValue().Set(value);
+        _uniform.AsValue().Write(0, value);
     }
 }
 
