@@ -41,8 +41,8 @@ public sealed class RenderOperations
     internal void Render(in CommandEncoder encoder)
     {
         foreach(var op in _list.AsSpan()) {
-            using var renderPass = op.GetRenderPass(encoder);
-            op.InvokeRender(renderPass.AsValue());
+            using var pass = op.GetRenderPass(encoder);
+            op.InvokeRender(pass.AsValue());
         }
     }
 

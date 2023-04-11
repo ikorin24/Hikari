@@ -23,9 +23,9 @@ public abstract class Renderable<TLayer, TVertex, TShader, TMaterial>
         _mesh = mesh;
     }
 
-    internal void InvokeRender(RenderPass renderPass) => Render(renderPass);
+    internal void InvokeRender(RenderPass pass) => Render(pass);
 
-    protected abstract void Render(RenderPass renderPass);
+    protected abstract void Render(RenderPass pass);
 
     internal override void OnDead()
     {

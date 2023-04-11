@@ -41,14 +41,14 @@ public abstract class RenderOperation
         return RenderPass.SurfaceRenderPass(in encoder);
     }
 
-    protected abstract void Render(RenderPass renderPass);
+    protected abstract void Render(RenderPass pass);
 
     protected virtual void FrameEnd() { }   // nop
 
     internal void InvokeFrameInit() => FrameInit();
     internal void InvokeFrameEnd() => FrameEnd();
 
-    internal void InvokeRender(RenderPass renderPass) => Render(renderPass);
+    internal void InvokeRender(RenderPass pass) => Render(pass);
 
     internal void Release()
     {
@@ -186,12 +186,12 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
         }
     }
 
-    protected override void Render(RenderPass renderPass)
+    protected override void Render(RenderPass pass)
     {
-        renderPass.SetPipeline(Pipeline);
+        pass.SetPipeline(Pipeline);
         foreach(var obj in _list.AsSpan()) {
             if(obj is Renderable<TSelf, TVertex, TShader, TMaterial> renderable) {
-                renderable.InvokeRender(renderPass);
+                renderable.InvokeRender(pass);
             }
         }
     }

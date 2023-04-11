@@ -102,14 +102,14 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
         return shader;
     }
 
-    protected override void Render(RenderPass renderPass)
+    protected override void Render(RenderPass pass)
     {
-        renderPass.SetPipeline(Pipeline);
+        pass.SetPipeline(Pipeline);
         var mesh = _rectMesh.AsValue();
         var material = _material.AsValue();
-        renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
-        renderPass.SetIndexBuffer(mesh.IndexBuffer);
-        renderPass.SetBindGroup(0, material.BindGroup0);
-        renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
+        pass.SetVertexBuffer(0, mesh.VertexBuffer);
+        pass.SetIndexBuffer(mesh.IndexBuffer);
+        pass.SetBindGroup(0, material.BindGroup0);
+        pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
     }
 }
