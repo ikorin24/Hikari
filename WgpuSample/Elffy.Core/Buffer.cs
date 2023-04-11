@@ -197,6 +197,15 @@ public readonly struct BufferSlice<T> : IEquatable<BufferSlice<T>> where T : unm
         return new BufferSlice<T>(buffer, 0, q);
     }
 
+    public void Write(ReadOnlySpan<T> data)
+    {
+        if(Length < (u64)data.Length) {
+            ThrowTooLong();
+            [DoesNotReturn] static void ThrowTooLong() => throw new ArgumentException("data is too long to write");
+        }
+        Buffer.Write(_startByte, data);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal CE.BufferSlice Native()
     {

@@ -36,6 +36,7 @@ public sealed class PbrModel : Renderable<PbrLayer, V, PbrShader, PbrMaterial>
         var material = Material;
         var mesh = Mesh;
         pass.SetBindGroup(0, material.BindGroup0);
+        pass.SetBindGroup(1, material.BindGroup1);
         pass.SetVertexBuffer(0, mesh.VertexBuffer);
         pass.SetVertexBuffer(1, _tangent);
         pass.SetIndexBuffer(mesh.IndexBuffer);

@@ -32,11 +32,17 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             proj: mat4x4<f32>,
         }
 
+        struct CameraMat {
+            proj: mat4x4<f32>,
+            view: mat4x4<f32>,
+        }
+
         @group(0) @binding(0) var<uniform> u: UniformValue;
         @group(0) @binding(1) var tex_sampler: sampler;
         @group(0) @binding(2) var albedo_tex: texture_2d<f32>;
         @group(0) @binding(3) var mr_tex: texture_2d<f32>;
         @group(0) @binding(4) var normal_tex: texture_2d<f32>;
+        @group(1) @binding(0) var<uniform> c: CameraMat;
 
         @vertex fn vs_main(
             v: Vin,
@@ -110,12 +116,20 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
     };
 
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
+    private readonly BindGroupLayout _bindGroupLayout1;
 
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
 
-    private PbrShader(Screen screen) : base(screen, ShaderSource, BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0))
+    public BindGroupLayout BindGroupLayout1 => _bindGroupLayout1;
+
+    private PbrShader(Screen screen)
+        : base(
+            screen,
+            ShaderSource,
+            BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0, out var bindGroupLayout1))
     {
         _bindGroupLayout0 = bindGroupLayout0;
+        _bindGroupLayout1 = bindGroupLayout1;
     }
 
     public static Own<PbrShader> Create(Screen screen)
@@ -132,14 +146,19 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         }
     }
 
-    private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(Screen screen, out Own<BindGroupLayout> bindGroupLayout0)
+    private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(
+        Screen screen,
+        out Own<BindGroupLayout> bindGroupLayout0,
+        out BindGroupLayout bindGroupLayout1)
     {
         bindGroupLayout0 = BindGroupLayout.Create(screen, _bindGroupLayoutDesc0);
+        bindGroupLayout1 = screen.Camera.CameraDataBindGroupLayout;
         return new PipelineLayoutDescriptor
         {
             BindGroupLayouts = new[]
             {
                 bindGroupLayout0.AsValue(),
+                bindGroupLayout1,
             },
         };
     }

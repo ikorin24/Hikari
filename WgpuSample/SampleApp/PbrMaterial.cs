@@ -17,6 +17,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
     public TextureView MetallicRoughness => _metallicRoughness.AsValue().View;
 
     public BindGroup BindGroup0 => _bindGroup0.AsValue();
+    public BindGroup BindGroup1 => Screen.Camera.CameraDataBindGroup;
 
     private PbrMaterial(
         PbrShader shader,
@@ -63,6 +64,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         normal.ThrowArgumentExceptionIfNone();
 
         var screen = shader.Screen;
+        //var uniform = Buffer.Create(screen, Matrix4.Identity, BufferUsages.Uniform | BufferUsages.CopyDst);
         var uniform = Uniform<UniformValue>.Create(screen, default);
         var desc = new BindGroupDescriptor
         {
