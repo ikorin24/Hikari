@@ -66,7 +66,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         var uniform = Uniform<UniformValue>.Create(screen, default);
         var desc = new BindGroupDescriptor
         {
-            Layout = shader.GetBindGroupLayout(0),
+            Layout = shader.BindGroupLayout0,
             Entries = new BindGroupEntry[]
             {
                 BindGroupEntry.Buffer(0, uniform.AsValue().Buffer),

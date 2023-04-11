@@ -27,7 +27,7 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
         var sampler = Sampler.NoMipmap(screen, AddressMode.ClampToEdge, FilterMode.Nearest, FilterMode.Nearest);
         var desc = new BindGroupDescriptor
         {
-            Layout = shader.GetBindGroupLayout(0),
+            Layout = shader.BindGroupLayout0,
             Entries = new BindGroupEntry[]
             {
                 BindGroupEntry.Sampler(0, sampler.AsValue()),

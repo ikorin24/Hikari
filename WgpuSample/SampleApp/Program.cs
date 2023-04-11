@@ -163,14 +163,40 @@ public sealed class MyShader : Shader<MyShader, MyMaterial>
         },
     };
 
-    private MyShader(Screen screen) : base(screen, in _groupDesc0, ShaderSource)
+    private readonly Own<BindGroupLayout> _bindGroupLayout0;
+
+    public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
+
+    private MyShader(Screen screen)
+        : base(screen, ShaderSource, BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0))
     {
+        _bindGroupLayout0 = bindGroupLayout0;
     }
 
     public static Own<MyShader> Create(Screen screen)
     {
         var self = new MyShader(screen);
         return CreateOwn(self);
+    }
+
+    protected override void Release(bool manualRelease)
+    {
+        base.Release(manualRelease);
+        if(manualRelease) {
+            _bindGroupLayout0.Dispose();
+        }
+    }
+
+    private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(Screen screen, out Own<BindGroupLayout> bindGroupLayout0)
+    {
+        bindGroupLayout0 = BindGroupLayout.Create(screen, _groupDesc0);
+        return new PipelineLayoutDescriptor
+        {
+            BindGroupLayouts = new[]
+            {
+                bindGroupLayout0.AsValue(),
+            },
+        };
     }
 }
 
@@ -220,7 +246,7 @@ public sealed class MyMaterial : Material<MyMaterial, MyShader>
         var uniform = Uniform.Create(screen, default(Vector3));
         var bindGroup = BindGroup.Create(shader.Screen, new BindGroupDescriptor
         {
-            Layout = shader.GetBindGroupLayout(0),
+            Layout = shader.BindGroupLayout0,
             Entries = new BindGroupEntry[3]
             {
                 BindGroupEntry.TextureView(0, texture.AsValue().View),

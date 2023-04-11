@@ -38,7 +38,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         }
         """u8;
 
-    private static readonly BindGroupLayoutDescriptor _bindGroupLayoutDesc = new()
+    private static readonly BindGroupLayoutDescriptor _bindGroupLayoutDesc0 = new()
     {
         Entries = new BindGroupLayoutEntry[]
         {
@@ -70,13 +70,39 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         }
     };
 
-    private DeferredProcessShader(Screen screen) : base(screen, _bindGroupLayoutDesc, ShaderSource)
+    private readonly Own<BindGroupLayout> _bindGroupLayout0;
+
+    public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
+
+    private DeferredProcessShader(Screen screen)
+        : base(screen, ShaderSource, BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0))
     {
+        _bindGroupLayout0 = bindGroupLayout0;
     }
 
     public static Own<DeferredProcessShader> Create(Screen screen)
     {
         var shader = new DeferredProcessShader(screen);
         return CreateOwn(shader);
+    }
+
+    protected override void Release(bool manualRelease)
+    {
+        base.Release(manualRelease);
+        if(manualRelease) {
+            _bindGroupLayout0.Dispose();
+        }
+    }
+
+    private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(Screen screen, out Own<BindGroupLayout> bindGroupLayout0)
+    {
+        bindGroupLayout0 = BindGroupLayout.Create(screen, _bindGroupLayoutDesc0);
+        return new PipelineLayoutDescriptor
+        {
+            BindGroupLayouts = new[]
+            {
+                bindGroupLayout0.AsValue(),
+            },
+        };
     }
 }

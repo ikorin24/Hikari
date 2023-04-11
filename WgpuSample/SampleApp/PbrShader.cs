@@ -77,7 +77,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         }
         """u8;
 
-    private static readonly BindGroupLayoutDescriptor _bglDesc = new()
+    private static readonly BindGroupLayoutDescriptor _bindGroupLayoutDesc0 = new()
     {
         Entries = new[]
         {
@@ -109,14 +109,38 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         },
     };
 
-    private PbrShader(Screen screen) : base(screen, in _bglDesc, ShaderSource)
-    {
+    private readonly Own<BindGroupLayout> _bindGroupLayout0;
 
+    public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
+
+    private PbrShader(Screen screen) : base(screen, ShaderSource, BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0))
+    {
+        _bindGroupLayout0 = bindGroupLayout0;
     }
 
     public static Own<PbrShader> Create(Screen screen)
     {
         var self = new PbrShader(screen);
         return CreateOwn(self);
+    }
+
+    protected override void Release(bool manualRelease)
+    {
+        base.Release(manualRelease);
+        if(manualRelease) {
+            _bindGroupLayout0.Dispose();
+        }
+    }
+
+    private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(Screen screen, out Own<BindGroupLayout> bindGroupLayout0)
+    {
+        bindGroupLayout0 = BindGroupLayout.Create(screen, _bindGroupLayoutDesc0);
+        return new PipelineLayoutDescriptor
+        {
+            BindGroupLayouts = new[]
+            {
+                bindGroupLayout0.AsValue(),
+            },
+        };
     }
 }
