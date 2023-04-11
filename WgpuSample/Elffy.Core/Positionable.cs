@@ -10,8 +10,8 @@ public abstract class Positionable<TLayer, TVertex, TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
     private Vector3 _position;
-    private Quaternion _rotation;
-    private float _scale;
+    private Quaternion _rotation = Quaternion.Identity;
+    private float _scale = 1f;
 
     public Vector3 Position
     {
@@ -33,6 +33,13 @@ public abstract class Positionable<TLayer, TVertex, TShader, TMaterial>
 
     protected Positionable(TLayer layer) : base(layer)
     {
+    }
+
+    public Matrix4 GetModel()
+    {
+        // TODO: cache
+        // TODO: thread safe
+        return CalcModel();
     }
 
     private Matrix4 CalcModel()

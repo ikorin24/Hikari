@@ -36,8 +36,6 @@ internal class Program
         screen.Title = "sample";
         var layer = new PbrLayer(screen, 0);
         var deferredProcess = new DeferredProcess(layer, 1);
-
-
         var sampler = Sampler.Create(screen, new()
         {
             AddressModeU = AddressMode.ClampToEdge,
@@ -50,9 +48,12 @@ internal class Program
         var albedo = LoadImage(screen, "pic.png", TextureFormat.Rgba8UnormSrgb);
         var mr = LoadImage(screen, "pic.png", TextureFormat.Rgba8Unorm);
         var normal = LoadImage(screen, "pic.png", TextureFormat.Rgba8Unorm);
+        var mesh = SampleData.SampleMesh(screen);
 
-        var model = new PbrModel(layer, SampleData.SampleMesh(screen), sampler, albedo, mr, normal);
-        model.Material.SetUniform(new(Matrix4.Identity, Matrix4.Identity, Matrix4.Identity));
+        var model = new PbrModel(layer, mesh, sampler, albedo, mr, normal);
+        var camera = screen.Camera;
+        camera.Position = new Vector3(0, 0, 3);
+        camera.LookAt(Vector3.Zero);
     }
 
     private static Own<Texture> LoadImage(Screen screen, string filepath, TextureFormat format)

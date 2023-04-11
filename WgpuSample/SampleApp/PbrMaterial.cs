@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System;
-using System.Runtime.InteropServices;
 
 namespace Elffy;
 
@@ -10,18 +9,20 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
     private readonly Own<Texture> _albedo;
     private readonly Own<Texture> _metallicRoughness;
     private readonly Own<Texture> _normal;
-    private readonly Own<Buffer> _uniform;
+    private readonly Own<Buffer> _modelUniform;
     private readonly Own<BindGroup> _bindGroup0;
 
-    public TextureView Albedo => _albedo.AsValue().View;
-    public TextureView MetallicRoughness => _metallicRoughness.AsValue().View;
+    public Texture Albedo => _albedo.AsValue();
+    public Texture MetallicRoughness => _metallicRoughness.AsValue();
+
+    internal BufferSlice<byte> ModelUniform => _modelUniform.AsValue().Slice();
 
     public BindGroup BindGroup0 => _bindGroup0.AsValue();
     public BindGroup BindGroup1 => Screen.Camera.CameraDataBindGroup;
 
     private PbrMaterial(
         PbrShader shader,
-        Own<Buffer> uniform,
+        Own<Buffer> modelUniform,
         Own<Sampler> sampler,
         Own<Texture> albedo,
         Own<Texture> metallicRoughness,
@@ -29,7 +30,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         Own<BindGroup> bindGroup)
         : base(shader)
     {
-        _uniform = uniform;
+        _modelUniform = modelUniform;
         _sampler = sampler;
         _albedo = albedo;
         _metallicRoughness = metallicRoughness;
@@ -41,7 +42,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
     {
         base.Release(manualRelease);
         if(manualRelease) {
-            _uniform.Dispose();
+            _modelUniform.Dispose();
             _sampler.Dispose();
             _albedo.Dispose();
             _metallicRoughness.Dispose();
@@ -64,13 +65,13 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         normal.ThrowArgumentExceptionIfNone();
 
         var screen = shader.Screen;
-        var uniform = Buffer.Create(screen, default(UniformValue), BufferUsages.Uniform | BufferUsages.CopyDst);
+        var modelUniform = Buffer.Create(screen, default(Matrix4), BufferUsages.Uniform | BufferUsages.CopyDst);
         var desc = new BindGroupDescriptor
         {
             Layout = shader.BindGroupLayout0,
             Entries = new BindGroupEntry[]
             {
-                BindGroupEntry.Buffer(0, uniform.AsValue()),
+                BindGroupEntry.Buffer(0, modelUniform.AsValue()),
                 BindGroupEntry.Sampler(1, sampler.AsValue()),
                 BindGroupEntry.TextureView(2, albedo.AsValue().View),
                 BindGroupEntry.TextureView(3, metallicRoughness.AsValue().View),
@@ -78,30 +79,12 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
             },
         };
         var bindGroup = BindGroup.Create(screen, in desc);
-        var material = new PbrMaterial(shader, uniform, sampler, albedo, metallicRoughness, normal, bindGroup);
+        var material = new PbrMaterial(shader, modelUniform, sampler, albedo, metallicRoughness, normal, bindGroup);
         return CreateOwn(material);
     }
 
-    public void SetUniform(in UniformValue value)
+    internal void WriteModelUniform(in Matrix4 model)
     {
-        _uniform.AsValue().Write(0, value);
-    }
-
-    [StructLayout(LayoutKind.Explicit)]
-    public struct UniformValue
-    {
-        [FieldOffset(0)]    // 0 ~ 63   (size: 64)
-        private Matrix4 _model;
-        [FieldOffset(64)]   // 64 ~ 127 (size: 64)
-        private Matrix4 _view;
-        [FieldOffset(128)]  // 127 ~ 191 (size: 64)
-        private Matrix4 _projection;
-
-        public UniformValue(Matrix4 model, Matrix4 view, Matrix4 projection)
-        {
-            _model = model;
-            _view = view;
-            _projection = projection;
-        }
+        _modelUniform.AsValue().Write(0, model);
     }
 }

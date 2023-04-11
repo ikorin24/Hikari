@@ -28,8 +28,6 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         }
         struct UniformValue {
             model: mat4x4<f32>,
-            view: mat4x4<f32>,
-            proj: mat4x4<f32>,
         }
 
         struct CameraMat {
@@ -47,11 +45,11 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         @vertex fn vs_main(
             v: Vin,
         ) -> V2F {
-            var model_view = u.view * u.model;
+            var model_view = c.view * u.model;
             var mv33 = mat44_to_33(model_view);
             var output: V2F;
             var pos4: vec4<f32> = model_view * vec4(v.pos, 1.0);
-            output.clip_pos = u.proj * pos4;
+            output.clip_pos = c.proj * pos4;
             output.pos_camera_coord = pos4.xyz / pos4.w;
             output.uv = v.uv;
             output.tangent_camera_coord = normalize(mv33 * v.tangent);
