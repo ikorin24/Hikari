@@ -446,10 +446,14 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.Texture> CreateTextureWithData(
-        Rust.Ref<CE.HostScreen> screen,
-        CE.TextureDescriptor* desc,
+        this Rust.Ref<CE.HostScreen> screen,
+        in CE.TextureDescriptor desc,
         CE.Slice<u8> data)
-        => elffy_create_texture_with_data(screen, desc, data).Validate();
+    {
+        fixed(CE.TextureDescriptor* descPtr = &desc) {
+            return elffy_create_texture_with_data(screen, descPtr, data).Validate();
+        }
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
