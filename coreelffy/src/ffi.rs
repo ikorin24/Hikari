@@ -154,7 +154,7 @@ where
     let render_pass = desc.begin_render_pass_with(command_encoder);
     // `command_encoder` is no longer accessible until `render_pass` will drop.
 
-    make_box_result(Box::new(render_pass), None)
+    make_box_result(Box::new(render_pass))
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::RenderPass>: Send, Sync);
@@ -331,7 +331,7 @@ extern "cdecl" fn elffy_create_bind_group_layout(
         let layout = screen.device.create_bind_group_layout(desc);
         Box::new(layout)
     });
-    make_box_result(value, None)
+    make_box_result(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::BindGroupLayout>: Send, Sync);
@@ -362,7 +362,7 @@ extern "cdecl" fn elffy_create_bind_group(
         let bind_group = screen.device.create_bind_group(desc);
         Box::new(bind_group)
     });
-    make_box_result(value, None)
+    make_box_result(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::BindGroup>: Send, Sync);
@@ -391,7 +391,7 @@ extern "cdecl" fn elffy_create_pipeline_layout(
 ) -> ApiBoxResult<wgpu::PipelineLayout> {
     let value = screen.device.create_pipeline_layout(&desc.to_wgpu_type());
     let value = Box::new(value);
-    make_box_result(value, None)
+    make_box_result(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::PipelineLayout>: Send, Sync);
@@ -427,7 +427,7 @@ extern "cdecl" fn elffy_create_render_pipeline(
             return error_box_result(err);
         }
     };
-    make_box_result(value, None)
+    make_box_result(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::RenderPipeline>: Send, Sync);
@@ -465,7 +465,7 @@ extern "cdecl" fn elffy_create_buffer_init(
             usage,
         });
     let value = Box::new(buffer);
-    make_box_result(value, Some(|value| value.destroy()))
+    make_box_result(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::Buffer>: Send, Sync);
@@ -480,7 +480,6 @@ static_assertions::assert_impl_all!(wgpu::Buffer: Send, Sync);
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_buffer(buffer: Box<wgpu::Buffer>) {
-    buffer.destroy();
     drop(buffer)
 }
 
@@ -497,7 +496,7 @@ extern "cdecl" fn elffy_create_sampler(
 ) -> ApiBoxResult<wgpu::Sampler> {
     let sampler = screen.device.create_sampler(&desc.to_wgpu_type());
     let value = Box::new(sampler);
-    make_box_result(value, None)
+    make_box_result(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::Sampler>: Send, Sync);
@@ -537,7 +536,7 @@ extern "cdecl" fn elffy_create_shader_module(
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
     let value = Box::new(shader);
-    make_box_result(value, None)
+    make_box_result(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::ShaderModule>: Send, Sync);
@@ -565,7 +564,7 @@ extern "cdecl" fn elffy_create_texture(
     desc: &TextureDescriptor,
 ) -> ApiBoxResult<wgpu::Texture> {
     let value = Box::new(screen.device.create_texture(&desc.to_wgpu_type()));
-    make_box_result(value, Some(|value| value.destroy()))
+    make_box_result(value)
 }
 
 /// # Thread Safety
@@ -585,7 +584,7 @@ extern "cdecl" fn elffy_create_texture_with_data(
             .device
             .create_texture_with_data(&screen.queue, &desc.to_wgpu_type(), &data);
     let value = Box::new(texture);
-    make_box_result(value, Some(|value| value.destroy()))
+    make_box_result(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::Texture>: Send, Sync);
@@ -600,7 +599,6 @@ static_assertions::assert_impl_all!(wgpu::Texture: Send, Sync);
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_texture(texture: Box<wgpu::Texture>) {
-    texture.destroy();
     drop(texture)
 }
 
@@ -615,7 +613,7 @@ extern "cdecl" fn elffy_create_texture_view(
 ) -> ApiBoxResult<wgpu::TextureView> {
     let desc = &desc.to_wgpu_type();
     let value = Box::new(texture.create_view(desc));
-    make_box_result(value, None)
+    make_box_result(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::TextureView>: Send, Sync);
@@ -786,15 +784,10 @@ extern "cdecl" fn elffy_set_ime_position(screen: &HostScreen, x: u32, y: u32) ->
 }
 
 #[inline]
-fn make_box_result<T>(value: Box<T>, on_value_drop: Option<fn(Box<T>)>) -> ApiBoxResult<T> {
+fn make_box_result<T>(value: Box<T>) -> ApiBoxResult<T> {
     let err_count = reset_tls_err_count();
     match NonZeroUsize::new(err_count) {
-        Some(err_count) => {
-            if let Some(on_value_drop) = on_value_drop {
-                on_value_drop(value);
-            }
-            ApiBoxResult::err(err_count)
-        }
+        Some(err_count) => ApiBoxResult::err(err_count),
         None => ApiBoxResult::ok(value),
     }
 }
