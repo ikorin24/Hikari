@@ -13,10 +13,10 @@ public static class SampleData
         const float A = 0.3f;
         ReadOnlySpan<Vertex> vertices = stackalloc Vertex[4]
         {
-            new Vertex(new(-A, A, 0.0f), new(0, 0, 1), new(0f, 0f)),
-            new Vertex(new(-A, -A, 0.0f), new(0, 0, 1), new(0f, 1f)),
-            new Vertex(new(A, -A, 0.0f), new(0, 0, 1), new(1f, 1f)),
-            new Vertex(new(A, A, 0.0f), new(0, 0, 1), new(1f, 0f)),
+            new Vertex(new(-A, A, 0.0f), new(0, 0, 1), new(0f, 1f)),
+            new Vertex(new(-A, -A, 0.0f), new(0, 0, 1), new(0f, 0f)),
+            new Vertex(new(A, -A, 0.0f), new(0, 0, 1), new(1f, 0f)),
+            new Vertex(new(A, A, 0.0f), new(0, 0, 1), new(1f, 1f)),
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
         return Mesh.CreateWithTangent(screen, vertices, indices);
