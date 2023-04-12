@@ -20,18 +20,10 @@ internal class Program
             Height = 720,
             Style = WindowStyle.Default,
         };
-        Engine.Run(screenConfig, OnInitialized2);
+        Engine.Run(screenConfig, OnInitialized);
     }
 
-    //private static void OnInitialized(Screen screen)
-    //{
-    //    screen.Title = "sample";
-    //    var layer = new MyObjectLayer(screen, 0);
-    //    var model = new MyModel(layer, SampleData.SampleMesh(screen), SampleData.SampleTexture(screen));
-    //    model.Material.SetUniform(new Vector3(0.1f, 0.4f, 0));
-    //}
-
-    private static void OnInitialized2(Screen screen)
+    private static void OnInitialized(Screen screen)
     {
         screen.Title = "sample";
         var layer = new PbrLayer(screen, 0);
@@ -45,9 +37,9 @@ internal class Program
             MinFilter = FilterMode.Linear,
             MipmapFilter = FilterMode.Linear,
         });
-        var albedo = LoadImage(screen, "pic.png", TextureFormat.Rgba8UnormSrgb);
-        var mr = LoadImage(screen, "pic.png", TextureFormat.Rgba8Unorm);
-        var normal = LoadImage(screen, "pic.png", TextureFormat.Rgba8Unorm);
+        var albedo = LoadTexture(screen, "pic.png", TextureFormat.Rgba8UnormSrgb, true);
+        var mr = LoadTexture(screen, "pic.png", TextureFormat.Rgba8Unorm, true);
+        var normal = LoadTexture(screen, "pic.png", TextureFormat.Rgba8Unorm, true);
         var mesh = SampleData.SampleMesh(screen);
 
         var model = new PbrModel(layer, mesh, sampler, albedo, mr, normal);
@@ -56,273 +48,33 @@ internal class Program
         camera.LookAt(Vector3.Zero);
     }
 
-    private static Own<Texture> LoadImage(Screen screen, string filepath, TextureFormat format)
+    private static Own<Texture> LoadTexture(Screen screen, string filepath, TextureFormat format, bool useMipmap)
     {
-        Own<Texture> texture;
-        using(var stream = File.OpenRead(filepath)) {
-            using var image = Image.FromStream(stream, Path.GetExtension(filepath));
-            Debug.Assert(image.Width == 2048);
-            Debug.Assert(image.Height == 2048);
-            texture = Texture.Create(screen, new TextureDescriptor
-            {
-                Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
-                MipLevelCount = 6,
-                SampleCount = 1,
-                Dimension = TextureDimension.D2,
-                Format = format,
-                Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
-            });
-            var tex = texture.AsValue();
-            tex.Write<ColorByte>(0, image.GetPixels());
-            for(uint i = 1; i < tex.MipLevelCount; i++) {
-                var w = (image.Width >> (int)i);
-                var h = (image.Height >> (int)i);
-                using var curuent = image.Resized(new Vector2i(w, h));
-                tex.Write<ColorByte>(i, curuent.GetPixels());
-            }
+        using var image = LoadImage(filepath);
+        var mipLevelCount = useMipmap ? uint.Log2(uint.Min((uint)image.Width, (uint)image.Height)) : 1;
+        var texture = Texture.Create(screen, new TextureDescriptor
+        {
+            Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
+            MipLevelCount = mipLevelCount,
+            SampleCount = 1,
+            Dimension = TextureDimension.D2,
+            Format = format,
+            Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
+        });
+        var tex = texture.AsValue();
+        tex.Write<ColorByte>(0, image.GetPixels());
+        for(uint i = 1; i < tex.MipLevelCount; i++) {
+            var w = (image.Width >> (int)i);
+            var h = (image.Height >> (int)i);
+            using var curuent = image.Resized(new Vector2i(w, h));
+            tex.Write<ColorByte>(i, curuent.GetPixels());
         }
         return texture;
-    }
-}
-//internal record struct InstanceData(Vector3 Offset);
 
-public sealed class MyModel : Renderable<MyObjectLayer, VertexSlim, MyShader, MyMaterial>
-{
-    public MyModel(MyObjectLayer layer, Own<Mesh<VertexSlim>> mesh, Own<Texture> texture) : base(layer, mesh, MyMaterial.Create(layer.Shader, texture))
-    {
-    }
-
-    protected override void Render(RenderPass pass)
-    {
-        var mesh = Mesh;
-        var material = Material;
-        pass.SetBindGroup(0, material.BindGroup0);
-        pass.SetVertexBuffer(0, mesh.VertexBuffer);
-        pass.SetIndexBuffer(mesh.IndexBuffer);
-        pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
-    }
-}
-
-public sealed class MyShader : Shader<MyShader, MyMaterial>
-{
-    private static ReadOnlySpan<byte> ShaderSource => """
-        struct Vertex {
-            @location(0) pos: vec3<f32>,
-            @location(1) uv: vec2<f32>,
-        }
-
-        struct V2F {
-            @builtin(position) clip_pos: vec4<f32>,
-            @location(0) uv: vec2<f32>,
-        }
-
-        @group(0) @binding(0) var t_diffuse: texture_2d<f32>;
-        @group(0) @binding(1) var s_diffuse: sampler;
-        @group(0) @binding(2) var<uniform> offset: vec3<f32>;
-
-        @vertex fn vs_main(
-            v: Vertex,
-        ) -> V2F {
-            return V2F
-            (
-                vec4(v.pos + offset, 1.0),
-                v.uv,
-            );
-        }
-
-        @fragment fn fs_main(in: V2F) -> @location(0) vec4<f32> {
-            return textureSample(t_diffuse, s_diffuse, in.uv);
-        }
-        """u8;
-
-    private static readonly BindGroupLayoutDescriptor _groupDesc0 = new()
-    {
-        Entries = new[]
+        static Image LoadImage(string filepath)
         {
-            BindGroupLayoutEntry.Texture(
-                0,
-                ShaderStages.Fragment,
-                new TextureBindingData
-                {
-                    Multisampled = false,
-                    ViewDimension = TextureViewDimension.D2,
-                    SampleType = TextureSampleType.FloatFilterable,
-                }),
-            BindGroupLayoutEntry.Sampler(
-                1,
-                ShaderStages.Fragment,
-                SamplerBindingType.Filtering),
-            BindGroupLayoutEntry.Buffer(
-                2,
-                ShaderStages.Vertex,
-                new BufferBindingData
-                {
-                    HasDynamicOffset = false,
-                    MinBindingSize = 0,
-                    Type = BufferBindingType.Uniform,
-                }),
-        },
-    };
-
-    private readonly Own<BindGroupLayout> _bindGroupLayout0;
-
-    public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
-
-    private MyShader(Screen screen)
-        : base(screen, ShaderSource, BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0))
-    {
-        _bindGroupLayout0 = bindGroupLayout0;
-    }
-
-    public static Own<MyShader> Create(Screen screen)
-    {
-        var self = new MyShader(screen);
-        return CreateOwn(self);
-    }
-
-    protected override void Release(bool manualRelease)
-    {
-        base.Release(manualRelease);
-        if(manualRelease) {
-            _bindGroupLayout0.Dispose();
+            using var stream = File.OpenRead(filepath);
+            return Image.FromStream(stream, Path.GetExtension(filepath));
         }
-    }
-
-    private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(Screen screen, out Own<BindGroupLayout> bindGroupLayout0)
-    {
-        bindGroupLayout0 = BindGroupLayout.Create(screen, _groupDesc0);
-        return new PipelineLayoutDescriptor
-        {
-            BindGroupLayouts = new[]
-            {
-                bindGroupLayout0.AsValue(),
-            },
-        };
-    }
-}
-
-public sealed class MyMaterial : Material<MyMaterial, MyShader>
-{
-    private readonly Own<Texture> _texture;
-    private readonly Own<Sampler> _sampler;
-    private readonly Own<Buffer> _uniform;
-    private readonly Own<BindGroup> _bindGroup;
-
-    public BindGroup BindGroup0 => _bindGroup.AsValue();
-    public Texture Texture => _texture.AsValue();
-    public Sampler Sampler => _sampler.AsValue();
-
-    private MyMaterial(
-        MyShader shader,
-        Own<Texture> texture,
-        Own<Sampler> sampler,
-        Own<Buffer> uniform,
-        Own<BindGroup> bindGroup)
-        : base(shader)
-    {
-        _texture = texture;
-        _sampler = sampler;
-        _uniform = uniform;
-        _bindGroup = bindGroup;
-    }
-
-    protected override void Release(bool manualRelease)
-    {
-        base.Release(manualRelease);
-        if(manualRelease) {
-            _texture.Dispose();
-            _sampler.Dispose();
-            _uniform.Dispose();
-            _bindGroup.Dispose();
-        }
-    }
-
-    public static Own<MyMaterial> Create(MyShader shader, Own<Texture> texture)
-    {
-        ArgumentNullException.ThrowIfNull(shader);
-        texture.ThrowArgumentExceptionIfNone();
-
-        var screen = shader.Screen;
-        var sampler = Sampler.NoMipmap(screen, AddressMode.ClampToEdge, FilterMode.Linear, FilterMode.Nearest);
-        var uniform = Buffer.Create(screen, default(Vector3), BufferUsages.Uniform | BufferUsages.CopyDst);
-        var bindGroup = BindGroup.Create(shader.Screen, new BindGroupDescriptor
-        {
-            Layout = shader.BindGroupLayout0,
-            Entries = new BindGroupEntry[3]
-            {
-                BindGroupEntry.TextureView(0, texture.AsValue().View),
-                BindGroupEntry.Sampler(1, sampler.AsValue()),
-                BindGroupEntry.Buffer(2, uniform.AsValue()),
-            },
-        });
-        return CreateOwn(new MyMaterial(shader, texture, sampler, uniform, bindGroup));
-    }
-
-    public void SetUniform(in Vector3 value)
-    {
-        _uniform.AsValue().Write(0, value);
-    }
-}
-
-public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, VertexSlim, MyShader, MyMaterial>
-{
-    public MyObjectLayer(Screen screen, int sortOrder)
-        : base(MyShader.Create(screen), static shader => BuildPipeline(shader), sortOrder)
-    {
-    }
-
-    private static Own<RenderPipeline> BuildPipeline(MyShader shader)
-    {
-        var screen = shader.Screen;
-        var desc = new RenderPipelineDescriptor
-        {
-            Layout = shader.PipelineLayout,
-            Vertex = new VertexState
-            {
-                Module = shader.Module,
-                EntryPoint = "vs_main"u8.ToArray(),
-                Buffers = new VertexBufferLayout[]
-                {
-                    VertexBufferLayout.FromVertex<VertexSlim>(stackalloc[]
-                    {
-                        (0, VertexFieldSemantics.Position),
-                        (1, VertexFieldSemantics.UV),
-                    }),
-                },
-            },
-            Fragment = new FragmentState
-            {
-                Module = shader.Module,
-                EntryPoint = "fs_main"u8.ToArray(),
-                Targets = new ColorTargetState?[]
-                {
-                    new ColorTargetState
-                    {
-                        Format = screen.SurfaceFormat,
-                        Blend = BlendState.Replace,
-                        WriteMask = ColorWrites.All,
-                    },
-                },
-            },
-            Primitive = new PrimitiveState
-            {
-                Topology = PrimitiveTopology.TriangleList,
-                StripIndexFormat = null,
-                FrontFace = FrontFace.Ccw,
-                CullMode = Face.Back,
-                PolygonMode = PolygonMode.Fill,
-            },
-            DepthStencil = new DepthStencilState
-            {
-                Format = screen.DepthTexture.Format,
-                DepthWriteEnabled = true,
-                DepthCompare = CompareFunction.Less,
-                Stencil = StencilState.Default,
-                Bias = DepthBiasState.Default,
-            },
-            Multisample = MultisampleState.Default,
-            Multiview = 0,
-        };
-        return RenderPipeline.Create(screen, in desc);
     }
 }
