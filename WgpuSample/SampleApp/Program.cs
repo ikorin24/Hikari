@@ -326,9 +326,3 @@ public sealed class MyObjectLayer : ObjectLayer<MyObjectLayer, VertexSlim, MySha
         return RenderPipeline.Create(screen, in desc);
     }
 }
-
-public interface IGBufferProvider
-{
-    GBuffer CurrentGBuffer { get; }
-    Event<GBuffer> GBufferChanged { get; }
-}
