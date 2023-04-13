@@ -465,6 +465,15 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static CE.TextureFormatInfo TextureFormatInfo(
+        this CE.TextureFormat format)
+    {
+        CE.TextureFormatInfo info_out = default;
+        elffy_texture_format_info(format, ref info_out).Validate();
+        return info_out;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.TextureView> CreateTextureView(
         this Rust.Ref<Wgpu.Texture> texture,

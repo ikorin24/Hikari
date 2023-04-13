@@ -52,6 +52,29 @@ internal static class CoreElffy
         }
     }
 
+    internal struct TextureFormatInfo
+    {
+        public Wgpu.Features required_features;
+        public TextureSampleType sample_type;
+        public TupleU8U8 block_dimensions;
+        public u8 block_size;
+        public u8 components;
+        public bool srgb;
+        public TextureFormatFeatures guaranteed_format_features;
+    }
+
+    internal struct TupleU8U8
+    {
+        public u8 Value1;
+        public u8 Value2;
+    }
+
+    internal struct TextureFormatFeatures
+    {
+        public Wgpu.TextureUsages allowed_usages;
+        public Wgpu.TextureFormatFeatureFlags flags;
+    }
+
     internal enum TextureFormat : u32
     {
         [EnumMapTo(Elffy.TextureFormat.R8Unorm)] R8Unorm = 0,

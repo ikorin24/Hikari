@@ -22,6 +22,60 @@ internal static class Wgpu
     internal sealed class RenderPass : INativeTypeNonReprC { private RenderPass() { } }
     internal sealed class SurfaceTexture : INativeTypeNonReprC { private SurfaceTexture() { } }
 
+    [Flags]
+    internal enum Features : u64
+    {
+        //
+        // ---- Start numbering at 1 << 0 ----
+        //
+        // WebGPU features:
+        //
+
+        DEPTH_CLIP_CONTROL = 1uL << 0,
+        DEPTH32FLOAT_STENCIL8 = 1uL << 2,
+        TEXTURE_COMPRESSION_BC = 1uL << 3,
+        TEXTURE_COMPRESSION_ETC2 = 1uL << 4,
+        TEXTURE_COMPRESSION_ASTC_LDR = 1uL << 5,
+        INDIRECT_FIRST_INSTANCE = 1uL << 6,
+        TIMESTAMP_QUERY = 1uL << 7,
+        PIPELINE_STATISTICS_QUERY = 1uL << 8,
+        SHADER_FLOAT16 = 1uL << 9,
+
+        //
+        // ---- Restart Numbering for Native Features ---
+        //
+        // Native Features:
+        //
+
+        MAPPABLE_PRIMARY_BUFFERS = 1uL << 16,
+        TEXTURE_BINDING_ARRAY = 1uL << 17,
+        BUFFER_BINDING_ARRAY = 1uL << 18,
+        STORAGE_RESOURCE_BINDING_ARRAY = 1uL << 19,
+        SAMPLED_TEXTURE_AND_STORAGE_BUFFER_ARRAY_NON_UNIFORM_INDEXING = 1uL << 20,
+        UNIFORM_BUFFER_AND_STORAGE_TEXTURE_ARRAY_NON_UNIFORM_INDEXING = 1uL << 21,
+        PARTIALLY_BOUND_BINDING_ARRAY = 1uL << 22,
+        MULTI_DRAW_INDIRECT = 1uL << 23,
+        MULTI_DRAW_INDIRECT_COUNT = 1uL << 24,
+        PUSH_CONSTANTS = 1uL << 25,
+        ADDRESS_MODE_CLAMP_TO_BORDER = 1uL << 26,
+        POLYGON_MODE_LINE = 1uL << 27,
+        POLYGON_MODE_POINT = 1uL << 28,
+        TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES = 1uL << 29,
+        SHADER_FLOAT64 = 1uL << 30,
+        VERTEX_ATTRIBUTE_64BIT = 1uL << 31,
+        CONSERVATIVE_RASTERIZATION = 1uL << 32,
+        VERTEX_WRITABLE_STORAGE = 1uL << 33,
+        CLEAR_TEXTURE = 1uL << 34,
+        SPIRV_SHADER_PASSTHROUGH = 1uL << 35,
+        SHADER_PRIMITIVE_INDEX = 1uL << 36,
+        MULTIVIEW = 1uL << 37,
+        TEXTURE_FORMAT_16BIT_NORM = 1uL << 38,
+        ADDRESS_MODE_CLAMP_TO_ZERO = 1uL << 39,
+        TEXTURE_COMPRESSION_ASTC_HDR = 1uL << 40,
+        WRITE_TIMESTAMP_INSIDE_PASSES = 1uL << 41,
+    }
+
+
     internal enum Face
     {
         Front = 0,
@@ -182,6 +236,19 @@ internal static class Wgpu
         TEXTURE_BINDING = 1 << 2,
         STORAGE_BINDING = 1 << 3,
         RENDER_ATTACHMENT = 1 << 4,
+    }
+
+    [Flags]
+    internal enum TextureFormatFeatureFlags : u32
+    {
+        FILTERABLE = 1 << 0,
+        MULTISAMPLE_X2 = 1 << 1,
+        MULTISAMPLE_X4 = 1 << 2,
+        MULTISAMPLE_X8 = 1 << 3,
+        MULTISAMPLE_RESOLVE = 1 << 4,
+        STORAGE_READ_WRITE = 1 << 5,
+        STORAGE_ATOMICS = 1 << 6,
+        BLENDABLE = 1 << 7,
     }
 
     internal struct VertexAttribute

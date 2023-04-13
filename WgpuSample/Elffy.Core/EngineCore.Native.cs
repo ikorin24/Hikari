@@ -180,6 +180,11 @@ static unsafe partial class EngineCore
         Rust.Box<Wgpu.Texture> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_texture_format_info(
+        CE.TextureFormat format,
+        ref CE.TextureFormatInfo info_out);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.TextureView> elffy_create_texture_view(
         Rust.Ref<Wgpu.Texture> texture,
         CE.TextureViewDescriptor* desc);
