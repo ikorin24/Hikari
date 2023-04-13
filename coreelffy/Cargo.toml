@@ -13,6 +13,7 @@ pollster = "0.2.5"
 smallvec = "1.10.0"
 static_assertions = "1.1.0"
 wgpu = "0.15.1"
+wgpu-types = "0.15.1"
 winit = "0.28.1"
 coreelffy_macros = { path = "../coreelffy_macros" }
 regex = "1.7.1"

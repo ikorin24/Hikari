@@ -644,6 +644,24 @@ pub(crate) enum TextureSampleType {
     Uint = 4,
 }
 
+impl From<wgpu::TextureSampleType> for TextureSampleType {
+    fn from(value: wgpu::TextureSampleType) -> Self {
+        use wgpu::TextureSampleType as T;
+        match value {
+            T::Float { filterable } => {
+                if filterable {
+                    Self::FloatFilterable
+                } else {
+                    Self::FloatNotFilterable
+                }
+            }
+            T::Depth => Self::Depth,
+            T::Sint => Self::Sint,
+            T::Uint => Self::Uint,
+        }
+    }
+}
+
 impl TextureSampleType {
     pub fn to_wgpu_type(&self) -> wgpu::TextureSampleType {
         match self {
@@ -1140,6 +1158,47 @@ impl TryFrom<wgpu::TextureFormat> for TextureFormat {
             wgpu::TextureFormat::EacRg11Unorm => Ok(Self::EacRg11Unorm),
             wgpu::TextureFormat::EacRg11Snorm => Ok(Self::EacRg11Snorm),
             _ => Err("not supported texture format"),
+        }
+    }
+}
+
+#[repr(C)]
+pub(crate) struct TextureFormatInfo {
+    pub required_features: wgpu::Features,
+    pub sample_type: TextureSampleType,
+    pub block_dimensions: Tuple<u8, u8>,
+    pub block_size: u8,
+    pub components: u8,
+    pub srgb: bool,
+    pub guaranteed_format_features: TextureFormatFeatures,
+}
+
+impl From<wgpu_types::TextureFormatInfo> for TextureFormatInfo {
+    fn from(value: wgpu_types::TextureFormatInfo) -> Self {
+        Self {
+            required_features: value.required_features,
+            sample_type: value.sample_type.into(),
+            block_dimensions: value.block_dimensions.into(),
+            block_size: value.block_size,
+            components: value.components,
+            srgb: value.srgb,
+            guaranteed_format_features: value.guaranteed_format_features.into(),
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct TextureFormatFeatures {
+    pub allowed_usages: wgpu::TextureUsages,
+    pub flags: wgpu::TextureFormatFeatureFlags,
+}
+
+impl From<wgpu_types::TextureFormatFeatures> for TextureFormatFeatures {
+    fn from(value: wgpu_types::TextureFormatFeatures) -> Self {
+        Self {
+            allowed_usages: value.allowed_usages,
+            flags: value.flags,
         }
     }
 }

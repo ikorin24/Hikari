@@ -605,6 +605,21 @@ extern "cdecl" fn elffy_destroy_texture(texture: Box<wgpu::Texture>) {
 /// # Thread Safety
 /// ## OK
 /// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
+/// (`info_out` is mutable reference)
+#[no_mangle]
+extern "cdecl" fn elffy_texture_format_info(
+    format: TextureFormat,
+    info_out: &mut TextureFormatInfo,
+) -> ApiResult {
+    *info_out = format.to_wgpu_type().describe().into();
+    make_result()
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_texture_view(
