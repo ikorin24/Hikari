@@ -52,6 +52,80 @@ internal static class CoreElffy
         }
     }
 
+    internal enum TextureFormat : u32
+    {
+        [EnumMapTo(Elffy.TextureFormat.R8Unorm)] R8Unorm = 0,
+        [EnumMapTo(Elffy.TextureFormat.R8Snorm)] R8Snorm = 1,
+        [EnumMapTo(Elffy.TextureFormat.R8Uint)] R8Uint = 2,
+        [EnumMapTo(Elffy.TextureFormat.R8Sint)] R8Sint = 3,
+        [EnumMapTo(Elffy.TextureFormat.R16Uint)] R16Uint = 4,
+        [EnumMapTo(Elffy.TextureFormat.R16Sint)] R16Sint = 5,
+        [EnumMapTo(Elffy.TextureFormat.R16Unorm)] R16Unorm = 6,
+        [EnumMapTo(Elffy.TextureFormat.R16Snorm)] R16Snorm = 7,
+        [EnumMapTo(Elffy.TextureFormat.R16Float)] R16Float = 8,
+        [EnumMapTo(Elffy.TextureFormat.Rg8Unorm)] Rg8Unorm = 9,
+        [EnumMapTo(Elffy.TextureFormat.Rg8Snorm)] Rg8Snorm = 10,
+        [EnumMapTo(Elffy.TextureFormat.Rg8Uint)] Rg8Uint = 11,
+        [EnumMapTo(Elffy.TextureFormat.Rg8Sint)] Rg8Sint = 12,
+        [EnumMapTo(Elffy.TextureFormat.R32Uint)] R32Uint = 13,
+        [EnumMapTo(Elffy.TextureFormat.R32Sint)] R32Sint = 14,
+        [EnumMapTo(Elffy.TextureFormat.R32Float)] R32Float = 15,
+        [EnumMapTo(Elffy.TextureFormat.Rg16Uint)] Rg16Uint = 16,
+        [EnumMapTo(Elffy.TextureFormat.Rg16Sint)] Rg16Sint = 17,
+        [EnumMapTo(Elffy.TextureFormat.Rg16Unorm)] Rg16Unorm = 18,
+        [EnumMapTo(Elffy.TextureFormat.Rg16Snorm)] Rg16Snorm = 19,
+        [EnumMapTo(Elffy.TextureFormat.Rg16Float)] Rg16Float = 20,
+        [EnumMapTo(Elffy.TextureFormat.Rgba8Unorm)] Rgba8Unorm = 21,
+        [EnumMapTo(Elffy.TextureFormat.Rgba8UnormSrgb)] Rgba8UnormSrgb = 22,
+        [EnumMapTo(Elffy.TextureFormat.Rgba8Snorm)] Rgba8Snorm = 23,
+        [EnumMapTo(Elffy.TextureFormat.Rgba8Uint)] Rgba8Uint = 24,
+        [EnumMapTo(Elffy.TextureFormat.Rgba8Sint)] Rgba8Sint = 25,
+        [EnumMapTo(Elffy.TextureFormat.Bgra8Unorm)] Bgra8Unorm = 26,
+        [EnumMapTo(Elffy.TextureFormat.Bgra8UnormSrgb)] Bgra8UnormSrgb = 27,
+        [EnumMapTo(Elffy.TextureFormat.Rgb10a2Unorm)] Rgb10a2Unorm = 28,
+        [EnumMapTo(Elffy.TextureFormat.Rg11b10Float)] Rg11b10Float = 29,
+        [EnumMapTo(Elffy.TextureFormat.Rg32Uint)] Rg32Uint = 30,
+        [EnumMapTo(Elffy.TextureFormat.Rg32Sint)] Rg32Sint = 31,
+        [EnumMapTo(Elffy.TextureFormat.Rg32Float)] Rg32Float = 32,
+        [EnumMapTo(Elffy.TextureFormat.Rgba16Uint)] Rgba16Uint = 33,
+        [EnumMapTo(Elffy.TextureFormat.Rgba16Sint)] Rgba16Sint = 34,
+        [EnumMapTo(Elffy.TextureFormat.Rgba16Unorm)] Rgba16Unorm = 35,
+        [EnumMapTo(Elffy.TextureFormat.Rgba16Snorm)] Rgba16Snorm = 36,
+        [EnumMapTo(Elffy.TextureFormat.Rgba16Float)] Rgba16Float = 37,
+        [EnumMapTo(Elffy.TextureFormat.Rgba32Uint)] Rgba32Uint = 38,
+        [EnumMapTo(Elffy.TextureFormat.Rgba32Sint)] Rgba32Sint = 39,
+        [EnumMapTo(Elffy.TextureFormat.Rgba32Float)] Rgba32Float = 40,
+        [EnumMapTo(Elffy.TextureFormat.Depth32Float)] Depth32Float = 41,
+        [EnumMapTo(Elffy.TextureFormat.Depth32FloatStencil8)] Depth32FloatStencil8 = 42,
+        [EnumMapTo(Elffy.TextureFormat.Depth24Plus)] Depth24Plus = 43,
+        [EnumMapTo(Elffy.TextureFormat.Depth24PlusStencil8)] Depth24PlusStencil8 = 44,
+        [EnumMapTo(Elffy.TextureFormat.Rgb9e5Ufloat)] Rgb9e5Ufloat = 45,
+        [EnumMapTo(Elffy.TextureFormat.Bc1RgbaUnorm)] Bc1RgbaUnorm = 46,
+        [EnumMapTo(Elffy.TextureFormat.Bc1RgbaUnormSrgb)] Bc1RgbaUnormSrgb = 47,
+        [EnumMapTo(Elffy.TextureFormat.Bc2RgbaUnorm)] Bc2RgbaUnorm = 48,
+        [EnumMapTo(Elffy.TextureFormat.Bc2RgbaUnormSrgb)] Bc2RgbaUnormSrgb = 49,
+        [EnumMapTo(Elffy.TextureFormat.Bc3RgbaUnorm)] Bc3RgbaUnorm = 50,
+        [EnumMapTo(Elffy.TextureFormat.Bc3RgbaUnormSrgb)] Bc3RgbaUnormSrgb = 51,
+        [EnumMapTo(Elffy.TextureFormat.Bc4RUnorm)] Bc4RUnorm = 52,
+        [EnumMapTo(Elffy.TextureFormat.Bc4RSnorm)] Bc4RSnorm = 53,
+        [EnumMapTo(Elffy.TextureFormat.Bc5RgUnorm)] Bc5RgUnorm = 54,
+        [EnumMapTo(Elffy.TextureFormat.Bc5RgSnorm)] Bc5RgSnorm = 55,
+        [EnumMapTo(Elffy.TextureFormat.Bc6hRgbUfloat)] Bc6hRgbUfloat = 56,
+        [EnumMapTo(Elffy.TextureFormat.Bc6hRgbSfloat)] Bc6hRgbSfloat = 57,
+        [EnumMapTo(Elffy.TextureFormat.Bc7RgbaUnorm)] Bc7RgbaUnorm = 58,
+        [EnumMapTo(Elffy.TextureFormat.Bc7RgbaUnormSrgb)] Bc7RgbaUnormSrgb = 59,
+        [EnumMapTo(Elffy.TextureFormat.Etc2Rgb8Unorm)] Etc2Rgb8Unorm = 60,
+        [EnumMapTo(Elffy.TextureFormat.Etc2Rgb8UnormSrgb)] Etc2Rgb8UnormSrgb = 61,
+        [EnumMapTo(Elffy.TextureFormat.Etc2Rgb8A1Unorm)] Etc2Rgb8A1Unorm = 62,
+        [EnumMapTo(Elffy.TextureFormat.Etc2Rgb8A1UnormSrgb)] Etc2Rgb8A1UnormSrgb = 63,
+        [EnumMapTo(Elffy.TextureFormat.Etc2Rgba8Unorm)] Etc2Rgba8Unorm = 64,
+        [EnumMapTo(Elffy.TextureFormat.Etc2Rgba8UnormSrgb)] Etc2Rgba8UnormSrgb = 65,
+        [EnumMapTo(Elffy.TextureFormat.EacR11Unorm)] EacR11Unorm = 66,
+        [EnumMapTo(Elffy.TextureFormat.EacR11Snorm)] EacR11Snorm = 67,
+        [EnumMapTo(Elffy.TextureFormat.EacRg11Unorm)] EacRg11Unorm = 68,
+        [EnumMapTo(Elffy.TextureFormat.EacRg11Snorm)] EacRg11Snorm = 69,
+    }
+
     internal readonly struct RangeU32
     {
         private readonly u32 _start;
@@ -209,7 +283,7 @@ internal static class CoreElffy
     internal struct HostScreenInfo
     {
         public required Wgpu.Backend backend;
-        public required Opt<Wgpu.TextureFormat> surface_format;
+        public required Opt<TextureFormat> surface_format;
     }
 
     internal readonly struct MonitorId : IEquatable<MonitorId>
@@ -384,7 +458,7 @@ internal static class CoreElffy
 
     internal struct TextureViewDescriptor
     {
-        public required Opt<Wgpu.TextureFormat> format;
+        public required Opt<TextureFormat> format;
         public required Opt<TextureViewDimension> dimension;
         public required TextureAspect aspect;
         public required u32 base_mip_level;
@@ -582,7 +656,7 @@ internal static class CoreElffy
 
     internal struct DepthStencilState
     {
-        public required Wgpu.TextureFormat format;
+        public required TextureFormat format;
         public required bool depth_write_enabled;
         public required Wgpu.CompareFunction depth_compare;
         public required Wgpu.StencilState stencil;
@@ -629,7 +703,7 @@ internal static class CoreElffy
 
     internal struct ColorTargetState
     {
-        public required Wgpu.TextureFormat format;
+        public required TextureFormat format;
         public required Opt<Wgpu.BlendState> blend;
         public required Wgpu.ColorWrites write_mask;
     }
@@ -729,7 +803,7 @@ internal static class CoreElffy
     internal struct StorageTextureBindingData
     {
         public required StorageTextureAccess access;
-        public required Wgpu.TextureFormat format;
+        public required TextureFormat format;
         public required TextureViewDimension view_dimension;
     }
 
@@ -746,7 +820,7 @@ internal static class CoreElffy
         public required u32 mip_level_count;
         public required u32 sample_count;
         public required TextureDimension dimension;
-        public required Wgpu.TextureFormat format;
+        public required TextureFormat format;
         public required Wgpu.TextureUsages usage;
     }
 
