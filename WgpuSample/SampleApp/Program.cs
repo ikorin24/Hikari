@@ -4,6 +4,7 @@ using Elffy.Imaging;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Elffy;
 
@@ -37,9 +38,17 @@ internal class Program
             MinFilter = FilterMode.Linear,
             MipmapFilter = FilterMode.Linear,
         });
-        var albedo = LoadTexture(screen, "pic.png", TextureFormat.Rgba8UnormSrgb, true);
-        var mr = LoadTexture(screen, "pic.png", TextureFormat.Rgba8Unorm, true);
-        var normal = LoadTexture(screen, "pic.png", TextureFormat.Rgba8Unorm, true);
+
+        var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
+        var mr = LoadTexture(screen, "pic.png", false);
+        var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
+
+        //using var a = LoadTexture(screen, "resources/ground_0036_roughness_1k.jpg", TextureFormat.Rgba8UnormSrgb, true, (image, arg) =>
+        //{
+        //    var (mipLevel, texture) = arg;
+        //    texture.Write(mipLevel, image.GetPixels());
+        //});
+
         var mesh = SampleData.SampleMesh(screen);
 
         var model = new PbrModel(layer, mesh, sampler, albedo, mr, normal);
@@ -48,28 +57,11 @@ internal class Program
         camera.LookAt(Vector3.Zero);
     }
 
-    private static Own<Texture> LoadTexture(Screen screen, string filepath, TextureFormat format, bool useMipmap)
+    private static Own<Texture> LoadTexture(Screen screen, string filepath, bool isSrgb)
     {
+        var format = isSrgb ? TextureFormat.Rgba8UnormSrgb : TextureFormat.Rgba8Unorm;
         using var image = LoadImage(filepath);
-        var mipLevelCount = useMipmap ? uint.Log2(uint.Min((uint)image.Width, (uint)image.Height)) : 1;
-        var texture = Texture.Create(screen, new TextureDescriptor
-        {
-            Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
-            MipLevelCount = mipLevelCount,
-            SampleCount = 1,
-            Dimension = TextureDimension.D2,
-            Format = format,
-            Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
-        });
-        var tex = texture.AsValue();
-        tex.Write<ColorByte>(0, image.GetPixels());
-        for(uint i = 1; i < tex.MipLevelCount; i++) {
-            var w = (image.Width >> (int)i);
-            var h = (image.Height >> (int)i);
-            using var curuent = image.Resized(new Vector2i(w, h));
-            tex.Write<ColorByte>(i, curuent.GetPixels());
-        }
-        return texture;
+        return Texture.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding);
 
         static Image LoadImage(string filepath)
         {
@@ -77,4 +69,69 @@ internal class Program
             return Image.FromStream(stream, Path.GetExtension(filepath));
         }
     }
+
+    //private static Own<Texture> LoadTexture(Screen screen, string filepath, bool isSrgb, bool useMipmap)
+    //{
+    //    using var image = LoadImage(filepath);
+    //    var format = isSrgb ? TextureFormat.Rgba8UnormSrgb : TextureFormat.Rgba8Unorm;
+    //    var mipLevelCount = useMipmap ? uint.Log2(uint.Min((uint)image.Width, (uint)image.Height)) : 1;
+    //    var texture = Texture.Create(screen, new TextureDescriptor
+    //    {
+    //        Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
+    //        MipLevelCount = mipLevelCount,
+    //        SampleCount = 1,
+    //        Dimension = TextureDimension.D2,
+    //        Format = format,
+    //        Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
+    //    });
+    //    var tex = texture.AsValue();
+    //    tex.Write<ColorByte>(0, image.GetPixels());
+    //    for(uint i = 1; i < tex.MipLevelCount; i++) {
+    //        var w = (image.Width >> (int)i);
+    //        var h = (image.Height >> (int)i);
+    //        using var curuent = image.Resized(new Vector2i(w, h));
+    //        tex.Write<ColorByte>(i, curuent.GetPixels());
+    //    }
+    //    return texture;
+
+    //    static Image LoadImage(string filepath)
+    //    {
+    //        using var stream = File.OpenRead(filepath);
+    //        return Image.FromStream(stream, Path.GetExtension(filepath));
+    //    }
+    //}
+
+    //private static Own<Texture> LoadTexture(Screen screen, string filepath, TextureFormat format, bool useMipmap, ReadOnlyImageAction<(uint MipLevel, Texture Texture)> initTexture)
+    //{
+    //    using var image = LoadImage(filepath);
+    //    var mipLevelCount = useMipmap ? uint.Log2(uint.Min((uint)image.Width, (uint)image.Height)) : 1;
+    //    var texture = Texture.Create(screen, new TextureDescriptor
+    //    {
+    //        Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
+    //        MipLevelCount = mipLevelCount,
+    //        SampleCount = 1,
+    //        Dimension = TextureDimension.D2,
+    //        Format = format,
+    //        Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
+    //    });
+    //    var tex = texture.AsValue();
+    //    initTexture.Invoke(image, (MipLevel: 0, Texture: tex));
+
+    //    //tex.Write<ColorByte>(0, image.GetPixels());
+
+    //    for(uint i = 1; i < tex.MipLevelCount; i++) {
+    //        var w = (image.Width >> (int)i);
+    //        var h = (image.Height >> (int)i);
+    //        using var curuent = image.Resized(new Vector2i(w, h));
+    //        initTexture.Invoke(curuent, (MipLevel: i, Texture: tex));
+    //        //tex.Write<ColorByte>(i, curuent.GetPixels());
+    //    }
+    //    return texture;
+
+    //    static Image LoadImage(string filepath)
+    //    {
+    //        using var stream = File.OpenRead(filepath);
+    //        return Image.FromStream(stream, Path.GetExtension(filepath));
+    //    }
+    //}
 }

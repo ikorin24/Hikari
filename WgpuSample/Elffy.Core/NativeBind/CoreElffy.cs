@@ -63,11 +63,8 @@ internal static class CoreElffy
         public TextureFormatFeatures guaranteed_format_features;
     }
 
-    internal struct TupleU8U8
-    {
-        public u8 Value1;
-        public u8 Value2;
-    }
+    [StructLayout(LayoutKind.Sequential)]
+    internal record struct TupleU8U8(u8 Value1, u8 Value2);
 
     internal struct TextureFormatFeatures
     {

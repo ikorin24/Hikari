@@ -13,6 +13,36 @@ public readonly struct TextureDescriptor
     public required TextureFormat Format { get; init; }
     public required TextureUsages Usage { get; init; }
 
+    public Vector3u? MipLevelSize(u32 level)
+    {
+        if(level >= MipLevelCount) {
+            return null;
+        }
+        return new Vector3u
+        {
+            X = u32.Max(1, Size.X >> (int)level),
+            Y = Dimension switch
+            {
+                TextureDimension.D1 => 1,
+                _ => u32.Max(1, Size.Y >> (int)level),
+            },
+            Z = Dimension switch
+            {
+                TextureDimension.D3 => u32.Max(1, Size.Z >> (int)level),
+                _ => Size.Z,
+            },
+        };
+    }
+
+    public u32 ArrayLayerCount()
+    {
+        return Dimension switch
+        {
+            TextureDimension.D1 or TextureDimension.D3 => 1,
+            TextureDimension.D2 => Size.Z,
+        };
+    }
+
     internal CE.TextureDescriptor ToNative()
     {
         if(Size.X == 0) { throw new ArgumentOutOfRangeException("Size.X", "The value should not be 0"); }

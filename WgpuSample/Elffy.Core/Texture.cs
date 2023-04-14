@@ -1,7 +1,11 @@
 ﻿#nullable enable
+using Elffy.Effective;
 using Elffy.Imaging;
 using Elffy.NativeBind;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Elffy;
 
@@ -73,6 +77,140 @@ public sealed class Texture : IScreenManaged
         var textureNative = screen.AsRefChecked().CreateTexture(descNative);
         var texture = new Texture(screen, textureNative, desc);
         return Own.RefType(texture, static x => SafeCast.As<Texture>(x).Release());
+    }
+
+    public unsafe static Own<Texture> CreateFromRawData(Screen screen, in TextureDescriptor desc, ReadOnlySpan<u8> data)
+    {
+        ArgumentNullException.ThrowIfNull(screen);
+        var descNative = desc.ToNative();
+        Rust.Box<Wgpu.Texture> textureNative;
+        fixed(u8* p = data) {
+            textureNative = screen
+                .AsRefChecked()
+                .CreateTextureWithData(
+                    descNative,
+                    new CE.Slice<byte>(p, data.Length)
+                );
+        }
+        var texture = new Texture(screen, textureNative, desc);
+        return Own.RefType(texture, static x => SafeCast.As<Texture>(x).Release());
+    }
+
+    public unsafe static Own<Texture> CreateWithAutoMipmap(Screen screen, ReadOnlyImageRef image, TextureFormat format, TextureUsages usage, uint? mipLevelCount = null)
+    {
+        var desc = new TextureDescriptor
+        {
+            Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
+            MipLevelCount = mipLevelCount.GetValueOrDefault(
+                uint.Log2(uint.Min((uint)image.Width, (uint)image.Height))
+            ),
+            SampleCount = 1,
+            Dimension = TextureDimension.D2,
+            Format = format,
+            Usage = usage,
+        };
+
+        ArgumentNullException.ThrowIfNull(screen);
+        var isRgba8Format = desc.Format is
+            TextureFormat.Rgba8Sint or
+            TextureFormat.Rgba8Snorm or
+            TextureFormat.Rgba8Uint or
+            TextureFormat.Rgba8Unorm or
+            TextureFormat.Rgba8UnormSrgb;
+        if(isRgba8Format == false) {
+            throw new ArgumentException("not supported format");
+        }
+        if(desc.Dimension != TextureDimension.D2) {
+            throw new ArgumentException("2D texture is only supported.");
+        }
+
+        Texture texture;
+        switch(desc.MipLevelCount) {
+            case 0: {
+                throw new ArgumentException($"{nameof(TextureDescriptor.MipLevelCount)} should be 1 or larger");
+            }
+            case 1: {
+                var descNative = desc.ToNative();
+                Rust.Box<Wgpu.Texture> textureNative;
+                var pixelBytes = image.GetPixels().MarshalCast<ColorByte, u8>();
+                fixed(u8* p = pixelBytes) {
+                    var data = new CE.Slice<u8>(p, (usize)pixelBytes.Length);
+                    textureNative = screen.AsRefChecked().CreateTextureWithData(descNative, data);
+                }
+                texture = new Texture(screen, textureNative, desc);
+                break;
+            }
+            default: {
+                Span<(Vector3u MipSize, u32 ByteLength)> mipData = stackalloc (Vector3u, u32)[(int)desc.MipLevelCount];
+                CalcMipDataSize(desc, mipData, out var totalByteSize);
+                u8* p = (u8*)NativeMemory.Alloc(totalByteSize);
+                try {
+                    var ((width0, height0, _), mip0Bytelen) = mipData[0];
+                    Debug.Assert(width0 == image.Size.X);
+                    Debug.Assert(height0 == image.Size.Y);
+                    var mipmap0 = new ImageRef((ColorByte*)p, (int)width0, (int)height0);
+                    image.GetPixels().CopyTo(mipmap0.GetPixels());
+
+                    usize byteOffset = mip0Bytelen;
+                    var mipmapBefore = mipmap0.AsReadOnly();
+                    for(int level = 1; level < desc.MipLevelCount; level++) {
+                        var ((w, h, _), mipBytelen) = mipData[level];
+                        var mipmap = new ImageRef((ColorByte*)(p + byteOffset), (int)w, (int)h);
+                        mipmapBefore.ResizeTo(mipmap);
+                        byteOffset += mipBytelen;
+                        mipmapBefore = mipmap;
+                    }
+                    var data = new CE.Slice<u8>(p, totalByteSize);
+                    var descNative = desc.ToNative();
+                    var textureNative = screen.AsRefChecked().CreateTextureWithData(descNative, data);
+                    texture = new Texture(screen, textureNative, desc);
+                }
+                finally {
+                    NativeMemory.Free(p);
+                }
+                break;
+            }
+        }
+        return Own.RefType(texture, static x => SafeCast.As<Texture>(x).Release());
+    }
+
+    private static void CalcMipDataSize(in TextureDescriptor desc, Span<(Vector3u MipSize, u32 ByteLength)> mipData, out usize totalByteSize)
+    {
+        totalByteSize = 0;
+        var formatInfo = desc.Format.MapOrThrow().TextureFormatInfo();
+        var arrayLayerCount = desc.ArrayLayerCount();
+        for(uint layer = 0; layer < arrayLayerCount; layer++) {
+            for(uint mip = 0; mip < desc.MipLevelCount; mip++) {
+                var mipSize = desc.MipLevelSize(mip).GetOrThrow();
+                if(desc.Dimension != TextureDimension.D3) {
+                    mipSize.Z = 1;
+                }
+                var mipPhysicalSize = physicalSize(mipSize, formatInfo);
+                u32 widthBlocks = mipPhysicalSize.X / formatInfo.block_dimensions.Value1;
+                u32 heightBlocks = mipPhysicalSize.Y / formatInfo.block_dimensions.Value2;
+                u32 bytesPerRow = widthBlocks * formatInfo.block_size;
+                u32 dataSize = bytesPerRow * heightBlocks * mipSize.Z;
+                mipData[(int)mip] = (MipSize: mipSize, ByteLength: dataSize);
+                totalByteSize += dataSize;
+            }
+        }
+
+        static Vector3u physicalSize(Vector3u mipSize, in CE.TextureFormatInfo formatInfo)
+        {
+            var (w, h) = formatInfo.block_dimensions;
+            var block_width = (u32)w;
+            var block_height = (u32)h;
+
+            var width = ((mipSize.X + block_width - 1) / block_width) * block_width;
+            var height = ((mipSize.Y + block_height - 1) / block_height) * block_height;
+
+            return new Vector3u
+            {
+                X = width,
+                Y = height,
+                Z = mipSize.Z,
+            };
+        }
     }
 
     public unsafe void Write<TPixel>(u32 mipLevel, ReadOnlySpan<TPixel> pixelData) where TPixel : unmanaged
