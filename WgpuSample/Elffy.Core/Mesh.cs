@@ -204,7 +204,7 @@ public static class Mesh
         where TVertex : unmanaged, IVertex, IVertexUV
     {
         var tangentLen = vertexLen;
-        var tangents = (Vector3*)NativeMemory.Alloc((usize)sizeof(Vector3) * tangentLen);
+        var tangents = (Vector3*)NativeMemory.Alloc((usize)sizeof(Vector3), tangentLen);
         try {
             MeshHelper.CalcTangentsU16(vertices, vertexLen, indices, indexLen, tangents);
             return Mesh<TVertex>.Create<u16>(screen, vertices, vertexLen, indices, indexLen, tangents, tangentLen);
@@ -242,79 +242,6 @@ public static class Mesh
             NativeMemory.Free(tangents);
         }
     }
-}
-
-internal static class MeshHelper
-{
-    public unsafe static void CalcTangentsU32<TVertex>(TVertex* vertices, u32 verticesLen, u32* indices, u64 indicesLen, Vector3* tangents)
-        where TVertex : unmanaged, IVertex, IVertexUV
-    {
-        CalcTangentsU32(vertices, verticesLen, indices, indicesLen, tangents, TVertex.UVOffset);
-    }
-
-    public unsafe static void CalcTangentsU16<TVertex>(TVertex* vertices, u32 verticesLen, u16* indices, u64 indicesLen, Vector3* tangents)
-        where TVertex : unmanaged, IVertex, IVertexUV
-    {
-        CalcTangentsU16(vertices, verticesLen, indices, indicesLen, tangents, TVertex.UVOffset);
-    }
-
-    public unsafe static void CalcTangentsU32<TVertex>(TVertex* vertices, u32 verticesLen, u32* indices, u64 indicesLen, Vector3* tangents, uint uvOffset)
-        where TVertex : unmanaged, IVertex
-    {
-        Vector3u* triangles = (Vector3u*)indices;
-        u64 trianglesLen = indicesLen / 3;
-        for(u64 i = 0; i < trianglesLen; i++) {
-            var (i0, i1, i2) = triangles[i];
-            ref readonly var p0 = ref VertexAccessor.Position(vertices[i0]);
-            ref readonly var uv0 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i0], uvOffset);
-            ref readonly var p1 = ref VertexAccessor.Position(vertices[i1]);
-            ref readonly var uv1 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i1], uvOffset);
-            ref readonly var p2 = ref VertexAccessor.Position(vertices[i2]);
-            ref readonly var uv2 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i2], uvOffset);
-
-            var deltaUV1 = uv1 - uv0;
-            var deltaUV2 = uv2 - uv0;
-            var deltaPos1 = p1 - p0;
-            var deltaPos2 = p2 - p0;
-            var d = 1f / (deltaUV1.X * deltaUV2.Y - deltaUV1.Y * deltaUV2.X);
-            tangents[i] = d * (deltaUV2.Y * deltaPos1 - deltaUV1.Y * deltaPos2);
-#if DEBUG
-            var bitangent = d * (deltaUV1.X * deltaPos2 - deltaUV2.X * deltaPos1);
-#endif
-        }
-    }
-
-    public unsafe static void CalcTangentsU16<TVertex>(
-        TVertex* vertices, u32 verticesLen,
-        u16* indices, u64 indicesLen,
-        Vector3* tangents,
-        uint uvOffset)
-        where TVertex : unmanaged, IVertex
-    {
-        U16x3* triangles = (U16x3*)indices;
-        u64 trianglesLen = indicesLen / 3;
-        for(u64 i = 0; i < trianglesLen; i++) {
-            var (i0, i1, i2) = triangles[i];
-            ref readonly var p0 = ref VertexAccessor.Position(vertices[i0]);
-            ref readonly var uv0 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i0], uvOffset);
-            ref readonly var p1 = ref VertexAccessor.Position(vertices[i1]);
-            ref readonly var uv1 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i1], uvOffset);
-            ref readonly var p2 = ref VertexAccessor.Position(vertices[i2]);
-            ref readonly var uv2 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i2], uvOffset);
-
-            var deltaUV1 = uv1 - uv0;
-            var deltaUV2 = uv2 - uv0;
-            var deltaPos1 = p1 - p0;
-            var deltaPos2 = p2 - p0;
-            var d = 1f / (deltaUV1.X * deltaUV2.Y - deltaUV1.Y * deltaUV2.X);
-            tangents[i] = d * (deltaUV2.Y * deltaPos1 - deltaUV1.Y * deltaPos2);
-#if DEBUG
-            var bitangent = d * (deltaUV1.X * deltaPos2 - deltaUV2.X * deltaPos1);
-#endif
-        }
-    }
-
-    private record struct U16x3(u16 X, u16 Y, u16 Z);
 }
 
 public readonly struct IndexBufferSlice

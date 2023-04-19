@@ -34,7 +34,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             var c1: vec3<f32> = textureSample(g1, g_sampler, in.uv).xyz;
             var c2: vec3<f32> = textureSample(g2, g_sampler, in.uv).xyz;
             var c3: vec3<f32> = textureSample(g3, g_sampler, in.uv).xyz;
-            return vec4(c2, 1.0);
+            return vec4(c1, 1.0);
         }
         """u8;
 
