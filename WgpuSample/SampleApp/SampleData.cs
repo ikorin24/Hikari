@@ -10,7 +10,7 @@ public static class SampleData
 {
     public static Own<Mesh<Vertex>> SampleMesh(Screen screen)
     {
-        const float A = 0.3f;
+        const float A = 0.5f;
         ReadOnlySpan<Vertex> vertices = stackalloc Vertex[4]
         {
             new Vertex(new(-A, A, 0.0f), new(0, 0, 1), new(0f, 1f)),

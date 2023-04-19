@@ -42,12 +42,13 @@ internal class Program
         var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
         var mr = LoadTexture(screen, "pic.png", false);
         var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
-        //var mesh = SampleData.SampleMesh(screen);
-        var mesh = Shapes.Cube(screen);
+        var mesh = SampleData.SampleMesh(screen);
+        //var mesh = Shapes.Cube(screen);
+        //var mesh = Shapes.RegularIcosahedron(screen);
 
         var model = new PbrModel(layer, mesh, sampler, albedo, mr, normal);
         var camera = screen.Camera;
-        camera.Position = new Vector3(2, 6, 9);
+        camera.Position = new Vector3(2, 3, 5);
         camera.LookAt(Vector3.Zero);
     }
 
@@ -154,9 +155,152 @@ public static class Shapes
             new Vertex(new(a, -a, a), new(0, -1, 0), new(b2, c2)),
         };
 
-        // up, left, front, right, back, down
-        ReadOnlySpan<ushort> indices = stackalloc ushort[36] { 0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4, 8, 9, 10, 10, 11, 8, 12, 13, 14, 14, 15, 12, 16, 17, 18, 18, 19, 16, 20, 21, 22, 22, 23, 20 };
-
+#pragma warning disable IDE0055 // auto code formatting
+        ReadOnlySpan<ushort> indices = stackalloc ushort[36]
+        {
+            0, 1, 2, 2, 3, 0,           // up
+            4, 5, 6, 6, 7, 4,           // left
+            8, 9, 10, 10, 11, 8,        // front
+            12, 13, 14, 14, 15, 12,     // right
+            16, 17, 18, 18, 19, 16,     // back
+            20, 21, 22, 22, 23, 20,     // down
+        };
+#pragma warning restore IDE0055 // auto code formatting
         return Mesh.CreateWithTangent(screen, vertices, indices);
+    }
+
+    public static Own<Mesh<Vertex>> Plane(Screen screen, bool useTangent)
+    {
+        const float A = 0.5f;
+        ReadOnlySpan<Vertex> vertices = stackalloc Vertex[4]
+        {
+            new Vertex(new(-A, A, 0.0f), new(0, 0, 1), new(0f, 1f)),
+            new Vertex(new(-A, -A, 0.0f), new(0, 0, 1), new(0f, 0f)),
+            new Vertex(new(A, -A, 0.0f), new(0, 0, 1), new(1f, 0f)),
+            new Vertex(new(A, A, 0.0f), new(0, 0, 1), new(1f, 1f)),
+        };
+        ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
+        if(useTangent) {
+            return Mesh.CreateWithTangent(screen, vertices, indices);
+        }
+        else {
+            return Mesh.Create(screen, vertices, indices);
+        }
+    }
+
+    public static Own<Mesh<VertexPosNormal>> RegularIcosahedron(Screen screen)
+    {
+        const float a = 1f;
+        const float s = 1.618033988f * a;
+#pragma warning disable IDE0055 // auto code formatting
+        ReadOnlySpan<VertexPosNormal> vertices = stackalloc VertexPosNormal[12]
+        {
+            new VertexPosNormal(new(a, s, 0), new()),     // 0
+            new VertexPosNormal(new(-a, s, 0), new()),    // 1
+            new VertexPosNormal(new(-a, -s, 0), new()),   // 2
+            new VertexPosNormal(new(a, -s, 0), new()),    // 3
+            new VertexPosNormal(new(0, a, s), new()),     // 4
+            new VertexPosNormal(new(0, -a, s), new()),    // 5
+            new VertexPosNormal(new(0, -a, -s), new()),   // 6
+            new VertexPosNormal(new(0, a, -s), new()),    // 7
+            new VertexPosNormal(new(s, 0, a), new()),     // 8
+            new VertexPosNormal(new(s, 0, -a), new()),    // 9
+            new VertexPosNormal(new(-s, 0, -a), new()),   // 10
+            new VertexPosNormal(new(-s, 0, a), new()),    // 11
+        };
+        ReadOnlySpan<ushort> indices = stackalloc ushort[60]
+        {
+            4, 8, 0,
+            4, 5, 8,
+            4, 11, 5,
+            4, 1, 11,
+            4, 0, 1,
+            7, 1, 0,
+            7, 10, 1,
+            7, 6, 10,
+            7, 9, 6,
+            7, 0, 9,
+            3, 8, 5,
+            3, 9, 8,
+            3, 6, 9,
+            3, 2, 6,
+            3, 5, 2,
+            0, 8, 9,
+            1, 10, 11,
+            10, 6, 2,
+            10, 2, 11,
+            2, 5, 11,
+        };
+#pragma warning restore IDE0055 // auto code formatting
+
+        return Mesh.Create(screen, vertices, indices);
+    }
+
+    public static Own<Mesh<Vertex>> IcoSphere(Screen screen, uint division)
+    {
+        const float a = 1f;
+        const float s = 1.618033988f * a;
+#pragma warning disable IDE0055 // auto code formatting
+        ReadOnlySpan<Vertex> vertices = stackalloc Vertex[12]
+        {
+            new Vertex(new(a, s, 0), new(), new()),     // 0
+            new Vertex(new(-a, s, 0), new(), new()),    // 1
+            new Vertex(new(-a, -s, 0), new(), new()),   // 2
+            new Vertex(new(a, -s, 0), new(), new()),    // 3
+            new Vertex(new(0, a, s), new(), new()),     // 4
+            new Vertex(new(0, -a, s), new(), new()),    // 5
+            new Vertex(new(0, -a, -s), new(), new()),   // 6
+            new Vertex(new(0, a, -s), new(), new()),    // 7
+            new Vertex(new(s, 0, a), new(), new()),     // 8
+            new Vertex(new(s, 0, -a), new(), new()),    // 9
+            new Vertex(new(-s, 0, -a), new(), new()),   // 10
+            new Vertex(new(-s, 0, a), new(), new()),    // 11
+        };
+        ReadOnlySpan<ushort> indices = stackalloc ushort[60]
+        {
+            4, 8, 0,
+            4, 5, 8,
+            4, 11, 5,
+            4, 1, 11,
+            4, 0, 1,
+            7, 1, 0,
+            7, 10, 1,
+            7, 6, 10,
+            7, 9, 6,
+            7, 0, 9,
+            3, 8, 5,
+            3, 9, 8,
+            3, 6, 9,
+            3, 2, 6,
+            3, 5, 2,
+            0, 8, 9,
+            1, 10, 11,
+            10, 6, 2,
+            10, 2, 11,
+            2, 5, 11,
+        };
+#pragma warning restore IDE0055 // auto code formatting
+
+        for(int k = 0; k < indices.Length / 3; k++) {
+            ref readonly var v0 = ref vertices[indices[k * 3]];
+            ref readonly var v1 = ref vertices[indices[k * 3 + 1]];
+            ref readonly var v2 = ref vertices[indices[k * 3 + 2]];
+        }
+
+        if(division == 0) {
+            return Mesh.CreateWithTangent(screen, vertices, indices);
+        }
+        else {
+            var newVertices = new Vertex[vertices.Length * 2];
+            var newIndices = new ushort[indices.Length * 4];
+            for(int k = 0; k < indices.Length / 3; k++) {
+                ref readonly var v0 = ref vertices[indices[k * 3]];
+                ref readonly var v1 = ref vertices[indices[k * 3 + 1]];
+                ref readonly var v2 = ref vertices[indices[k * 3 + 2]];
+
+                //v0 + v1
+            }
+            return IcoSphere(screen, division - 1);
+        }
     }
 }

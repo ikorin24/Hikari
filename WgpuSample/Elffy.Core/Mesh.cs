@@ -59,6 +59,88 @@ public sealed class Mesh<TVertex>
         _isReleased = true;
     }
 
+    public unsafe static Own<Mesh<TVertex>> Create(
+        Screen screen,
+        ReadOnlySpan<TVertex> vertices,
+        ReadOnlySpan<u16> indices)
+    {
+        fixed(TVertex* v = vertices)
+        fixed(u16* i = indices) {
+            return Create<u16>(screen, v, (usize)vertices.Length, i, (u32)indices.Length, null, 0);
+        }
+    }
+
+    public unsafe static Own<Mesh<TVertex>> Create(
+        Screen screen,
+        TVertex* vertices, usize vertexLen,
+        u16* indices, u32 indexLen)
+    {
+        return Create<u16>(screen, vertices, vertexLen, indices, indexLen, null, 0);
+    }
+
+    public unsafe static Own<Mesh<TVertex>> Create(
+        Screen screen,
+        ReadOnlySpan<TVertex> vertices,
+        ReadOnlySpan<u32> indices)
+    {
+        fixed(TVertex* v = vertices)
+        fixed(u32* i = indices) {
+            return Create<u32>(screen, v, (usize)vertices.Length, i, (u32)indices.Length, null, 0);
+        }
+    }
+
+    public unsafe static Own<Mesh<TVertex>> Create(
+        Screen screen,
+        TVertex* vertices, usize vertexLen,
+        u32* indices, u32 indexLen)
+    {
+        return Create<u32>(screen, vertices, vertexLen, indices, indexLen, null, 0);
+    }
+
+    public unsafe static Own<Mesh<TVertex>> Create(
+        Screen screen,
+        ReadOnlySpan<TVertex> vertices,
+        ReadOnlySpan<u16> indices,
+        ReadOnlySpan<Vector3> tangents)
+    {
+        fixed(TVertex* v = vertices)
+        fixed(u16* i = indices)
+        fixed(Vector3* t = tangents) {
+            return Create<u16>(screen, v, (usize)vertices.Length, i, (u32)indices.Length, t, (usize)tangents.Length);
+        }
+    }
+
+    public unsafe static Own<Mesh<TVertex>> Create(
+        Screen screen,
+        TVertex* vertices, usize vertexLen,
+        u16* indices, u32 indexLen,
+        Vector3* tangents, usize tangentLen)
+    {
+        return Create<u16>(screen, vertices, vertexLen, indices, indexLen, tangents, tangentLen);
+    }
+
+    public unsafe static Own<Mesh<TVertex>> Create(
+        Screen screen,
+        ReadOnlySpan<TVertex> vertices,
+        ReadOnlySpan<u32> indices,
+        ReadOnlySpan<Vector3> tangents)
+    {
+        fixed(TVertex* v = vertices)
+        fixed(u32* i = indices)
+        fixed(Vector3* t = tangents) {
+            return Create<u32>(screen, v, (usize)vertices.Length, i, (u32)indices.Length, t, (usize)tangents.Length);
+        }
+    }
+
+    public unsafe static Own<Mesh<TVertex>> Create(
+        Screen screen,
+        TVertex* vertices, usize vertexLen,
+        u32* indices, u32 indexLen,
+        Vector3* tangents, usize tangentLen)
+    {
+        return Create<u32>(screen, vertices, vertexLen, indices, indexLen, tangents, tangentLen);
+    }
+
     internal unsafe static Own<Mesh<TVertex>> Create<TIndex>(
         Screen screen,
         TVertex* vertices, usize vertexLen,
@@ -78,14 +160,14 @@ public sealed class Mesh<TVertex>
             throw new ArgumentException("index type should be u32 or u16.");
         }
 
-        var vertexBuffer = Buffer.Create(screen, (u8*)vertices, vertexLen * (usize)sizeof(TVertex), BufferUsages.Vertex | BufferUsages.CopyDst);
-        var indexBuffer = Buffer.Create(screen, (u8*)indices, indexLen * (usize)sizeof(TIndex), BufferUsages.Index | BufferUsages.CopyDst);
+        var vertexBuffer = Buffer.Create(screen, (u8*)vertices, vertexLen * (usize)sizeof(TVertex), BufferUsages.Vertex);
+        var indexBuffer = Buffer.Create(screen, (u8*)indices, indexLen * (usize)sizeof(TIndex), BufferUsages.Index);
         Own<Buffer> tangentBuffer;
         if(tangentLen == 0) {
             tangentBuffer = Own<Buffer>.None;
         }
         else {
-            tangentBuffer = Buffer.Create(screen, (u8*)tangents, tangentLen * (usize)sizeof(Vector3), BufferUsages.Vertex | BufferUsages.CopyDst);
+            tangentBuffer = Buffer.Create(screen, (u8*)tangents, tangentLen * (usize)sizeof(Vector3), BufferUsages.Vertex);
         }
 
         var mesh = new Mesh<TVertex>(screen, vertexBuffer, indexBuffer, indexLen, indexFormat, tangentBuffer);
@@ -96,7 +178,7 @@ public sealed class Mesh<TVertex>
 public static class Mesh
 {
     public unsafe static Own<Mesh<TVertex>> Create<TVertex>(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u16> indices)
-        where TVertex : unmanaged, IVertex, IVertexUV
+        where TVertex : unmanaged, IVertex
     {
         fixed(TVertex* vp = vertices)
         fixed(u16* ip = indices) {
@@ -105,7 +187,7 @@ public static class Mesh
     }
 
     public unsafe static Own<Mesh<TVertex>> Create<TVertex>(Screen screen, ReadOnlySpan<TVertex> vertices, ReadOnlySpan<u32> indices)
-        where TVertex : unmanaged, IVertex, IVertexUV
+        where TVertex : unmanaged, IVertex
     {
         fixed(TVertex* vp = vertices)
         fixed(u32* ip = indices) {
@@ -188,7 +270,11 @@ internal static class MeshHelper
         }
     }
 
-    public unsafe static void CalcTangentsU16<TVertex>(TVertex* vertices, u32 verticesLen, u16* indices, u64 indicesLen, Vector3* tangents, uint uvOffset)
+    public unsafe static void CalcTangentsU16<TVertex>(
+        TVertex* vertices, u32 verticesLen,
+        u16* indices, u64 indicesLen,
+        Vector3* tangents,
+        uint uvOffset)
         where TVertex : unmanaged, IVertex
     {
         U16x3* triangles = (U16x3*)indices;
