@@ -1,44 +1,38 @@
 ﻿#nullable enable
+using System;
+using System.Diagnostics;
 
 namespace Elffy;
 
 public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, DeferredProcessShader>
 {
-    private readonly Own<BindGroup> _bindGroup0;
+    private readonly BindGroup[] _bindGroups;
+    private readonly IDisposable[] _disposables;
 
-    public BindGroup BindGroup0 => _bindGroup0.AsValue();
+    internal BindGroup BindGroup0 => _bindGroups[0];
+    internal BindGroup BindGroup1 => _bindGroups[1];
 
-    private DeferredProcessMaterial(DeferredProcessShader shader, Own<BindGroup> bindGroup0) : base(shader)
+    private DeferredProcessMaterial(DeferredProcessShader shader, GBuffer gBuffer) : base(shader)
     {
-        _bindGroup0 = bindGroup0;
+        var bindGroups = shader.CreateBindGroups(gBuffer, out var disposables);
+        Debug.Assert(bindGroups.Length == 2);
+        _bindGroups = bindGroups;
+        _disposables = disposables;
     }
 
     protected override void Release(bool manualRelease)
     {
         base.Release(manualRelease);
         if(manualRelease) {
-            _bindGroup0.Dispose();
+            foreach(var item in _disposables) {
+                item.Dispose();
+            }
         }
     }
 
-    public static Own<DeferredProcessMaterial> Create(DeferredProcessShader shader, GBuffer gBuffer)
+    internal static Own<DeferredProcessMaterial> Create(DeferredProcessShader shader, GBuffer gBuffer)
     {
-        var screen = shader.Screen;
-        var sampler = Sampler.NoMipmap(screen, AddressMode.ClampToEdge, FilterMode.Nearest, FilterMode.Nearest);
-        var desc = new BindGroupDescriptor
-        {
-            Layout = shader.BindGroupLayout0,
-            Entries = new BindGroupEntry[]
-            {
-                BindGroupEntry.Sampler(0, sampler.AsValue()),
-                BindGroupEntry.TextureView(1, gBuffer.ColorAttachment(0).View),
-                BindGroupEntry.TextureView(2, gBuffer.ColorAttachment(1).View),
-                BindGroupEntry.TextureView(3, gBuffer.ColorAttachment(2).View),
-                BindGroupEntry.TextureView(4, gBuffer.ColorAttachment(3).View),
-            },
-        };
-        var bindGroup0 = BindGroup.Create(screen, desc);
-        var material = new DeferredProcessMaterial(shader, bindGroup0);
+        var material = new DeferredProcessMaterial(shader, gBuffer);
         return CreateOwn(material);
     }
 }
