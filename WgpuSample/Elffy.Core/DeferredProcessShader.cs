@@ -40,28 +40,99 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         const INV_PI = 0.3183098861837907;
         const DIELECTRIC_F0 = 0.04;
 
+        const LIGHT_DIR = vec3<f32>(0.0, 0.70710678, 0.70710678);
+        const LIGHT_COLOR = vec3<f32>(1.0, 1.0, 1.0);
+
         @fragment fn fs_main(in: V2F) -> Fout {
-            var c0: vec4<f32> = textureSample(g0, g_sampler, in.uv);
-            var c1: vec4<f32> = textureSample(g1, g_sampler, in.uv);
-            var c2: vec4<f32> = textureSample(g2, g_sampler, in.uv);
-            var c3: vec4<f32> = textureSample(g3, g_sampler, in.uv);
-            var pos_camera_coord: vec3<f32> = c0.rgb;
-            var n: vec3<f32> = c1.rgb;    // normal direction in eye space, normalized
-            var albedo: vec3<f32> = c2.rgb;
-            var metallic: f32 = c0.a;
-            var roughness: f32 = c1.a;
-            var alpha: f32 = roughness * roughness;
-            var v: vec3<f32> = -normalize(pos_camera_coord);    // camera direction in camera space, normalized
-            var dot_nv: f32 = abs(dot(n, v));
-            var reflectivity: f32 = mix(DIELECTRIC_F0, 1.0, metallic);
-            var f0: vec3<f32> = mix(vec3<f32>(DIELECTRIC_F0, DIELECTRIC_F0, DIELECTRIC_F0), albedo, metallic);
-            
+            let c0: vec4<f32> = textureSample(g0, g_sampler, in.uv);
+            let c1: vec4<f32> = textureSample(g1, g_sampler, in.uv);
+            let c2: vec4<f32> = textureSample(g2, g_sampler, in.uv);
+            let c3: vec4<f32> = textureSample(g3, g_sampler, in.uv);
+            let pos_camera_coord: vec3<f32> = c0.rgb;
+            let n: vec3<f32> = c1.rgb;    // normal direction in eye space, normalized
+            let albedo: vec3<f32> = c2.rgb;
+            let metallic: f32 = c0.a;
+            let roughness: f32 = c1.a;
+            let alpha: f32 = roughness * roughness;
+            let v: vec3<f32> = -normalize(pos_camera_coord);    // camera direction in camera space, normalized
+            let dot_nv: f32 = abs(dot(n, v));
+            let reflectivity: f32 = mix(DIELECTRIC_F0, 1.0, metallic);
+            let f0: vec3<f32> = mix(vec3<f32>(DIELECTRIC_F0, DIELECTRIC_F0, DIELECTRIC_F0), albedo, metallic);
+
+            var fragColor: vec3<f32>;
+
+            let l = LIGHT_DIR;
+            let lColor = LIGHT_COLOR;
+            let h = normalize(v + l);                  // half vector in eye space, normalized
+            let dot_nl: f32 = max(0.0, dot(n, l));
+            let dot_lh: f32 = max(0.0, dot(l, h));
+            let irradiance: vec3<f32> = dot_nl * lColor;
+
+            // Diffuse
+            // You can use Burley instead of Lambert.
+            let diffuse: vec3<f32> = (1.0 - reflectivity) * Lambert() * irradiance * albedo;
+
+            // Specular
+            let dot_nh: f32 = dot(n, h);
+            let V: f32 = SmithGGXCorrelated(dot_nl, dot_nv, alpha);
+            let D: f32 = GGX(n, h, dot_nh, roughness) * step(0.0, dot_nh);
+            let F: vec3<f32> = FresnelSchlick(f0, vec3(1.0, 1.0, 1.0), dot_lh);
+            let specular: vec3<f32> = max(vec3(0.0, 0.0, 0.0), V * D * F * irradiance);
+
+            //let bias: f32 = clamp(_shadowMapBias * tan(acos(dot_nl)), 0.0, _shadowMapBias * 10);
+            let bias: f32 = 0.0;
+
+            //float shadow = CalcShadow(_lightMatData, _viewInv * vec4(pos, 1), _shadowMap, bias);
+            let shadow: f32 = 0.0;
+
+            fragColor = (diffuse + specular) * (1.0 - shadow);
+
+            let ssao: f32 = 1.0;
+            fragColor *= ssao;
+
             var out: Fout;
-            out.color = vec4(c1.rgb, 1.0);
+            out.color = vec4<f32>(fragColor, 1.0);
 
             var pos_dnc = camera.proj * vec4(pos_camera_coord, 1.0);
             out.depth = (pos_dnc.z / pos_dnc.w) * 0.5 + 0.5;
             return out;
+        }
+
+        fn Lambert() -> f32 {
+            return INV_PI;
+        }
+
+        fn SmithGGXCorrelated(dot_nl: f32, dot_nv: f32, alpha: f32) -> f32 {
+            // For optimization, we will approximate the following expression.
+            // (This approximation is not mathematically correct, but it works fine.)
+            // let a2 = alpha * alpha;
+            // let lambdaV = dot_nl * sqrt((-dot_nv * a2 + dot_nv) * dot_nv + a2);
+            // let lambdaL = dot_nv * sqrt((-dot_nl * a2 + dot_nl) * dot_nl + a2);
+
+
+            let EPSILON: f32 = 0.0001;
+            let beta: f32 = 1.0 - alpha;
+            let lambdaV: f32 = dot_nl * (dot_nv * beta + alpha);
+            let lambdaL: f32 = dot_nv * (dot_nl * beta + alpha);
+            return 0.5 / (lambdaV + lambdaL + EPSILON);
+        }
+
+        // TODO: f16
+        fn GGX(n: vec3<f32>, h: vec3<f32>, dot_nh: f32, roughness: f32) -> f32    // Trowbridge-Reitz
+        {
+            let p = roughness * dot_nh;
+            let cross_nh = cross(n, h);
+            let q = roughness / (dot(cross_nh, cross_nh) + p * p);
+            return min(q * q * INV_PI, 65504.0);        // 65504.0 is max value of f16
+        }
+
+
+        // TODO: f16
+        fn FresnelSchlick(f0: vec3<f32>, f90: vec3<f32>, u: f32) -> vec3<f32>
+        {
+            let x = 1.0 - u;
+            let x2 = x * x;
+            return f0 + (f90 - f0) * (x2 * x2 * x);
         }
         """u8;
 
