@@ -49,24 +49,6 @@ public sealed class Buffer : IScreenManaged
         }
     }
 
-    public static Own<Buffer> CreateUniformBuffer<T>(Screen screen, in T data) where T : unmanaged
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        return CreateFromSpan(screen, new ReadOnlySpan<T>(in data), BufferUsages.Uniform | BufferUsages.CopyDst);
-    }
-
-    public static Own<Buffer> CreateVertexBuffer<T>(Screen screen, ReadOnlySpan<T> data) where T : unmanaged
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        return CreateFromSpan(screen, data, BufferUsages.Vertex | BufferUsages.CopyDst);
-    }
-
-    public static Own<Buffer> CreateIndexBuffer<T>(Screen screen, ReadOnlySpan<T> data) where T : unmanaged
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        return CreateFromSpan(screen, data, BufferUsages.Index | BufferUsages.CopyDst);
-    }
-
     public unsafe static Own<Buffer> Create<T>(Screen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
     {
         ArgumentNullException.ThrowIfNull(screen);
