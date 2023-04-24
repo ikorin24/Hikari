@@ -8,17 +8,8 @@ public sealed class PbrModel : Renderable<PbrLayer, V, PbrShader, PbrMaterial>
 {
     private readonly BufferSlice<Vector3> _tangent;
 
-    public PbrModel(
-        PbrLayer layer,
-        Own<Mesh<V>> mesh,
-        Own<Sampler> sampler,
-        Own<Texture> albedo,
-        Own<Texture> metallicRoughness,
-        Own<Texture> normal)
-        : base(
-            layer,
-            GetTangentBuffer(mesh, out var tangent),
-            PbrMaterial.Create(layer.Shader, sampler, albedo, metallicRoughness, normal))
+    public PbrModel(PbrLayer layer, Own<Mesh<V>> mesh, Own<PbrMaterial> material)
+        : base(layer, GetTangentBuffer(mesh, out var tangent), material)
     {
         _tangent = tangent;
     }
