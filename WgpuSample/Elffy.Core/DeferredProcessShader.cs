@@ -62,11 +62,11 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             var fragColor: vec3<f32>;
 
             let l = LIGHT_DIR;
-            let lColor = LIGHT_COLOR;
+            let l_color = LIGHT_COLOR;
             let h = normalize(v + l);                  // half vector in eye space, normalized
             let dot_nl: f32 = max(0.0, dot(n, l));
             let dot_lh: f32 = max(0.0, dot(l, h));
-            let irradiance: vec3<f32> = dot_nl * lColor;
+            let irradiance: vec3<f32> = dot_nl * l_color;
 
             // Diffuse
             // You can use Burley instead of Lambert.
@@ -74,10 +74,10 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
 
             // Specular
             let dot_nh: f32 = dot(n, h);
-            let V: f32 = SmithGGXCorrelated(dot_nl, dot_nv, alpha);
-            let D: f32 = GGX(n, h, dot_nh, roughness) * step(0.0, dot_nh);
-            let F: vec3<f32> = FresnelSchlick(f0, vec3(1.0, 1.0, 1.0), dot_lh);
-            let specular: vec3<f32> = max(vec3(0.0, 0.0, 0.0), V * D * F * irradiance);
+            let V = SmithGGXCorrelated(dot_nl, dot_nv, alpha);
+            let D = GGX(n, h, dot_nh, roughness) * step(0.0, dot_nh);
+            let F = FresnelSchlick(f0, vec3(1.0, 1.0, 1.0), dot_lh);
+            let specular: vec3<f32> = max(vec3<f32>(), V * D * F * irradiance);
 
             //let bias: f32 = clamp(_shadowMapBias * tan(acos(dot_nl)), 0.0, _shadowMapBias * 10);
             let bias: f32 = 0.0;
