@@ -37,6 +37,6 @@ public abstract class Shader<TSelf, TMaterial>
     protected static Own<TSelf> CreateOwn(TSelf shader)
     {
         ArgumentNullException.ThrowIfNull(shader);
-        return Own.RefType(shader, static x => SafeCast.As<TSelf>(x).Release());
+        return Own.New(shader, static x => SafeCast.As<TSelf>(x).Release());
     }
 }

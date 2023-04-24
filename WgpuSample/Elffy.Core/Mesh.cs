@@ -89,7 +89,7 @@ public sealed class Mesh<TVertex>
         }
 
         var mesh = new Mesh<TVertex>(screen, vertexBuffer, indexBuffer, indexLen, indexFormat, tangentBuffer);
-        return Own.RefType(mesh, static x => SafeCast.As<Mesh<TVertex>>(x).Release());
+        return Own.New(mesh, static x => SafeCast.As<Mesh<TVertex>>(x).Release());
     }
 }
 

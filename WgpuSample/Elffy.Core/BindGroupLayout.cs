@@ -48,7 +48,7 @@ public sealed class BindGroupLayout : IScreenManaged
         var descNative = desc.ToNative(pins);
         var bindGroupLayoutNative = screen.AsRefChecked().CreateBindGroupLayout(descNative);
         var bindGroupLayout = new BindGroupLayout(screen, bindGroupLayoutNative);
-        return Own.RefType(bindGroupLayout, static x => _release(SafeCast.As<BindGroupLayout>(x)));
+        return Own.New(bindGroupLayout, static x => _release(SafeCast.As<BindGroupLayout>(x)));
     }
 }
 

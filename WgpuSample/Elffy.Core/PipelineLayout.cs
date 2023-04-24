@@ -49,7 +49,7 @@ public sealed class PipelineLayout : IScreenManaged
         var descNative = new CE.PipelineLayoutDescriptor(bindGroupLayoutsNative, (nuint)bindGroupLayouts.Length);
         var pipelineLayoutNative = screen.AsRefChecked().CreatePipelineLayout(descNative);
         var pipelineLayout = new PipelineLayout(screen, pipelineLayoutNative);
-        return Own.RefType(pipelineLayout, static x => SafeCast.As<PipelineLayout>(x).Release());
+        return Own.New(pipelineLayout, static x => SafeCast.As<PipelineLayout>(x).Release());
     }
 }
 

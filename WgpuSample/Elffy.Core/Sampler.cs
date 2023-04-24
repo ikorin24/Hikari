@@ -45,7 +45,7 @@ public sealed class Sampler : IScreenManaged
         var descNative = desc.ToNative();
         var samplerNative = screen.AsRefChecked().CreateSampler(descNative);
         var sampler = new Sampler(screen, samplerNative);
-        return Own.RefType(sampler, static x => SafeCast.As<Sampler>(x).Release());
+        return Own.New(sampler, static x => SafeCast.As<Sampler>(x).Release());
     }
 
     public static Own<Sampler> NoMipmap(Screen screen, AddressMode addressMode, FilterMode magFilter, FilterMode minFilter)

@@ -48,7 +48,7 @@ public sealed class GBuffer : IScreenManaged
         }
 
         var gbuffer = new GBuffer(screen, size, formats);
-        return Own.RefType(gbuffer, static x => SafeCast.As<GBuffer>(x).Release());
+        return Own.New(gbuffer, static x => SafeCast.As<GBuffer>(x).Release());
     }
 
     public Texture ColorAttachment(int index)

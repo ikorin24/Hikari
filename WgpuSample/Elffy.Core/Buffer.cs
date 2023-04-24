@@ -81,7 +81,7 @@ public sealed class Buffer : IScreenManaged
         var data = new CE.Slice<u8>(ptr, byteLength);
         var bufferNative = screenRef.CreateBufferInit(data, usage.FlagsMap());
         var buffer = new Buffer(screen, bufferNative, usage, byteLength);
-        return Own.RefType(buffer, static x => SafeCast.As<Buffer>(x).Release());
+        return Own.New(buffer, static x => SafeCast.As<Buffer>(x).Release());
     }
 
     public BufferSlice<u8> Slice() => BufferSlice<u8>.Full(this);

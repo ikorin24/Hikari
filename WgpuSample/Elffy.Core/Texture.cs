@@ -76,7 +76,7 @@ public sealed class Texture : IScreenManaged
         var descNative = desc.ToNative();
         var textureNative = screen.AsRefChecked().CreateTexture(descNative);
         var texture = new Texture(screen, textureNative, desc);
-        return Own.RefType(texture, static x => SafeCast.As<Texture>(x).Release());
+        return Own.New(texture, static x => SafeCast.As<Texture>(x).Release());
     }
 
     public unsafe static Own<Texture> CreateFromRawData(Screen screen, in TextureDescriptor desc, ReadOnlySpan<u8> data)
@@ -93,7 +93,7 @@ public sealed class Texture : IScreenManaged
                 );
         }
         var texture = new Texture(screen, textureNative, desc);
-        return Own.RefType(texture, static x => SafeCast.As<Texture>(x).Release());
+        return Own.New(texture, static x => SafeCast.As<Texture>(x).Release());
     }
 
     public unsafe static Own<Texture> CreateWithAutoMipmap(Screen screen, ReadOnlyImageRef image, TextureFormat format, TextureUsages usage, uint? mipLevelCount = null)
@@ -171,7 +171,7 @@ public sealed class Texture : IScreenManaged
                 break;
             }
         }
-        return Own.RefType(texture, static x => SafeCast.As<Texture>(x).Release());
+        return Own.New(texture, static x => SafeCast.As<Texture>(x).Release());
     }
 
     private static void CalcMipDataSize(in TextureDescriptor desc, Span<(Vector3u MipSize, u32 ByteLength)> mipData, out usize totalByteSize)

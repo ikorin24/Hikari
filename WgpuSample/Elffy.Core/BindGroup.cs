@@ -46,7 +46,7 @@ public sealed class BindGroup : IScreenManaged
         using var pins = new PinHandleHolder();
         var bindGroupNative = screen.AsRefChecked().CreateBindGroup(desc.ToNative(pins));
         var bindGroup = new BindGroup(screen, bindGroupNative);
-        return Own.RefType(bindGroup, static x => _release(SafeCast.As<BindGroup>(x)));
+        return Own.New(bindGroup, static x => _release(SafeCast.As<BindGroup>(x)));
     }
 }
 

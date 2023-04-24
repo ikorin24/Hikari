@@ -29,6 +29,6 @@ public abstract class Material<TSelf, TShader>
     protected static Own<TSelf> CreateOwn(TSelf self)
     {
         ArgumentNullException.ThrowIfNull(self);
-        return Own.RefType(self, static x => SafeCast.As<TSelf>(x).Release());
+        return Own.New(self, static x => SafeCast.As<TSelf>(x).Release());
     }
 }

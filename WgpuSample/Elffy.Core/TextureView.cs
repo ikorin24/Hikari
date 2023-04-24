@@ -47,6 +47,6 @@ public sealed class TextureView : IScreenManaged, ITextureView
         var screen = texture.Screen;
         var textureViewNative = texture.NativeRef.CreateTextureView(CE.TextureViewDescriptor.Default);
         var textureView = new TextureView(screen, textureViewNative);
-        return Own.RefType(textureView, static x => SafeCast.As<TextureView>(x).Release());
+        return Own.New(textureView, static x => SafeCast.As<TextureView>(x).Release());
     }
 }

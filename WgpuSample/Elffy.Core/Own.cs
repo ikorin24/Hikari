@@ -22,7 +22,7 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
 
     public static Own<T> None => default;
 
-    internal Own(T value, Action<object> release, RefTypeMarker _)
+    internal Own(T value, Action<object> release, Own.RefTypeMarker _)
     {
         Debug.Assert(typeof(T).IsValueType == false);
         ArgumentNullException.ThrowIfNull(value);
@@ -31,7 +31,7 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
         _release = release;
     }
 
-    internal Own(T value, Action<T> release, ValueTypeMarker _)
+    internal Own(T value, Action<T> release, Own.ValueTypeMarker _)
     {
         Debug.Assert(typeof(T).IsValueType);
         ArgumentNullException.ThrowIfNull(release);
@@ -95,24 +95,24 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
     public static bool operator ==(Own<T> left, Own<T> right) => left.Equals(right);
 
     public static bool operator !=(Own<T> left, Own<T> right) => !(left == right);
+}
 
+public static class Own
+{
     internal static ValueTypeMarker ValueType => default;
     internal static RefTypeMarker RefType => default;
 
     internal readonly struct ValueTypeMarker { }
     internal readonly struct RefTypeMarker { }
-}
 
-public static class Own
-{
-    public static Own<T> RefType<T>(T value, Action<object> release) where T : class
+    public static Own<T> New<T>(T value, Action<object> release) where T : class
     {
-        return new Own<T>(value, release, Own<T>.RefType);
+        return new Own<T>(value, release, RefType);
     }
 
-    public static Own<T> ValueType<T>(T value, Action<T> release) where T : struct
+    public static Own<T> New<T>(T value, Action<T> release) where T : struct
     {
-        return new Own<T>(value, release, Own<T>.ValueType);
+        return new Own<T>(value, release, ValueType);
     }
 }
 

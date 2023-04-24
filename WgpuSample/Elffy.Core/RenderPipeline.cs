@@ -47,7 +47,7 @@ public sealed class RenderPipeline : IScreenManaged
             var descNative = desc.ToNative(pins);
             var renderPipelineNative = screen.AsRefChecked().CreateRenderPipeline(descNative);
             var renderPipeline = new RenderPipeline(screen, renderPipelineNative);
-            return Own.RefType(renderPipeline, static x => SafeCast.As<RenderPipeline>(x).Release());
+            return Own.New(renderPipeline, static x => SafeCast.As<RenderPipeline>(x).Release());
         }
         finally {
             pins.Dispose();

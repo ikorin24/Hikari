@@ -42,6 +42,6 @@ public sealed class ShaderModule : IScreenManaged
         ArgumentNullException.ThrowIfNull(screen);
         var shaderModuleNative = screen.AsRefChecked().CreateShaderModule(shaderSource);
         var shaderModule = new ShaderModule(screen, shaderModuleNative);
-        return Own.RefType(shaderModule, static x => SafeCast.As<ShaderModule>(x).Release());
+        return Own.New(shaderModule, static x => SafeCast.As<ShaderModule>(x).Release());
     }
 }
