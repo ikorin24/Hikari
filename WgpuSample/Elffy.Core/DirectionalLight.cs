@@ -48,7 +48,7 @@ public sealed class DirectionalLight
     internal DirectionalLight(Screen screen)
     {
         var data = new DirectionalLightData(
-            new Vector3(0f, -1f, -0.2f).Normalized(),
+            new Vector3(0f, -1f, -0.3f).Normalized(),
             new Color3(1, 1, 1)
         );
         _buffer = Buffer.Create(screen, in data, BufferUsages.Storage | BufferUsages.CopyDst);

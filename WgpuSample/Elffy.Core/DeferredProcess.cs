@@ -21,10 +21,10 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
         const float Z = 0;
         ReadOnlySpan<V> vertices = stackalloc V[]
         {
-            new(new(-1, -1, Z), new(0, 0)),
-            new(new(1, -1, Z), new(1, 0)),
-            new(new(1, 1, Z), new(1, 1)),
-            new(new(-1, 1, Z), new(0, 1)),
+            new(new(-1, -1, Z), new(0, 1)),
+            new(new(1, -1, Z), new(1, 1)),
+            new(new(1, 1, Z), new(1, 0)),
+            new(new(-1, 1, Z), new(0, 0)),
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
         _rectMesh = Mesh.Create(Screen, vertices, indices);
