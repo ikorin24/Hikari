@@ -14,6 +14,7 @@ public sealed class Screen
     private readonly ThreadId _mainThread;
     private readonly SubscriptionBag _subscriptions;
     private readonly Camera _camera;
+    private readonly Lights _lights;
     private TextureFormat _surfaceFormat;
     private GraphicsBackend _backend;
     private bool _initialized;
@@ -109,12 +110,14 @@ public sealed class Screen
     public MonitorId? CurrentMonitor => _native.Unwrap().AsRef().CurrentMonitor();
 
     public Camera Camera => _camera;
+    public Lights Lights => _lights;
 
     internal Screen(Rust.Box<CE.HostScreen> screen, ThreadId mainThread)
     {
         _native = screen;
         _mainThread = mainThread;
         _camera = new Camera(this);
+        _lights = new Lights(this);
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
         _renderOperations = new RenderOperations(this);
@@ -237,6 +240,7 @@ public sealed class Screen
         _camera.DisposeInternal();
         _depthTexture.Dispose();
         _depthTexture = Own<Texture>.None;
+        _lights.DisposeInternal();
         _resized.Clear();
         _subscriptions.Dispose();
         return native;

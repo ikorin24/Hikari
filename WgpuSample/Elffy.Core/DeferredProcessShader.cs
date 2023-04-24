@@ -22,12 +22,17 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             proj: mat4x4<f32>,
             view: mat4x4<f32>,
         }
+        struct DirLightData {
+            dir: vec4<f32>,
+            color: vec4<f32>,
+        }
         @group(0) @binding(0) var g_sampler: sampler;
         @group(0) @binding(1) var g0: texture_2d<f32>;
         @group(0) @binding(2) var g1: texture_2d<f32>;
         @group(0) @binding(3) var g2: texture_2d<f32>;
         @group(0) @binding(4) var g3: texture_2d<f32>;
         @group(1) @binding(0) var<uniform> camera: CameraMat;
+        @group(2) @binding(0) var<storage> dir_light: DirLightData;
 
         @vertex fn vs_main(
             v: Vin,
@@ -61,8 +66,9 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
 
             var fragColor: vec3<f32>;
 
-            let l = LIGHT_DIR;
-            let l_color = LIGHT_COLOR;
+            //let l = LIGHT_DIR;
+            let l = -dir_light.dir.xyz;
+            let l_color = dir_light.color.rgb;
             let h = normalize(v + l);                  // half vector in eye space, normalized
             let dot_nl: f32 = max(0.0, dot(n, l));
             let dot_lh: f32 = max(0.0, dot(l, h));
@@ -218,6 +224,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         {
             bg0.AsValue(),
             screen.Camera.CameraDataBindGroup,
+            screen.Lights.DataBindGroup,
         };
     }
 
@@ -232,6 +239,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             {
                 bindGroupLayout0.AsValue(),
                 screen.Camera.CameraDataBindGroupLayout,
+                screen.Lights.DataBindGroupLayout,
             },
         };
     }

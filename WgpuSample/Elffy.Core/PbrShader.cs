@@ -88,7 +88,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new BufferBindingData
             {
                 HasDynamicOffset = false,
-                MinBindingSize = 0,
+                MinBindingSize = null,
                 Type = BufferBindingType.Uniform,
             }),
             BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Filtering),

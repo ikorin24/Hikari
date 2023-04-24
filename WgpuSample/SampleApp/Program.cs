@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Elffy.Effective;
 using Elffy.Imaging;
+using Elffy.Mathematics;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -40,22 +41,44 @@ internal class Program
         });
 
         var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
-        var mr = LoadTexture(screen, "pic.png", false);
+        var mr = LoadRoughnessTexture(screen, "resources/ground_0036_roughness_1k.jpg");
         var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
         var mesh = SampleData.SampleMesh(screen);
         //var mesh = Shapes.Cube(screen, true);
         //var mesh = Shapes.RegularIcosahedron(screen);
 
         var model = new PbrModel(layer, mesh, sampler, albedo, mr, normal);
+        model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
         var camera = screen.Camera;
-        camera.Position = new Vector3(0, 0, 3);
+        camera.Position = new Vector3(0, 3, 0.0001f);
         camera.LookAt(Vector3.Zero);
+
+        var dir = screen.Lights.DirectionalLight.Direction;
+
+        //screen.Lights.DirectionalLight.SetLightData(new Vector3(0, -1f, -1f), new Color3(1, 1, 1));
     }
 
     private static Own<Texture> LoadTexture(Screen screen, string filepath, bool isSrgb)
     {
         var format = isSrgb ? TextureFormat.Rgba8UnormSrgb : TextureFormat.Rgba8Unorm;
         using var image = LoadImage(filepath);
+        return Texture.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding);
+
+        static Image LoadImage(string filepath)
+        {
+            using var stream = File.OpenRead(filepath);
+            return Image.FromStream(stream, Path.GetExtension(filepath));
+        }
+    }
+
+    private static Own<Texture> LoadRoughnessTexture(Screen screen, string filepath)
+    {
+        var format = TextureFormat.Rgba8Unorm;
+        using var image = LoadImage(filepath);
+        var pixels = image.GetPixels();
+        for(int i = 0; i < pixels.Length; i++) {
+            pixels[i] = new ColorByte(0x00, pixels[i].G, 0x00, 0x00);
+        }
         return Texture.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding);
 
         static Image LoadImage(string filepath)

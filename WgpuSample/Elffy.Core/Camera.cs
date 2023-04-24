@@ -205,7 +205,7 @@ public sealed class Camera
                     {
                         Type = BufferBindingType.Uniform,
                         HasDynamicOffset = false,
-                        MinBindingSize = 0,
+                        MinBindingSize = null,
                     }),
             },
         });

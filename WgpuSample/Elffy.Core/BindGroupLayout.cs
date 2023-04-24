@@ -2,6 +2,7 @@
 using Elffy.NativeBind;
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -146,8 +147,6 @@ public sealed class BufferBindingData : IBindingTypeData
 {
     private CE.BufferBindingData _nativePayload;
     private BufferBindingType _type;
-    private bool _hasDynamicOffset;
-    private u64 _minBindingSize;
 
     public required BufferBindingType Type
     {
@@ -160,20 +159,23 @@ public sealed class BufferBindingData : IBindingTypeData
     }
     public required bool HasDynamicOffset
     {
-        get => _hasDynamicOffset;
+        get => _nativePayload.has_dynamic_offset;
         init
         {
             _nativePayload.has_dynamic_offset = value;
-            _hasDynamicOffset = value;
         }
     }
-    public required u64 MinBindingSize
+    public required u64? MinBindingSize
     {
-        get => _minBindingSize;
-        set
+        get => _nativePayload.min_binding_size == 0 ? null : _nativePayload.min_binding_size;
+        init
         {
-            _nativePayload.min_binding_size = value;
-            _minBindingSize = value;
+            if(value == 0) {
+                Throw();
+                [DoesNotReturn]
+                static void Throw() => throw new ArgumentOutOfRangeException(nameof(value), "value should not be 0");
+            }
+            _nativePayload.min_binding_size = (value == null) ? 0 : value.Value;
         }
     }
 
