@@ -48,14 +48,17 @@ internal class Program
         //var mesh = Shapes.RegularIcosahedron(screen);
 
         var model = new PbrModel(layer, mesh, sampler, albedo, mr, normal);
-        model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
+        //model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
+        model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, 0.ToRadian());
         var camera = screen.Camera;
-        camera.Position = new Vector3(0, 3, 0.0001f);
+        //camera.Position = new Vector3(0, 3, 0);
+        camera.Position = new Vector3(0, -2f, 3);
         camera.LookAt(Vector3.Zero);
 
         var dir = screen.Lights.DirectionalLight.Direction;
 
         //screen.Lights.DirectionalLight.SetLightData(new Vector3(0, -1f, -1f), new Color3(1, 1, 1));
+        screen.Lights.DirectionalLight.SetLightData(new Vector3(0, 0, -1f), new Color3(1, 1, 1));
     }
 
     private static Own<Texture> LoadTexture(Screen screen, string filepath, bool isSrgb)

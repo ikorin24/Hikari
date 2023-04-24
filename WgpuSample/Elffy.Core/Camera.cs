@@ -18,6 +18,10 @@ public sealed class Camera
         public Matrix4 View;
     }
 
+    private static Vector3 InitialPos => new Vector3(0, 0, 10);
+    private static Vector3 InitialDirection => new Vector3(0, 0, -1);
+    private static Vector3 InitialUp => Vector3.UnitY;
+
     private readonly Screen _screen;
     private readonly Own<Buffer> _uniformBuffer;
     private readonly Own<BindGroupLayout> _bindGroupLayout;
@@ -26,8 +30,7 @@ public sealed class Camera
     private Matrix4 _view;
     private Matrix4 _projection;
     private Vector3 _position;
-    private Vector3 _direction;
-    private Vector3 _up;
+    private Quaternion _rotation;
     private Frustum _frustum;
     private float _aspect;  // Aspect ratio (width / height). It may be NaN when height is 0.
     private float _near;
@@ -57,7 +60,7 @@ public sealed class Camera
             }
             lock(_sync) {
                 _mode = value;
-                CalcProjection(_mode, _near, _far, _aspect, out _projection);
+                _projection = CalcProjection(_mode, _near, _far, _aspect);
                 Frustum.FromMatrix(_projection, _view, out _frustum);
                 _isUniformChanged = true;
             }
@@ -80,7 +83,7 @@ public sealed class Camera
             }
             lock(_sync) {
                 _position = value;
-                CalcView(_position, _direction, _up, out _view);
+                _view = CalcView(_position, _rotation);
                 Frustum.FromMatrix(_projection, _view, out _frustum);
                 _isUniformChanged = true;
             }
@@ -93,22 +96,8 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _direction;
+                return _rotation * InitialDirection;
             }
-        }
-        set
-        {
-            var normalized = value.Normalized();
-            if(normalized.ContainsNaNOrInfinity) {
-                throw new ArgumentException($"value contains NaN or Infinity");
-            }
-            lock(_sync) {
-                _direction = normalized;
-                CalcView(_position, _direction, _up, out _view);
-                Frustum.FromMatrix(_projection, _view, out _frustum);
-                _isUniformChanged = true;
-            }
-            _matrixChanged.Invoke(this);
         }
     }
 
@@ -117,22 +106,8 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _up;
+                return _rotation * InitialUp;
             }
-        }
-        set
-        {
-            var normalized = value.Normalized();
-            if(normalized.ContainsNaNOrInfinity) {
-                throw new ArgumentException($"value contains NaN or Infinity");
-            }
-            lock(_sync) {
-                _up = normalized;
-                CalcView(_position, _direction, _up, out _view);
-                Frustum.FromMatrix(_projection, _view, out _frustum);
-                _isUniformChanged = true;
-            }
-            _matrixChanged.Invoke(this);
         }
     }
 
@@ -175,15 +150,14 @@ public sealed class Camera
         _screen = screen;
         _view = Matrix4.Identity;
         _projection = Matrix4.Identity;
-        _position = new Vector3(0, 0, 10);
-        _direction = -Vector3.UnitZ;
-        _up = Vector3.UnitY;
+        _position = InitialPos;
+        _rotation = Quaternion.Identity;
         _near = 0.5f;
         _far = 1000f;
         _aspect = 1f;
         _mode = CameraProjectionMode.Perspective(25f / 180f * float.Pi);
-        CalcProjection(_mode, _near, _far, _aspect, out _projection);
-        CalcView(_position, _direction, _up, out _view);
+        _projection = CalcProjection(_mode, _near, _far, _aspect);
+        _view = CalcView(_position, _rotation);
         Frustum.FromMatrix(_projection, _view, out _frustum);
 
         _uniformBuffer = Buffer.Create(
@@ -234,7 +208,7 @@ public sealed class Camera
         lock(_sync) {
             _near = near;
             _far = far;
-            CalcProjection(_mode, _near, _far, _aspect, out _projection);
+            _projection = CalcProjection(_mode, _near, _far, _aspect);
             Frustum.FromMatrix(_projection, _view, out _frustum);
             _isUniformChanged = true;
         }
@@ -244,12 +218,12 @@ public sealed class Camera
     public void LookAt(in Vector3 target)
     {
         lock(_sync) {
-            var vec = (target - _position).Normalized();
-            if(vec.ContainsNaNOrInfinity) {
+            var dir = (target - _position).Normalized();
+            if(dir.ContainsNaNOrInfinity) {
                 return;
             }
-            _direction = vec;
-            CalcView(_position, _direction, _up, out _view);
+            _rotation = Quaternion.FromTwoVectors(InitialDirection, dir);
+            _view = CalcView(_position, _rotation);
             Frustum.FromMatrix(_projection, _view, out _frustum);
             _isUniformChanged = true;
         }
@@ -259,14 +233,15 @@ public sealed class Camera
 
     public void LookAt(in Vector3 target, in Vector3 cameraPos)
     {
-        var vec = (target - cameraPos).Normalized();
-        if(vec.ContainsNaNOrInfinity) {
+        var dir = (target - cameraPos).Normalized();
+        if(dir.ContainsNaNOrInfinity) {
             return;
         }
+        var rotation = Quaternion.FromTwoVectors(InitialDirection, dir);
         lock(_sync) {
-            _direction = vec;
+            _rotation = rotation;
             _position = cameraPos;
-            CalcView(_position, _direction, _up, out _view);
+            _view = CalcView(_position, _rotation);
             Frustum.FromMatrix(_projection, _view, out _frustum);
             _isUniformChanged = true;
         }
@@ -281,7 +256,7 @@ public sealed class Camera
         }
         lock(_sync) {
             _aspect = aspect;
-            CalcProjection(_mode, _near, _far, _aspect, out _projection);
+            _projection = CalcProjection(_mode, _near, _far, _aspect);
             Frustum.FromMatrix(_projection, _view, out _frustum);
             _isUniformChanged = true;
         }
@@ -305,13 +280,15 @@ public sealed class Camera
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CalcView(in Vector3 pos, in Vector3 dir, in Vector3 up, out Matrix4 view)
+    private static Matrix4 CalcView(in Vector3 pos, in Quaternion rotation)
     {
-        Matrix4.LookAt(pos, pos + dir, up, out view);
+        var dir = rotation * InitialDirection;
+        var up = rotation * InitialUp;
+        return Matrix4.LookAt(pos, pos + dir, up);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CalcProjection(CameraProjectionMode mode, float near, float far, float aspect, out Matrix4 projection)
+    private static Matrix4 CalcProjection(in CameraProjectionMode mode, float near, float far, float aspect)
     {
         if(aspect <= 0) {
             throw new ArgumentException($"{nameof(aspect)} is 0");
@@ -321,12 +298,14 @@ public sealed class Camera
         }
 
         if(mode.IsPerspective(out var fovy)) {
-            Matrix4.PerspectiveProjection(fovy, aspect, near, far, out projection);
+            Matrix4.PerspectiveProjection(fovy, aspect, near, far, out var projection);
+            return projection;
         }
         else if(mode.IsOrthographic(out var height)) {
             var y = height / 2f;
             var x = y * aspect;
-            Matrix4.OrthographicProjection(-x, x, -y, y, near, far, out projection);
+            Matrix4.OrthographicProjection(-x, x, -y, y, near, far, out var projection);
+            return projection;
         }
         else {
             throw new UnreachableException("invalid camera projection mode");
