@@ -7,14 +7,14 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
+public readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
 {
     private readonly T _value;
 
     // The following tricks are for upcasting.
     // Action<object>?  if (typeof(T).IsValueType == false)
     // Action<T>?       if (typeof(T).IsValueType == true)
-    private readonly Delegate? _release;
+    internal readonly Delegate? _release;
 
     [MemberNotNullWhen(false, nameof(_value))]
     [MemberNotNullWhen(false, nameof(_release))]
@@ -39,6 +39,19 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
         _release = release;
     }
 
+    internal Own(T value, Delegate release)
+    {
+        if(typeof(T).IsValueType) {
+            Debug.Assert(release is Action<T>);
+        }
+        else {
+            ArgumentNullException.ThrowIfNull(value);
+            Debug.Assert(release is Action<object>);
+        }
+        _value = value;
+        _release = release;
+    }
+
     public void Dispose()
     {
         if(IsNone) { return; }
@@ -52,6 +65,8 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
             release.Invoke(_value);
         }
     }
+
+    public OwnOrShared<T> AsOwnOrShared() => OwnOrShared<T>.FromOwn(this);
 
     public T AsValue()
     {
@@ -74,6 +89,51 @@ public unsafe readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
     {
         value = _value;
         return !IsNone;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Own<U> Cast<U>()
+    {
+        var x = CastOrNone<U>();
+        if(x.IsNone) {
+            throw new InvalidCastException($"cannot cast Own<{typeof(T).Name}> to Own<{typeof(U).Name}>");
+        }
+        return x;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Own<U> CastOrNone<U>()
+    {
+        if(typeof(T) == typeof(U)) {
+            return Unsafe.As<Own<T>, Own<U>>(ref Unsafe.AsRef(in this));
+        }
+        else if(typeof(T).IsAssignableTo(typeof(U))) {
+            // upcast
+            if(typeof(T).IsValueType) {
+                // cannot upcast value type into object
+                return Own<U>.None;
+            }
+            else {
+                return Unsafe.As<Own<T>, Own<U>>(ref Unsafe.AsRef(in this));
+            }
+        }
+        else if(typeof(U).IsAssignableTo(typeof(T))) {
+            // downcast
+            if(TryAsValue(out var value)) {
+                if(value is U) {
+                    return Unsafe.As<Own<T>, Own<U>>(ref Unsafe.AsRef(in this));
+                }
+                else {
+                    return Own<U>.None;
+                }
+            }
+            else {
+                return Unsafe.As<Own<T>, Own<U>>(ref Unsafe.AsRef(in this));
+            }
+        }
+        else {
+            return Own<U>.None;
+        }
     }
 
     public static explicit operator T(Own<T> own) => own.AsValue();
@@ -118,63 +178,11 @@ public static class Own
 
 public static class OwnExtensions
 {
-    public static void ThrowArgumentExceptionIfNone<T>(this Own<T> self, [CallerArgumentExpression(nameof(self))] string? paramName = null)
+    internal static void ThrowArgumentExceptionIfNone<T>(this Own<T> self, [CallerArgumentExpression(nameof(self))] string? paramName = null)
     {
         if(self.IsNone) {
             Throw(paramName);
             [DoesNotReturn] static void Throw(string? paramName) => throw new ArgumentException("the value is none", paramName);
         }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Own<U> Upcast<T, U>(this Own<T> self) where T : class, U
-    {
-        // T is subclass of U.
-        // In this case, Own<T> and Own<U> has same values in all fields.
-        // So, it is valid to return itself
-
-        return Unsafe.As<Own<T>, Own<U>>(ref self);
-    }
-
-    public static Own<U> DowncastOrNone<T, U>(this Own<T> self) where U : class, T
-    {
-        if(self.TryAsValue(out var value)) {
-            if(value is U) {
-                return Unsafe.As<Own<T>, Own<U>>(ref self);
-            }
-            else {
-                return Own<U>.None;
-            }
-        }
-        else {
-            return Unsafe.As<Own<T>, Own<U>>(ref self);
-        }
-    }
-
-    public static bool TryDowncast<T, U>(this Own<T> self, out Own<U> casted) where U : class, T
-    {
-        if(self.TryAsValue(out var value)) {
-            if(value is U) {
-                casted = Unsafe.As<Own<T>, Own<U>>(ref self);
-                return true;
-            }
-            else {
-                casted = Own<U>.None;
-                return false;
-            }
-        }
-        else {
-            casted = Unsafe.As<Own<T>, Own<U>>(ref self);
-            return true;
-        }
-    }
-
-    public static Own<U> Downcast<T, U>(this Own<T> self) where U : class, T
-    {
-        if(self.TryDowncast<T, U>(out var casted) == false) {
-            ThrowInvalidCast();
-            [DoesNotReturn] static void ThrowInvalidCast() => throw new InvalidCastException();
-        }
-        return casted;
     }
 }
