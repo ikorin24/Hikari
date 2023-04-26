@@ -9,13 +9,16 @@ public abstract class Renderable<TLayer, TVertex, TShader, TMaterial>
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
-    private readonly Own<TMaterial> _material;
-    private readonly Own<Mesh<TVertex>> _mesh;
+    private readonly MaybeOwn<TMaterial> _material;
+    private readonly MaybeOwn<Mesh<TVertex>> _mesh;
 
     public TMaterial Material => _material.AsValue();
     public Mesh<TVertex> Mesh => _mesh.AsValue();
 
-    protected Renderable(TLayer layer, Own<Mesh<TVertex>> mesh, Own<TMaterial> material) : base(layer)
+    public bool IsOwnMaterial => _material.IsOwn(out _);
+    public bool IsOwnMesh => _mesh.IsOwn(out _);
+
+    protected Renderable(TLayer layer, MaybeOwn<Mesh<TVertex>> mesh, MaybeOwn<TMaterial> material) : base(layer)
     {
         material.ThrowArgumentExceptionIfNone();
         mesh.ThrowArgumentExceptionIfNone();

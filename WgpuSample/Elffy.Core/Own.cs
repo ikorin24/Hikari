@@ -66,7 +66,8 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
         }
     }
 
-    public OwnOrShared<T> AsOwnOrShared() => OwnOrShared<T>.FromOwn(this);
+    public MaybeOwn<T> AsMaybeOwn() => MaybeOwn<T>.FromOwn(this);
+    public MaybeOwn<T> ToNotOwn() => MaybeOwn<T>.FromShared(AsValue());
 
     public T AsValue()
     {
@@ -174,10 +175,7 @@ public static class Own
     {
         return new Own<T>(value, release, ValueType);
     }
-}
 
-public static class OwnExtensions
-{
     internal static void ThrowArgumentExceptionIfNone<T>(this Own<T> self, [CallerArgumentExpression(nameof(self))] string? paramName = null)
     {
         if(self.IsNone) {
