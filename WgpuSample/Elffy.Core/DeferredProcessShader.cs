@@ -45,9 +45,6 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         const INV_PI = 0.3183098861837907;
         const DIELECTRIC_F0 = 0.04;
 
-        const LIGHT_DIR = vec3<f32>(0.0, 0.70710678, 0.70710678);
-        const LIGHT_COLOR = vec3<f32>(1.0, 1.0, 1.0);
-
         @fragment fn fs_main(in: V2F) -> Fout {
             let c0: vec4<f32> = textureSample(g0, g_sampler, in.uv);
             let c1: vec4<f32> = textureSample(g1, g_sampler, in.uv);
@@ -66,8 +63,8 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
 
             var fragColor: vec3<f32>;
 
-            //let l = LIGHT_DIR;
-            let l = -dir_light.dir.xyz;
+            let l: vec3<f32> = mat44_to_33(camera.view) * (-dir_light.dir.xyz);
+            
             let l_color = dir_light.color.rgb;
             let h = normalize(v + l);                  // half vector in eye space, normalized
             let dot_nl: f32 = max(0.0, dot(n, l));
@@ -139,6 +136,13 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             let x = 1.0 - u;
             let x2 = x * x;
             return f0 + (f90 - f0) * (x2 * x2 * x);
+        }
+        fn mat44_to_33(m: mat4x4<f32>) -> mat3x3<f32> {
+            return mat3x3<f32>(
+                vec3<f32>(m[0].x, m[0].y, m[0].z),
+                vec3<f32>(m[1].x, m[1].y, m[1].z),
+                vec3<f32>(m[2].x, m[2].y, m[2].z),
+            );
         }
         """u8;
 
