@@ -25,6 +25,8 @@ public sealed class RenderPipeline : IScreenManaged
 
     ~RenderPipeline() => Release(false);
 
+    public void Validate() => IScreenManaged.DefaultValidate(this);
+
     private void Release()
     {
         Release(true);

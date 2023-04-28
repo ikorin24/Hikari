@@ -48,6 +48,11 @@ public sealed class Mesh<TVertex>
         _isReleased = false;
     }
 
+    public void Validate()
+    {
+        IScreenManaged.DefaultValidate(this);
+    }
+
     private void Release()
     {
         if(_isReleased) {

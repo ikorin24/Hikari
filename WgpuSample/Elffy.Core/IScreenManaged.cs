@@ -6,10 +6,23 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-internal interface IScreenManaged
+public interface IScreenManaged
 {
     Screen Screen { get; }
     bool IsManaged { get; }
+
+    void Validate();
+
+    public static void DefaultValidate(IScreenManaged self)
+    {
+        if(self.IsManaged == false) {
+            Throw(self.GetType().FullName);
+
+            [DoesNotReturn]
+            [DebuggerHidden]
+            static void Throw(string? typeName) => throw new InvalidOperationException($"The object is not managed by the engine. Type: {typeName}");
+        }
+    }
 }
 
 internal static class EngineManagedExtensions

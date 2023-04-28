@@ -9,7 +9,7 @@ namespace Elffy;
 
 public readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
 {
-    private readonly T _value;
+    internal readonly T _value;
 
     // The following tricks are for upcasting.
     // Action<object>?  if (typeof(T).IsValueType == false)
@@ -69,10 +69,14 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
     public MaybeOwn<T> AsMaybeOwn() => MaybeOwn<T>.FromOwn(this);
     public MaybeOwn<T> ToNotOwn() => MaybeOwn<T>.FromShared(AsValue());
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T AsValue()
     {
         if(IsNone) {
             ThrowNoValue();
+        }
+        if(_value is IScreenManaged x) {
+            x.Validate();
         }
         return _value;
     }
@@ -176,11 +180,26 @@ public static class Own
         return new Own<T>(value, release, ValueType);
     }
 
+    public static void Validate<T>(this Own<T> self) where T : IScreenManaged
+    {
+        if(self.IsNone) {
+            Throw();
+
+            [DebuggerHidden]
+            [DoesNotReturn]
+            static void Throw() => throw new InvalidOperationException("the value is none");
+        }
+        self._value.Validate();
+    }
+
     internal static void ThrowArgumentExceptionIfNone<T>(this Own<T> self, [CallerArgumentExpression(nameof(self))] string? paramName = null)
     {
         if(self.IsNone) {
             Throw(paramName);
-            [DoesNotReturn] static void Throw(string? paramName) => throw new ArgumentException("the value is none", paramName);
+
+            [DebuggerHidden]
+            [DoesNotReturn]
+            static void Throw(string? paramName) => throw new ArgumentException("the value is none", paramName);
         }
     }
 }

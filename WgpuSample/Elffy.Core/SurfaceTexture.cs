@@ -31,6 +31,8 @@ public sealed class SurfaceTextureView : IScreenManaged, ITextureView
         _threadId = threadId;
     }
 
+    public void Validate() => IScreenManaged.DefaultValidate(this);
+
     internal Rust.OptionBox<Wgpu.TextureView> Replace(Rust.OptionBox<Wgpu.TextureView> value)
     {
         return InterlockedEx.Exchange(ref _native, value);

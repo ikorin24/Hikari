@@ -5,28 +5,31 @@ namespace Elffy;
 
 public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 {
-    private readonly Own<Sampler> _sampler;
-    private readonly Own<Texture> _albedo;
-    private readonly Own<Texture> _metallicRoughness;
-    private readonly Own<Texture> _normal;
+    private readonly MaybeOwn<Sampler> _sampler;
+    private readonly MaybeOwn<Texture> _albedo;
+    private readonly MaybeOwn<Texture> _metallicRoughness;
+    private readonly MaybeOwn<Texture> _normal;
     private readonly Own<Buffer> _modelUniform;
     private readonly Own<BindGroup> _bindGroup0;
+    private readonly BindGroup _bindGroup1;
 
     public Texture Albedo => _albedo.AsValue();
     public Texture MetallicRoughness => _metallicRoughness.AsValue();
 
     internal BufferSlice<byte> ModelUniform => _modelUniform.AsValue().Slice();
 
-    public BindGroup BindGroup0 => _bindGroup0.AsValue();
-    public BindGroup BindGroup1 => Screen.Camera.CameraDataBindGroup;
+    internal (BindGroup BindGroup0, BindGroup BindGroup1) GetBindGroups()
+    {
+        return (_bindGroup0.AsValue(), _bindGroup1);
+    }
 
     private PbrMaterial(
         PbrShader shader,
         Own<Buffer> modelUniform,
-        Own<Sampler> sampler,
-        Own<Texture> albedo,
-        Own<Texture> metallicRoughness,
-        Own<Texture> normal,
+        MaybeOwn<Sampler> sampler,
+        MaybeOwn<Texture> albedo,
+        MaybeOwn<Texture> metallicRoughness,
+        MaybeOwn<Texture> normal,
         Own<BindGroup> bindGroup)
         : base(shader)
     {
@@ -36,6 +39,17 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         _metallicRoughness = metallicRoughness;
         _normal = normal;
         _bindGroup0 = bindGroup;
+        _bindGroup1 = Screen.Camera.CameraDataBindGroup;
+    }
+
+    public override void Validate()
+    {
+        base.Validate();
+        _sampler.Validate();
+        _albedo.Validate();
+        _metallicRoughness.Validate();
+        _normal.Validate();
+        _bindGroup1.Validate();
     }
 
     protected override void Release(bool manualRelease)
@@ -53,10 +67,10 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 
     public static Own<PbrMaterial> Create(
         PbrShader shader,
-        Own<Sampler> sampler,
-        Own<Texture> albedo,
-        Own<Texture> metallicRoughness,
-        Own<Texture> normal)
+        MaybeOwn<Sampler> sampler,
+        MaybeOwn<Texture> albedo,
+        MaybeOwn<Texture> metallicRoughness,
+        MaybeOwn<Texture> normal)
     {
         ArgumentNullException.ThrowIfNull(shader);
         sampler.ThrowArgumentExceptionIfNone();

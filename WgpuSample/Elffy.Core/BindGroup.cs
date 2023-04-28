@@ -11,17 +11,28 @@ public sealed class BindGroup : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.BindGroup> _native;
+    private readonly IScreenManaged[] _associated;
+
     internal Rust.Ref<Wgpu.BindGroup> NativeRef => _native.Unwrap();
 
     public Screen Screen => _screen;
 
     public bool IsManaged => _native.IsNone == false;
 
-    private BindGroup(Screen screen, Rust.Box<Wgpu.BindGroup> native)
+    public void Validate()
+    {
+        IScreenManaged.DefaultValidate(this);
+        foreach(var item in _associated) {
+            item.Validate();
+        }
+    }
+
+    private BindGroup(Screen screen, Rust.Box<Wgpu.BindGroup> native, IScreenManaged[] associated)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _native = native;
         _screen = screen;
+        _associated = associated;
     }
 
     ~BindGroup() => Release(false);
@@ -45,7 +56,15 @@ public sealed class BindGroup : IScreenManaged
     {
         using var pins = new PinHandleHolder();
         var bindGroupNative = screen.AsRefChecked().CreateBindGroup(desc.ToNative(pins));
-        var bindGroup = new BindGroup(screen, bindGroupNative);
+
+        var entries = desc.Entries.Span;
+        var associated = new IScreenManaged[1 + entries.Length];
+        for(int i = 0; i < entries.Length; i++) {
+            associated[i] = entries[i].Resource;
+        }
+        associated[entries.Length] = desc.Layout;
+        var bindGroup = new BindGroup(screen, bindGroupNative, associated);
+
         return Own.New(bindGroup, static x => _release(SafeCast.As<BindGroup>(x)));
     }
 }
@@ -68,11 +87,13 @@ public readonly struct BindGroupDescriptor
 public readonly struct BindGroupEntry
 {
     private readonly u32 _binding;
-    private readonly object _resource;
+    private readonly IScreenManaged _resource;
 
     public u32 Binding => _binding;
 
-    private BindGroupEntry(u32 binding, object resource)
+    internal IScreenManaged Resource => _resource;
+
+    private BindGroupEntry(u32 binding, IScreenManaged resource)
     {
         Debug.Assert(resource is BufferBinding or Elffy.TextureView or Elffy.Sampler);
         _binding = binding;
@@ -121,9 +142,14 @@ public readonly struct BindGroupEntry
         return new BindGroupEntry(binding, sampler);
     }
 
-    internal sealed class BufferBinding
+    internal sealed class BufferBinding : IScreenManaged
     {
-        private CE.BufferBinding _native;
+        private readonly Buffer _buffer;
+        private readonly Wrap _wrap;
+
+        public Screen Screen => _buffer.Screen;
+
+        public bool IsManaged => _buffer.IsManaged;
 
         public BufferBinding(BufferSlice<u8> bufferSlice) : this(bufferSlice.Buffer, bufferSlice.StartByteOffset, bufferSlice.ByteLength)
         {
@@ -131,19 +157,31 @@ public readonly struct BindGroupEntry
 
         public BufferBinding(Buffer buffer, u64 offset, u64 size)
         {
-            _native = new()
+            _buffer = buffer;
+            _wrap = new Wrap(new()
             {
                 buffer = buffer.NativeRef,
                 offset = offset,
                 size = size
-            };
+            });
         }
+
+        public void Validate() => IScreenManaged.DefaultValidate(this);
 
         internal unsafe CE.BindingResource ToNative(PinHandleHolder pins)
         {
-            pins.Add(GCHandle.Alloc(this, GCHandleType.Pinned));
-            var payload = (CE.BufferBinding*)Unsafe.AsPointer(ref _native);
+            pins.Add(GCHandle.Alloc(_wrap, GCHandleType.Pinned));
+            var payload = (CE.BufferBinding*)Unsafe.AsPointer(ref Unsafe.AsRef(in _wrap.Native));
             return CE.BindingResource.Buffer(payload);
+        }
+
+        private sealed class Wrap
+        {
+            public readonly CE.BufferBinding Native;
+            public Wrap(CE.BufferBinding native)
+            {
+                Native = native;
+            }
         }
     }
 }

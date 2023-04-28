@@ -41,6 +41,11 @@ public sealed class GBuffer : IScreenManaged
         }
     }
 
+    public void Validate()
+    {
+        IScreenManaged.DefaultValidate(this);
+    }
+
     public static Own<GBuffer> Create(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
         if(formats.IsEmpty) {

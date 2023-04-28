@@ -25,6 +25,14 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
         _disposables = disposables;
     }
 
+    public override void Validate()
+    {
+        base.Validate();
+        _bindGroup0.Validate();
+        _bindGroup1.Validate();
+        _bindGroup2.Validate();
+    }
+
     protected override void Release(bool manualRelease)
     {
         base.Release(manualRelease);

@@ -23,6 +23,8 @@ public sealed class PipelineLayout : IScreenManaged
 
     ~PipelineLayout() => Release(false);
 
+    public void Validate() => IScreenManaged.DefaultValidate(this);
+
     private void Release()
     {
         Release(true);

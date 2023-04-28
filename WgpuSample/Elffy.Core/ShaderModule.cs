@@ -22,6 +22,8 @@ public sealed class ShaderModule : IScreenManaged
 
     ~ShaderModule() => Release(false);
 
+    public void Validate() => IScreenManaged.DefaultValidate(this);
+
     private void Release()
     {
         Release(true);

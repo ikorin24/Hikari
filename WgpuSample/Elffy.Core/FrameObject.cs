@@ -27,6 +27,8 @@ public abstract class FrameObject : IScreenManaged
         ArgumentNullException.ThrowIfNull(screen);
         _screen = screen;
     }
+
+    public virtual void Validate() => IScreenManaged.DefaultValidate(this);
 }
 
 public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameObject

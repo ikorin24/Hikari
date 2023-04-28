@@ -24,6 +24,8 @@ public sealed class Sampler : IScreenManaged
 
     ~Sampler() => Release(false);
 
+    public void Validate() => IScreenManaged.DefaultValidate(this);
+
     private void Release()
     {
         Release(true);

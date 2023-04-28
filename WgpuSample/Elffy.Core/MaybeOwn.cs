@@ -7,7 +7,7 @@ namespace Elffy;
 
 public readonly struct MaybeOwn<T> : IDisposable, IEquatable<MaybeOwn<T>>
 {
-    private readonly Own<T> _inner;
+    internal readonly Own<T> _inner;
 
     public static MaybeOwn<T> None => default;
 
@@ -71,6 +71,11 @@ public static class MaybeOwn
     public static MaybeOwn<T> New<T>(Own<T> own) => MaybeOwn<T>.FromOwn(own);
 
     public static MaybeOwn<T> New<T>(T value) => MaybeOwn<T>.FromShared(value);
+
+    public static void Validate<T>(this MaybeOwn<T> self) where T : IScreenManaged
+    {
+        self._inner.Validate();
+    }
 
     internal static void ThrowArgumentExceptionIfNone<T>(this MaybeOwn<T> self, [CallerArgumentExpression(nameof(self))] string? paramName = null)
     {

@@ -8,7 +8,7 @@ public sealed class PbrModel : Renderable<PbrLayer, V, PbrShader, PbrMaterial>
 {
     private readonly BufferSlice<Vector3> _tangent;
 
-    public PbrModel(PbrLayer layer, MaybeOwn<Mesh<V>> mesh, MaybeOwn<PbrMaterial> material)
+    public PbrModel(PbrLayer layer, MaybeOwn<Mesh<V>> mesh, Own<PbrMaterial> material)
         : base(layer, GetTangentBuffer(mesh, out var tangent), material)
     {
         _tangent = tangent;
@@ -25,10 +25,11 @@ public sealed class PbrModel : Renderable<PbrLayer, V, PbrShader, PbrMaterial>
     protected override void Render(RenderPass pass)
     {
         var material = Material;
+        var (bindGroup0, bindGroup1) = material.GetBindGroups();
         var mesh = Mesh;
         material.WriteModelUniform(GetModel());
-        pass.SetBindGroup(0, material.BindGroup0);
-        pass.SetBindGroup(1, material.BindGroup1);
+        pass.SetBindGroup(0, bindGroup0);
+        pass.SetBindGroup(1, bindGroup1);
         pass.SetVertexBuffer(0, mesh.VertexBuffer);
         pass.SetVertexBuffer(1, _tangent);
         pass.SetIndexBuffer(mesh.IndexBuffer);

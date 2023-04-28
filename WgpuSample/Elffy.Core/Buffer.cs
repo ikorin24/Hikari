@@ -34,6 +34,8 @@ public sealed class Buffer : IScreenManaged
 
     ~Buffer() => Release(false);
 
+    public void Validate() => IScreenManaged.DefaultValidate(this);
+
     private void Release()
     {
         Release(true);

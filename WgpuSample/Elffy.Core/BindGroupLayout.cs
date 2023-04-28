@@ -42,6 +42,8 @@ public sealed class BindGroupLayout : IScreenManaged
         }
     }
 
+    public void Validate() => IScreenManaged.DefaultValidate(this);
+
     public unsafe static Own<BindGroupLayout> Create(Screen screen, in BindGroupLayoutDescriptor desc)
     {
         using var pins = new PinHandleHolder();
