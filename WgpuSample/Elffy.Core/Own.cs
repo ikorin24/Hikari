@@ -75,8 +75,15 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
         if(IsNone) {
             ThrowNoValue();
         }
-        if(_value is IScreenManaged x) {
-            x.Validate();
+        if(typeof(T).IsValueType) {
+            if(_value is IScreenManaged x) {
+                x.Validate();
+            }
+        }
+        else {
+            if(typeof(T).IsAssignableTo(typeof(IScreenManaged))) {
+                SafeCast.As<IScreenManaged>(_value).Validate();
+            }
         }
         return _value;
     }
