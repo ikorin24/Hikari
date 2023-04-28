@@ -43,10 +43,11 @@ internal class Program
         var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
         var mr = LoadRoughnessTexture(screen, "resources/ground_0036_roughness_1k.jpg");
         var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
+        var mesh = SampleData.SampleMesh(screen);
 
         var model = new PbrModel(
                 layer,
-                SampleData.SampleMesh(screen),
+                mesh,
                 PbrMaterial.Create(layer.Shader, sampler, albedo, mr, normal));
         model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -25.ToRadian());
 

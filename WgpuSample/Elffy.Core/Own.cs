@@ -81,15 +81,6 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
         return _value;
     }
 
-    public T AsValue(out Own<T> self)
-    {
-        if(IsNone) {
-            ThrowNoValue();
-        }
-        self = this;
-        return _value;
-    }
-
     public bool TryAsValue(out T value)
     {
         value = _value;

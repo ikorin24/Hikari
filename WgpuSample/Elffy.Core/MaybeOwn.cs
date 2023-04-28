@@ -40,13 +40,8 @@ public readonly struct MaybeOwn<T> : IDisposable, IEquatable<MaybeOwn<T>>
         return new(new Own<T>(value, onRelease));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T AsValue() => _inner.AsValue();
-
-    public T AsValue(out MaybeOwn<T> self)
-    {
-        self = this;
-        return _inner.AsValue();
-    }
 
     public bool TryAsValue(out T value) => _inner.TryAsValue(out value);
 
