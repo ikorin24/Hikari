@@ -44,22 +44,22 @@ internal class Program
         var mr = LoadRoughnessTexture(screen, "resources/ground_0036_roughness_1k.jpg");
         var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
 
-        //var model = new PbrModel(layer, mesh, sampler, albedo, mr, normal);
         var model = new PbrModel(
-            layer,
-            SampleData.SampleMesh(screen),
-            PbrMaterial.Create(layer.Shader, sampler, albedo, mr, normal));
-        //model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -23.ToRadian());
-        //model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, 0.ToRadian());
+                layer,
+                SampleData.SampleMesh(screen),
+                PbrMaterial.Create(layer.Shader, sampler, albedo, mr, normal));
+        model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -25.ToRadian());
+
+        var cube = new PbrModel(
+                layer,
+                Shapes.Cube(screen, true),
+                PbrMaterial.Create(layer.Shader, sampler, albedo, mr, normal));
+        cube.Scale = 0.3f;
+        cube.Rotation = Quaternion.FromAxisAngle((Vector3.UnitX + Vector3.UnitY), 45.ToRadian());
+
+
         var camera = screen.Camera;
-        camera.Position = new Vector3(0, 0f, 3);
-        //camera.Position = new Vector3(0, -2f, 3);
-        camera.LookAt(Vector3.Zero);
-
-        var dir = screen.Lights.DirectionalLight.Direction;
-
-        //screen.Lights.DirectionalLight.SetLightData(new Vector3(0, -1f, -1f), new Color3(1, 1, 1));
-        //screen.Lights.DirectionalLight.SetLightData(new Vector3(0, 0, -1f), new Color3(1, 1, 1));
+        camera.LookAt(Vector3.Zero, new Vector3(0, 0f, 3));
     }
 
     private static Own<Texture> LoadTexture(Screen screen, string filepath, bool isSrgb)
