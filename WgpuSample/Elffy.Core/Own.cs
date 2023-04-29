@@ -66,9 +66,6 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
         }
     }
 
-    public MaybeOwn<T> AsMaybeOwn() => MaybeOwn<T>.FromOwn(this);
-    public MaybeOwn<T> ToNotOwn() => MaybeOwn<T>.FromShared(AsValue());
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T AsValue()
     {
