@@ -130,6 +130,12 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         _bindGroupLayout1 = bindGroupLayout1;
     }
 
+    public override void Validate()
+    {
+        base.Validate();
+        _bindGroupLayout1.Validate();
+    }
+
     public static Own<PbrShader> Create(Screen screen)
     {
         var self = new PbrShader(screen);

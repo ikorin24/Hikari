@@ -45,7 +45,7 @@ public abstract class Shader<TSelf, TMaterial>
         return Own.New(shader, static x => SafeCast.As<TSelf>(x).Release());
     }
 
-    public void Validate()
+    public virtual void Validate()
     {
         IScreenManaged.DefaultValidate(this);
     }
