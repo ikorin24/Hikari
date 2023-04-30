@@ -47,16 +47,20 @@ internal class Program
 
         var model = new PbrModel(
                 layer,
-                mesh,
-                PbrMaterial.Create(layer.Shader, sampler, albedo, mr, normal));
+                SampleData.SampleMesh(screen),
+                PbrMaterial.Create(
+                    layer.Shader,
+                    sampler,
+                    albedo,
+                    mr,
+                    normal));
         model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -25.ToRadian());
-
         var cube = new PbrModel(
                 layer,
                 Shapes.Cube(screen, true),
-                PbrMaterial.Create(layer.Shader, sampler, albedo, mr, normal));
+                PbrMaterial.Create(layer.Shader, sampler.AsValue(), albedo.AsValue(), mr.AsValue(), normal.AsValue()));
         cube.Scale = 0.3f;
-        cube.Rotation = Quaternion.FromAxisAngle((Vector3.UnitX + Vector3.UnitY), 45.ToRadian());
+        cube.Rotation = Quaternion.FromAxisAngle((Vector3.UnitX + Vector3.UnitY), 75.ToRadian());
 
 
         var camera = screen.Camera;
