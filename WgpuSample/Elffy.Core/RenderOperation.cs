@@ -43,12 +43,20 @@ public abstract class RenderOperation
 
     protected abstract void Render(RenderPass pass);
 
+    protected abstract void EarlyUpdate();
+    protected abstract void Update();
+    protected abstract void LateUpdate();
+
     protected virtual void FrameEnd() { }   // nop
 
     internal void InvokeFrameInit() => FrameInit();
     internal void InvokeFrameEnd() => FrameEnd();
 
     internal void InvokeRender(RenderPass pass) => Render(pass);
+
+    internal void InvokeEarlyUpdate() => EarlyUpdate();
+    internal void InvokeUpdate() => Update();
+    internal void InvokeLateUpdate() => LateUpdate();
 
     internal void Release()
     {
@@ -186,13 +194,37 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
         }
     }
 
-    protected override void Render(RenderPass pass)
+    protected sealed override void Render(RenderPass pass)
     {
         pass.SetPipeline(Pipeline);
         foreach(var obj in _list.AsSpan()) {
             if(obj is Renderable<TSelf, TVertex, TShader, TMaterial> renderable) {
                 renderable.InvokeRender(pass);
             }
+        }
+    }
+
+    protected sealed override void EarlyUpdate()
+    {
+        foreach(var obj in _list.AsSpan()) {
+            if(obj.IsFrozen) { continue; }
+            obj.InvokeEarlyUpdate();
+        }
+    }
+
+    protected sealed override void LateUpdate()
+    {
+        foreach(var obj in _list.AsSpan()) {
+            if(obj.IsFrozen) { continue; }
+            obj.InvokeLateUpdate();
+        }
+    }
+
+    protected sealed override void Update()
+    {
+        foreach(var obj in _list.AsSpan()) {
+            if(obj.IsFrozen) { continue; }
+            obj.InvokeUpdate();
         }
     }
 }

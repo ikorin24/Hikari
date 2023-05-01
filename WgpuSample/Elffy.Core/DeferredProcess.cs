@@ -102,6 +102,18 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
         return shader;
     }
 
+    protected override void EarlyUpdate()
+    {
+    }
+
+    protected override void Update()
+    {
+    }
+
+    protected override void LateUpdate()
+    {
+    }
+
     protected override void Render(RenderPass pass)
     {
         pass.SetPipeline(Pipeline);

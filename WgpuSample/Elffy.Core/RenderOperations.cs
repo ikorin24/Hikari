@@ -38,6 +38,27 @@ public sealed class RenderOperations
 
     }
 
+    internal void EarlyUpdate()
+    {
+        foreach(var op in _list.AsSpan()) {
+            op.InvokeEarlyUpdate();
+        }
+    }
+
+    internal void Update()
+    {
+        foreach(var op in _list.AsSpan()) {
+            op.InvokeUpdate();
+        }
+    }
+
+    internal void LateUpdate()
+    {
+        foreach(var op in _list.AsSpan()) {
+            op.InvokeLateUpdate();
+        }
+    }
+
     internal void Render(in CommandEncoder encoder)
     {
         foreach(var op in _list.AsSpan()) {

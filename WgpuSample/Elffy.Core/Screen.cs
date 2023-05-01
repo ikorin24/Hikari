@@ -212,6 +212,10 @@ public sealed class Screen
         _renderOperations.ApplyAdd();
         // TODO: update
 
+        RenderOperations.EarlyUpdate();
+        RenderOperations.Update();
+        RenderOperations.LateUpdate();
+
         _camera.UpdateUniformBuffer();
         RenderOperations.Render(in encoder);
         _renderOperations.ApplyRemove();

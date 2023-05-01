@@ -39,12 +39,24 @@ public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameOb
 {
     private readonly TLayer _layer;
     private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
+
+    private EventSource<FrameObject> _update;
+    private EventSource<FrameObject> _lateUpdate;
+    private EventSource<FrameObject> _earlyUpdate;
+
     private LifeState _state;
     private bool _isFrozen;
 
     public TLayer Layer => _layer;
     public sealed override LifeState LifeState => _state;
     public sealed override SubscriptionRegister Subscriptions => _subscriptions.Register;
+
+    public Event<FrameObject> EarlyUpdate => _earlyUpdate.Event;
+
+    public Event<FrameObject> LateUpdate => _lateUpdate.Event;
+
+    public Event<FrameObject> Update => _update.Event;
+
     public bool IsFrozen
     {
         get => _isFrozen;
@@ -58,6 +70,10 @@ public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameOb
         _state = LifeState.New;
         layer.Add(this);
     }
+
+    public virtual void InvokeEarlyUpdate() => _earlyUpdate.Invoke(this);
+    public virtual void InvokeUpdate() => _update.Invoke(this);
+    public virtual void InvokeLateUpdate() => _lateUpdate.Invoke(this);
 
     internal void SetLifeStateAlive()
     {
