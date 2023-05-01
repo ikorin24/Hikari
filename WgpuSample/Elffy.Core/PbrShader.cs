@@ -61,14 +61,14 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         @fragment fn fs_main(in: V2F) -> GBuffer {
             // TBN matrix: tangent space -> camera space
             var tbn = mat3x3<f32>(in.tangent_camera_coord, in.bitangent_camera_coord, in.normal_camera_coord);
-            var mr: vec2<f32> = textureSample(mr_tex, tex_sampler, in.uv).rg;
+            var mrao: vec3<f32> = textureSample(mr_tex, tex_sampler, in.uv).rgb;
             var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, tex_sampler, in.uv).rgb * 2.0 - 1.0);
 
             var output: GBuffer;
-            output.g0 = vec4(in.pos_camera_coord, mr.r);
-            output.g1 = vec4(normal_camera_coord, mr.g);
+            output.g0 = vec4(in.pos_camera_coord, mrao.r);
+            output.g1 = vec4(normal_camera_coord, mrao.g);
             output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
-            output.g3 = vec4(1.0, 1.0, 1.0, 1.0);
+            output.g3 = vec4(mrao.b, 1.0, 1.0, 1.0);
             return output;
         }
 

@@ -90,6 +90,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
 
             fragColor = (diffuse + specular) * (1.0 - shadow);
 
+            fragColor *= c3.r;  // ao
             let ssao: f32 = 1.0;
             fragColor *= ssao;
 

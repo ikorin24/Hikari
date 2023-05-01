@@ -1,11 +1,8 @@
 ﻿#nullable enable
-using Elffy.Effective;
 using Elffy.Imaging;
 using Elffy.Mathematics;
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
 
 namespace Elffy;
 
@@ -41,9 +38,8 @@ internal class Program
         });
 
         var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
-        var mr = LoadRoughnessTexture(screen, "resources/ground_0036_roughness_1k.jpg");
+        var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
         var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
-        var mesh = SampleData.SampleMesh(screen);
 
         var model = new PbrModel(
                 layer,
@@ -80,13 +76,16 @@ internal class Program
         }
     }
 
-    private static Own<Texture> LoadRoughnessTexture(Screen screen, string filepath)
+    private static Own<Texture> LoadRoughnessAOTexture(Screen screen, string filepath, string aoFilePath)
     {
         var format = TextureFormat.Rgba8Unorm;
         using var image = LoadImage(filepath);
+        using var aoImage = LoadImage(aoFilePath);
+        var aoPixels = aoImage.GetPixels();
+
         var pixels = image.GetPixels();
         for(int i = 0; i < pixels.Length; i++) {
-            pixels[i] = new ColorByte(0x00, pixels[i].G, 0x00, 0x00);
+            pixels[i] = new ColorByte(0x00, pixels[i].G, aoPixels[i].R, 0x00);
         }
         return Texture.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding);
 
