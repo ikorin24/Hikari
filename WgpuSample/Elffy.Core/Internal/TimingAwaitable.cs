@@ -4,10 +4,11 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Diagnostics;
 using Cysharp.Threading.Tasks;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Elffy.Internal;
 
-internal sealed class TimingAwaitable : IUniTaskSource<AsyncUnit>, IChainInstancePooled<TimingAwaitable>
+internal sealed class TimingAwaitable : IUniTaskSource, IChainInstancePooled<TimingAwaitable>
 {
     private static Int16TokenFactory _tokenFactory;
 
@@ -24,15 +25,11 @@ internal sealed class TimingAwaitable : IUniTaskSource<AsyncUnit>, IChainInstanc
 
     [DebuggerHidden]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public AsyncUnit GetResult(short token)
+    public void GetResult(short token)
     {
-        var result = _awaitableCore.GetResult(token);
+        _awaitableCore.GetResult(token);
         Return(this);
-        return result;
     }
-
-    [DebuggerHidden]
-    void IUniTaskSource.GetResult(short token) => GetResult(token);
 
     [DebuggerHidden]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -46,7 +43,7 @@ internal sealed class TimingAwaitable : IUniTaskSource<AsyncUnit>, IChainInstanc
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public UniTaskStatus UnsafeGetStatus() => _awaitableCore.UnsafeGetStatus();
 
-    internal static UniTask<AsyncUnit> Create(Timing? queue, CancellationToken ct)
+    internal static UniTask Create(Timing? queue, CancellationToken ct)
     {
         var token = _tokenFactory.CreateToken();
         if(ChainInstancePool<TimingAwaitable>.TryGetInstanceFast(out var taskSource)) {
@@ -55,7 +52,7 @@ internal sealed class TimingAwaitable : IUniTaskSource<AsyncUnit>, IChainInstanc
         else {
             taskSource = new TimingAwaitable(queue, token, ct);
         }
-        return new UniTask<AsyncUnit>(taskSource, token);
+        return new UniTask(taskSource, token);
     }
 
     private static void Return(TimingAwaitable source)
@@ -82,30 +79,30 @@ internal struct TimingAwaitableCore
 
     [DebuggerHidden]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public AsyncUnit GetResult(short token)
+    public void GetResult(short token)
     {
         ValidateToken(token);
         if(Interlocked.CompareExchange(ref _queue, null, _completedGuard) == _completedGuard) {
-            return AsyncUnit.Default;   // It means success
+            // success
+            return;
         }
         else {
-            return NotSuccess();
+            NotSuccess();
         }
     }
 
     [DebuggerHidden]
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private AsyncUnit NotSuccess()
+    [DoesNotReturn]
+    private void NotSuccess()
     {
         var status = UnsafeGetStatus();
-        Debug.Assert(status != UniTaskStatus.Succeeded);    // 'Succeeded' never come here.
-        return status switch
+        Debug.Assert(status != UniTaskStatus.Succeeded);
+        throw status switch
         {
-            UniTaskStatus.Pending => throw new InvalidOperationException("Not yet completed, UniTask only allow to use await."),
-            UniTaskStatus.Canceled => throw new OperationCanceledException(),
-            UniTaskStatus.Succeeded or
-            UniTaskStatus.Faulted or
-            _ => throw new Exception("Invalid status. How did you get here ?"),
+            UniTaskStatus.Pending => new InvalidOperationException("Not yet completed, UniTask only allow to use await."),
+            UniTaskStatus.Canceled => new OperationCanceledException(),
+            _ => new UnreachableException("Invalid status. How did you get here?"),
         };
     }
 

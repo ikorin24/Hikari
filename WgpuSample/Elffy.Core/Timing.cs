@@ -27,7 +27,7 @@ public sealed class Timing : IScreenManaged
         _queueLock = new FastSpinLock();
     }
 
-    public UniTask<AsyncUnit> Switch(CancellationToken ct = default)
+    public UniTask Switch(CancellationToken ct = default)
     {
         return TimingAwaitable.Create(this, ct);
     }

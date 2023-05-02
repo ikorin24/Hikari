@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Cysharp.Threading.Tasks;
 using Elffy.Imaging;
 using Elffy.Mathematics;
 using System;
