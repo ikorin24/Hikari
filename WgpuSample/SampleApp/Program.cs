@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Cysharp.Threading.Tasks;
 using Elffy.Imaging;
 using Elffy.Mathematics;
 using System;
@@ -61,6 +62,11 @@ internal class Program
 
         var camera = screen.Camera;
         camera.LookAt(Vector3.Zero, new Vector3(0, 0f, 3));
+
+        screen.Update.Subscribe(screen =>
+        {
+            System.Diagnostics.Debug.WriteLine(screen.FrameNum);
+        });
     }
 
     private static Own<Texture> LoadTexture(Screen screen, string filepath, bool isSrgb)

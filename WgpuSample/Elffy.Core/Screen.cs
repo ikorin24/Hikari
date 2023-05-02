@@ -15,6 +15,9 @@ public sealed class Screen
     private readonly SubscriptionBag _subscriptions;
     private readonly Camera _camera;
     private readonly Lights _lights;
+    private readonly Timing _earlyUpdate;
+    private readonly Timing _update;
+    private readonly Timing _lateUpdate;
     private TextureFormat _surfaceFormat;
     private GraphicsBackend _backend;
     private bool _initialized;
@@ -37,6 +40,10 @@ public sealed class Screen
     public Keyboard Keyboard => _keyboard;
     public ulong FrameNum => _frameNum;
     public RenderOperations RenderOperations => _renderOperations;
+
+    public Timing EarlyUpdate => _earlyUpdate;
+    public Timing Update => _update;
+    public Timing LateUpdate => _lateUpdate;
 
     public Texture DepthTexture
     {
@@ -118,6 +125,9 @@ public sealed class Screen
         _mainThread = mainThread;
         _camera = new Camera(this);
         _lights = new Lights(this);
+        _earlyUpdate = new Timing(this);
+        _update = new Timing(this);
+        _lateUpdate = new Timing(this);
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
         _renderOperations = new RenderOperations(this);
@@ -210,14 +220,23 @@ public sealed class Screen
     private void Render(in CommandEncoder encoder)
     {
         _renderOperations.ApplyAdd();
-        // TODO: update
 
+        // early update
+        _earlyUpdate.DoQueuedEvents();
         RenderOperations.EarlyUpdate();
+
+        // update
+        _update.DoQueuedEvents();
         RenderOperations.Update();
+
+        // late update
+        _lateUpdate.DoQueuedEvents();
         RenderOperations.LateUpdate();
 
+        // render
         _camera.UpdateUniformBuffer();
         RenderOperations.Render(in encoder);
+
         _renderOperations.ApplyRemove();
         _keyboard.PrepareNextFrame();
     }
