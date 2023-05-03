@@ -674,6 +674,37 @@ internal static class CoreElffy
         public required Rust.OptionNonZeroU32 multiview { get => _multiview; init => _multiview = value; }
     }
 
+    internal struct ComputePipelineDescriptor
+    {
+        private readonly NativePointer _layout; //: &'a wgpu::PipelineLayout,
+        private readonly NativePointer _module; //: &'a wgpu::ShaderModule,
+        private readonly Slice<u8> _entry_point;
+
+        public unsafe required Rust.Ref<Wgpu.PipelineLayout> layout
+        {
+            get
+            {
+                var layout = _layout;
+                return *(Rust.Ref<Wgpu.PipelineLayout>*)(&layout);
+            }
+            init => _layout = value.AsPtr();
+        }
+        public unsafe required Rust.Ref<Wgpu.ShaderModule> module
+        {
+            get
+            {
+                var module = _module;
+                return *(Rust.Ref<Wgpu.ShaderModule>*)(&module);
+            }
+            init => _module = value.AsPtr();
+        }
+        public required Slice<u8> entry_point
+        {
+            get => _entry_point;
+            init => _entry_point = value;
+        }
+    }
+
     internal struct DepthStencilState
     {
         public required TextureFormat format;

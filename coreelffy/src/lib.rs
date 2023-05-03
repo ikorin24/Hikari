@@ -447,6 +447,28 @@ impl<'a> RenderPipelineDescriptor<'a> {
 }
 
 #[repr(C)]
+pub(crate) struct ComputePipelineDescriptor<'a> {
+    pub layout: &'a wgpu::PipelineLayout,
+    pub module: &'a wgpu::ShaderModule,
+    pub entry_point: Slice<'a, u8>,
+}
+
+impl<'a> ComputePipelineDescriptor<'a> {
+    pub fn use_wgpu_type<T>(
+        &self,
+        consume: impl FnOnce(&wgpu::ComputePipelineDescriptor) -> Result<T, Box<dyn Error>>,
+    ) -> Result<T, Box<dyn Error>> {
+        let pipeline_desc = wgpu::ComputePipelineDescriptor {
+            label: None,
+            layout: Some(self.layout),
+            module: self.module,
+            entry_point: self.entry_point.as_str()?,
+        };
+        consume(&pipeline_desc)
+    }
+}
+
+#[repr(C)]
 pub(crate) struct DepthStencilState {
     pub format: TextureFormat,
     pub depth_write_enabled: bool,

@@ -175,6 +175,38 @@ extern "cdecl" fn elffy_destroy_render_pass<'cmd_enc>(
 }
 
 /// # Thread Safety
+///
+/// `&mut wgpu::CommandEncoder` can not move to another thread because it's mutable reference.
+/// This function can be called from any thread, but be careful about the thread of argument `command_encoder`
+///
+/// # Thread Safety
+/// ## OK
+/// - called from any thread (Be careful about the thread of argument `command_encoder`)
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
+#[no_mangle]
+extern "cdecl" fn elffy_create_compute_pass(
+    command_encoder: &mut wgpu::CommandEncoder,
+) -> ApiBoxResult<wgpu::ComputePass> {
+    let compute_pass =
+        command_encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None });
+    make_box_result(Box::new(compute_pass))
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args with same args
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_compute_pass(compute_pass: Box<wgpu::ComputePass>) {
+    drop(compute_pass)
+}
+
+static_assertions::assert_impl_all!(Box<wgpu::ComputePass>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::ComputePass: Send, Sync);
+
+/// # Thread Safety
 /// ## OK
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
@@ -430,6 +462,7 @@ extern "cdecl" fn elffy_create_render_pipeline(
     make_box_result(value)
 }
 
+static_assertions::assert_impl_all!(RenderPipelineDescriptor: Send, Sync);
 static_assertions::assert_impl_all!(Box<wgpu::RenderPipeline>: Send, Sync);
 static_assertions::assert_impl_all!(wgpu::RenderPipeline: Send, Sync);
 
@@ -442,6 +475,37 @@ static_assertions::assert_impl_all!(wgpu::RenderPipeline: Send, Sync);
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
 extern "cdecl" fn elffy_destroy_render_pipeline(pipeline: Box<wgpu::RenderPipeline>) {
+    drop(pipeline)
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn elffy_create_compute_pipeline(
+    screen: &HostScreen,
+    desc: &ComputePipelineDescriptor,
+) -> ApiBoxResult<wgpu::ComputePipeline> {
+    match desc.use_wgpu_type(|desc| {
+        let value = screen.device.create_compute_pipeline(desc);
+        Ok(Box::new(value))
+    }) {
+        Ok(value) => make_box_result(value),
+        Err(err) => error_box_result(err),
+    }
+}
+
+static_assertions::assert_impl_all!(ComputePipelineDescriptor: Send, Sync);
+static_assertions::assert_impl_all!(Box<wgpu::ComputePipeline>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::ComputePipeline: Send, Sync);
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_compute_pipeline(pipeline: Box<wgpu::ComputePipeline>) {
     drop(pipeline)
 }
 
@@ -663,6 +727,36 @@ extern "cdecl" fn elffy_write_buffer(
 
 static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
 static_assertions::assert_impl_all!(wgpu::RenderPipeline: Send, Sync);
+
+#[no_mangle]
+extern "cdecl" fn elffy_compute_set_pipeline<'a>(
+    pass: &'a mut wgpu::ComputePass<'a>,
+    pipeline: &'a wgpu::ComputePipeline,
+) -> ApiResult {
+    pass.set_pipeline(pipeline);
+    make_result()
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_compute_set_bind_group<'a>(
+    pass: &'a mut wgpu::ComputePass<'a>,
+    index: u32,
+    bind_group: &'a wgpu::BindGroup,
+) -> ApiResult {
+    pass.set_bind_group(index, bind_group, &[]);
+    make_result()
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_compute_dispatch_workgroups<'a>(
+    pass: &'a mut wgpu::ComputePass<'a>,
+    x: u32,
+    y: u32,
+    z: u32,
+) -> ApiResult {
+    pass.dispatch_workgroups(x, y, z);
+    make_result()
+}
 
 /// # Thread Safety
 /// It cannot be called at the same time as other functions that use same `&mut wgpu::RenderPass`.

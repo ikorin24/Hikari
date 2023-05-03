@@ -13,6 +13,7 @@ internal static class Wgpu
     internal sealed class BindGroup : INativeTypeNonReprC { private BindGroup() { } }
     internal sealed class Buffer : INativeTypeNonReprC { private Buffer() { } }
     internal sealed class RenderPipeline : INativeTypeNonReprC { private RenderPipeline() { } }
+    internal sealed class ComputePipeline : INativeTypeNonReprC { private ComputePipeline() { } }
     internal sealed class Sampler : INativeTypeNonReprC { private Sampler() { } }
     internal sealed class PipelineLayout : INativeTypeNonReprC { private PipelineLayout() { } }
     internal sealed class ShaderModule : INativeTypeNonReprC { private ShaderModule() { } }
@@ -20,6 +21,7 @@ internal static class Wgpu
     internal sealed class TextureView : INativeTypeNonReprC { private TextureView() { } }
     internal sealed class CommandEncoder : INativeTypeNonReprC { private CommandEncoder() { } }
     internal sealed class RenderPass : INativeTypeNonReprC { private RenderPass() { } }
+    internal sealed class ComputePass : INativeTypeNonReprC { private ComputePass() { } }
     internal sealed class SurfaceTexture : INativeTypeNonReprC { private SurfaceTexture() { } }
 
     [Flags]

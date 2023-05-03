@@ -57,6 +57,14 @@ static unsafe partial class EngineCore
         Rust.Box<Wgpu.RenderPass> render_pass);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiBoxResult<Wgpu.ComputePass> elffy_create_compute_pass(
+        Rust.MutRef<Wgpu.CommandEncoder> command_encoder);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial void elffy_destroy_compute_pass(
+        Rust.Box<Wgpu.ComputePass> compute_pass);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_set_inner_size(
         Rust.Ref<CE.HostScreen> screen,
         u32 width,
@@ -137,6 +145,15 @@ static unsafe partial class EngineCore
         Rust.Box<Wgpu.RenderPipeline> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiBoxResult<Wgpu.ComputePipeline> elffy_create_compute_pipeline(
+        Rust.Ref<CE.HostScreen> screen,
+        in CE.ComputePipelineDescriptor desc);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial void elffy_destroy_compute_pipeline(
+        Rust.Box<Wgpu.ComputePipeline> handle);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Buffer> elffy_create_buffer_init(
         Rust.Ref<CE.HostScreen> screen,
         CE.Slice<u8> contents,
@@ -199,6 +216,24 @@ static unsafe partial class EngineCore
         Rust.Ref<Wgpu.Buffer> buffer,
         u64 offset,
         CE.Slice<u8> data);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_compute_set_pipeline(
+        Rust.MutRef<Wgpu.ComputePass> pass,
+        Rust.Ref<Wgpu.ComputePipeline> pipeline);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_compute_set_bind_group(
+        Rust.MutRef<Wgpu.ComputePass> pass,
+        u32 index,
+        Rust.Ref<Wgpu.BindGroup> bind_group);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_compute_dispatch_workgroups(
+        Rust.MutRef<Wgpu.ComputePass> pass,
+        u32 x,
+        u32 y,
+        u32 z);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_set_pipeline(

@@ -214,6 +214,18 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Rust.Box<Wgpu.ComputePass> CreateComputePass(this Rust.MutRef<Wgpu.CommandEncoder> commandEncoder)
+    {
+        return elffy_create_compute_pass(commandEncoder).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void DestroyComputePass(this Rust.Box<Wgpu.ComputePass> computePass)
+    {
+        elffy_destroy_compute_pass(computePass);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Vector2u ScreenGetInnerSize(
         this Rust.Ref<CE.HostScreen> screen)
@@ -376,6 +388,24 @@ internal unsafe static partial class EngineCore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
+    public static Rust.Box<Wgpu.ComputePipeline> CreateComputePipeline(
+        this Rust.Ref<CE.HostScreen> screen,
+        in CE.ComputePipelineDescriptor desc)
+    {
+        return elffy_create_compute_pipeline(screen, desc).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
+    public static void DestroyComputePipeline(
+        this Rust.Box<Wgpu.ComputePipeline> handle)
+    {
+        handle.ThrowIfInvalid();
+        elffy_destroy_compute_pipeline(handle);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
     public static Rust.Box<Wgpu.Buffer> CreateBufferInit(
         this Rust.Ref<CE.HostScreen> screen,
         CE.Slice<u8> contents,
@@ -504,6 +534,38 @@ internal unsafe static partial class EngineCore
         screen.ThrowIfInvalid();
         buffer.ThrowIfInvalid();
         elffy_write_buffer(screen, buffer, offset, data).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
+    public static void SetPipeline(
+        this Rust.MutRef<Wgpu.ComputePass> pass,
+        Rust.Ref<Wgpu.ComputePipeline> pipeline)
+    {
+        pass.ThrowIfInvalid();
+        pipeline.ThrowIfInvalid();
+        elffy_compute_set_pipeline(pass, pipeline).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
+    public static void SetBindGroup(
+        this Rust.MutRef<Wgpu.ComputePass> pass,
+        u32 index,
+        Rust.Ref<Wgpu.BindGroup> bindGroup)
+    {
+        elffy_compute_set_bind_group(pass, index, bindGroup).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
+    public static void DispatchWorkgroups(
+        this Rust.MutRef<Wgpu.ComputePass> pass,
+        u32 x,
+        u32 y,
+        u32 z)
+    {
+        elffy_compute_dispatch_workgroups(pass, x, y, z).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
