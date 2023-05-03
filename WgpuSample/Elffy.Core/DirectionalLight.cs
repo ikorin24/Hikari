@@ -4,11 +4,18 @@ using System.Runtime.InteropServices;
 
 namespace Elffy;
 
-public sealed class DirectionalLight
+public sealed class DirectionalLight : IScreenManaged
 {
+    private readonly Screen _screen;
     private readonly Own<Buffer> _buffer;
     private DirectionalLightData _data;
     private readonly object _sync = new();
+
+    public Screen Screen => _screen;
+
+    public bool IsManaged => _buffer.IsNone == false;
+
+    public void Validate() => IScreenManaged.DefaultValidate(this);
 
     public Vector3 Direction
     {
@@ -51,6 +58,7 @@ public sealed class DirectionalLight
             new Vector3(0f, -1f, -0.3f).Normalized(),
             new Color3(1, 1, 1)
         );
+        _screen = screen;
         _buffer = Buffer.Create(screen, in data, BufferUsages.Storage | BufferUsages.CopyDst);
         _data = data;
     }
