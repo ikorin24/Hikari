@@ -22,11 +22,9 @@ public sealed class PbrModel : Renderable<PbrLayer, V, PbrShader, PbrMaterial>
         return mesh;
     }
 
-    protected override void Render(RenderPass pass)
+    protected override void Render(in RenderPass pass, PbrMaterial material, Mesh<V> mesh)
     {
-        var material = Material;
         var (bindGroup0, bindGroup1) = material.GetBindGroups();
-        var mesh = Mesh;
         material.WriteModelUniform(GetModel());
         pass.SetBindGroup(0, bindGroup0);
         pass.SetBindGroup(1, bindGroup1);

@@ -1,17 +1,13 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
-using System;
 
 namespace Elffy;
 
 public abstract class ComputeOperation : Operation
 {
     private Own<ComputePipeline> _pipeline;
-    private ComputePipelineDescriptor _desc;
 
     protected ComputeOperation(Screen screen, int sortOrder, in ComputePipelineDescriptor desc) : base(screen, sortOrder)
     {
-        _desc = desc;
         _pipeline = ComputePipeline.Create(screen, desc);
     }
 
