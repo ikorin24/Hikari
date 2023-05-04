@@ -6,25 +6,25 @@ using System.Diagnostics;
 
 namespace Elffy;
 
-public sealed class RenderOperations
+public sealed class Operations
 {
     // [NOTE]
     // The order of the elements in the list is not guaranteed.
 
     private readonly Screen _screen;
-    private readonly List<RenderOperation> _list;
-    private readonly List<RenderOperation> _addedList;
-    private readonly List<RenderOperation> _removedList;
-    private EventSource<RenderOperations> _added;
-    private EventSource<RenderOperations> _removed;
+    private readonly List<Operation> _list;
+    private readonly List<Operation> _addedList;
+    private readonly List<Operation> _removedList;
+    private EventSource<Operations> _added;
+    private EventSource<Operations> _removed;
     private readonly object _sync = new object();
 
     public Screen Screen => _screen;
 
-    public Event<RenderOperations> Added => _added.Event;
-    public Event<RenderOperations> Removed => _removed.Event;
+    public Event<Operations> Added => _added.Event;
+    public Event<Operations> Removed => _removed.Event;
 
-    internal RenderOperations(Screen screen)
+    internal Operations(Screen screen)
     {
         _screen = screen;
         _list = new();
@@ -62,12 +62,11 @@ public sealed class RenderOperations
     internal void Render(in CommandEncoder encoder)
     {
         foreach(var op in _list.AsSpan()) {
-            using var pass = op.GetRenderPass(encoder);
-            op.InvokeRender(pass.AsValue());
+            op.InvokeExecute(in encoder);
         }
     }
 
-    internal void Add(RenderOperation operation)
+    internal void Add(Operation operation)
     {
         lock(_sync) {
             _addedList.Add(operation);
@@ -100,7 +99,7 @@ public sealed class RenderOperations
         }
     }
 
-    internal void Remove(RenderOperation operation)
+    internal void Remove(Operation operation)
     {
         lock(_sync) {
             Debug.Assert(operation.LifeState == LifeState.Terminating);
@@ -118,7 +117,7 @@ public sealed class RenderOperations
                 foreach(var removedItem in removedList.AsSpan()) {
                     if(list.RemoveFastUnordered(removedItem)) {
                         removedItem.SetLifeStateDead();
-                        removedItem.Release();
+                        removedItem.InvokeRelease();
                     }
                 }
                 list.Sort((x, y) => x.SortOrder - y.SortOrder);

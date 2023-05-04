@@ -3,91 +3,31 @@ using Elffy.Effective;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-public abstract class RenderOperation
+public abstract class RenderOperation : Operation
 {
-    private readonly Screen _screen;
     private readonly Own<RenderPipeline> _pipeline;
-    private LifeState _lifeState;
-    private readonly int _sortOrder;
-    private readonly SubscriptionBag _subscriptions = new();
-    private EventSource<RenderOperation> _onDead = new();
 
-    public Screen Screen => _screen;
-    public RenderPipeline Pipeline => _pipeline.AsValue();
-    public LifeState LifeState => _lifeState;
-    public SubscriptionRegister Subscriptions => _subscriptions.Register;
-    public int SortOrder => _sortOrder;
-    public Event<RenderOperation> Dead => _onDead.Event;
-
-    protected RenderOperation(Screen screen, Own<RenderPipeline> pipeline, int sortOrder)
+    protected RenderOperation(Screen screen, Own<RenderPipeline> pipeline, int sortOrder) : base(screen, sortOrder)
     {
-        _screen = screen;
         _pipeline = pipeline;
-        _lifeState = LifeState.New;
-        _sortOrder = sortOrder;
-        screen.RenderOperations.Add(this);
+        screen.Operations.Add(this);
     }
 
-    protected virtual void FrameInit() { }  // nop
-
-    internal Own<RenderPass> GetRenderPass(in CommandEncoder encoder) => CreateRenderPass(encoder);
+    protected sealed override void Execute(in CommandEncoder encoder)
+    {
+        using var pass = CreateRenderPass(in encoder);
+        Render(pass.AsValue(), _pipeline.AsValue());
+    }
 
     protected virtual Own<RenderPass> CreateRenderPass(in CommandEncoder encoder)
     {
         return RenderPass.SurfaceRenderPass(in encoder);
     }
 
-    protected abstract void Render(RenderPass pass);
-
-    protected abstract void EarlyUpdate();
-    protected abstract void Update();
-    protected abstract void LateUpdate();
-
-    protected virtual void FrameEnd() { }   // nop
-
-    internal void InvokeFrameInit() => FrameInit();
-    internal void InvokeFrameEnd() => FrameEnd();
-
-    internal void InvokeRender(RenderPass pass) => Render(pass);
-
-    internal void InvokeEarlyUpdate() => EarlyUpdate();
-    internal void InvokeUpdate() => Update();
-    internal void InvokeLateUpdate() => LateUpdate();
-
-    internal void Release()
-    {
-        _pipeline.Dispose();
-        _onDead.Invoke(this);
-        _subscriptions.Dispose();
-    }
-
-    public bool Terminate()
-    {
-        var currentState = InterlockedEx.CompareExchange(ref _lifeState, LifeState.Terminating, LifeState.Alive);
-        if(currentState != LifeState.Alive) {
-            return false;
-        }
-        Screen.RenderOperations.Remove(this);
-        return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void SetLifeStateAlive()
-    {
-        Debug.Assert(_lifeState == LifeState.New);
-        _lifeState = LifeState.Alive;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void SetLifeStateDead()
-    {
-        Debug.Assert(_lifeState == LifeState.Terminating);
-        _lifeState = LifeState.Dead;
-    }
+    protected abstract void Render(in RenderPass pass, RenderPipeline pipeline);
 }
 
 public abstract class RenderOperation<TShader, TMaterial>
@@ -194,9 +134,9 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
         }
     }
 
-    protected sealed override void Render(RenderPass pass)
+    protected sealed override void Render(in RenderPass pass, RenderPipeline pipeline)
     {
-        pass.SetPipeline(Pipeline);
+        pass.SetPipeline(pipeline);
         foreach(var obj in _list.AsSpan()) {
             if(obj is Renderable<TSelf, TVertex, TShader, TMaterial> renderable) {
                 renderable.InvokeRender(pass);

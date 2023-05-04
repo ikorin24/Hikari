@@ -26,7 +26,7 @@ public sealed class Screen
     private Own<Texture> _depthTexture;
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
-    private readonly RenderOperations _renderOperations;
+    private readonly Operations _operations;
     private bool _isCloseRequested;
     private EventSource<(Screen Screen, Vector2u Size)> _resized;
 
@@ -39,7 +39,7 @@ public sealed class Screen
     public Mouse Mouse => _mouse;
     public Keyboard Keyboard => _keyboard;
     public ulong FrameNum => _frameNum;
-    public RenderOperations RenderOperations => _renderOperations;
+    public Operations Operations => _operations;
 
     public Timing EarlyUpdate => _earlyUpdate;
     public Timing Update => _update;
@@ -130,7 +130,7 @@ public sealed class Screen
         _lateUpdate = new Timing(this);
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
-        _renderOperations = new RenderOperations(this);
+        _operations = new Operations(this);
         _subscriptions = new SubscriptionBag();
     }
 
@@ -219,25 +219,27 @@ public sealed class Screen
 
     private void Render(in CommandEncoder encoder)
     {
-        _renderOperations.ApplyAdd();
+        var operations = _operations;
+
+        operations.ApplyAdd();
 
         // early update
         _earlyUpdate.DoQueuedEvents();
-        RenderOperations.EarlyUpdate();
+        operations.EarlyUpdate();
 
         // update
         _update.DoQueuedEvents();
-        RenderOperations.Update();
+        operations.Update();
 
         // late update
         _lateUpdate.DoQueuedEvents();
-        RenderOperations.LateUpdate();
+        operations.LateUpdate();
 
         // render
         _camera.UpdateUniformBuffer();
-        RenderOperations.Render(in encoder);
+        operations.Render(in encoder);
 
-        _renderOperations.ApplyRemove();
+        operations.ApplyRemove();
         _keyboard.PrepareNextFrame();
     }
 
@@ -259,7 +261,7 @@ public sealed class Screen
     internal Rust.OptionBox<CE.HostScreen> OnClosed()
     {
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
-        _renderOperations.DisposeInternal();
+        _operations.DisposeInternal();
         _camera.DisposeInternal();
         _depthTexture.Dispose();
         _depthTexture = Own<Texture>.None;

@@ -114,9 +114,9 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
     {
     }
 
-    protected override void Render(RenderPass pass)
+    protected override void Render(in RenderPass pass, RenderPipeline pipeline)
     {
-        pass.SetPipeline(Pipeline);
+        pass.SetPipeline(pipeline);
         var mesh = _rectMesh.AsValue();
         var material = _material.AsValue();
         pass.SetVertexBuffer(0, mesh.VertexBuffer);
