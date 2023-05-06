@@ -19,6 +19,12 @@ public readonly struct ComputePass
         self._native.DestroyComputePass();
     };
 
+    internal static Own<ComputePass> Create(in CommandEncoder encoder)
+    {
+        var native = encoder.NativeMut.CreateComputePass();
+        return Own.New(new ComputePass(native), _release);
+    }
+
     internal static Own<ComputePass> Create(Rust.MutRef<Wgpu.CommandEncoder> encoder)
     {
         var native = encoder.CreateComputePass();

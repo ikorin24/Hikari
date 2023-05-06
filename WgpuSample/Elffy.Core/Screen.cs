@@ -237,7 +237,7 @@ public sealed class Screen
 
         // render
         _camera.UpdateUniformBuffer();
-        operations.Render(in encoder);
+        operations.Execute(in encoder);
 
         operations.ApplyRemove();
         _keyboard.PrepareNextFrame();

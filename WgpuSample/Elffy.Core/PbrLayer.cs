@@ -7,6 +7,7 @@ namespace Elffy;
 
 public sealed class PbrLayer
     : ObjectLayer<PbrLayer, V, PbrShader, PbrMaterial>,
+    IShadowMapping,
     IGBufferProvider
 {
     private const int MrtCount = 4;
@@ -138,5 +139,10 @@ public sealed class PbrLayer
             Multiview = 0,
         };
         return RenderPipeline.Create(screen, in desc);
+    }
+
+    void IShadowMapping.RenderShadowMap(in ComputePass pass, RenderPipeline pipeline)
+    {
+        throw new NotImplementedException();
     }
 }
