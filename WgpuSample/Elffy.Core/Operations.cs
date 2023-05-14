@@ -17,7 +17,6 @@ public sealed class Operations
     private readonly List<Operation> _removedList;
     private EventSource<Operations> _added;
     private EventSource<Operations> _removed;
-    private Own<ComputePipeline> _shadowMappingPipeline;
     private readonly object _sync = new object();
 
     public Screen Screen => _screen;
@@ -62,11 +61,14 @@ public sealed class Operations
 
     internal void Execute(in CommandEncoder encoder)
     {
+        var screen = _screen;
+        var size = screen.ClientSize;
+        var lights = screen.Lights;
+        var context = new RenderShadowMapContext(encoder, lights.DirectionalLight.LightDepthBindGroup);
         foreach(var op in _list.AsSpan()) {
-            if(op is IShadowMapping shadowMapping) {
-                //shadowMapping.RenderShadowMap(in encoder, );
-            }
+            op.InvokeRenderShadowMap(in context);
         }
+
         foreach(var op in _list.AsSpan()) {
             op.InvokeExecute(in encoder);
         }

@@ -44,12 +44,16 @@ public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameOb
     private EventSource<FrameObject> _lateUpdate;
     private EventSource<FrameObject> _earlyUpdate;
 
+    private EventSource<FrameObject> _dead;
+
     private LifeState _state;
     private bool _isFrozen;
 
     public TLayer Layer => _layer;
     public sealed override LifeState LifeState => _state;
     public sealed override SubscriptionRegister Subscriptions => _subscriptions.Register;
+
+    public Event<FrameObject> Dead => _dead.Event;
 
     public Event<FrameObject> EarlyUpdate => _earlyUpdate.Event;
 
@@ -90,6 +94,7 @@ public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameOb
     internal virtual void OnDead()
     {
         Debug.Assert(_state == LifeState.Dead);
+        _dead.Invoke(this);
         _subscriptions.Dispose();
     }
 }

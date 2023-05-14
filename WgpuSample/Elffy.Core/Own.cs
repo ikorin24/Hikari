@@ -85,6 +85,13 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
         return _value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public T AsValue(out Own<T> self)
+    {
+        self = this;
+        return AsValue();
+    }
+
     public bool TryAsValue(out T value)
     {
         value = _value;

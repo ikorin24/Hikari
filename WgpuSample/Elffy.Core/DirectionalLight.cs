@@ -9,6 +9,10 @@ public sealed class DirectionalLight : IScreenManaged
     private readonly Screen _screen;
     private readonly Own<Buffer> _buffer;
     private DirectionalLightData _data;
+    private Own<Buffer> _lightDepth;
+    private Own<BindGroup> _lightDepthBindGroup;
+    private Own<BindGroupLayout> _lightDepthBindGroupLayout;
+
     private readonly object _sync = new();
 
     public Screen Screen => _screen;
@@ -16,6 +20,9 @@ public sealed class DirectionalLight : IScreenManaged
     public bool IsManaged => _buffer.IsNone == false;
 
     public void Validate() => IScreenManaged.DefaultValidate(this);
+
+    public BindGroup LightDepthBindGroup => _lightDepthBindGroup.AsValue();
+    public BindGroupLayout LightDepthBindGroupLayout => _lightDepthBindGroupLayout.AsValue();
 
     public Vector3 Direction
     {
@@ -61,11 +68,46 @@ public sealed class DirectionalLight : IScreenManaged
         _screen = screen;
         _buffer = Buffer.Create(screen, in data, BufferUsages.Storage | BufferUsages.CopyDst);
         _data = data;
+        CreateLightDepth(screen, out _lightDepth, out _lightDepthBindGroup, out _lightDepthBindGroupLayout);
+    }
+
+    private static unsafe void CreateLightDepth(Screen screen, out Own<Buffer> depth, out Own<BindGroup> bindGroup, out Own<BindGroupLayout> bindGroupLayout)
+    {
+        const u32 Width = 1024;
+        const u32 Height = 1024;
+
+        nuint len = (nuint)Width * Height * sizeof(f32) + (nuint)sizeof(Vector2u);
+
+        var mem = (byte*)NativeMemory.AllocZeroed(len);
+        *(Vector2u*)mem = new Vector2u(Width, Height);
+        try {
+            depth = Buffer.Create(screen, mem, len, BufferUsages.Storage);
+            bindGroup = BindGroup.Create(screen, new()
+            {
+                Layout = BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new BindGroupLayoutEntry[]
+                {
+                    BindGroupLayoutEntry.Buffer(0, ShaderStages.Compute, new() { Type = BufferBindingType.Storate }),
+                },
+                }).AsValue(out bindGroupLayout),
+                Entries = new[]
+                {
+                    BindGroupEntry.Buffer(0, depth.AsValue()),
+                },
+            });
+        }
+        finally {
+            NativeMemory.Free(mem);
+        }
     }
 
     internal void DisposeInternal()
     {
         _buffer.Dispose();
+        _lightDepth.Dispose();
+        _lightDepthBindGroup.Dispose();
+        _lightDepthBindGroupLayout.Dispose();
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]

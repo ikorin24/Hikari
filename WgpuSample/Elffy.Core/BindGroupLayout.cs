@@ -159,7 +159,7 @@ public sealed class BufferBindingData : IBindingTypeData
             _type = value;
         }
     }
-    public required bool HasDynamicOffset
+    public bool HasDynamicOffset
     {
         get => _nativePayload.has_dynamic_offset;
         init
@@ -167,7 +167,7 @@ public sealed class BufferBindingData : IBindingTypeData
             _nativePayload.has_dynamic_offset = value;
         }
     }
-    public required u64? MinBindingSize
+    public u64? MinBindingSize
     {
         get => _nativePayload.min_binding_size == 0 ? null : _nativePayload.min_binding_size;
         init

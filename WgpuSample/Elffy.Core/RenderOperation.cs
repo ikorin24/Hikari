@@ -59,6 +59,8 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
     private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial>> _removedList;
     private readonly object _sync = new object();
 
+    protected private ReadOnlySpan<FrameObject<TSelf, TVertex, TShader, TMaterial>> Objects => _list.AsSpan();
+
     protected ObjectLayer(Own<TShader> shader, Func<TShader, RenderPipelineDescriptor> pipelineDescGen, int sortOrder)
         : this(shader, pipelineDescGen(shader.AsValue()), sortOrder) { }
 

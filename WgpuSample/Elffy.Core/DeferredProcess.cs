@@ -114,6 +114,11 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
     {
     }
 
+    protected override void RenderShadowMap(in RenderShadowMapContext context)
+    {
+        // nop
+    }
+
     protected override void Render(in RenderPass pass, RenderPipeline pipeline)
     {
         pass.SetPipeline(pipeline);

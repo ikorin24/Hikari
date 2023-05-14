@@ -24,6 +24,7 @@ public sealed class Screen
     private string _title = "";
     private Mouse _mouse;
     private Own<Texture> _depthTexture;
+    private readonly Own<Buffer> _info;
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
     private readonly Operations _operations;
@@ -35,6 +36,7 @@ public sealed class Screen
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
     internal ThreadId MainThread => _mainThread;
 
+    internal BufferSlice<u8> InfoBuffer => _info.AsValue().Slice();
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
     public Mouse Mouse => _mouse;
     public Keyboard Keyboard => _keyboard;
@@ -123,6 +125,7 @@ public sealed class Screen
     {
         _native = screen;
         _mainThread = mainThread;
+        _subscriptions = new SubscriptionBag();
         _camera = new Camera(this);
         _lights = new Lights(this);
         _earlyUpdate = new Timing(this);
@@ -131,7 +134,10 @@ public sealed class Screen
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
         _operations = new Operations(this);
-        _subscriptions = new SubscriptionBag();
+        _info = Buffer.Create(this, new ScreenInfo
+        {
+            Size = Vector2u.Zero,
+        }, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
     }
 
     public void Close()
@@ -251,6 +257,10 @@ public sealed class Screen
         _native.Unwrap().AsRef().ScreenResizeSurface(size.X, size.Y);
         UpdateDepthTexture(size);
         _camera.ChangeScreenSize(size);
+        _info.AsValue().Write(0, new ScreenInfo
+        {
+            Size = size,
+        });
         _resized.Invoke((this, size));
     }
 
@@ -268,6 +278,7 @@ public sealed class Screen
         _lights.DisposeInternal();
         _resized.Clear();
         _subscriptions.Dispose();
+        _info.Dispose();
         return native;
     }
 
@@ -284,6 +295,11 @@ public sealed class Screen
             Throw();
             static void Throw() => throw new InvalidOperationException("not initialized");
         }
+    }
+
+    private struct ScreenInfo
+    {
+        public Vector2u Size;
     }
 }
 

@@ -27,6 +27,8 @@ public abstract class Operation
         _sortOrder = sortOrder;
     }
 
+    protected abstract void RenderShadowMap(in RenderShadowMapContext context);
+
     protected abstract void Execute(in CommandEncoder encoder);
 
     protected abstract void EarlyUpdate();
@@ -44,6 +46,7 @@ public abstract class Operation
 
     internal void InvokeFrameInit() => FrameInit();
     internal void InvokeFrameEnd() => FrameEnd();
+    internal void InvokeRenderShadowMap(in RenderShadowMapContext context) => RenderShadowMap(in context);
     internal void InvokeExecute(in CommandEncoder encoder) => Execute(in encoder);
     internal void InvokeEarlyUpdate() => EarlyUpdate();
     internal void InvokeUpdate() => Update();
