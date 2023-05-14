@@ -13,7 +13,6 @@ public unsafe readonly ref struct RenderShadowMapContext
     [UnscopedRef]
     public ref readonly CommandEncoder CommandEncoder => ref _encoder;
 
-    //public BufferSlice<byte> LightDepth => _lightDepth;
     public BindGroup LightDepthBindGroup => _lightDepthBindGroup;
 
     [Obsolete("Don't use default constructor.", true)]
@@ -24,6 +23,5 @@ public unsafe readonly ref struct RenderShadowMapContext
     {
         _encoder = encoder;
         _lightDepthBindGroup = lightDepthBindGroup;
-        //_lightDepth = lightDepth;
     }
 }

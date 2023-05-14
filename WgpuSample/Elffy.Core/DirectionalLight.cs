@@ -12,6 +12,7 @@ public sealed class DirectionalLight : IScreenManaged
     private Own<Buffer> _lightDepth;
     private Own<BindGroup> _lightDepthBindGroup;
     private Own<BindGroupLayout> _lightDepthBindGroupLayout;
+    private readonly Vector2u _shadowMapSize;
 
     private readonly object _sync = new();
 
@@ -23,6 +24,8 @@ public sealed class DirectionalLight : IScreenManaged
 
     public BindGroup LightDepthBindGroup => _lightDepthBindGroup.AsValue();
     public BindGroupLayout LightDepthBindGroupLayout => _lightDepthBindGroupLayout.AsValue();
+
+    public Vector2u ShadowMapSize => _shadowMapSize;
 
     public Vector3 Direction
     {
@@ -68,13 +71,14 @@ public sealed class DirectionalLight : IScreenManaged
         _screen = screen;
         _buffer = Buffer.Create(screen, in data, BufferUsages.Storage | BufferUsages.CopyDst);
         _data = data;
-        CreateLightDepth(screen, out _lightDepth, out _lightDepthBindGroup, out _lightDepthBindGroupLayout);
+        CreateLightDepth(screen, out _lightDepth, out _lightDepthBindGroup, out _lightDepthBindGroupLayout, out _shadowMapSize);
     }
 
-    private static unsafe void CreateLightDepth(Screen screen, out Own<Buffer> depth, out Own<BindGroup> bindGroup, out Own<BindGroupLayout> bindGroupLayout)
+    private static unsafe void CreateLightDepth(Screen screen, out Own<Buffer> depth, out Own<BindGroup> bindGroup, out Own<BindGroupLayout> bindGroupLayout, out Vector2u shadowMapSize)
     {
         const u32 Width = 1024;
         const u32 Height = 1024;
+        shadowMapSize = new Vector2u(Width, Height);
 
         nuint len = (nuint)Width * Height * sizeof(f32) + (nuint)sizeof(Vector2u);
 
@@ -87,9 +91,9 @@ public sealed class DirectionalLight : IScreenManaged
                 Layout = BindGroupLayout.Create(screen, new()
                 {
                     Entries = new BindGroupLayoutEntry[]
-                {
-                    BindGroupLayoutEntry.Buffer(0, ShaderStages.Compute, new() { Type = BufferBindingType.Storate }),
-                },
+                    {
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Compute, new() { Type = BufferBindingType.Storate }),
+                    },
                 }).AsValue(out bindGroupLayout),
                 Entries = new[]
                 {
