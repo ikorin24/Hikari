@@ -6,14 +6,23 @@ using System.Diagnostics;
 
 namespace Elffy;
 
-public abstract class RenderOperation : Operation
+public abstract class RenderOperation<TShader, TMaterial>
+    : Operation
+    where TShader : Shader<TShader, TMaterial>
+    where TMaterial : Material<TMaterial, TShader>
 {
     private readonly Own<RenderPipeline> _pipeline;
+    private readonly Own<TShader> _shader;
 
-    protected RenderOperation(Screen screen, Own<RenderPipeline> pipeline, int sortOrder) : base(screen, sortOrder)
+    public TShader Shader => _shader.AsValue();
+
+    protected RenderOperation(Own<TShader> shader, Own<RenderPipeline> pipeline, int sortOrder)
+        : base(shader.AsValue().Screen, sortOrder)
     {
+        pipeline.ThrowArgumentExceptionIfNone();
+        shader.ThrowArgumentExceptionIfNone();
         _pipeline = pipeline;
-        screen.Operations.Add(this);
+        _shader = shader;
     }
 
     protected sealed override void Execute(in CommandEncoder encoder)
@@ -30,36 +39,18 @@ public abstract class RenderOperation : Operation
     protected abstract void Render(in RenderPass pass, RenderPipeline pipeline);
 }
 
-public abstract class RenderOperation<TShader, TMaterial>
-    : RenderOperation
-    where TShader : Shader<TShader, TMaterial>
-    where TMaterial : Material<TMaterial, TShader>
-{
-    private readonly Own<TShader> _shader;
-
-    public TShader Shader => _shader.AsValue();
-
-    protected RenderOperation(Own<TShader> shader, Own<RenderPipeline> pipeline, int sortOrder)
-        : base(shader.AsValue().Screen, pipeline, sortOrder)
-    {
-        shader.ThrowArgumentExceptionIfNone();
-        _shader = shader;
-    }
-}
-
-public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
+public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     : RenderOperation<TShader, TMaterial>
-    where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial>
+    where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     where TVertex : unmanaged, IVertex
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
+    where TObject : FrameObject<TObject, TSelf, TVertex, TShader, TMaterial>
 {
-    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial>> _list;
-    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial>> _addedList;
-    private readonly List<FrameObject<TSelf, TVertex, TShader, TMaterial>> _removedList;
+    private readonly List<TObject> _list;
+    private readonly List<TObject> _addedList;
+    private readonly List<TObject> _removedList;
     private readonly object _sync = new object();
-
-    protected private ReadOnlySpan<FrameObject<TSelf, TVertex, TShader, TMaterial>> Objects => _list.AsSpan();
 
     protected ObjectLayer(Own<TShader> shader, Func<TShader, RenderPipelineDescriptor> pipelineDescGen, int sortOrder)
         : this(shader, pipelineDescGen(shader.AsValue()), sortOrder) { }
@@ -78,7 +69,14 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
         _removedList = new();
     }
 
-    internal void Add(FrameObject<TSelf, TVertex, TShader, TMaterial> frameObject)
+    protected sealed override void RenderShadowMap(in RenderShadowMapContext context)
+    {
+        RenderShadowMap(context, _list.AsSpan());
+    }
+
+    protected abstract void RenderShadowMap(in RenderShadowMapContext context, ReadOnlySpan<TObject> objects);
+
+    internal void Add(TObject frameObject)
     {
         lock(_sync) {
             _addedList.Add(frameObject);
@@ -105,7 +103,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
         }
     }
 
-    internal void Remove(FrameObject<TSelf, TVertex, TShader, TMaterial> frameObject)
+    internal void Remove(TObject frameObject)
     {
         lock(_sync) {
             Debug.Assert(frameObject.LifeState == LifeState.Terminating);
@@ -140,9 +138,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial>
     {
         pass.SetPipeline(pipeline);
         foreach(var obj in _list.AsSpan()) {
-            if(obj is Renderable<TSelf, TVertex, TShader, TMaterial> renderable) {
-                renderable.InvokeRender(pass);
-            }
+            obj.InvokeRender(in pass);
         }
     }
 

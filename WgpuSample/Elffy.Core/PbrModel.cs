@@ -4,7 +4,7 @@ using V = Elffy.Vertex;
 
 namespace Elffy;
 
-public sealed class PbrModel : Renderable<PbrLayer, V, PbrShader, PbrMaterial>, IShadowMapRenderable
+public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrMaterial>
 {
     private readonly BufferSlice<Vector3> _tangent;
     private readonly Own<BindGroup> _shadowBindGroup0;
@@ -51,11 +51,10 @@ public sealed class PbrModel : Renderable<PbrLayer, V, PbrShader, PbrMaterial>, 
         pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
     }
 
-    void IShadowMapRenderable.RenderShadowMap(in RenderShadowMapContext context, in ComputePass pass)
+    internal void RenderShadowMap(in RenderShadowMapContext context, in ComputePass pass)
     {
         pass.SetBindGroup(0, _shadowBindGroup0.AsValue());
         pass.SetBindGroup(1, context.LightDepthBindGroup);
-        //pass.SetBindGroup(2, );
         pass.DispatchWorkgroups(0, 0, 0);
     }
 }

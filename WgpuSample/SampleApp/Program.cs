@@ -64,7 +64,7 @@ internal class Program
 
         screen.Update.Subscribe(screen =>
         {
-            System.Diagnostics.Debug.WriteLine(screen.FrameNum);
+            //System.Diagnostics.Debug.WriteLine(screen.FrameNum);
         });
     }
 

@@ -2,9 +2,10 @@
 
 namespace Elffy;
 
-public abstract class Renderable<TLayer, TVertex, TShader, TMaterial>
-    : Positionable<TLayer, TVertex, TShader, TMaterial>
-    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial>
+public abstract class Renderable<TSelf, TLayer, TVertex, TShader, TMaterial>
+    : Positionable<TSelf, TLayer, TVertex, TShader, TMaterial>
+    where TSelf : Renderable<TSelf, TLayer, TVertex, TShader, TMaterial>
+    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TSelf>
     where TVertex : unmanaged, IVertex
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
@@ -25,7 +26,7 @@ public abstract class Renderable<TLayer, TVertex, TShader, TMaterial>
         _mesh = mesh;
     }
 
-    internal void InvokeRender(in RenderPass pass)
+    private protected sealed override void Render(in RenderPass pass)
     {
         Render(pass, _material.AsValue(), _mesh.AsValue());
     }

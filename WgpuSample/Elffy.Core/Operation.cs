@@ -25,6 +25,7 @@ public abstract class Operation
         _screen = screen;
         _lifeState = LifeState.New;
         _sortOrder = sortOrder;
+        screen.Operations.Add(this);
     }
 
     protected abstract void RenderShadowMap(in RenderShadowMapContext context);

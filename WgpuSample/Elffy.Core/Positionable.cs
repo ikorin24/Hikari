@@ -2,9 +2,10 @@
 
 namespace Elffy;
 
-public abstract class Positionable<TLayer, TVertex, TShader, TMaterial>
-    : FrameObject<TLayer, TVertex, TShader, TMaterial>
-    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial>
+public abstract class Positionable<TSelf, TLayer, TVertex, TShader, TMaterial>
+    : FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
+    where TSelf : Positionable<TSelf, TLayer, TVertex, TShader, TMaterial>
+    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TSelf>
     where TVertex : unmanaged, IVertex
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>

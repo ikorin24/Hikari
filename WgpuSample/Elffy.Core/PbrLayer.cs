@@ -6,7 +6,7 @@ using V = Elffy.Vertex;
 namespace Elffy;
 
 public sealed class PbrLayer
-    : ObjectLayer<PbrLayer, V, PbrShader, PbrMaterial>,
+    : ObjectLayer<PbrLayer, V, PbrShader, PbrMaterial, PbrModel>,
     IGBufferProvider
 {
     private const int MrtCount = 4;
@@ -161,15 +161,13 @@ public sealed class PbrLayer
         return RenderPipeline.Create(screen, in desc);
     }
 
-    protected override void RenderShadowMap(in RenderShadowMapContext context)
+    protected override void RenderShadowMap(in RenderShadowMapContext context, ReadOnlySpan<PbrModel> objects)
     {
         using var pass = ComputePass.Create(context.CommandEncoder);
         var p = pass.AsValue();
         p.SetPipeline(_shadowPipeline);
-        foreach(var obj in Objects) {
-            if(obj is IShadowMapRenderable x) {
-                x.RenderShadowMap(context, p);
-            }
+        foreach(var obj in objects) {
+            obj.RenderShadowMap(context, p);
         }
     }
 

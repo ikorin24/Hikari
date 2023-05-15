@@ -31,8 +31,10 @@ public abstract class FrameObject : IScreenManaged
     public virtual void Validate() => IScreenManaged.DefaultValidate(this);
 }
 
-public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameObject
-    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial>
+public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
+    : FrameObject
+    where TSelf : FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
+    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TSelf>
     where TVertex : unmanaged, IVertex
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
@@ -72,7 +74,21 @@ public abstract class FrameObject<TLayer, TVertex, TShader, TMaterial> : FrameOb
         _layer = layer;
         _isFrozen = false;
         _state = LifeState.New;
-        layer.Add(this);
+        if(this is TSelf self) {
+            layer.Add(self);
+        }
+        else {
+            ThrowHelper.ThrowInvalidOperation("Invalid self type.");
+        }
+    }
+
+    internal void InvokeRender(in RenderPass pass)
+    {
+        Render(pass);
+    }
+
+    private protected virtual void Render(in RenderPass pass)
+    {
     }
 
     public virtual void InvokeEarlyUpdate() => _earlyUpdate.Invoke(this);

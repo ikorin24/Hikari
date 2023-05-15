@@ -62,7 +62,6 @@ public sealed class Operations
     internal void Execute(in CommandEncoder encoder)
     {
         var screen = _screen;
-        var size = screen.ClientSize;
         var lights = screen.Lights;
         var context = new RenderShadowMapContext(encoder, lights.DirectionalLight.LightDepthBindGroup);
         foreach(var op in _list.AsSpan()) {
