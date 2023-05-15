@@ -59,7 +59,7 @@ public sealed class PbrLayer
     internal BindGroupLayout ShadowBindGroupLayout0 => _shadowBgl0;
 
     public PbrLayer(Screen screen, int sortOrder)
-        : base(PbrShader.Create(screen), static shader => BuildPipeline(shader), sortOrder)
+        : base(screen, PbrShader.Create(screen), static shader => BuildPipeline(shader), sortOrder)
     {
         RecreateGBuffer(screen, screen.ClientSize);
         _shadowPipeline = CreateRenderShadowPipeline(

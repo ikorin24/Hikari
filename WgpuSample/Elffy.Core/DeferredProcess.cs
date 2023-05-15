@@ -12,7 +12,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
     private readonly Own<Mesh<V>> _rectMesh;
 
     public DeferredProcess(IGBufferProvider gBufferProvider, int sortOrder)
-        : base(CreateShader(gBufferProvider, out var gBuffer, out var pipeline), pipeline, sortOrder)
+        : base(gBufferProvider.CurrentGBuffer.Screen, CreateShader(gBufferProvider, out var gBuffer, out var pipeline), pipeline, sortOrder)
     {
         _gBufferProvider = gBufferProvider;
 
