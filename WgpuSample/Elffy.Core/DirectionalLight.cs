@@ -9,9 +9,9 @@ public sealed class DirectionalLight : IScreenManaged
     private readonly Screen _screen;
     private readonly Own<Buffer> _buffer;
     private DirectionalLightData _data;
-    private Own<Buffer> _lightDepth;
-    private Own<BindGroup> _lightDepthBindGroup;
-    private Own<BindGroupLayout> _lightDepthBindGroupLayout;
+    private Own<Buffer> _shadowMap;
+    private Own<BindGroup> _shadowMapBindGroup;
+    private Own<BindGroupLayout> _shadowMapBindGroupLayout;
     private readonly Vector2u _shadowMapSize;
 
     private readonly object _sync = new();
@@ -22,8 +22,8 @@ public sealed class DirectionalLight : IScreenManaged
 
     public void Validate() => IScreenManaged.DefaultValidate(this);
 
-    public BindGroup LightDepthBindGroup => _lightDepthBindGroup.AsValue();
-    public BindGroupLayout LightDepthBindGroupLayout => _lightDepthBindGroupLayout.AsValue();
+    public BindGroup ShadowMapBindGroup => _shadowMapBindGroup.AsValue();
+    public BindGroupLayout ShadowMapBindGroupLayout => _shadowMapBindGroupLayout.AsValue();
 
     public Vector2u ShadowMapSize => _shadowMapSize;
 
@@ -71,10 +71,10 @@ public sealed class DirectionalLight : IScreenManaged
         _screen = screen;
         _buffer = Buffer.Create(screen, in data, BufferUsages.Storage | BufferUsages.CopyDst);
         _data = data;
-        CreateLightDepth(screen, out _lightDepth, out _lightDepthBindGroup, out _lightDepthBindGroupLayout, out _shadowMapSize);
+        CreateShadowMap(screen, out _shadowMap, out _shadowMapBindGroup, out _shadowMapBindGroupLayout, out _shadowMapSize);
     }
 
-    private static unsafe void CreateLightDepth(Screen screen, out Own<Buffer> depth, out Own<BindGroup> bindGroup, out Own<BindGroupLayout> bindGroupLayout, out Vector2u shadowMapSize)
+    private static unsafe void CreateShadowMap(Screen screen, out Own<Buffer> depth, out Own<BindGroup> bindGroup, out Own<BindGroupLayout> bindGroupLayout, out Vector2u shadowMapSize)
     {
         const u32 Width = 1024;
         const u32 Height = 1024;
@@ -109,9 +109,9 @@ public sealed class DirectionalLight : IScreenManaged
     internal void DisposeInternal()
     {
         _buffer.Dispose();
-        _lightDepth.Dispose();
-        _lightDepthBindGroup.Dispose();
-        _lightDepthBindGroupLayout.Dispose();
+        _shadowMap.Dispose();
+        _shadowMapBindGroup.Dispose();
+        _shadowMapBindGroupLayout.Dispose();
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]

@@ -63,7 +63,7 @@ public sealed class Operations
     {
         var screen = _screen;
         var lights = screen.Lights;
-        var context = new RenderShadowMapContext(encoder, lights.DirectionalLight.LightDepthBindGroup);
+        var context = new RenderShadowMapContext(encoder, lights.DirectionalLight.ShadowMapBindGroup);
         foreach(var op in _list.AsSpan()) {
             op.InvokeRenderShadowMap(in context);
         }

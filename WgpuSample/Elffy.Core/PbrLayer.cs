@@ -166,10 +166,14 @@ public sealed class PbrLayer
         using var pass = ComputePass.Create(context.CommandEncoder);
         var p = pass.AsValue();
         p.SetPipeline(_shadowPipeline);
+        var workgroups = new Vector3u(1, 1, 1);
+        //float.Ceiling()
         foreach(var obj in objects) {
-            obj.RenderShadowMap(context, p);
+            obj.RenderShadowMap(context, p, workgroups);
         }
     }
+
+    private static Vector3u WorkgroupSize => new Vector3u(16, 16, 1);
 
     private static ReadOnlySpan<u8> ShadowMappingSource => """
         struct State {
@@ -197,7 +201,7 @@ public sealed class PbrLayer
             uv_y: f32,
         };
 
-        @compute @workgroup_size(256, 1)
+        @compute @workgroup_size(16, 16, 1)
         fn clear(@builtin(global_invocation_id) global_id : vec3<u32>) {
             let index = global_id.x * 3u;
             atomicStore(&depth.data[index + 0u], 255u);
@@ -205,7 +209,7 @@ public sealed class PbrLayer
             atomicStore(&depth.data[index + 2u], 255u);
         }
 
-        @compute @workgroup_size(256, 1)
+        @compute @workgroup_size(16, 16, 1)
         fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
             let index = global_id.x * 3u;
 
@@ -287,7 +291,7 @@ public sealed class PbrLayer
         out BindGroupLayout bindGroupLayout1)
     {
         var lights = screen.Lights;
-        var bgl1 = lights.DirectionalLight.LightDepthBindGroupLayout;
+        var bgl1 = lights.DirectionalLight.ShadowMapBindGroupLayout;
 
         var pipeline = ComputePipeline.Create(screen, new()
         {

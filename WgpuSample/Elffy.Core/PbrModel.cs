@@ -51,10 +51,10 @@ public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrM
         pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
     }
 
-    internal void RenderShadowMap(in RenderShadowMapContext context, in ComputePass pass)
+    internal void RenderShadowMap(in RenderShadowMapContext context, in ComputePass pass, in Vector3u workgroups)
     {
         pass.SetBindGroup(0, _shadowBindGroup0.AsValue());
-        pass.SetBindGroup(1, context.LightDepthBindGroup);
-        pass.DispatchWorkgroups(0, 0, 0);
+        pass.SetBindGroup(1, context.ShadowMapBindGroup);
+        pass.DispatchWorkgroups(workgroups.X, workgroups.Y, workgroups.Z);
     }
 }
