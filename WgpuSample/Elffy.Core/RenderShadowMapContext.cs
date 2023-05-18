@@ -8,20 +8,20 @@ namespace Elffy;
 public unsafe readonly ref struct RenderShadowMapContext
 {
     private readonly CommandEncoder _encoder;
-    private readonly BindGroup _shadowMapBindGroup;
+    private readonly Lights _lights;
 
     [UnscopedRef]
     public ref readonly CommandEncoder CommandEncoder => ref _encoder;
 
-    public BindGroup ShadowMapBindGroup => _shadowMapBindGroup;
+    public Lights Lights => _lights;
 
     [Obsolete("Don't use default constructor.", true)]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public RenderShadowMapContext() => throw new NotSupportedException("Don't use default constructor.");
 
-    internal RenderShadowMapContext(CommandEncoder encoder, BindGroup shadowMapBindGroup)
+    internal RenderShadowMapContext(CommandEncoder encoder, Lights lights)
     {
         _encoder = encoder;
-        _shadowMapBindGroup = shadowMapBindGroup;
+        _lights = lights;
     }
 }

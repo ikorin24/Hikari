@@ -166,14 +166,10 @@ public sealed class PbrLayer
         using var pass = ComputePass.Create(context.CommandEncoder);
         var p = pass.AsValue();
         p.SetPipeline(_shadowPipeline);
-        var workgroups = new Vector3u(1, 1, 1);
-        //float.Ceiling()
         foreach(var obj in objects) {
-            obj.RenderShadowMap(context, p, workgroups);
+            obj.RenderShadowMap(context, p, 256);
         }
     }
-
-    private static Vector3u WorkgroupSize => new Vector3u(16, 16, 1);
 
     private static ReadOnlySpan<u8> ShadowMappingSource => """
         struct State {
@@ -203,20 +199,44 @@ public sealed class PbrLayer
 
         @compute @workgroup_size(16, 16, 1)
         fn clear(@builtin(global_invocation_id) global_id : vec3<u32>) {
-            let index = global_id.x * 3u;
-            atomicStore(&depth.data[index + 0u], 255u);
-            atomicStore(&depth.data[index + 1u], 255u);
-            atomicStore(&depth.data[index + 2u], 255u);
+            let i = global_id.x * 3u;
+            atomicStore(&depth.data[i + 0u], 255u);
+            atomicStore(&depth.data[i + 1u], 255u);
+            atomicStore(&depth.data[i + 2u], 255u);
         }
 
-        @compute @workgroup_size(16, 16, 1)
+        @compute @workgroup_size(256, 1, 1)
         fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
-            let index = global_id.x * 3u;
-
-            let v1 = project(vertex_buffer[index_buffer[index + 0u]]);
-            let v2 = project(vertex_buffer[index_buffer[index + 1u]]);
-            let v3 = project(vertex_buffer[index_buffer[index + 2u]]);
-  
+            if global_id.x >= arrayLength(&index_buffer) / 3u {
+                return;
+            }
+            var v1: vec3<f32>;
+            var v2: vec3<f32>;
+            var v3: vec3<f32>;
+            if false {
+                if global_id.x >= arrayLength(&index_buffer) / 3u {
+                    return;
+                }
+                let i: u32 = global_id.x * 3u;
+                let j0 = index_buffer[i + 0u];
+                let j1 = index_buffer[i + 1u];
+                let j2 = index_buffer[i + 2u];
+                v1 = project(vertex_buffer[j0]);
+                v2 = project(vertex_buffer[j1]);
+                v3 = project(vertex_buffer[j2]);
+            }
+            else {
+                if global_id.x >= arrayLength(&index_buffer) * 2u / 3u {
+                    return;
+                }
+                let i: u32 = global_id.x * 3u;
+                let j0 = (index_buffer[(i + 0u) >> 1u] >> (((i + 0u) & 1u) << 4u)) & 65535u;
+                let j1 = (index_buffer[(i + 1u) >> 1u] >> (((i + 1u) & 1u) << 4u)) & 65535u;
+                let j2 = (index_buffer[(i + 2u) >> 1u] >> (((i + 2u) & 1u) << 4u)) & 65535u;
+                v1 = project(vertex_buffer[j0]);
+                v2 = project(vertex_buffer[j1]);
+                v3 = project(vertex_buffer[j2]);
+            }
             draw_triangle(v1, v2, v3);
         }
 
