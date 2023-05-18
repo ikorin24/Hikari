@@ -131,9 +131,6 @@ public sealed class Timing : IScreenManaged
             _state = action;
         }
 
-#if !DEBUG
-        [DebuggerHidden]
-#endif
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Invoke() => _action.Invoke(_state);
     }
