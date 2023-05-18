@@ -774,6 +774,27 @@ extern "cdecl" fn elffy_set_pipeline<'a>(
     make_result()
 }
 
+/// # Thread Safety
+/// It cannot be called at the same time as other functions that use same `&mut wgpu::RenderPass`.
+/// Multiple mutable references cannot exist simultaneously.
+/// ## OK
+/// - called from any thread
+/// ## NG
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn elffy_set_viewport<'a>(
+    render_pass: &mut wgpu::RenderPass<'a>,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    min_depth: f32,
+    max_depth: f32,
+) -> ApiResult {
+    render_pass.set_viewport(x, y, w, h, min_depth, max_depth);
+    make_result()
+}
+
 static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
 static_assertions::assert_impl_all!(wgpu::BindGroup: Send, Sync);
 

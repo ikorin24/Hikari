@@ -259,6 +259,16 @@ static unsafe partial class EngineCore
         Wgpu.IndexFormat index_format);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_set_viewport(
+        Rust.MutRef<Wgpu.RenderPass> render_pass,
+        f32 x,
+        f32 y,
+        f32 w,
+        f32 h,
+        f32 minDepth,
+        f32 maxDepth);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_draw(
         Rust.MutRef<Wgpu.RenderPass> render_pass,
         CE.RangeU32 vertices,

@@ -92,6 +92,17 @@ public readonly struct RenderPass
         _native.AsMut().SetIndexBuffer(bufferSlice.Native(), Wgpu.IndexFormat.Uint16);
     }
 
+    public void SetViewport(
+        f32 x,
+        f32 y,
+        f32 w,
+        f32 h,
+        f32 minDepth,
+        f32 maxDepth)
+    {
+        _native.AsMut().SetViewport(x, y, w, h, minDepth, maxDepth);
+    }
+
     public void DrawIndexed(u32 indexStart, u32 indexCount, i32 baseVertex, u32 instanceStart, u32 instanceCount)
     {
         var indexRange = new CE.RangeU32(indexStart, checked(indexStart + indexCount));

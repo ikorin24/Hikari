@@ -613,6 +613,20 @@ internal unsafe static partial class EngineCore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
+    public static void SetViewport(
+        this Rust.MutRef<Wgpu.RenderPass> render_pass,
+        f32 x,
+        f32 y,
+        f32 w,
+        f32 h,
+        f32 minDepth,
+        f32 maxDepth)
+    {
+        elffy_set_viewport(render_pass, x, y, w, h, minDepth, maxDepth).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
     public static void Draw(
         Rust.MutRef<Wgpu.RenderPass> render_pass,
         CE.RangeU32 vertices,
