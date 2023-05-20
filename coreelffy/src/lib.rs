@@ -1184,6 +1184,167 @@ impl TryFrom<wgpu::TextureFormat> for TextureFormat {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    #[test]
+    #[rustfmt::skip]
+    fn test_texture_format() {
+        use crate::TextureFormat as A;
+        use wgpu::TextureFormat as B;
+
+        assert_eq!(A::R8Unorm.to_wgpu_type(), B::R8Unorm);
+        assert_eq!(A::R8Snorm.to_wgpu_type(), B::R8Snorm);
+        assert_eq!(A::R8Uint.to_wgpu_type(), B::R8Uint);
+        assert_eq!(A::R8Sint.to_wgpu_type(), B::R8Sint);
+        assert_eq!(A::R16Uint.to_wgpu_type(), B::R16Uint);
+        assert_eq!(A::R16Sint.to_wgpu_type(), B::R16Sint);
+        assert_eq!(A::R16Unorm.to_wgpu_type(), B::R16Unorm);
+        assert_eq!(A::R16Snorm.to_wgpu_type(), B::R16Snorm);
+        assert_eq!(A::R16Float.to_wgpu_type(), B::R16Float);
+        assert_eq!(A::Rg8Unorm.to_wgpu_type(), B::Rg8Unorm);
+        assert_eq!(A::Rg8Snorm.to_wgpu_type(), B::Rg8Snorm);
+        assert_eq!(A::Rg8Uint.to_wgpu_type(), B::Rg8Uint);
+        assert_eq!(A::Rg8Sint.to_wgpu_type(), B::Rg8Sint);
+        assert_eq!(A::R32Uint.to_wgpu_type(), B::R32Uint);
+        assert_eq!(A::R32Sint.to_wgpu_type(), B::R32Sint);
+        assert_eq!(A::R32Float.to_wgpu_type(), B::R32Float);
+        assert_eq!(A::Rg16Uint.to_wgpu_type(), B::Rg16Uint);
+        assert_eq!(A::Rg16Sint.to_wgpu_type(), B::Rg16Sint);
+        assert_eq!(A::Rg16Unorm.to_wgpu_type(), B::Rg16Unorm);
+        assert_eq!(A::Rg16Snorm.to_wgpu_type(), B::Rg16Snorm);
+        assert_eq!(A::Rg16Float.to_wgpu_type(), B::Rg16Float);
+        assert_eq!(A::Rgba8Unorm.to_wgpu_type(), B::Rgba8Unorm);
+        assert_eq!(A::Rgba8UnormSrgb.to_wgpu_type(), B::Rgba8UnormSrgb);
+        assert_eq!(A::Rgba8Snorm.to_wgpu_type(), B::Rgba8Snorm);
+        assert_eq!(A::Rgba8Uint.to_wgpu_type(), B::Rgba8Uint);
+        assert_eq!(A::Rgba8Sint.to_wgpu_type(), B::Rgba8Sint);
+        assert_eq!(A::Bgra8Unorm.to_wgpu_type(), B::Bgra8Unorm);
+        assert_eq!(A::Bgra8UnormSrgb.to_wgpu_type(), B::Bgra8UnormSrgb);
+        assert_eq!(A::Rgb10a2Unorm.to_wgpu_type(), B::Rgb10a2Unorm);
+        assert_eq!(A::Rg11b10Float.to_wgpu_type(), B::Rg11b10Float);
+        assert_eq!(A::Rg32Uint.to_wgpu_type(), B::Rg32Uint);
+        assert_eq!(A::Rg32Sint.to_wgpu_type(), B::Rg32Sint);
+        assert_eq!(A::Rg32Float.to_wgpu_type(), B::Rg32Float);
+        assert_eq!(A::Rgba16Uint.to_wgpu_type(), B::Rgba16Uint);
+        assert_eq!(A::Rgba16Sint.to_wgpu_type(), B::Rgba16Sint);
+        assert_eq!(A::Rgba16Unorm.to_wgpu_type(), B::Rgba16Unorm);
+        assert_eq!(A::Rgba16Snorm.to_wgpu_type(), B::Rgba16Snorm);
+        assert_eq!(A::Rgba16Float.to_wgpu_type(), B::Rgba16Float);
+        assert_eq!(A::Rgba32Uint.to_wgpu_type(), B::Rgba32Uint);
+        assert_eq!(A::Rgba32Sint.to_wgpu_type(), B::Rgba32Sint);
+        assert_eq!(A::Rgba32Float.to_wgpu_type(), B::Rgba32Float);
+        assert_eq!(A::Depth32Float.to_wgpu_type(), B::Depth32Float);
+        assert_eq!(A::Depth32FloatStencil8.to_wgpu_type(), B::Depth32FloatStencil8);
+        assert_eq!(A::Depth24Plus.to_wgpu_type(), B::Depth24Plus);
+        assert_eq!(A::Depth24PlusStencil8.to_wgpu_type(), B::Depth24PlusStencil8);
+        assert_eq!(A::Rgb9e5Ufloat.to_wgpu_type(), B::Rgb9e5Ufloat);
+        assert_eq!(A::Bc1RgbaUnorm.to_wgpu_type(), B::Bc1RgbaUnorm);
+        assert_eq!(A::Bc1RgbaUnormSrgb.to_wgpu_type(), B::Bc1RgbaUnormSrgb);
+        assert_eq!(A::Bc2RgbaUnorm.to_wgpu_type(), B::Bc2RgbaUnorm);
+        assert_eq!(A::Bc2RgbaUnormSrgb.to_wgpu_type(), B::Bc2RgbaUnormSrgb);
+        assert_eq!(A::Bc3RgbaUnorm.to_wgpu_type(), B::Bc3RgbaUnorm);
+        assert_eq!(A::Bc3RgbaUnormSrgb.to_wgpu_type(), B::Bc3RgbaUnormSrgb);
+        assert_eq!(A::Bc4RUnorm.to_wgpu_type(), B::Bc4RUnorm);
+        assert_eq!(A::Bc4RSnorm.to_wgpu_type(), B::Bc4RSnorm);
+        assert_eq!(A::Bc5RgUnorm.to_wgpu_type(), B::Bc5RgUnorm);
+        assert_eq!(A::Bc5RgSnorm.to_wgpu_type(), B::Bc5RgSnorm);
+        assert_eq!(A::Bc6hRgbUfloat.to_wgpu_type(), B::Bc6hRgbUfloat);
+        assert_eq!(A::Bc6hRgbSfloat.to_wgpu_type(), B::Bc6hRgbSfloat);
+        assert_eq!(A::Bc7RgbaUnorm.to_wgpu_type(), B::Bc7RgbaUnorm);
+        assert_eq!(A::Bc7RgbaUnormSrgb.to_wgpu_type(), B::Bc7RgbaUnormSrgb);
+        assert_eq!(A::Etc2Rgb8Unorm.to_wgpu_type(), B::Etc2Rgb8Unorm);
+        assert_eq!(A::Etc2Rgb8UnormSrgb.to_wgpu_type(), B::Etc2Rgb8UnormSrgb);
+        assert_eq!(A::Etc2Rgb8A1Unorm.to_wgpu_type(), B::Etc2Rgb8A1Unorm);
+        assert_eq!(A::Etc2Rgb8A1UnormSrgb.to_wgpu_type(), B::Etc2Rgb8A1UnormSrgb);
+        assert_eq!(A::Etc2Rgba8Unorm.to_wgpu_type(), B::Etc2Rgba8Unorm);
+        assert_eq!(A::Etc2Rgba8UnormSrgb.to_wgpu_type(), B::Etc2Rgba8UnormSrgb);
+        assert_eq!(A::EacR11Unorm.to_wgpu_type(), B::EacR11Unorm);
+        assert_eq!(A::EacR11Snorm.to_wgpu_type(), B::EacR11Snorm);
+        assert_eq!(A::EacRg11Unorm.to_wgpu_type(), B::EacRg11Unorm);
+        assert_eq!(A::EacRg11Snorm.to_wgpu_type(), B::EacRg11Snorm);
+
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_texture_format_from_wgpu() {
+        use crate::TextureFormat as A;
+        use wgpu::TextureFormat as B;
+
+        assert_eq!(A::R8Unorm, B::R8Unorm.try_into().unwrap());
+        assert_eq!(A::R8Snorm, B::R8Snorm.try_into().unwrap());
+        assert_eq!(A::R8Uint, B::R8Uint.try_into().unwrap());
+        assert_eq!(A::R8Sint, B::R8Sint.try_into().unwrap());
+        assert_eq!(A::R16Uint, B::R16Uint.try_into().unwrap());
+        assert_eq!(A::R16Sint, B::R16Sint.try_into().unwrap());
+        assert_eq!(A::R16Unorm, B::R16Unorm.try_into().unwrap());
+        assert_eq!(A::R16Snorm, B::R16Snorm.try_into().unwrap());
+        assert_eq!(A::R16Float, B::R16Float.try_into().unwrap());
+        assert_eq!(A::Rg8Unorm, B::Rg8Unorm.try_into().unwrap());
+        assert_eq!(A::Rg8Snorm, B::Rg8Snorm.try_into().unwrap());
+        assert_eq!(A::Rg8Uint, B::Rg8Uint.try_into().unwrap());
+        assert_eq!(A::Rg8Sint, B::Rg8Sint.try_into().unwrap());
+        assert_eq!(A::R32Uint, B::R32Uint.try_into().unwrap());
+        assert_eq!(A::R32Sint, B::R32Sint.try_into().unwrap());
+        assert_eq!(A::R32Float, B::R32Float.try_into().unwrap());
+        assert_eq!(A::Rg16Uint, B::Rg16Uint.try_into().unwrap());
+        assert_eq!(A::Rg16Sint, B::Rg16Sint.try_into().unwrap());
+        assert_eq!(A::Rg16Unorm, B::Rg16Unorm.try_into().unwrap());
+        assert_eq!(A::Rg16Snorm, B::Rg16Snorm.try_into().unwrap());
+        assert_eq!(A::Rg16Float, B::Rg16Float.try_into().unwrap());
+        assert_eq!(A::Rgba8Unorm, B::Rgba8Unorm.try_into().unwrap());
+        assert_eq!(A::Rgba8UnormSrgb, B::Rgba8UnormSrgb.try_into().unwrap());
+        assert_eq!(A::Rgba8Snorm, B::Rgba8Snorm.try_into().unwrap());
+        assert_eq!(A::Rgba8Uint, B::Rgba8Uint.try_into().unwrap());
+        assert_eq!(A::Rgba8Sint, B::Rgba8Sint.try_into().unwrap());
+        assert_eq!(A::Bgra8Unorm, B::Bgra8Unorm.try_into().unwrap());
+        assert_eq!(A::Bgra8UnormSrgb, B::Bgra8UnormSrgb.try_into().unwrap());
+        assert_eq!(A::Rgb10a2Unorm, B::Rgb10a2Unorm.try_into().unwrap());
+        assert_eq!(A::Rg11b10Float, B::Rg11b10Float.try_into().unwrap());
+        assert_eq!(A::Rg32Uint, B::Rg32Uint.try_into().unwrap());
+        assert_eq!(A::Rg32Sint, B::Rg32Sint.try_into().unwrap());
+        assert_eq!(A::Rg32Float, B::Rg32Float.try_into().unwrap());
+        assert_eq!(A::Rgba16Uint, B::Rgba16Uint.try_into().unwrap());
+        assert_eq!(A::Rgba16Sint, B::Rgba16Sint.try_into().unwrap());
+        assert_eq!(A::Rgba16Unorm, B::Rgba16Unorm.try_into().unwrap());
+        assert_eq!(A::Rgba16Snorm, B::Rgba16Snorm.try_into().unwrap());
+        assert_eq!(A::Rgba16Float, B::Rgba16Float.try_into().unwrap());
+        assert_eq!(A::Rgba32Uint, B::Rgba32Uint.try_into().unwrap());
+        assert_eq!(A::Rgba32Sint, B::Rgba32Sint.try_into().unwrap());
+        assert_eq!(A::Rgba32Float, B::Rgba32Float.try_into().unwrap());
+        assert_eq!(A::Depth32Float, B::Depth32Float.try_into().unwrap());
+        assert_eq!(A::Depth32FloatStencil8, B::Depth32FloatStencil8.try_into().unwrap());
+        assert_eq!(A::Depth24Plus, B::Depth24Plus.try_into().unwrap());
+        assert_eq!(A::Depth24PlusStencil8, B::Depth24PlusStencil8.try_into().unwrap());
+        assert_eq!(A::Rgb9e5Ufloat, B::Rgb9e5Ufloat.try_into().unwrap());
+        assert_eq!(A::Bc1RgbaUnorm, B::Bc1RgbaUnorm.try_into().unwrap());
+        assert_eq!(A::Bc1RgbaUnormSrgb, B::Bc1RgbaUnormSrgb.try_into().unwrap());
+        assert_eq!(A::Bc2RgbaUnorm, B::Bc2RgbaUnorm.try_into().unwrap());
+        assert_eq!(A::Bc2RgbaUnormSrgb, B::Bc2RgbaUnormSrgb.try_into().unwrap());
+        assert_eq!(A::Bc3RgbaUnorm, B::Bc3RgbaUnorm.try_into().unwrap());
+        assert_eq!(A::Bc3RgbaUnormSrgb, B::Bc3RgbaUnormSrgb.try_into().unwrap());
+        assert_eq!(A::Bc4RUnorm, B::Bc4RUnorm.try_into().unwrap());
+        assert_eq!(A::Bc4RSnorm, B::Bc4RSnorm.try_into().unwrap());
+        assert_eq!(A::Bc5RgUnorm, B::Bc5RgUnorm.try_into().unwrap());
+        assert_eq!(A::Bc5RgSnorm, B::Bc5RgSnorm.try_into().unwrap());
+        assert_eq!(A::Bc6hRgbUfloat, B::Bc6hRgbUfloat.try_into().unwrap());
+        assert_eq!(A::Bc6hRgbSfloat, B::Bc6hRgbSfloat.try_into().unwrap());
+        assert_eq!(A::Bc7RgbaUnorm, B::Bc7RgbaUnorm.try_into().unwrap());
+        assert_eq!(A::Bc7RgbaUnormSrgb, B::Bc7RgbaUnormSrgb.try_into().unwrap());
+        assert_eq!(A::Etc2Rgb8Unorm, B::Etc2Rgb8Unorm.try_into().unwrap());
+        assert_eq!(A::Etc2Rgb8UnormSrgb, B::Etc2Rgb8UnormSrgb.try_into().unwrap());
+        assert_eq!(A::Etc2Rgb8A1Unorm, B::Etc2Rgb8A1Unorm.try_into().unwrap());
+        assert_eq!(A::Etc2Rgb8A1UnormSrgb, B::Etc2Rgb8A1UnormSrgb.try_into().unwrap());
+        assert_eq!(A::Etc2Rgba8Unorm, B::Etc2Rgba8Unorm.try_into().unwrap());
+        assert_eq!(A::Etc2Rgba8UnormSrgb, B::Etc2Rgba8UnormSrgb.try_into().unwrap());
+        assert_eq!(A::EacR11Unorm, B::EacR11Unorm.try_into().unwrap());
+        assert_eq!(A::EacR11Snorm, B::EacR11Snorm.try_into().unwrap());
+        assert_eq!(A::EacRg11Unorm, B::EacRg11Unorm.try_into().unwrap());
+        assert_eq!(A::EacRg11Snorm, B::EacRg11Snorm.try_into().unwrap());
+
+    }
+}
+
 #[repr(C)]
 pub(crate) struct TextureFormatInfo {
     pub required_features: wgpu::Features,
