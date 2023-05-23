@@ -31,7 +31,6 @@ public sealed class Camera
     private Matrix4 _projection;
     private Vector3 _position;
     private Quaternion _rotation;
-    private Frustum _frustum;
     private float _aspect;  // Aspect ratio (width / height). It may be NaN when height is 0.
     private float _near;
     private float _far;
@@ -41,6 +40,8 @@ public sealed class Camera
     private EventSource<Camera> _matrixChanged;
 
     public Event<Camera> MatrixChanged => _matrixChanged.Event;
+
+    public Screen Screen => _screen;
 
     public BindGroupLayout CameraDataBindGroupLayout => _bindGroupLayout.AsValue();
     public BindGroup CameraDataBindGroup => _bindGroup.AsValue();
@@ -61,7 +62,6 @@ public sealed class Camera
             lock(_sync) {
                 _mode = value;
                 _projection = CalcProjection(_mode, _near, _far, _aspect);
-                Frustum.FromMatrix(_projection, _view, out _frustum);
                 _isUniformChanged = true;
             }
             _matrixChanged.Invoke(this);
@@ -84,7 +84,6 @@ public sealed class Camera
             lock(_sync) {
                 _position = value;
                 _view = CalcView(_position, _rotation);
-                Frustum.FromMatrix(_projection, _view, out _frustum);
                 _isUniformChanged = true;
             }
             _matrixChanged.Invoke(this);
@@ -131,6 +130,16 @@ public sealed class Camera
         }
     }
 
+    public float Aspect
+    {
+        get
+        {
+            lock(_sync) {
+                return _aspect;
+            }
+        }
+    }
+
     public Matrix4 GetView()
     {
         lock(_sync) {
@@ -158,7 +167,6 @@ public sealed class Camera
         _mode = CameraProjectionMode.Perspective(25f / 180f * float.Pi);
         _projection = CalcProjection(_mode, _near, _far, _aspect);
         _view = CalcView(_position, _rotation);
-        Frustum.FromMatrix(_projection, _view, out _frustum);
 
         _uniformBuffer = Buffer.Create(
             screen,
@@ -209,7 +217,6 @@ public sealed class Camera
             _near = near;
             _far = far;
             _projection = CalcProjection(_mode, _near, _far, _aspect);
-            Frustum.FromMatrix(_projection, _view, out _frustum);
             _isUniformChanged = true;
         }
         _matrixChanged.Invoke(this);
@@ -224,7 +231,6 @@ public sealed class Camera
             }
             _rotation = Quaternion.FromTwoVectors(InitialDirection, dir);
             _view = CalcView(_position, _rotation);
-            Frustum.FromMatrix(_projection, _view, out _frustum);
             _isUniformChanged = true;
         }
 
@@ -242,10 +248,22 @@ public sealed class Camera
             _rotation = rotation;
             _position = cameraPos;
             _view = CalcView(_position, _rotation);
-            Frustum.FromMatrix(_projection, _view, out _frustum);
             _isUniformChanged = true;
         }
         _matrixChanged.Invoke(this);
+    }
+
+    public void GetFrustum(out Frustum frustum)
+    {
+        lock(_sync) {
+            Frustum.FromMatrix(_projection, _view, out frustum);
+        }
+    }
+
+    public Frustum GetFrustum()
+    {
+        GetFrustum(out var frustum);
+        return frustum;
     }
 
     internal void ChangeScreenSize(Vector2u size)
@@ -257,7 +275,6 @@ public sealed class Camera
         lock(_sync) {
             _aspect = aspect;
             _projection = CalcProjection(_mode, _near, _far, _aspect);
-            Frustum.FromMatrix(_projection, _view, out _frustum);
             _isUniformChanged = true;
         }
         _matrixChanged.Invoke(this);
