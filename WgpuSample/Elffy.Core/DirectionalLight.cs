@@ -76,8 +76,7 @@ public sealed class DirectionalLight : IScreenManaged
         _data = data;
         _shadowMap = CreateShadowMap(screen);
 
-        // TODO: zeroed init method
-        _lightMatricesBuffer = Buffer.Create(screen, stackalloc Matrix4[CascadeCountConst].AsReadOnly(), BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
+        _lightMatricesBuffer = Buffer.CreateZeroed(screen, (usize)CascadeCountConst * (usize)Matrix4.SizeInBytes, BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
     }
 
     private static Own<Texture> CreateShadowMap(Screen screen)

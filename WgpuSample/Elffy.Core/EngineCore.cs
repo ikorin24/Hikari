@@ -406,6 +406,14 @@ internal unsafe static partial class EngineCore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
+    public static Rust.Box<Wgpu.Buffer> CreateBuffer(
+        this Rust.Ref<CE.HostScreen> screen,
+        u64 size,
+        Wgpu.BufferUsages usage)
+        => elffy_create_buffer(screen, size, usage).Validate();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
     public static Rust.Box<Wgpu.Buffer> CreateBufferInit(
         this Rust.Ref<CE.HostScreen> screen,
         CE.Slice<u8> contents,

@@ -514,6 +514,26 @@ extern "cdecl" fn elffy_destroy_compute_pipeline(pipeline: Box<wgpu::ComputePipe
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
+extern "cdecl" fn elffy_create_buffer(
+    screen: &HostScreen,
+    size: u64,
+    usage: wgpu::BufferUsages,
+) -> ApiBoxResult<wgpu::Buffer> {
+    let buffer = screen.device.create_buffer(&wgpu_types::BufferDescriptor {
+        label: None,
+        size,
+        usage,
+        mapped_at_creation: false,
+    });
+    let value = Box::new(buffer);
+    make_box_result(value)
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
 extern "cdecl" fn elffy_create_buffer_init(
     screen: &HostScreen,
     contents: Slice<u8>,

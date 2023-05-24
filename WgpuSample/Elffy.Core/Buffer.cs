@@ -51,6 +51,16 @@ public sealed class Buffer : IScreenManaged
         }
     }
 
+    public unsafe static Own<Buffer> CreateZeroed(Screen screen, usize size, BufferUsages usage)
+    {
+        ArgumentNullException.ThrowIfNull(screen);
+
+        var screenRef = screen.AsRefChecked();
+        var bufferNative = screenRef.CreateBuffer(size, usage.FlagsMap());
+        var buffer = new Buffer(screen, bufferNative, usage, size);
+        return Own.New(buffer, static x => SafeCast.As<Buffer>(x).Release());
+    }
+
     public unsafe static Own<Buffer> Create<T>(Screen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
     {
         ArgumentNullException.ThrowIfNull(screen);

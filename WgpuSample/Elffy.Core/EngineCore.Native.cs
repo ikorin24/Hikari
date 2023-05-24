@@ -154,6 +154,12 @@ static unsafe partial class EngineCore
         Rust.Box<Wgpu.ComputePipeline> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiBoxResult<Wgpu.Buffer> elffy_create_buffer(
+        Rust.Ref<CE.HostScreen> screen,
+        u64 size,
+        Wgpu.BufferUsages usage);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Buffer> elffy_create_buffer_init(
         Rust.Ref<CE.HostScreen> screen,
         CE.Slice<u8> contents,
