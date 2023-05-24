@@ -83,14 +83,14 @@ public sealed class Mesh<TVertex>
             throw new ArgumentException("index type should be u32 or u16.");
         }
 
-        var vertexBuffer = Buffer.Create(screen, (u8*)vertices, vertexLen * (usize)sizeof(TVertex), BufferUsages.Vertex | BufferUsages.Storage);
-        var indexBuffer = Buffer.Create(screen, (u8*)indices, indexLen * (usize)sizeof(TIndex), BufferUsages.Index | BufferUsages.Storage);
+        var vertexBuffer = Buffer.CreateInitBytes(screen, (u8*)vertices, vertexLen * (usize)sizeof(TVertex), BufferUsages.Vertex | BufferUsages.Storage);
+        var indexBuffer = Buffer.CreateInitBytes(screen, (u8*)indices, indexLen * (usize)sizeof(TIndex), BufferUsages.Index | BufferUsages.Storage);
         Own<Buffer> tangentBuffer;
         if(tangentLen == 0) {
             tangentBuffer = Own<Buffer>.None;
         }
         else {
-            tangentBuffer = Buffer.Create(screen, (u8*)tangents, tangentLen * (usize)sizeof(Vector3), BufferUsages.Vertex | BufferUsages.Storage);
+            tangentBuffer = Buffer.CreateInitBytes(screen, (u8*)tangents, tangentLen * (usize)sizeof(Vector3), BufferUsages.Vertex | BufferUsages.Storage);
         }
 
         var mesh = new Mesh<TVertex>(screen, vertexBuffer, indexBuffer, indexLen, indexFormat, tangentBuffer);

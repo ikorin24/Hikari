@@ -134,7 +134,7 @@ public sealed class Screen
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
         _operations = new Operations(this);
-        _info = Buffer.Create(this, new ScreenInfo
+        _info = Buffer.CreateInitData(this, new ScreenInfo
         {
             Size = Vector2u.Zero,
         }, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
@@ -257,7 +257,7 @@ public sealed class Screen
         _native.Unwrap().AsRef().ScreenResizeSurface(size.X, size.Y);
         UpdateDepthTexture(size);
         _camera.ChangeScreenSize(size);
-        _info.AsValue().Write(0, new ScreenInfo
+        _info.AsValue().WriteData(0, new ScreenInfo
         {
             Size = size,
         });

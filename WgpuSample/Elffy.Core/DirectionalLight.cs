@@ -61,7 +61,7 @@ public sealed class DirectionalLight : IScreenManaged
         var buffer = _buffer.AsValue();
         lock(_sync) {
             _data = new DirectionalLightData(direction, color);
-            buffer.Write(0, _data);
+            buffer.WriteData(0, _data);
         }
     }
 
@@ -72,11 +72,11 @@ public sealed class DirectionalLight : IScreenManaged
             new Color3(1, 1, 1)
         );
         _screen = screen;
-        _buffer = Buffer.Create(screen, in data, BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
+        _buffer = Buffer.CreateInitData(screen, in data, BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
         _data = data;
         _shadowMap = CreateShadowMap(screen);
 
-        _lightMatricesBuffer = Buffer.CreateZeroed(screen, (usize)CascadeCountConst * (usize)Matrix4.SizeInBytes, BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
+        _lightMatricesBuffer = Buffer.Create(screen, (usize)CascadeCountConst * (usize)Matrix4.SizeInBytes, BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
     }
 
     private static Own<Texture> CreateShadowMap(Screen screen)

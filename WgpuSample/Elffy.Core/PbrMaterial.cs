@@ -82,7 +82,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         normal.ThrowArgumentExceptionIfNone();
 
         var screen = shader.Screen;
-        var modelUniform = Buffer.Create(screen, default(Matrix4), BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
+        var modelUniform = Buffer.CreateInitData(screen, default(Matrix4), BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
         var desc = new BindGroupDescriptor
         {
             Layout = shader.BindGroupLayout0,
@@ -114,6 +114,6 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 
     internal void WriteModelUniform(in Matrix4 model)
     {
-        _modelUniform.AsValue().Write(0, model);
+        _modelUniform.AsValue().WriteData(0, model);
     }
 }

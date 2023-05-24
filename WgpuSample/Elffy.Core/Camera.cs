@@ -199,7 +199,7 @@ public sealed class Camera
             Far = far,
             ProjectionMode = mode,
         };
-        _cameraMatrixBuffer = Buffer.Create(
+        _cameraMatrixBuffer = Buffer.CreateInitData(
             screen,
             _state.Matrix,
             BufferUsages.Uniform | BufferUsages.CopyDst);
@@ -313,7 +313,7 @@ public sealed class Camera
         lock(_sync) {
             if(_isCameraMatrixChanged) {
                 _isCameraMatrixChanged = false;
-                uniformBuffer.Write(0, _state.Matrix);
+                uniformBuffer.WriteData(0, _state.Matrix);
             }
         }
     }

@@ -51,7 +51,7 @@ public sealed class Buffer : IScreenManaged
         }
     }
 
-    public unsafe static Own<Buffer> CreateZeroed(Screen screen, usize size, BufferUsages usage)
+    public unsafe static Own<Buffer> Create(Screen screen, usize size, BufferUsages usage)
     {
         ArgumentNullException.ThrowIfNull(screen);
 
@@ -61,19 +61,19 @@ public sealed class Buffer : IScreenManaged
         return Own.New(buffer, static x => SafeCast.As<Buffer>(x).Release());
     }
 
-    public unsafe static Own<Buffer> Create<T>(Screen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
+    public unsafe static Own<Buffer> CreateInitSpan<T>(Screen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
     {
         ArgumentNullException.ThrowIfNull(screen);
         return CreateFromSpan(screen, data, usage);
     }
 
-    public unsafe static Own<Buffer> Create<T>(Screen screen, in T data, BufferUsages usage) where T : unmanaged
+    public unsafe static Own<Buffer> CreateInitData<T>(Screen screen, in T data, BufferUsages usage) where T : unmanaged
     {
         ArgumentNullException.ThrowIfNull(screen);
         return CreateFromSpan(screen, new ReadOnlySpan<T>(in data), usage);
     }
 
-    public unsafe static Own<Buffer> Create(Screen screen, byte* ptr, usize byteLength, BufferUsages usage)
+    public unsafe static Own<Buffer> CreateInitBytes(Screen screen, byte* ptr, usize byteLength, BufferUsages usage)
     {
         ArgumentNullException.ThrowIfNull(screen);
         return CreateFromPtr(screen, ptr, byteLength, usage);
@@ -105,7 +105,7 @@ public sealed class Buffer : IScreenManaged
 
     public BufferSlice<T> Slice<T>() where T : unmanaged => BufferSlice<T>.Full(this);
 
-    public unsafe void Write<T>(u64 offset, in T data) where T : unmanaged
+    public unsafe void WriteData<T>(u64 offset, in T data) where T : unmanaged
     {
         fixed(T* p = &data) {
             WriteBytes(offset, (byte*)p, (usize)sizeof(T));
