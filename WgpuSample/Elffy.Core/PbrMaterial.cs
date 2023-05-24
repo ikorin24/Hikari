@@ -18,6 +18,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 
     public Texture Albedo => _albedo.AsValue();
     public Texture MetallicRoughness => _metallicRoughness.AsValue();
+    public Texture Normal => _normal.AsValue();
 
     internal BufferSlice<byte> ModelUniform => _modelUniform.AsValue().Slice();
 

@@ -32,22 +32,13 @@ internal class Program
         var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
         var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
 
-        var model = new PbrModel(
-                layer,
-                SampleData.SampleMesh(screen),
-                PbrMaterial.Create(
-                    layer.Shader,
-                    albedo,
-                    mr,
-                    normal));
+        var model = new PbrModel(layer, Shapes.Plane(screen, true), albedo, mr, normal);
         model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
-        var cube = new PbrModel(
-                layer,
-                Shapes.Cube(screen, true),
-                PbrMaterial.Create(layer.Shader, albedo.AsValue(), mr.AsValue(), normal.AsValue()));
+        var material = model.Material;
+        var cube = new PbrModel(layer, Shapes.Cube(screen, true),
+            material.Albedo, material.MetallicRoughness, material.Normal);
         cube.Scale = 0.3f;
         cube.Position = new Vector3(0, 0.2f, 0);
-
 
         var camera = screen.Camera;
         camera.LookAt(Vector3.Zero, new Vector3(0, 2f, 3) * 0.6f);
