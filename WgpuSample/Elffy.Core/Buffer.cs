@@ -98,19 +98,19 @@ public sealed class Buffer : IScreenManaged
     public unsafe void Write<T>(u64 offset, in T data) where T : unmanaged
     {
         fixed(T* p = &data) {
-            Write(offset, (byte*)p, (usize)sizeof(T));
+            WriteBytes(offset, (byte*)p, (usize)sizeof(T));
         }
     }
 
-    public unsafe void Write<T>(u64 offset, ReadOnlySpan<T> data) where T : unmanaged
+    public unsafe void WriteSpan<T>(u64 offset, ReadOnlySpan<T> data) where T : unmanaged
     {
         fixed(T* p = data) {
             var len = (usize)sizeof(T) * (usize)data.Length;
-            Write(offset, (byte*)p, len);
+            WriteBytes(offset, (byte*)p, len);
         }
     }
 
-    public unsafe void Write(u64 offset, byte* data, usize dataLen)
+    public unsafe void WriteBytes(u64 offset, byte* data, usize dataLen)
     {
         var native = NativeRef;
         var screen = Screen;
@@ -187,7 +187,7 @@ public readonly struct BufferSlice<T> : IEquatable<BufferSlice<T>> where T : unm
             ThrowTooLong();
             [DoesNotReturn] static void ThrowTooLong() => throw new ArgumentException("data is too long to write");
         }
-        Buffer.Write(_startByte, data);
+        Buffer.WriteSpan(_startByte, data);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

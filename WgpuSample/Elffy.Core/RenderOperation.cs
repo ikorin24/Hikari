@@ -52,14 +52,8 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     private readonly List<TObject> _removedList;
     private readonly object _sync = new object();
 
-    protected ObjectLayer(Screen screen, Own<TShader> shader, Func<TShader, RenderPipelineDescriptor> pipelineDescGen, int sortOrder)
-        : this(screen, shader, pipelineDescGen(shader.AsValue()), sortOrder) { }
-
     protected ObjectLayer(Screen screen, Own<TShader> shader, Func<TShader, Own<RenderPipeline>> pipelineGen, int sortOrder)
         : this(screen, shader, pipelineGen(shader.AsValue()), sortOrder) { }
-
-    protected ObjectLayer(Screen screen, Own<TShader> shader, in RenderPipelineDescriptor pipelineDesc, int sortOrder)
-        : this(screen, shader, RenderPipeline.Create(shader.AsValue().Screen, pipelineDesc), sortOrder) { }
 
     protected ObjectLayer(Screen screen, Own<TShader> shader, Own<RenderPipeline> pipeline, int sortOrder)
         : base(screen, shader, pipeline, sortOrder)

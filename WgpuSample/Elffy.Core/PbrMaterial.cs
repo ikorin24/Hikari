@@ -12,16 +12,17 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
     private readonly Own<Buffer> _modelUniform;
     private readonly Own<BindGroup> _bindGroup0;
     private readonly BindGroup _bindGroup1;
+    private readonly Own<BindGroup> _shadowBindGroup0;
 
     public Texture Albedo => _albedo.AsValue();
     public Texture MetallicRoughness => _metallicRoughness.AsValue();
 
     internal BufferSlice<byte> ModelUniform => _modelUniform.AsValue().Slice();
 
-    internal (BindGroup BindGroup0, BindGroup BindGroup1) GetBindGroups()
-    {
-        return (_bindGroup0.AsValue(), _bindGroup1);
-    }
+    internal BindGroup BindGroup0 => _bindGroup0.AsValue();
+    internal BindGroup BindGroup1 => _bindGroup1;
+
+    internal BindGroup ShadowBindGroup0 => _shadowBindGroup0.AsValue();
 
     private PbrMaterial(
         PbrShader shader,
@@ -30,7 +31,8 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         MaybeOwn<Texture> albedo,
         MaybeOwn<Texture> metallicRoughness,
         MaybeOwn<Texture> normal,
-        Own<BindGroup> bindGroup)
+        Own<BindGroup> bindGroup0,
+        Own<BindGroup> shadowBindGroup0)
         : base(shader)
     {
         _modelUniform = modelUniform;
@@ -38,8 +40,9 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         _albedo = albedo;
         _metallicRoughness = metallicRoughness;
         _normal = normal;
-        _bindGroup0 = bindGroup;
+        _bindGroup0 = bindGroup0;
         _bindGroup1 = Screen.Camera.CameraDataBindGroup;
+        _shadowBindGroup0 = shadowBindGroup0;
     }
 
     public override void Validate()
@@ -92,8 +95,20 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
                 BindGroupEntry.TextureView(4, normal.AsValue().View),
             },
         };
-        var bindGroup = BindGroup.Create(screen, in desc);
-        var material = new PbrMaterial(shader, modelUniform, sampler, albedo, metallicRoughness, normal, bindGroup);
+        var bindGroup0 = BindGroup.Create(screen, in desc);
+
+        var lights = screen.Lights;
+        var shadowBindGroup0 = BindGroup.Create(screen, new()
+        {
+            Layout = shader.ShadowBindGroupLayout0,
+            Entries = new[]
+            {
+                BindGroupEntry.Buffer(0, modelUniform.AsValue()),
+                BindGroupEntry.Buffer(1, lights.DirectionalLight.LightMatricesBuffer),
+            },
+        });
+
+        var material = new PbrMaterial(shader, modelUniform, sampler, albedo, metallicRoughness, normal, bindGroup0, shadowBindGroup0);
         return CreateOwn(material);
     }
 

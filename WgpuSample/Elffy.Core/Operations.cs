@@ -63,6 +63,7 @@ public sealed class Operations
     {
         var screen = _screen;
         var lights = screen.Lights;
+        lights.UpdateLightMatrix();
         var context = new RenderShadowMapContext(encoder, lights);
         foreach(var op in _list.AsSpan()) {
             op.InvokeRenderShadowMap(in context);

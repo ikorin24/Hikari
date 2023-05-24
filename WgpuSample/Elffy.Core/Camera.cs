@@ -10,7 +10,7 @@ namespace Elffy;
 public sealed class Camera
 {
     [StructLayout(LayoutKind.Explicit)]
-    private struct UniformValue
+    internal struct CameraMatrix
     {
         [FieldOffset(0)]    // 0 ~ 63   (size: 64)
         public Matrix4 Projection;
@@ -18,25 +18,28 @@ public sealed class Camera
         public Matrix4 View;
     }
 
+    internal struct CameraState
+    {
+        public CameraMatrix Matrix;
+        public Vector3 Position;
+        public Quaternion Rotation;
+        public CameraProjectionMode ProjectionMode;
+        public float Aspect;    // Aspect ratio (width / height).
+        public float Near;
+        public float Far;
+    }
+
     private static Vector3 InitialPos => new Vector3(0, 0, 10);
     private static Vector3 InitialDirection => new Vector3(0, 0, -1);
     private static Vector3 InitialUp => Vector3.UnitY;
 
     private readonly Screen _screen;
-    private readonly Own<Buffer> _uniformBuffer;
+    private readonly Own<Buffer> _cameraMatrixBuffer;
     private readonly Own<BindGroupLayout> _bindGroupLayout;
     private readonly Own<BindGroup> _bindGroup;
     private readonly object _sync = new object();
-    private Matrix4 _view;
-    private Matrix4 _projection;
-    private Vector3 _position;
-    private Quaternion _rotation;
-    private float _aspect;  // Aspect ratio (width / height). It may be NaN when height is 0.
-    private float _near;
-    private float _far;
-    private CameraProjectionMode _mode;
-    private bool _isUniformChanged;
-
+    private CameraState _state;
+    private bool _isCameraMatrixChanged;
     private EventSource<Camera> _matrixChanged;
 
     public Event<Camera> MatrixChanged => _matrixChanged.Event;
@@ -51,7 +54,7 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _mode;
+                return _state.ProjectionMode;
             }
         }
         set
@@ -60,9 +63,9 @@ public sealed class Camera
                 throw new ArgumentException(nameof(value));
             }
             lock(_sync) {
-                _mode = value;
-                _projection = CalcProjection(_mode, _near, _far, _aspect);
-                _isUniformChanged = true;
+                _state.ProjectionMode = value;
+                _state.Matrix.Projection = CalcProjection(_state.ProjectionMode, _state.Near, _state.Far, _state.Aspect);
+                _isCameraMatrixChanged = true;
             }
             _matrixChanged.Invoke(this);
         }
@@ -73,7 +76,7 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _position;
+                return _state.Position;
             }
         }
         set
@@ -82,9 +85,9 @@ public sealed class Camera
                 throw new ArgumentException($"value contains NaN or Infinity");
             }
             lock(_sync) {
-                _position = value;
-                _view = CalcView(_position, _rotation);
-                _isUniformChanged = true;
+                _state.Position = value;
+                _state.Matrix.View = CalcView(_state.Position, _state.Rotation);
+                _isCameraMatrixChanged = true;
             }
             _matrixChanged.Invoke(this);
         }
@@ -95,7 +98,7 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _rotation * InitialDirection;
+                return _state.Rotation * InitialDirection;
             }
         }
     }
@@ -105,7 +108,7 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _rotation * InitialUp;
+                return _state.Rotation * InitialUp;
             }
         }
     }
@@ -115,7 +118,7 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _far;
+                return _state.Far;
             }
         }
     }
@@ -125,7 +128,7 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _near;
+                return _state.Near;
             }
         }
     }
@@ -135,7 +138,7 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _aspect;
+                return _state.Aspect;
             }
         }
     }
@@ -143,38 +146,62 @@ public sealed class Camera
     public Matrix4 GetView()
     {
         lock(_sync) {
-            return _view;
+            return _state.Matrix.View;
         }
     }
 
     public Matrix4 GetProjection()
     {
         lock(_sync) {
-            return _projection;
+            return _state.Matrix.Projection;
+        }
+    }
+
+    internal delegate T ReadStateFunc<T>(in CameraState state);
+
+    internal CameraState ReadState()
+    {
+        lock(_sync) {
+            return _state;
+        }
+    }
+
+    internal T ReadState<T>(ReadStateFunc<T> func)
+    {
+        lock(_sync) {
+            return func(_state);
         }
     }
 
     internal Camera(Screen screen)
     {
         _screen = screen;
-        _view = Matrix4.Identity;
-        _projection = Matrix4.Identity;
-        _position = InitialPos;
-        _rotation = Quaternion.Identity;
-        _near = 0.5f;
-        _far = 1000f;
-        _aspect = 1f;
-        _mode = CameraProjectionMode.Perspective(25f / 180f * float.Pi);
-        _projection = CalcProjection(_mode, _near, _far, _aspect);
-        _view = CalcView(_position, _rotation);
 
-        _uniformBuffer = Buffer.Create(
-            screen,
-            new UniformValue
+        var mode = CameraProjectionMode.Perspective(25f / 180f * MathF.PI);
+        var aspect = 1f;
+        var near = 0.5f;
+        //var far = 1000f;
+        var far = 100f;
+        var rot = Quaternion.Identity;
+        var projection = CalcProjection(mode, near, far, aspect);
+        var view = CalcView(InitialPos, rot);
+        _state = new CameraState
+        {
+            Matrix = new CameraMatrix
             {
-                Projection = _projection,
-                View = _view,
+                Projection = projection,
+                View = view,
             },
+            Position = InitialPos,
+            Rotation = rot,
+            Aspect = aspect,
+            Near = near,
+            Far = far,
+            ProjectionMode = mode,
+        };
+        _cameraMatrixBuffer = Buffer.Create(
+            screen,
+            _state.Matrix,
             BufferUsages.Uniform | BufferUsages.CopyDst);
         _bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
         {
@@ -196,7 +223,7 @@ public sealed class Camera
             Layout = _bindGroupLayout.AsValue(),
             Entries = new[]
             {
-                BindGroupEntry.Buffer(0, _uniformBuffer.AsValue()),
+                BindGroupEntry.Buffer(0, _cameraMatrixBuffer.AsValue()),
             },
         });
     }
@@ -205,7 +232,7 @@ public sealed class Camera
     {
         _bindGroup.Dispose();
         _bindGroupLayout.Dispose();
-        _uniformBuffer.Dispose();
+        _cameraMatrixBuffer.Dispose();
     }
 
     public void SetNearFar(float near, float far)
@@ -214,10 +241,10 @@ public sealed class Camera
         if(far <= 0) { ThrowOutOfRange("The value of far is 0 or negative."); }
         if(near > far) { ThrowOutOfRange("The value of near must be smaller than the value of far."); }
         lock(_sync) {
-            _near = near;
-            _far = far;
-            _projection = CalcProjection(_mode, _near, _far, _aspect);
-            _isUniformChanged = true;
+            _state.Near = near;
+            _state.Far = far;
+            _state.Matrix.Projection = CalcProjection(_state.ProjectionMode, _state.Near, _state.Far, _state.Aspect);
+            _isCameraMatrixChanged = true;
         }
         _matrixChanged.Invoke(this);
     }
@@ -225,13 +252,13 @@ public sealed class Camera
     public void LookAt(in Vector3 target)
     {
         lock(_sync) {
-            var dir = (target - _position).Normalized();
+            var dir = (target - _state.Position).Normalized();
             if(dir.ContainsNaNOrInfinity) {
                 return;
             }
-            _rotation = Quaternion.FromTwoVectors(InitialDirection, dir);
-            _view = CalcView(_position, _rotation);
-            _isUniformChanged = true;
+            _state.Rotation = Quaternion.FromTwoVectors(InitialDirection, dir);
+            _state.Matrix.View = CalcView(_state.Position, _state.Rotation);
+            _isCameraMatrixChanged = true;
         }
 
         _matrixChanged.Invoke(this);
@@ -245,10 +272,10 @@ public sealed class Camera
         }
         var rotation = Quaternion.FromTwoVectors(InitialDirection, dir);
         lock(_sync) {
-            _rotation = rotation;
-            _position = cameraPos;
-            _view = CalcView(_position, _rotation);
-            _isUniformChanged = true;
+            _state.Rotation = rotation;
+            _state.Position = cameraPos;
+            _state.Matrix.View = CalcView(_state.Position, _state.Rotation);
+            _isCameraMatrixChanged = true;
         }
         _matrixChanged.Invoke(this);
     }
@@ -256,7 +283,7 @@ public sealed class Camera
     public void GetFrustum(out Frustum frustum)
     {
         lock(_sync) {
-            Frustum.FromMatrix(_projection, _view, out frustum);
+            Frustum.FromMatrix(_state.Matrix.Projection, _state.Matrix.View, out frustum);
         }
     }
 
@@ -273,25 +300,20 @@ public sealed class Camera
             throw new ArgumentException($"width / height is 0 or NaN. width: {size.X}, height: {size.Y}");
         }
         lock(_sync) {
-            _aspect = aspect;
-            _projection = CalcProjection(_mode, _near, _far, _aspect);
-            _isUniformChanged = true;
+            _state.Aspect = aspect;
+            _state.Matrix.Projection = CalcProjection(_state.ProjectionMode, _state.Near, _state.Far, _state.Aspect);
+            _isCameraMatrixChanged = true;
         }
         _matrixChanged.Invoke(this);
     }
 
     internal void UpdateUniformBuffer()
     {
-        var uniformBuffer = _uniformBuffer.AsValue();
+        var uniformBuffer = _cameraMatrixBuffer.AsValue();
         lock(_sync) {
-            if(_isUniformChanged) {
-                _isUniformChanged = false;
-                var value = new UniformValue
-                {
-                    Projection = _projection,
-                    View = _view,
-                };
-                uniformBuffer.Write(0, value);
+            if(_isCameraMatrixChanged) {
+                _isCameraMatrixChanged = false;
+                uniformBuffer.Write(0, _state.Matrix);
             }
         }
     }

@@ -1,5 +1,7 @@
 ﻿#nullable enable
+using Elffy.Effective;
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Elffy;
@@ -7,12 +9,12 @@ namespace Elffy;
 public sealed class DirectionalLight : IScreenManaged
 {
     private readonly Screen _screen;
-    private readonly Own<Buffer> _buffer;
+    private readonly Own<Buffer> _buffer;       // DirectionalLightData
     private DirectionalLightData _data;
-    private Own<Buffer> _shadowMap;
-    private Own<BindGroup> _shadowMapBindGroup;
-    private Own<BindGroupLayout> _shadowMapBindGroupLayout;
-    private readonly Vector2u _shadowMapSize;
+    private Own<Texture> _shadowMap;
+    private Own<Buffer> _lightMatricesBuffer;   // Matrix4[CascadeCount]
+
+    private const int CascadeCountConst = 4;
 
     private readonly object _sync = new();
 
@@ -22,10 +24,11 @@ public sealed class DirectionalLight : IScreenManaged
 
     public void Validate() => IScreenManaged.DefaultValidate(this);
 
-    public BindGroup ShadowMapBindGroup => _shadowMapBindGroup.AsValue();
-    public BindGroupLayout ShadowMapBindGroupLayout => _shadowMapBindGroupLayout.AsValue();
+    public Texture ShadowMap => _shadowMap.AsValue();
 
-    public Vector2u ShadowMapSize => _shadowMapSize;
+    public BufferSlice<byte> LightMatricesBuffer => _lightMatricesBuffer.AsValue().Slice();
+
+    public int CascadeCount => CascadeCountConst;
 
     public Vector3 Direction
     {
@@ -69,49 +72,103 @@ public sealed class DirectionalLight : IScreenManaged
             new Color3(1, 1, 1)
         );
         _screen = screen;
-        _buffer = Buffer.Create(screen, in data, BufferUsages.Storage | BufferUsages.CopyDst);
+        _buffer = Buffer.Create(screen, in data, BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
         _data = data;
-        CreateShadowMap(screen, out _shadowMap, out _shadowMapBindGroup, out _shadowMapBindGroupLayout, out _shadowMapSize);
+        _shadowMap = CreateShadowMap(screen);
+
+        // TODO: zeroed init method
+        _lightMatricesBuffer = Buffer.Create(screen, stackalloc Matrix4[CascadeCountConst].AsReadOnly(), BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
     }
 
-    private static unsafe void CreateShadowMap(Screen screen, out Own<Buffer> depth, out Own<BindGroup> bindGroup, out Own<BindGroupLayout> bindGroupLayout, out Vector2u shadowMapSize)
+    private static Own<Texture> CreateShadowMap(Screen screen)
     {
         const u32 Width = 1024;
         const u32 Height = 1024;
-        shadowMapSize = new Vector2u(Width, Height);
-
-        nuint len = (nuint)Width * Height * sizeof(f32) + (nuint)sizeof(Vector2u);
-
-        var mem = (byte*)NativeMemory.AllocZeroed(len);
-        *(Vector2u*)mem = new Vector2u(Width, Height);
-        try {
-            depth = Buffer.Create(screen, mem, len, BufferUsages.Storage);
-            bindGroup = BindGroup.Create(screen, new()
-            {
-                Layout = BindGroupLayout.Create(screen, new()
-                {
-                    Entries = new BindGroupLayoutEntry[]
-                    {
-                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Compute, new() { Type = BufferBindingType.Storate }),
-                    },
-                }).AsValue(out bindGroupLayout),
-                Entries = new[]
-                {
-                    BindGroupEntry.Buffer(0, depth.AsValue()),
-                },
-            });
-        }
-        finally {
-            NativeMemory.Free(mem);
-        }
+        return Texture.Create(screen, new()
+        {
+            Dimension = TextureDimension.D2,
+            Size = new Vector3u(Width, Height, 1u),
+            Format = TextureFormat.Depth32Float,
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Usage = TextureUsages.TextureBinding | TextureUsages.RenderAttachment,
+        });
     }
 
     internal void DisposeInternal()
     {
         _buffer.Dispose();
         _shadowMap.Dispose();
-        _shadowMapBindGroup.Dispose();
-        _shadowMapBindGroupLayout.Dispose();
+        _lightMatricesBuffer.Dispose();
+    }
+
+    [SkipLocalsInit]
+    internal void UpdateLightMatrix()
+    {
+        var camera = _screen.Camera;
+        var lightDir = Direction;
+        Vector3 lightUp;
+        {
+            var dirX0Z = new Vector3(lightDir.X, 0, lightDir.Z).Normalized();
+            lightUp = dirX0Z.ContainsNaNOrInfinity ?
+                Vector3.UnitX :
+                Quaternion.FromTwoVectors(dirX0Z, lightDir) * Vector3.UnitY;
+        }
+
+        Span<Matrix4> lightMatrices = stackalloc Matrix4[CascadeCountConst];
+        CalcLightMatrix(lightDir, lightUp, camera, lightMatrices);
+        var buffer = _lightMatricesBuffer.AsValue();
+        buffer.WriteSpan(0, lightMatrices.AsReadOnly());
+    }
+
+    private static void CalcLightMatrix(
+        in Vector3 lightDir, in Vector3 lightUp,
+        Camera camera,
+        Span<Matrix4> lightMatrices)
+    {
+        var (far, near, aspect, projMode, view) = camera.ReadState(
+            (in Camera.CameraState s) => (s.Far, s.Near, s.Aspect, s.ProjectionMode, s.Matrix.View)
+        );
+
+        var nearToFar = far - near;
+        for(int i = 0; i < lightMatrices.Length; i++) {
+            // TODO: 線形ではない分割方法を考える
+            var n = near + nearToFar * (float)i / lightMatrices.Length;        // i 番目のカスケードシャドウの NearPlane の中心位置
+            var f = near + nearToFar * (float)(i + 1) / lightMatrices.Length;  // i 番目のカスケードシャドウの FarPlane の中心位置
+            Matrix4 cascadedProj;
+            if(projMode.IsPerspective(out var fovy)) {
+                Matrix4.PerspectiveProjection(fovy, aspect, n, f, out cascadedProj);
+            }
+            else if(projMode.IsOrthographic(out var height)) {
+                throw new NotImplementedException();        // TODO:
+            }
+            else {
+                throw new NotSupportedException();
+            }
+
+            Frustum.FromMatrix(cascadedProj, view, out var cascadedFrustum);
+            var center = cascadedFrustum.Center;
+            var lview = Matrix4.LookAt(center - lightDir, center, lightUp);
+
+            var min = Vector3.MaxValue;
+            var max = Vector3.MinValue;
+            foreach(var corner in cascadedFrustum.Corners) {
+                var p = lview.Transform(corner);
+                min = Vector3.Min(min, p);
+                max = Vector3.Max(max, p);
+            }
+
+            var lAabb = Bounds.FromMinMax(min, max);
+            var lightFar = -lAabb.Min.Z + float.Clamp(lAabb.Size.Z * 5, 10, 1000);  // TODO: depth ちゃんと決める
+            var lightNear = -lAabb.Max.Z - float.Clamp(lAabb.Size.Z * 5, 10, 1000); // TODO: depth ちゃんと決める
+            Matrix4.OrthographicProjection(
+                lAabb.Min.X, lAabb.Max.X,
+                lAabb.Min.Y, lAabb.Max.Y,
+                lightNear,
+                lightFar,
+                out var lproj);
+            lightMatrices[i] = lproj * lview;
+        }
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]

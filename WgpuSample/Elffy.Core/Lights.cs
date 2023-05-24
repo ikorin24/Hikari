@@ -51,4 +51,9 @@ public sealed class Lights
         _bindGroupLayout.Dispose();
         _bindGroup.Dispose();
     }
+
+    internal void UpdateLightMatrix()
+    {
+        _dirLight.UpdateLightMatrix();
+    }
 }
