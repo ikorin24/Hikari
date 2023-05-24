@@ -198,7 +198,7 @@ public sealed class PbrLayer
         var p = pass.AsValue();
         p.SetPipeline(_shadowPipeline.AsValue());
         foreach(var obj in objects) {
-            obj.RenderShadowMap(in p, obj.Material, obj.Mesh);
+            obj.RenderShadowMap(in p, context.Lights, obj.Material, obj.Mesh);
         }
     }
 }

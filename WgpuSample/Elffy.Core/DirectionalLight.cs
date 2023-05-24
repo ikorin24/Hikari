@@ -14,7 +14,7 @@ public sealed class DirectionalLight : IScreenManaged
     private Own<Texture> _shadowMap;
     private Own<Buffer> _lightMatricesBuffer;   // Matrix4[CascadeCount]
 
-    private const int CascadeCountConst = 4;
+    private const int CascadeCountConst = 1;
 
     private readonly object _sync = new();
 
@@ -87,7 +87,7 @@ public sealed class DirectionalLight : IScreenManaged
         {
             Dimension = TextureDimension.D2,
             Size = new Vector3u(Width, Height, 1u),
-            Format = TextureFormat.Depth32Float,
+            Format = TextureFormat.Depth32Float,            // TODO: depth16unorm
             MipLevelCount = 1,
             SampleCount = 1,
             Usage = TextureUsages.TextureBinding | TextureUsages.RenderAttachment,

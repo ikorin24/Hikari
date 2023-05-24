@@ -54,6 +54,8 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         @group(0) @binding(3) var mr_tex: texture_2d<f32>;
         @group(0) @binding(4) var normal_tex: texture_2d<f32>;
         @group(1) @binding(0) var<uniform> c: CameraMat;
+        @group(2) @binding(0) var shadowmap: texture_depth_2d;
+        @group(2) @binding(1) var shadowmap_sampler: sampler;
 
         @vertex fn vs_main(
             v: Vin,
@@ -98,12 +100,14 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
     private readonly Own<PipelineLayout> _shadowPipelineLayout;
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly BindGroupLayout _bindGroupLayout1;
+    private readonly Own<BindGroupLayout> _bindGroupLayout2;
 
     private readonly Own<BindGroupLayout> _shadowBindGroupLayout0;
 
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
 
     public BindGroupLayout BindGroupLayout1 => _bindGroupLayout1;
+    public BindGroupLayout BindGroupLayout2 => _bindGroupLayout2.AsValue();
 
     public BindGroupLayout ShadowBindGroupLayout0 => _shadowBindGroupLayout0.AsValue();
 
@@ -114,10 +118,15 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         : base(
             screen,
             ShaderSource,
-            BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0, out var bindGroupLayout1))
+            BuildPipelineLayoutDescriptor(
+                screen,
+                out var bindGroupLayout0,
+                out var bindGroupLayout1,
+                out var bindGroupLayout2))
     {
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout1 = bindGroupLayout1;
+        _bindGroupLayout2 = bindGroupLayout2;
         _shadowModule = ShaderModule.Create(screen, ShadowShaderSource);
         _shadowPipelineLayout = BuildShadowPipeline(screen, out var shadowBgl0);
         _shadowBindGroupLayout0 = shadowBgl0;
@@ -140,6 +149,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         base.Release(manualRelease);
         if(manualRelease) {
             _bindGroupLayout0.Dispose();
+            _bindGroupLayout2.Dispose();
             _shadowBindGroupLayout0.Dispose();
             _shadowModule.Dispose();
             _shadowPipelineLayout.Dispose();
@@ -149,7 +159,8 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
     private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(
         Screen screen,
         out Own<BindGroupLayout> bindGroupLayout0,
-        out BindGroupLayout bindGroupLayout1)
+        out BindGroupLayout bindGroupLayout1,
+        out Own<BindGroupLayout> bindGroupLayout2)
     {
         bindGroupLayout1 = screen.Camera.CameraDataBindGroupLayout;
         return new PipelineLayoutDescriptor
@@ -186,6 +197,19 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
                     },
                 }).AsValue(out bindGroupLayout0),
                 bindGroupLayout1,
+                BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new[]
+                    {
+                        BindGroupLayoutEntry.Texture(0, ShaderStages.Fragment, new()
+                        {
+                            ViewDimension = TextureViewDimension.D2,
+                            Multisampled = false,
+                            SampleType = TextureSampleType.Depth,
+                        }),
+                        BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Comparison),
+                    },
+                }).AsValue(out bindGroupLayout2),
             },
         };
     }

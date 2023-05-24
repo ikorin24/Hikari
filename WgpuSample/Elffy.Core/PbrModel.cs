@@ -32,15 +32,15 @@ public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrM
         material.WriteModelUniform(GetModel());
         pass.SetBindGroup(0, material.BindGroup0);
         pass.SetBindGroup(1, material.BindGroup1);
+        pass.SetBindGroup(2, material.BindGroup2);
         pass.SetVertexBuffer(0, mesh.VertexBuffer);
         pass.SetVertexBuffer(1, _tangent);
         pass.SetIndexBuffer(mesh.IndexBuffer);
         pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
     }
 
-    internal void RenderShadowMap(in RenderPass pass, PbrMaterial material, Mesh<V> mesh)
+    internal void RenderShadowMap(in RenderPass pass, Lights lights, PbrMaterial material, Mesh<V> mesh)
     {
-        var lights = Screen.Lights;
         var directionalLight = lights.DirectionalLight;
 
         for(int i = 0; i < directionalLight.CascadeCount; i++) {

@@ -27,15 +27,6 @@ internal class Program
         screen.Title = "sample";
         var layer = new PbrLayer(screen, 0);
         var deferredProcess = new DeferredProcess(layer, 1);
-        var sampler = Sampler.Create(screen, new()
-        {
-            AddressModeU = AddressMode.ClampToEdge,
-            AddressModeV = AddressMode.ClampToEdge,
-            AddressModeW = AddressMode.ClampToEdge,
-            MagFilter = FilterMode.Linear,
-            MinFilter = FilterMode.Linear,
-            MipmapFilter = FilterMode.Linear,
-        });
 
         var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
         var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
@@ -46,25 +37,26 @@ internal class Program
                 SampleData.SampleMesh(screen),
                 PbrMaterial.Create(
                     layer.Shader,
-                    sampler,
                     albedo,
                     mr,
                     normal));
-        model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -25.ToRadian());
+        model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
         var cube = new PbrModel(
                 layer,
                 Shapes.Cube(screen, true),
-                PbrMaterial.Create(layer.Shader, sampler.AsValue(), albedo.AsValue(), mr.AsValue(), normal.AsValue()));
+                PbrMaterial.Create(layer.Shader, albedo.AsValue(), mr.AsValue(), normal.AsValue()));
         cube.Scale = 0.3f;
-        cube.Rotation = Quaternion.FromAxisAngle((Vector3.UnitX + Vector3.UnitY), 75.ToRadian());
+        cube.Position = new Vector3(0, 0.2f, 0);
 
 
         var camera = screen.Camera;
-        camera.LookAt(Vector3.Zero, new Vector3(0, 0f, 3));
+        camera.LookAt(Vector3.Zero, new Vector3(0, 2f, 3) * 0.6f);
 
         screen.Update.Subscribe(screen =>
         {
             //System.Diagnostics.Debug.WriteLine(screen.FrameNum);
+            var a = (screen.FrameNum * 10 / 360f).ToRadian();
+            cube.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, a);
         });
     }
 
