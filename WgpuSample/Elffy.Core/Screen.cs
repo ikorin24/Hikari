@@ -22,7 +22,7 @@ public sealed class Screen
     private GraphicsBackend _backend;
     private bool _initialized;
     private string _title = "";
-    private Mouse _mouse;
+    private readonly Mouse _mouse;
     private Own<Texture> _depthTexture;
     private readonly Own<Buffer> _info;
     private readonly Keyboard _keyboard;

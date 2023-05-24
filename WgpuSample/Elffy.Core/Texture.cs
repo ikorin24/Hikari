@@ -3,7 +3,6 @@ using Elffy.Effective;
 using Elffy.Imaging;
 using Elffy.NativeBind;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
