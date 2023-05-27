@@ -32,7 +32,12 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             @location(2) tangent_camera_coord: vec3<f32>,
             @location(3) bitangent_camera_coord: vec3<f32>,
             @location(4) normal_camera_coord: vec3<f32>,
+            @location(5) shadowmap_pos0: vec3<f32>,
+            //@location(6) shadowmap_pos1: vec3<f32>,
+            //@location(7) shadowmap_pos2: vec3<f32>,
+            //@location(8) shadowmap_pos3: vec3<f32>,
         }
+
         struct GBuffer {
             @location(0) g0 : vec4<f32>,
             @location(1) g1 : vec4<f32>,
@@ -55,21 +60,35 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         @group(0) @binding(4) var normal_tex: texture_2d<f32>;
         @group(1) @binding(0) var<uniform> c: CameraMat;
         @group(2) @binding(0) var shadowmap: texture_depth_2d;
-        @group(2) @binding(1) var shadowmap_sampler: sampler;
+        @group(2) @binding(1) var shadowmap_sampler: sampler_comparison;
+        @group(2) @binding(2) var<storage, read> lightMatrices: array<mat4x4<f32>>;
+
+        fn cascade_count() -> u32 {
+            return arrayLength(&lightMatrices);
+        }
 
         @vertex fn vs_main(
             v: Vin,
         ) -> V2F {
-            var model_view = c.view * u.model;
-            var mv33 = mat44_to_33(model_view);
+            let model_view = c.view * u.model;
+            let mv33 = mat44_to_33(model_view);
             var output: V2F;
-            var pos4: vec4<f32> = model_view * vec4(v.pos, 1.0);
+            let pos4: vec4<f32> = model_view * vec4(v.pos, 1.0);
+
+            var shadowmap_pos0: vec3<f32>;
+            {
+                let a = lightMatrices[0] * vec4(v.pos, 1.0);
+                shadowmap_pos0 = a.xyz / a.w;
+            }
+
             output.clip_pos = c.proj * pos4;
             output.pos_camera_coord = pos4.xyz / pos4.w;
             output.uv = v.uv;
             output.tangent_camera_coord = normalize(mv33 * v.tangent);
             output.bitangent_camera_coord = normalize(mv33 * cross(v.normal, v.tangent));
             output.normal_camera_coord = normalize(mv33 * v.normal);
+
+            output.shadowmap_pos0 = shadowmap_pos0;
             return output;
         }
 
@@ -77,13 +96,22 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             // TBN matrix: tangent space -> camera space
             var tbn = mat3x3<f32>(in.tangent_camera_coord, in.bitangent_camera_coord, in.normal_camera_coord);
             var mrao: vec3<f32> = textureSample(mr_tex, tex_sampler, in.uv).rgb;
-            var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, tex_sampler, in.uv).rgb * 2.0 - 1.0);
+            var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, tex_sampler, in.uv).rgb /* * 2.0 - 1.0*/);
 
             var output: GBuffer;
             output.g0 = vec4(in.pos_camera_coord, mrao.r);
             output.g1 = vec4(normal_camera_coord, mrao.g);
-            output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
+            //output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
+            output.g2 = vec4(normal_camera_coord, 1.0);
             output.g3 = vec4(mrao.b, 1.0, 1.0, 1.0);
+
+
+            let visibility: f32 = textureSampleCompare(
+                shadowmap, shadowmap_sampler,
+                in.shadowmap_pos0.xy, in.shadowmap_pos0.z - 0.007
+            );
+            //output.g2 = vec4(visibility, visibility, visibility, 1.0);
+            
             return output;
         }
 
@@ -95,6 +123,8 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             );
         }
         """u8;
+
+    // see https://webgpu.github.io/webgpu-samples/samples/shadowMapping#./fragment.wgsl
 
     private readonly Own<ShaderModule> _shadowModule;
     private readonly Own<PipelineLayout> _shadowPipelineLayout;
@@ -208,6 +238,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
                             SampleType = TextureSampleType.Depth,
                         }),
                         BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Comparison),
+                        BindGroupLayoutEntry.Buffer(2, ShaderStages.Vertex, new() { Type = BufferBindingType.StorateReadOnly }),
                     },
                 }).AsValue(out bindGroupLayout2),
             },

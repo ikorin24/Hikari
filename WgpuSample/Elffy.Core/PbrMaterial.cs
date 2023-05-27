@@ -89,6 +89,8 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         normal.ThrowArgumentExceptionIfNone();
 
         var screen = shader.Screen;
+        var lights = screen.Lights;
+        var directionalLight = lights.DirectionalLight;
         var modelUniform = Buffer.Create(screen, (usize)Matrix4.SizeInBytes, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
         var sampler = Sampler.Create(screen, new()
         {
@@ -116,7 +118,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
             Layout = shader.BindGroupLayout2,
             Entries = new[]
             {
-                BindGroupEntry.TextureView(0, screen.Lights.DirectionalLight.ShadowMap.View),
+                BindGroupEntry.TextureView(0, directionalLight.ShadowMap.View),
                 BindGroupEntry.Sampler(1, Sampler.Create(screen, new()
                 {
                     AddressModeU = AddressMode.ClampToEdge,
@@ -125,12 +127,13 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
                     MagFilter = FilterMode.Linear,
                     MinFilter = FilterMode.Linear,
                     MipmapFilter = FilterMode.Linear,
-                    Compare = CompareFunction.Less,
+                    Compare = CompareFunction.LessEqual,
                 }).AsValue(out var shadowSampler)),
+                BindGroupEntry.Buffer(2, directionalLight.LightMatricesBuffer)
             },
         });
 
-        var lights = screen.Lights;
+
         var shadowBindGroup0 = BindGroup.Create(screen, new()
         {
             Layout = shader.ShadowBindGroupLayout0,
