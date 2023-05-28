@@ -282,6 +282,7 @@ internal static class CoreElffy
         public required ResizedEventFn event_resized;
         public required KeyboardEventFn event_keyboard;
         public required CharReceivedEventFn event_char_received;
+        public required MouseButtonEventFn event_mouse_button;
         public required ImeInputEventFn event_ime;
         public required MouseWheelEventFn event_wheel;
         public required CursorMovedEventFn event_cursor_moved;
@@ -315,6 +316,12 @@ internal static class CoreElffy
         public bool Equals(MonitorId other) => _v.Equals(other._v);
 
         public override int GetHashCode() => _v.GetHashCode();
+    }
+
+    internal readonly struct MouseButton
+    {
+        public readonly u16 number;
+        public readonly bool is_named_buton;
     }
 
     internal unsafe readonly struct HostScreenInitFn
@@ -365,6 +372,12 @@ internal static class CoreElffy
     {
         private readonly delegate* unmanaged[Cdecl]<ScreenId, Rune, void> _func;
         public CharReceivedEventFn(delegate* unmanaged[Cdecl]<ScreenId, Rune, void> f) => _func = f;
+    }
+
+    internal unsafe readonly struct MouseButtonEventFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<ScreenId, MouseButton, bool, void> _func;
+        public MouseButtonEventFn(delegate* unmanaged[Cdecl]<ScreenId, MouseButton, bool, void> f) => _func = f;
     }
 
     internal unsafe readonly struct ImeInputEventFn

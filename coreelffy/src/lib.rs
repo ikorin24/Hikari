@@ -23,6 +23,7 @@ pub(crate) struct EngineCoreConfig {
     pub event_resized: ResizedEventFn,
     pub event_keyboard: KeyboardEventFn,
     pub event_char_received: CharReceivedEventFn,
+    pub event_mouse_button: MouseButtonEventFn,
     pub event_ime: ImeInputEventFn,
     pub event_wheel: MouseWheelEventFn,
     pub event_cursor_moved: CursorMovedEventFn,
@@ -1852,6 +1853,38 @@ impl MonitorId {
     }
 }
 
+#[repr(C)]
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct MouseButton {
+    /// the button number.
+    /// 0: left, 1: right, 2: middle (when `is_named_buton` is true)
+    number: u16,
+    is_named_buton: bool,
+}
+
+impl From<winit::event::MouseButton> for MouseButton {
+    fn from(value: winit::event::MouseButton) -> Self {
+        match value {
+            winit::event::MouseButton::Left => MouseButton {
+                number: 0,
+                is_named_buton: true,
+            },
+            winit::event::MouseButton::Right => MouseButton {
+                number: 1,
+                is_named_buton: true,
+            },
+            winit::event::MouseButton::Middle => MouseButton {
+                number: 2,
+                is_named_buton: true,
+            },
+            winit::event::MouseButton::Other(n) => MouseButton {
+                number: n,
+                is_named_buton: false,
+            },
+        }
+    }
+}
+
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct ErrMessageId(NonZeroUsize);
@@ -1872,6 +1905,8 @@ pub(crate) type ResizedEventFn = extern "cdecl" fn(screen_id: ScreenId, width: u
 pub(crate) type KeyboardEventFn =
     extern "cdecl" fn(screen_id: ScreenId, key: winit::event::VirtualKeyCode, pressed: bool);
 pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen_id: ScreenId, input: char);
+pub(crate) type MouseButtonEventFn =
+    extern "cdecl" fn(screen_id: ScreenId, button: MouseButton, pressed: bool);
 pub(crate) type ImeInputEventFn = extern "cdecl" fn(screen_id: ScreenId, input: &ImeInputData);
 pub(crate) type MouseWheelEventFn =
     extern "cdecl" fn(screen_id: ScreenId, x_delta: f32, y_delta: f32);

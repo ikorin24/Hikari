@@ -1,45 +1,191 @@
 ﻿#nullable enable
-using System;
-using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
 public sealed class Mouse
 {
     private readonly Screen _screen;
-    private Vector2 _pos;
+    private PosBuf _posBuf;
+    private readonly KeyBuf[] _namedKeys = new KeyBuf[3];
+    private readonly object _sync = new();
 
-    private bool _onScreen;
+    private bool _isOnScreen;
     private Vector2 _wheelDelta;
 
-    /// <summary>Get whether the mouse is on the screen or not.</summary>
-    public bool OnScreen => _onScreen;
+    public Screen Screen => _screen;
 
-    /// <summary>Get position of the mouse on the screen based on top-left.</summary>
-    public Vector2 Position => _pos;
+    public bool IsOnScreen => _isOnScreen;
 
-    public Vector2 PositionDelta => throw new NotImplementedException();
+    public Vector2 Position
+    {
+        get
+        {
+            lock(_sync) {
+                return _posBuf.Current;
+            }
+        }
+    }
 
-    /// <summary>Get wheel value difference from previouse frame.</summary>
-    public float WheelDelta => throw new NotImplementedException();
+    public Vector2 PositionDelta
+    {
+        get
+        {
+            lock(_sync) {
+                return _posBuf.Delta;
+            }
+        }
+    }
+
+    public float WheelDelta
+    {
+        get
+        {
+            lock(_sync) {
+                return _wheelDelta.Y;
+            }
+        }
+    }
 
     internal Mouse(Screen screen)
     {
         _screen = screen;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsDown(MouseButton button)
+    {
+        lock(_sync) {
+            return _namedKeys[(uint)button].IsKeyDown;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsPressed(MouseButton button)
+    {
+        lock(_sync) {
+            return _namedKeys[(uint)button].IsKeyPressed;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsUp(MouseButton button)
+    {
+        lock(_sync) {
+            return _namedKeys[(uint)button].IsKeyUp;
+        }
+    }
+
+    internal void OnMouseButton(CE.MouseButton button, bool pressed)
+    {
+        if(button.is_named_buton) {
+            lock(_sync) {
+                _namedKeys[button.number].SetValue(pressed);
+            }
+        }
+        else {
+            // nop
+        }
+    }
+
     internal void OnWheel(Vector2 delta)
     {
-        _wheelDelta = delta;
+        lock(_sync) {
+            _wheelDelta = delta;
+        }
     }
 
     internal void OnCursorMoved(Vector2 pos)
     {
-        _pos = pos;
+        lock(_sync) {
+            _posBuf.SetValue(pos);
+        }
     }
 
     internal void OnCursorEnteredLeft(bool entered)
     {
-        _onScreen = entered;
+        lock(_sync) {
+            _isOnScreen = entered;
+        }
     }
+
+    internal void InitFrame()
+    {
+        lock(_sync) {
+            //_wheelDelta = Vector2.Zero;
+            _posBuf.InitFrame();
+            for(int i = 0; i < _namedKeys.Length; i++) {
+                _namedKeys[i].InitFrame();
+            }
+        }
+    }
+
+    private struct PosBuf
+    {
+        private Vector2 _delta;
+        private Vector2 _current;
+        private Vector2 _newValue;
+        private bool _changed;
+
+        public Vector2 Current => _current;
+
+        public Vector2 Delta => _delta;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetValue(Vector2 value)
+        {
+            _newValue = value;
+            _changed = true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void InitFrame()
+        {
+            if(_changed) {
+                _delta = _newValue - _current;
+                _current = _newValue;
+            }
+            else {
+                _delta = default;
+            }
+            _changed = false;
+        }
+    }
+
+    private struct KeyBuf
+    {
+        private bool _current;
+        private bool _prev;
+        private bool _changed;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetValue(bool value)
+        {
+            _prev = _current;
+            _current = value;
+            _changed = true;
+        }
+
+        public bool IsKeyPressed => _current;
+
+        public bool IsKeyDown => _current && !_prev;
+
+        public bool IsKeyUp => !_current && _prev;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void InitFrame()
+        {
+            if(_changed == false) {
+                _prev = _current;
+            }
+            _changed = false;
+        }
+    }
+}
+
+public enum MouseButton : uint
+{
+    Left = 0,
+    Right,
+    Middle,
 }

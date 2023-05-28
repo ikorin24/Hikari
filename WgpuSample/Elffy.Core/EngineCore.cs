@@ -41,6 +41,7 @@ internal unsafe static partial class EngineCore
             event_resized = new(&EventResized),
             event_keyboard = new(&EventKeyboard),
             event_char_received = new(&EventCharReceived),
+            event_mouse_button = new(&EventMouseButton),
             event_ime = new(&EventIme),
             event_wheel = new(&EventWheel),
             event_cursor_moved = new(&EventCursorMoved),
@@ -95,6 +96,12 @@ internal unsafe static partial class EngineCore
         static void EventCharReceived(CE.ScreenId id, Rune input)
         {
             _config.OnCharReceived(id, input);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        static void EventMouseButton(CE.ScreenId id, CE.MouseButton button, bool pressed)
+        {
+            _config.OnMouseButton(id, button, pressed);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -753,6 +760,7 @@ internal readonly struct EngineCoreConfig
 
     public required Action<CE.ScreenId, Winit.VirtualKeyCode, bool> OnKeyboardInput { get; init; }
     public required Action<CE.ScreenId, Rune> OnCharReceived { get; init; }
+    public required Action<CE.ScreenId, CE.MouseButton, bool> OnMouseButton { get; init; }
     public required EngineCoreImeInputAction OnImeInput { get; init; }
 
     public required Action<CE.ScreenId, f32, f32> OnWheel { get; init; }

@@ -25,6 +25,7 @@ public static class Engine
             OnResized = _onResized,
             OnKeyboardInput = _onKeyboardInput,
             OnCharReceived = _onCharReceived,
+            OnMouseButton = _onMouseButon,
             OnImeInput = _onImeInput,
             OnWheel = _onWheel,
             OnCursorMoved = _onCursorMoved,
@@ -76,6 +77,12 @@ public static class Engine
         (CE.ScreenId id, Rune input) =>
         {
             _screens[id].Keyboard.OnCharReceived(input);
+        };
+
+    private static readonly Action<CE.ScreenId, CE.MouseButton, bool> _onMouseButon =
+        (CE.ScreenId id, CE.MouseButton button, bool pressed) =>
+        {
+            _screens[id].Mouse.OnMouseButton(button, pressed);
         };
 
     private static readonly EngineCoreImeInputAction _onImeInput =

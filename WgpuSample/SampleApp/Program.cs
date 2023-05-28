@@ -2,6 +2,7 @@
 using Elffy.Imaging;
 using Elffy.Mathematics;
 using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace Elffy;
@@ -54,6 +55,11 @@ internal class Program
             cube.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, a);
             model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, -a) * Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
         });
+
+        screen.Update.Subscribe(screen =>
+        {
+            ControlCamera(screen.Mouse, camera, Vector3.Zero);
+        });
     }
 
     private static Own<Texture> LoadTexture(Screen screen, string filepath, bool isSrgb)
@@ -87,5 +93,44 @@ internal class Program
             using var stream = File.OpenRead(filepath);
             return Image.FromStream(stream, Path.GetExtension(filepath));
         }
+    }
+
+    private static void ControlCamera(Mouse mouse, Camera camera, Vector3 target)
+    {
+        var cameraPos = camera.Position;
+        var posChanged = false;
+        if(mouse.IsPressed(MouseButton.Left)) {
+            var vec = mouse.PositionDelta * (MathTool.PiOver180 * 0.5f);
+            cameraPos = CalcCameraPosition(cameraPos, target, vec.X, vec.Y);
+            posChanged = true;
+        }
+
+        var wheelDelta = mouse.WheelDelta;
+        Debug.WriteLine(wheelDelta);
+        if(wheelDelta != 0) {
+            cameraPos += (cameraPos - target) * wheelDelta * -0.1f;
+            posChanged = true;
+        }
+
+        if(posChanged) {
+            camera.LookAt(target, cameraPos);
+        }
+    }
+
+    private static Vector3 CalcCameraPosition(in Vector3 cameraPos, in Vector3 center, float horizontalAngle, float verticalAngle)
+    {
+        const float MaxVertical = 89.99f * MathTool.PiOver180;
+        const float MinVertical = -MaxVertical;
+        var vec = cameraPos - center;
+        var radius = vec.Length;
+        var xzLength = vec.Xz.Length;
+        var beta = MathF.Atan2(vec.Y, xzLength) + verticalAngle;
+        beta = MathF.Max(MathF.Min(beta, MaxVertical), MinVertical);
+
+        Vector3 result;
+        var (sinBeta, cosBeta) = MathF.SinCos(beta);
+        (result.X, result.Z) = Matrix2.GetRotation(horizontalAngle) * vec.Xz * (radius * cosBeta / xzLength);
+        result.Y = radius * sinBeta;
+        return result + center;
     }
 }

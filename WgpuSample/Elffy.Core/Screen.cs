@@ -226,6 +226,7 @@ public sealed class Screen
     private void Render(in CommandEncoder encoder)
     {
         var operations = _operations;
+        _mouse.InitFrame();
 
         operations.ApplyAdd();
 

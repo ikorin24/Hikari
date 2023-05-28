@@ -113,6 +113,19 @@ impl Engine {
         f(screen_id, c)
     }
 
+    pub fn event_mouse_button(
+        screen_id: ScreenId,
+        button: &event::MouseButton,
+        state: &event::ElementState,
+    ) {
+        let f = Self::get_engine_field(|engine| engine.config.event_mouse_button).unwrap();
+        let pressed = match state {
+            event::ElementState::Pressed => true,
+            event::ElementState::Released => false,
+        };
+        f(screen_id, (*button).into(), pressed)
+    }
+
     pub fn event_ime(screen_id: ScreenId, input: &ImeInputData) {
         let f = Self::get_engine_field(|engine| engine.config.event_ime).unwrap();
         f(screen_id, input)
@@ -303,6 +316,9 @@ fn handle_event(
                     }
                     WindowEvent::ReceivedCharacter(c) => {
                         Engine::event_char_received(target.1, *c);
+                    }
+                    WindowEvent::MouseInput { state, button, .. } => {
+                        Engine::event_mouse_button(target.1, button, state);
                     }
                     WindowEvent::MouseWheel { delta, phase, .. } if *phase == TouchPhase::Moved => {
                         match delta {
