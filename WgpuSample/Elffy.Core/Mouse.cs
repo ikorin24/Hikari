@@ -11,7 +11,7 @@ public sealed class Mouse
     private readonly object _sync = new();
 
     private bool _isOnScreen;
-    private Vector2 _wheelDelta;
+    private WheelDeltaBuf _wheelDeltaBuf;
 
     public Screen Screen => _screen;
 
@@ -42,7 +42,7 @@ public sealed class Mouse
         get
         {
             lock(_sync) {
-                return _wheelDelta.Y;
+                return _wheelDeltaBuf.Current.Y;
             }
         }
     }
@@ -91,7 +91,7 @@ public sealed class Mouse
     internal void OnWheel(Vector2 delta)
     {
         lock(_sync) {
-            _wheelDelta = delta;
+            _wheelDeltaBuf.SetValue(delta);
         }
     }
 
@@ -112,8 +112,8 @@ public sealed class Mouse
     internal void InitFrame()
     {
         lock(_sync) {
-            //_wheelDelta = Vector2.Zero;
             _posBuf.InitFrame();
+            _wheelDeltaBuf.InitFrame();
             for(int i = 0; i < _namedKeys.Length; i++) {
                 _namedKeys[i].InitFrame();
             }
@@ -177,6 +177,34 @@ public sealed class Mouse
         {
             if(_changed == false) {
                 _prev = _current;
+            }
+            _changed = false;
+        }
+    }
+
+    private struct WheelDeltaBuf
+    {
+        private Vector2 _current;
+        private Vector2 _newValue;
+        private bool _changed;
+
+        public Vector2 Current => _current;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetValue(Vector2 value)
+        {
+            _newValue = value;
+            _changed = true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void InitFrame()
+        {
+            if(_changed) {
+                _current = _newValue;
+            }
+            else {
+                _current = default;
             }
             _changed = false;
         }

@@ -106,7 +106,6 @@ internal class Program
         }
 
         var wheelDelta = mouse.WheelDelta;
-        Debug.WriteLine(wheelDelta);
         if(wheelDelta != 0) {
             cameraPos += (cameraPos - target) * wheelDelta * -0.1f;
             posChanged = true;
