@@ -44,7 +44,6 @@ internal class Program
         var camera = screen.Camera;
         camera.SetNearFar(0.5f, 20);
         camera.LookAt(Vector3.Zero, new Vector3(0, 2f, 3) * 0.6f);
-        camera.LookAt(Vector3.Zero, new Vector3(0, 0.2f, 3));
 
         screen.Lights.DirectionalLight.SetLightData(new Vector3(-0.5f, -1, 0), Color3.White);
 
@@ -52,7 +51,7 @@ internal class Program
         {
             //System.Diagnostics.Debug.WriteLine(screen.FrameNum);
             var a = (screen.FrameNum * 10 / 360f).ToRadian();
-            cube.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, a);
+            //cube.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, a);
             model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, -a) * Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
         });
 

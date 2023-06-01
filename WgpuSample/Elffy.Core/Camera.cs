@@ -85,11 +85,23 @@ public sealed class Camera
                 throw new ArgumentException($"value contains NaN or Infinity");
             }
             lock(_sync) {
+                var valid = CalcView(_state.Position, _state.Rotation, out var view);
+                Debug.Assert(valid);
                 _state.Position = value;
-                _state.Matrix.View = CalcView(_state.Position, _state.Rotation);
+                _state.Matrix.View = view;
                 _isCameraMatrixChanged = true;
             }
             _matrixChanged.Invoke(this);
+        }
+    }
+
+    public Quaternion Rotation
+    {
+        get
+        {
+            lock(_sync) {
+                return _state.Rotation;
+            }
         }
     }
 
@@ -184,7 +196,11 @@ public sealed class Camera
         var far = 100f;
         var rot = Quaternion.Identity;
         var projection = CalcProjection(mode, near, far, aspect);
-        var view = CalcView(InitialPos, rot);
+        Matrix4 view;
+        {
+            var valid = CalcView(InitialPos, rot, out view);
+            Debug.Assert(valid);
+        }
         _state = new CameraState
         {
             Matrix = new CameraMatrix
@@ -249,35 +265,44 @@ public sealed class Camera
         _matrixChanged.Invoke(this);
     }
 
-    public void LookAt(in Vector3 target)
+    public bool LookAt(in Vector3 target)
     {
         lock(_sync) {
-            var dir = (target - _state.Position).Normalized();
+            var pos = _state.Position;
+            var dir = (target - pos).Normalized();
             if(dir.ContainsNaNOrInfinity) {
-                return;
+                return false;
+            }
+            if(CalcView(pos, _state.Rotation, out var view) == false) {
+                return false;
             }
             _state.Rotation = Quaternion.FromTwoVectors(InitialDirection, dir);
-            _state.Matrix.View = CalcView(_state.Position, _state.Rotation);
+            _state.Matrix.View = view;
             _isCameraMatrixChanged = true;
         }
-
         _matrixChanged.Invoke(this);
+        return true;
     }
 
-    public void LookAt(in Vector3 target, in Vector3 cameraPos)
+    public bool LookAt(in Vector3 target, in Vector3 cameraPos)
     {
         var dir = (target - cameraPos).Normalized();
         if(dir.ContainsNaNOrInfinity) {
-            return;
+            return false;
         }
         var rotation = Quaternion.FromTwoVectors(InitialDirection, dir);
+        if(CalcView(cameraPos, rotation, out var view) == false) {
+            return false;
+        }
+
         lock(_sync) {
             _state.Rotation = rotation;
             _state.Position = cameraPos;
-            _state.Matrix.View = CalcView(_state.Position, _state.Rotation);
+            _state.Matrix.View = view;
             _isCameraMatrixChanged = true;
         }
         _matrixChanged.Invoke(this);
+        return true;
     }
 
     public void GetFrustum(out Frustum frustum)
@@ -318,12 +343,19 @@ public sealed class Camera
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Matrix4 CalcView(in Vector3 pos, in Quaternion rotation)
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //private static Matrix4 CalcView(in Vector3 pos, in Quaternion rotation)
+    //{
+    //    var dir = rotation * InitialDirection;
+    //    if(Matrix4.LookAt(pos, pos + dir, Vector3.UnitY, out var result) == false) {
+    //        result = Matrix4.Identity;
+    //    }
+    //    return result;
+    //}
+    private static bool CalcView(in Vector3 pos, in Quaternion rotation, out Matrix4 view)
     {
         var dir = rotation * InitialDirection;
-        var up = rotation * InitialUp;
-        return Matrix4.LookAt(pos, pos + dir, up);
+        return Matrix4.LookAt(pos, pos + dir, Vector3.UnitY, out view);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
