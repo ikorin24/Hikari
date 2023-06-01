@@ -67,6 +67,10 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             return arrayLength(&lightMatrices);
         }
 
+        fn to_vec3(v: vec4<f32>) -> vec3<f32> {
+            return v.xyz / v.w;
+        }
+
         @vertex fn vs_main(
             v: Vin,
         ) -> V2F {
@@ -85,8 +89,13 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             output.pos_camera_coord = pos4.xyz / pos4.w;
             output.uv = v.uv;
             output.tangent_camera_coord = normalize(mv33 * v.tangent);
+            //output.tangent_camera_coord = normalize(       to_vec3(model_view * vec4(v.tangent, 1.0))     );
+
+
             output.bitangent_camera_coord = normalize(mv33 * cross(v.normal, v.tangent));
+            //output.bitangent_camera_coord =    normalize(       to_vec3(model_view * vec4( cross(v.normal, v.tangent), 1.0)  )     );
             output.normal_camera_coord = normalize(mv33 * v.normal);
+            //output.normal_camera_coord = normalize( to_vec3( model_view * vec4( v.normal, 1.0) )  );
 
             output.shadowmap_pos0 = shadowmap_pos0;
             return output;
@@ -96,7 +105,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             // TBN matrix: tangent space -> camera space
             var tbn = mat3x3<f32>(in.tangent_camera_coord, in.bitangent_camera_coord, in.normal_camera_coord);
             var mrao: vec3<f32> = textureSample(mr_tex, tex_sampler, in.uv).rgb;
-            var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, tex_sampler, in.uv).rgb /* * 2.0 - 1.0*/);
+            var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, tex_sampler, in.uv).rgb * 2.0 - 1.0);
 
             var output: GBuffer;
             output.g0 = vec4(in.pos_camera_coord, mrao.r);
@@ -116,11 +125,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         }
 
         fn mat44_to_33(m: mat4x4<f32>) -> mat3x3<f32> {
-            return mat3x3<f32>(
-                vec3<f32>(m[0].x, m[0].y, m[0].z),
-                vec3<f32>(m[1].x, m[1].y, m[1].z),
-                vec3<f32>(m[2].x, m[2].y, m[2].z),
-            );
+            return mat3x3<f32>(m[0].xyz, m[1].xyz, m[2].xyz);
         }
         """u8;
 
