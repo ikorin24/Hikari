@@ -110,8 +110,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             var output: GBuffer;
             output.g0 = vec4(in.pos_camera_coord, mrao.r);
             output.g1 = vec4(normal_camera_coord, mrao.g);
-            //output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
-            output.g2 = vec4(normal_camera_coord, 1.0);
+            output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
             output.g3 = vec4(mrao.b, 1.0, 1.0, 1.0);
 
 
