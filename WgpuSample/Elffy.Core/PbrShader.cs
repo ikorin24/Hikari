@@ -79,25 +79,13 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             var output: V2F;
             let pos4: vec4<f32> = model_view * vec4(v.pos, 1.0);
 
-            var shadowmap_pos0: vec3<f32>;
-            {
-                let a = lightMatrices[0] * vec4(v.pos, 1.0);
-                shadowmap_pos0 = a.xyz / a.w;
-            }
-
             output.clip_pos = c.proj * pos4;
             output.pos_camera_coord = pos4.xyz / pos4.w;
             output.uv = v.uv;
             output.tangent_camera_coord = normalize(mv33 * v.tangent);
-            //output.tangent_camera_coord = normalize(       to_vec3(model_view * vec4(v.tangent, 1.0))     );
-
-
             output.bitangent_camera_coord = normalize(mv33 * cross(v.normal, v.tangent));
-            //output.bitangent_camera_coord =    normalize(       to_vec3(model_view * vec4( cross(v.normal, v.tangent), 1.0)  )     );
             output.normal_camera_coord = normalize(mv33 * v.normal);
-            //output.normal_camera_coord = normalize( to_vec3( model_view * vec4( v.normal, 1.0) )  );
-
-            output.shadowmap_pos0 = shadowmap_pos0;
+            output.shadowmap_pos0 = to_vec3(lightMatrices[0] * u.model * vec4(v.pos, 1.0));
             return output;
         }
 
@@ -107,17 +95,17 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             var mrao: vec3<f32> = textureSample(mr_tex, tex_sampler, in.uv).rgb;
             var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, tex_sampler, in.uv).rgb * 2.0 - 1.0);
 
-            var output: GBuffer;
-            output.g0 = vec4(in.pos_camera_coord, mrao.r);
-            output.g1 = vec4(normal_camera_coord, mrao.g);
-            output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
-            output.g3 = vec4(mrao.b, 1.0, 1.0, 1.0);
-
-
             let visibility: f32 = textureSampleCompare(
                 shadowmap, shadowmap_sampler,
                 in.shadowmap_pos0.xy, in.shadowmap_pos0.z - 0.007
             );
+
+            var output: GBuffer;
+            output.g0 = vec4(in.pos_camera_coord, mrao.r);
+            output.g1 = vec4(normal_camera_coord, mrao.g);
+            output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
+            output.g3 = vec4(mrao.b, visibility, 1.0, 1.0);
+
             //output.g2 = vec4(visibility, visibility, visibility, 1.0);
             
             return output;
