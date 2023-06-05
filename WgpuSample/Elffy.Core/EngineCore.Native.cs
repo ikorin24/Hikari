@@ -170,6 +170,20 @@ static unsafe partial class EngineCore
         Rust.Box<Wgpu.Buffer> handle);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult elffy_copy_texture_to_buffer(
+        Rust.MutRef<Wgpu.CommandEncoder> encoder,
+        in CE.ImageCopyTexture source,
+        in Wgpu.Extent3d copy_size,
+        Rust.Ref<Wgpu.Buffer> buffer,
+        in Wgpu.ImageDataLayout image_layout);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiValueResult<usize> elffy_read_buffer(
+        Rust.Ref<CE.HostScreen> screen,
+        CE.BufferSlice buffer_slice,
+        CE.Slice<u8> dest);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Sampler> elffy_create_sampler(
         Rust.Ref<CE.HostScreen> screen,
         CE.SamplerDescriptor* desc);

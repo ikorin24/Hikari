@@ -1671,6 +1671,56 @@ impl Slice<'_, u8> {
 
 #[repr(C)]
 #[derive(Debug)]
+pub(crate) struct SliceMut<'a, T> {
+    pub data: Option<&'a mut T>,
+    pub len: usize,
+}
+
+impl<'a, T> Default for SliceMut<'a, T> {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
+impl<'a, T> SliceMut<'a, T> {
+    #[inline]
+    #[allow(dead_code)]
+    pub fn as_slice(&self) -> &'a [T] {
+        match self.len {
+            0 => &[],
+            _ => unsafe {
+                let r: &T = self.data.as_ref().unwrap();
+                let p: *const T = r;
+                std::slice::from_raw_parts(p, self.len)
+            },
+        }
+    }
+
+    #[inline]
+    pub fn as_slice_mut(self) -> &'a mut [T] {
+        match self.len {
+            0 => &mut [],
+            _ => unsafe {
+                let r: &mut T = self.data.unwrap();
+                let p: *mut T = r;
+                std::slice::from_raw_parts_mut(p, self.len)
+            },
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self { data: None, len: 0 }
+    }
+
+    #[inline]
+    #[allow(dead_code)]
+    pub fn iter(&self) -> std::slice::Iter<T> {
+        self.as_slice().iter()
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
 pub(crate) struct DrawBufferArg<'a> {
     pub vertex_buffer: SlotBufSlice<'a>,
     pub vertices_range: RangeU32,

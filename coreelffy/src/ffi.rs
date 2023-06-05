@@ -567,6 +567,65 @@ extern "cdecl" fn elffy_destroy_buffer(buffer: Box<wgpu::Buffer>) {
     drop(buffer)
 }
 
+#[no_mangle]
+extern "cdecl" fn elffy_copy_texture_to_buffer(
+    encoder: &mut wgpu::CommandEncoder,
+    source: &ImageCopyTexture,
+    copy_size: &wgpu::Extent3d,
+    buffer: &wgpu::Buffer,
+    image_layout: &wgpu::ImageDataLayout,
+) -> ApiResult {
+    // Caller should check args before because this can cause panic.
+    encoder.copy_texture_to_buffer(
+        source.to_wgpu_type(),
+        wgpu::ImageCopyBuffer {
+            buffer,
+            layout: *image_layout,
+        },
+        *copy_size,
+    );
+    make_result()
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_read_buffer<'a>(
+    screen: &HostScreen,
+    buffer_slice: BufferSlice<'a>,
+    dest: SliceMut<'a, u8>,
+) -> ApiValueResult<usize> {
+    use pollster::FutureExt;
+
+    match read(&screen.device, &buffer_slice.to_wgpu_type()).block_on() {
+        Some(result) => match result {
+            Ok(view) => {
+                let view: &[u8] = &view;
+                dest.as_slice_mut().copy_from_slice(view);
+                return make_value_result(view.len());
+            }
+            Err(err) => {
+                return error_value_result(err);
+            }
+        },
+        None => {
+            return error_value_result("map_async failed");
+        }
+    };
+
+    async fn read<'a>(
+        device: &wgpu::Device,
+        buffer_slice: &wgpu::BufferSlice<'a>,
+    ) -> Option<Result<wgpu::BufferView<'a>, wgpu::BufferAsyncError>> {
+        let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            tx.send(result).unwrap();
+        });
+        device.poll(wgpu::Maintain::Wait);
+        rx.receive()
+            .await
+            .map(move |result| result.map(|_| buffer_slice.get_mapped_range()))
+    }
+}
+
 static_assertions::assert_impl_all!(SamplerDescriptor: Send, Sync);
 
 /// # Thread Safety
