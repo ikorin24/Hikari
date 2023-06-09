@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Cysharp.Threading.Tasks;
 using System;
 using System.Runtime.InteropServices;
 
@@ -12,15 +11,18 @@ public sealed class Mesh<TVertex>
     private readonly Screen _screen;
     private readonly Own<Buffer> _vertexBuffer;
     private readonly Own<Buffer> _indexBuffer;
+    private readonly Own<Buffer> _optTangent;
+    private readonly uint _vertexCount;
     private readonly uint _indexCount;
     private readonly IndexFormat _indexFormat;
-    private readonly Own<Buffer> _optTangent;
     private bool _isReleased;
 
     public BufferSlice VertexBuffer => _vertexBuffer.AsValue().Slice();
-    public IndexBufferSlice IndexBuffer => new IndexBufferSlice(_indexFormat, _indexBuffer.AsValue().Slice());
+    public BufferSlice IndexBuffer => _indexBuffer.AsValue();
+    public IndexFormat IndexFormat => _indexFormat;
 
     public uint IndexCount => _indexCount;
+    public uint VertexCount => _vertexCount;
 
     public bool TryGetOptionalTangent(out BufferSlice tangent)
     {
@@ -38,11 +40,12 @@ public sealed class Mesh<TVertex>
 
     public bool IsManaged => _isReleased == false;
 
-    private Mesh(Screen screen, Own<Buffer> vertexBuffer, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat, Own<Buffer> optTangent)
+    private Mesh(Screen screen, Own<Buffer> vertexBuffer, uint vertexCount, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat, Own<Buffer> optTangent)
     {
         _screen = screen;
         _vertexBuffer = vertexBuffer;
         _indexBuffer = indexBuffer;
+        _vertexCount = vertexCount;
         _indexCount = indexCount;
         _indexFormat = indexFormat;
         _optTangent = optTangent;
@@ -95,7 +98,7 @@ public sealed class Mesh<TVertex>
             tangentBuffer = Buffer.CreateInitBytes(screen, (u8*)tangents, tangentLen * (usize)sizeof(Vector3), BufferUsages.Vertex | BufferUsages.Storage | BufferUsages.CopySrc);
         }
 
-        var mesh = new Mesh<TVertex>(screen, vertexBuffer, indexBuffer, indexLen, indexFormat, tangentBuffer);
+        var mesh = new Mesh<TVertex>(screen, vertexBuffer, vertexLen, indexBuffer, indexLen, indexFormat, tangentBuffer);
         return Own.New(mesh, static x => SafeCast.As<Mesh<TVertex>>(x).Release());
     }
 }
@@ -248,31 +251,5 @@ public static class Mesh
         finally {
             NativeMemory.Free(tangents);
         }
-    }
-}
-
-public readonly struct IndexBufferSlice : IReadBuffer
-{
-    private readonly IndexFormat _format;
-    private readonly BufferSlice _byteSlice;
-
-    public IndexBufferSlice(IndexFormat format, BufferSlice byteSlice)
-    {
-        _format = format;
-        _byteSlice = byteSlice;
-    }
-
-    public IndexFormat Format => _format;
-
-    public BufferSlice BufferSlice => _byteSlice;
-
-    public UniTask<byte[]> ReadToArray() => _byteSlice.ReadToArray();
-    public UniTask<int> Read<TElement>(Memory<TElement> dest) where TElement : unmanaged
-        => _byteSlice.Read(dest);
-    public void ReadCallback(ReadOnlySpanAction<byte> onRead, Action<Exception>? onException = null) => _byteSlice.ReadCallback(onRead, onException);
-
-    internal CE.BufferSlice BufferSliceNative()
-    {
-        return _byteSlice.Native();
     }
 }

@@ -77,11 +77,6 @@ public readonly struct RenderPass
         _native.AsMut().SetIndexBuffer(bufferSlice, indexFormat.MapOrThrow());
     }
 
-    public void SetIndexBuffer(in IndexBufferSlice slice)
-    {
-        _native.AsMut().SetIndexBuffer(slice.BufferSliceNative(), slice.Format.MapOrThrow());
-    }
-
     public void SetIndexBuffer(in BufferSlice bufferSlice, IndexFormat format)
     {
         _native.AsMut().SetIndexBuffer(bufferSlice.Native(), format.MapOrThrow());

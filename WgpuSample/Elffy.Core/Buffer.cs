@@ -278,20 +278,13 @@ public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer
                _byteLength == other._byteLength;
     }
 
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(_buffer, _startByte, _byteLength);
-    }
+    public override int GetHashCode() => HashCode.Combine(_buffer, _startByte, _byteLength);
 
-    public static bool operator ==(BufferSlice left, BufferSlice right)
-    {
-        return left.Equals(right);
-    }
+    public static bool operator ==(BufferSlice left, BufferSlice right) => left.Equals(right);
 
-    public static bool operator !=(BufferSlice left, BufferSlice right)
-    {
-        return !(left == right);
-    }
+    public static bool operator !=(BufferSlice left, BufferSlice right) => !(left == right);
+
+    public static implicit operator BufferSlice(Buffer buffer) => Full(buffer);
 }
 
 internal interface IReadBuffer

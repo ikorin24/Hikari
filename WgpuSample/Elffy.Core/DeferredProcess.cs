@@ -125,7 +125,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
         var mesh = _rectMesh.AsValue();
         var material = _material.AsValue();
         pass.SetVertexBuffer(0, mesh.VertexBuffer);
-        pass.SetIndexBuffer(mesh.IndexBuffer);
+        pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
         pass.SetBindGroup(0, material.BindGroup0);
         pass.SetBindGroup(1, material.BindGroup1);
         pass.SetBindGroup(2, material.BindGroup2);

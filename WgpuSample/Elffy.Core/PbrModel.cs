@@ -40,7 +40,7 @@ public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrM
         pass.SetBindGroup(2, material.BindGroup2);
         pass.SetVertexBuffer(0, mesh.VertexBuffer);
         pass.SetVertexBuffer(1, _tangent);
-        pass.SetIndexBuffer(mesh.IndexBuffer);
+        pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
         pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
     }
 
@@ -51,7 +51,7 @@ public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrM
         for(int i = 0; i < directionalLight.CascadeCount; i++) {
             pass.SetBindGroup(0, material.ShadowBindGroup0);
             pass.SetVertexBuffer(0, mesh.VertexBuffer);
-            pass.SetIndexBuffer(mesh.IndexBuffer);
+            pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
             //pass.SetViewport(-1, -1, 2, 2, 0, 1);           // TODO: viewport
             pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
         }
