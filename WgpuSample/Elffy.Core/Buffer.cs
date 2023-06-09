@@ -13,12 +13,12 @@ public sealed class Buffer : IScreenManaged, IReadBuffer
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Buffer> _native;
-    private readonly BufferUsages? _usage;
+    private readonly BufferUsages _usage;
     private readonly usize _byteLen;
 
     public Screen Screen => _screen;
 
-    public BufferUsages Usage => _usage.GetOrThrow();
+    public BufferUsages Usage => _usage;
 
     public usize ByteLength => _byteLen;
 
