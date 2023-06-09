@@ -1,4 +1,6 @@
 ﻿#nullable enable
+using Cysharp.Threading.Tasks;
+using Elffy.Effective;
 using Elffy.NativeBind;
 using System;
 using System.Collections.Generic;
@@ -7,7 +9,7 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-public sealed class Buffer : IScreenManaged
+public sealed class Buffer : IScreenManaged, IReadBuffer
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Buffer> _native;
@@ -137,9 +139,18 @@ public sealed class Buffer : IScreenManaged
         var slice = new CE.Slice<byte>(data, dataLen);
         screen.AsRefChecked().WriteBuffer(native, offset, slice);
     }
+
+    public UniTask<byte[]> ReadToArray()
+        => Slice().ReadToArray();
+
+    public UniTask<int> Read<TElement>(Memory<TElement> dest) where TElement : unmanaged
+        => Slice<TElement>().Read(dest);
+
+    public void ReadCallback(ReadOnlySpanAction<byte> onRead, Action<Exception>? onException = null)
+        => Slice().ReadCallback(onRead, onException);
 }
 
-public readonly struct BufferSlice<T> : IEquatable<BufferSlice<T>> where T : unmanaged
+public readonly struct BufferSlice<T> : IEquatable<BufferSlice<T>>, IReadBuffer where T : unmanaged
 {
     private readonly Buffer? _buffer;
     private readonly u64 _startByte;
@@ -193,11 +204,64 @@ public readonly struct BufferSlice<T> : IEquatable<BufferSlice<T>> where T : unm
 
     public void Write(ReadOnlySpan<T> data)
     {
+        var buffer = Buffer;
+        CheckUsageFlag(BufferUsages.CopyDst, buffer.Usage);
         if(Length < (u64)data.Length) {
             ThrowTooLong();
             [DoesNotReturn] static void ThrowTooLong() => throw new ArgumentException("data is too long to write");
         }
-        Buffer.WriteSpan(_startByte, data);
+        buffer.WriteSpan(_startByte, data);
+    }
+
+    public UniTask<byte[]> ReadToArray()
+    {
+        var completionSource = new UniTaskCompletionSource<byte[]>();
+        ReadCore(
+            (span) => completionSource.TrySetResult(span.ToArray()),
+            (ex) => completionSource.TrySetException(ex));
+        return completionSource.Task;
+    }
+
+    public UniTask<int> Read<TElement>(Memory<TElement> dest) where TElement : unmanaged
+    {
+        var completionSource = new UniTaskCompletionSource<int>();
+        ReadCore(
+            (bytes) =>
+            {
+                var source = bytes.MarshalCast<byte, TElement>();
+                source.CopyTo(dest.Span);
+                completionSource.TrySetResult(source.Length);
+            },
+            (ex) => completionSource.TrySetException(ex));
+        return completionSource.Task;
+    }
+
+    public void ReadCallback(ReadOnlySpanAction<byte> onRead, Action<Exception>? onException = null)
+    {
+        ArgumentNullException.ThrowIfNull(onRead);
+        onException ??= (ex) => { };
+        ReadCore(onRead, onException);
+    }
+
+    private void ReadCore(ReadOnlySpanAction<byte> onRead, Action<Exception> onException)
+    {
+        var buffer = Buffer;
+        CheckUsageFlag(BufferUsages.CopySrc, buffer.Usage);
+        var len = ByteLength;
+        var screen = buffer.Screen;
+        if(len == 0) {
+            onRead(Span<byte>.Empty);
+        }
+        else {
+            screen.AsRefChecked().ReadBuffer(Native(), onRead, onException);
+        }
+    }
+
+    private static void CheckUsageFlag(BufferUsages needed, BufferUsages actual)
+    {
+        if(actual.HasFlag(needed) == false) {
+            throw new InvalidOperationException($"'{needed}' flag is needed, but the flag the buffer has is '{actual}'.");
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -245,4 +309,13 @@ public readonly struct BufferSlice<T> : IEquatable<BufferSlice<T>> where T : unm
     {
         return !(left == right);
     }
+}
+
+internal interface IReadBuffer
+{
+    UniTask<byte[]> ReadToArray();
+
+    UniTask<int> Read<TElement>(Memory<TElement> dest) where TElement : unmanaged;
+
+    void ReadCallback(ReadOnlySpanAction<byte> onRead, Action<Exception>? onException = null);
 }

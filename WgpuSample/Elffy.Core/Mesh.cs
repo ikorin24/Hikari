@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Cysharp.Threading.Tasks;
 using System;
 using System.Runtime.InteropServices;
 
@@ -83,14 +84,15 @@ public sealed class Mesh<TVertex>
             throw new ArgumentException("index type should be u32 or u16.");
         }
 
-        var vertexBuffer = Buffer.CreateInitBytes(screen, (u8*)vertices, vertexLen * (usize)sizeof(TVertex), BufferUsages.Vertex | BufferUsages.Storage);
-        var indexBuffer = Buffer.CreateInitBytes(screen, (u8*)indices, indexLen * (usize)sizeof(TIndex), BufferUsages.Index | BufferUsages.Storage);
+        // TODO: pass usage flags from arg
+        var vertexBuffer = Buffer.CreateInitBytes(screen, (u8*)vertices, vertexLen * (usize)sizeof(TVertex), BufferUsages.Vertex | BufferUsages.Storage | BufferUsages.CopySrc);
+        var indexBuffer = Buffer.CreateInitBytes(screen, (u8*)indices, indexLen * (usize)sizeof(TIndex), BufferUsages.Index | BufferUsages.Storage | BufferUsages.CopySrc);
         Own<Buffer> tangentBuffer;
         if(tangentLen == 0) {
             tangentBuffer = Own<Buffer>.None;
         }
         else {
-            tangentBuffer = Buffer.CreateInitBytes(screen, (u8*)tangents, tangentLen * (usize)sizeof(Vector3), BufferUsages.Vertex | BufferUsages.Storage);
+            tangentBuffer = Buffer.CreateInitBytes(screen, (u8*)tangents, tangentLen * (usize)sizeof(Vector3), BufferUsages.Vertex | BufferUsages.Storage | BufferUsages.CopySrc);
         }
 
         var mesh = new Mesh<TVertex>(screen, vertexBuffer, indexBuffer, indexLen, indexFormat, tangentBuffer);
@@ -249,7 +251,7 @@ public static class Mesh
     }
 }
 
-public readonly struct IndexBufferSlice
+public readonly struct IndexBufferSlice : IReadBuffer
 {
     private readonly IndexFormat _format;
     private readonly BufferSlice<u8> _byteSlice;
@@ -285,6 +287,11 @@ public readonly struct IndexBufferSlice
     {
         return _byteSlice;
     }
+
+    public UniTask<byte[]> ReadToArray() => _byteSlice.ReadToArray();
+    public UniTask<int> Read<TElement>(Memory<TElement> dest) where TElement : unmanaged
+        => _byteSlice.Read(dest);
+    public void ReadCallback(ReadOnlySpanAction<byte> onRead, Action<Exception>? onException = null) => _byteSlice.ReadCallback(onRead, onException);
 
     internal CE.BufferSlice BufferSliceNative()
     {

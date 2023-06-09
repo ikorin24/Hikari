@@ -438,6 +438,18 @@ internal unsafe static partial class EngineCore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
+    public static void CopyTextureToBuffer(
+        this Rust.MutRef<Wgpu.CommandEncoder> encoder,
+        in CE.ImageCopyTexture source,
+        in Wgpu.Extent3d copy_size,
+        Rust.Ref<Wgpu.Buffer> buffer,
+        in Wgpu.ImageDataLayout image_layout)
+    {
+        elffy_copy_texture_to_buffer(encoder, source, copy_size, buffer, image_layout).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
     public static Rust.Box<Wgpu.Sampler> CreateSampler(
         this Rust.Ref<CE.HostScreen> screen,
         in CE.SamplerDescriptor desc)

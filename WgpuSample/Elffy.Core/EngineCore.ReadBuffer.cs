@@ -1,0 +1,66 @@
+﻿#nullable enable
+using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
+using System.Threading;
+using System.Collections.Concurrent;
+using Elffy.NativeBind;
+
+namespace Elffy;
+
+unsafe partial class EngineCore
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerHidden]
+    public static void ReadBuffer(
+        this Rust.Ref<CE.HostScreen> screen,
+        CE.BufferSlice buffer_slice,
+        ReadOnlySpanAction<byte> onRead,
+        Action<Exception> onException)
+    {
+        var token = Callback.NewToken();
+        Callback.Register(token, onRead, onException);
+        elffy_read_buffer(screen, buffer_slice, token, &OnCallback);
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        static void OnCallback(usize token, usize errorCount, byte* ptr, usize length)
+        {
+            Action<Exception>? onException = null;
+            try {
+                if(Callback.Take(token, out var callback)) {
+                    (var onRead, onException) = callback;
+                    if(int.MaxValue < length) {
+                        throw new NotImplementedException();
+                    }
+                    var span = new ReadOnlySpan<byte>(ptr, (int)length);
+                    onRead.Invoke(span);
+                }
+                else {
+                    Debug.Fail($"Callback not found. token: {token}");
+                }
+            }
+            catch(Exception ex) {
+                onException?.Invoke(ex);
+            }
+        }
+    }
+}
+
+file record struct Callback(ReadOnlySpanAction<byte> OnRead, Action<Exception> OnException)
+{
+    private static ulong _token;
+    private static readonly ConcurrentDictionary<usize, Callback> _callbacks = new();
+
+    public static usize NewToken() => (usize)Interlocked.Increment(ref _token);
+
+    public static bool Register(usize token, ReadOnlySpanAction<byte> onRead, Action<Exception> onException)
+    {
+        return _callbacks.TryAdd(token, new(onRead, onException));
+    }
+
+    public static bool Take(usize token, out Callback callback)
+    {
+        return _callbacks.TryRemove(token, out callback);
+    }
+}

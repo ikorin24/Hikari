@@ -178,10 +178,11 @@ static unsafe partial class EngineCore
         in Wgpu.ImageDataLayout image_layout);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiValueResult<usize> elffy_read_buffer(
+    private static partial void elffy_read_buffer(
         Rust.Ref<CE.HostScreen> screen,
         CE.BufferSlice buffer_slice,
-        CE.Slice<u8> dest);
+        usize token,
+        delegate* unmanaged[Cdecl]<usize, usize, u8*, usize, void> callback);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Sampler> elffy_create_sampler(

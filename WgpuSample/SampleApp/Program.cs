@@ -1,4 +1,6 @@
 ﻿#nullable enable
+using Cysharp.Threading.Tasks;
+using Elffy.Effective;
 using Elffy.Imaging;
 using Elffy.Mathematics;
 using System;
@@ -58,6 +60,23 @@ internal class Program
         screen.Update.Subscribe(screen =>
         {
             ControlCamera(screen.Mouse, camera, Vector3.Zero);
+        });
+
+        cube.Mesh.VertexBuffer.ReadCallback(data =>
+        {
+            var vertices = data.MarshalCast<byte, Vertex>();
+            return;
+        });
+
+        UniTask.Void(async () =>
+        {
+            var mesh = cube.Mesh;
+            var array = new ushort[mesh.IndexCount];
+            var len = await cube.Mesh.IndexBuffer.Read(array.AsMemory());
+            var indices = array[..len];
+            for(int i = 0; i < indices.Length / 3; i++) {
+                Debug.WriteLine($"{indices[i * 3 + 0]}, {indices[i * 3 + 1]}, {indices[i * 3 + 2]}");
+            }
         });
     }
 
