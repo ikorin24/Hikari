@@ -14,7 +14,7 @@ public sealed class Mesh<TVertex>
     private readonly Own<Buffer> _indexBuffer;
     private readonly uint _indexCount;
     private readonly IndexFormat _indexFormat;
-    private Own<Buffer> _optTangent;
+    private readonly Own<Buffer> _optTangent;
     private bool _isReleased;
 
     public BufferSlice VertexBuffer => _vertexBuffer.AsValue().Slice();
