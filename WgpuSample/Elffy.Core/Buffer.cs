@@ -151,10 +151,8 @@ public sealed class Buffer : IScreenManaged, IReadBuffer
 public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer
 {
     private readonly Buffer? _buffer;
-    private readonly u64 _startByte;
-    private readonly u64 _byteLength;
-
-    //private readonly u64 _elementCount;
+    private readonly u64 _offset;
+    private readonly u64 _length;
 
     public Buffer Buffer
     {
@@ -168,15 +166,14 @@ public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer
         }
     }
 
-    public u64 Length => _byteLength;
-    public u64 StartByteOffset => _startByte;
-    public u64 ByteLength => _byteLength;
+    public u64 Length => _length;
+    public u64 Offset => _offset;
 
-    internal BufferSlice(Buffer buffer, u64 startByte, u64 byteLength)
+    internal BufferSlice(Buffer buffer, u64 offset, u64 length)
     {
         _buffer = buffer;
-        _startByte = startByte;
-        _byteLength = byteLength;
+        _offset = offset;
+        _length = length;
     }
 
     public static BufferSlice Full(Buffer buffer)
@@ -189,11 +186,11 @@ public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer
     {
         var buffer = Buffer;
         CheckUsageFlag(BufferUsages.CopyDst, buffer.Usage);
-        if(Length < (u64)data.Length) {
+        if(_length < (u64)data.Length) {
             ThrowTooLong();
             [DoesNotReturn] static void ThrowTooLong() => throw new ArgumentException("data is too long to write");
         }
-        buffer.WriteSpan(_startByte, data);
+        buffer.WriteSpan(_offset, data);
     }
 
     public UniTask<byte[]> ReadToArray()
@@ -230,7 +227,7 @@ public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer
     {
         var buffer = Buffer;
         CheckUsageFlag(BufferUsages.CopySrc, buffer.Usage);
-        var len = ByteLength;
+        var len = Length;
         var screen = buffer.Screen;
         if(len == 0) {
             onRead(Span<byte>.Empty);
@@ -251,8 +248,8 @@ public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer
     internal CE.BufferSlice Native()
     {
         ArgumentNullException.ThrowIfNull(_buffer);
-        var start = _startByte;
-        var end = start + ByteLength;
+        var start = _offset;
+        var end = start + Length;
         return new CE.BufferSlice
         {
             buffer = _buffer.NativeRef,
@@ -274,11 +271,11 @@ public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer
     public bool Equals(BufferSlice other)
     {
         return EqualityComparer<Buffer?>.Default.Equals(_buffer, other._buffer) &&
-               _startByte == other._startByte &&
-               _byteLength == other._byteLength;
+               _offset == other._offset &&
+               _length == other._length;
     }
 
-    public override int GetHashCode() => HashCode.Combine(_buffer, _startByte, _byteLength);
+    public override int GetHashCode() => HashCode.Combine(_buffer, _offset, _length);
 
     public static bool operator ==(BufferSlice left, BufferSlice right) => left.Equals(right);
 

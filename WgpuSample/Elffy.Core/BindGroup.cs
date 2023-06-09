@@ -151,7 +151,7 @@ public readonly struct BindGroupEntry
 
         public bool IsManaged => _buffer.IsManaged;
 
-        public BufferBinding(BufferSlice bufferSlice) : this(bufferSlice.Buffer, bufferSlice.StartByteOffset, bufferSlice.ByteLength)
+        public BufferBinding(BufferSlice bufferSlice) : this(bufferSlice.Buffer, bufferSlice.Offset, bufferSlice.Length)
         {
         }
 
