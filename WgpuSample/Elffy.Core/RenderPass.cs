@@ -66,7 +66,7 @@ public readonly struct RenderPass
         var bufferSlice = new CE.BufferSlice(buffer.NativeRef, CE.RangeBoundsU64.RangeFull);
         _native.AsMut().SetVertexBuffer(slot, bufferSlice);
     }
-    public void SetVertexBuffer<T>(u32 slot, in BufferSlice<T> bufferSlice) where T : unmanaged
+    public void SetVertexBuffer(u32 slot, in BufferSlice bufferSlice)
     {
         _native.AsMut().SetVertexBuffer(slot, bufferSlice.Native());
     }
@@ -82,14 +82,9 @@ public readonly struct RenderPass
         _native.AsMut().SetIndexBuffer(slice.BufferSliceNative(), slice.Format.MapOrThrow());
     }
 
-    public void SetIndexBuffer(in BufferSlice<u32> bufferSlice)
+    public void SetIndexBuffer(in BufferSlice bufferSlice, IndexFormat format)
     {
-        _native.AsMut().SetIndexBuffer(bufferSlice.Native(), Wgpu.IndexFormat.Uint32);
-    }
-
-    public void SetIndexBuffer(in BufferSlice<u16> bufferSlice)
-    {
-        _native.AsMut().SetIndexBuffer(bufferSlice.Native(), Wgpu.IndexFormat.Uint16);
+        _native.AsMut().SetIndexBuffer(bufferSlice.Native(), format.MapOrThrow());
     }
 
     public void SetViewport(

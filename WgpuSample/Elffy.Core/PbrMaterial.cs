@@ -20,7 +20,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
     public Texture MetallicRoughness => _metallicRoughness.AsValue();
     public Texture Normal => _normal.AsValue();
 
-    internal BufferSlice<byte> ModelUniform => _modelUniform.AsValue().Slice();
+    internal BufferSlice ModelUniform => _modelUniform.AsValue().Slice();
 
     internal BindGroup BindGroup0 => _bindGroup0.AsValue();
     internal BindGroup BindGroup1 => _bindGroup1;

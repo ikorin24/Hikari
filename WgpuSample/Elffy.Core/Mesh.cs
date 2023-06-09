@@ -17,15 +17,15 @@ public sealed class Mesh<TVertex>
     private Own<Buffer> _optTangent;
     private bool _isReleased;
 
-    public BufferSlice<TVertex> VertexBuffer => _vertexBuffer.AsValue().Slice<TVertex>();
+    public BufferSlice VertexBuffer => _vertexBuffer.AsValue().Slice();
     public IndexBufferSlice IndexBuffer => new IndexBufferSlice(_indexFormat, _indexBuffer.AsValue().Slice());
 
     public uint IndexCount => _indexCount;
 
-    public bool TryGetOptionalTangent(out BufferSlice<Vector3> tangent)
+    public bool TryGetOptionalTangent(out BufferSlice tangent)
     {
         if(_optTangent.TryAsValue(out var tan)) {
-            tangent = tan.Slice<Vector3>();
+            tangent = tan.Slice();
             return true;
         }
         tangent = default;
@@ -254,39 +254,17 @@ public static class Mesh
 public readonly struct IndexBufferSlice : IReadBuffer
 {
     private readonly IndexFormat _format;
-    private readonly BufferSlice<u8> _byteSlice;
+    private readonly BufferSlice _byteSlice;
 
-    public IndexBufferSlice(IndexFormat format, BufferSlice<u8> byteSlice)
+    public IndexBufferSlice(IndexFormat format, BufferSlice byteSlice)
     {
         _format = format;
         _byteSlice = byteSlice;
     }
 
     public IndexFormat Format => _format;
-    public bool IsUint16(out BufferSlice<u16> bufferSlice)
-    {
-        if(_format == IndexFormat.Uint16) {
-            bufferSlice = _byteSlice.Cast<u16>();
-            return true;
-        }
-        bufferSlice = default;
-        return false;
-    }
 
-    public bool IsUint32(out BufferSlice<u32> bufferSlice)
-    {
-        if(_format == IndexFormat.Uint32) {
-            bufferSlice = _byteSlice.Cast<u32>();
-            return true;
-        }
-        bufferSlice = default;
-        return false;
-    }
-
-    public BufferSlice<u8> AsBufferSlice()
-    {
-        return _byteSlice;
-    }
+    public BufferSlice BufferSlice => _byteSlice;
 
     public UniTask<byte[]> ReadToArray() => _byteSlice.ReadToArray();
     public UniTask<int> Read<TElement>(Memory<TElement> dest) where TElement : unmanaged

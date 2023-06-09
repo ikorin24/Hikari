@@ -26,7 +26,7 @@ public sealed class DirectionalLight : IScreenManaged
 
     public Texture ShadowMap => _shadowMap.AsValue();
 
-    public BufferSlice<byte> LightMatricesBuffer => _lightMatricesBuffer.AsValue().Slice();
+    public BufferSlice LightMatricesBuffer => _lightMatricesBuffer.AsValue().Slice();
 
     public int CascadeCount => CascadeCountConst;
 
@@ -50,7 +50,7 @@ public sealed class DirectionalLight : IScreenManaged
         }
     }
 
-    public BufferSlice<byte> DataBuffer => _buffer.AsValue().Slice();
+    public BufferSlice DataBuffer => _buffer.AsValue().Slice();
 
     public void SetLightData(in Vector3 direction, in Color3 color)
     {

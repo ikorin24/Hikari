@@ -6,7 +6,7 @@ namespace Elffy;
 
 public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrMaterial>
 {
-    private readonly BufferSlice<Vector3> _tangent;
+    private readonly BufferSlice _tangent;
 
     public PbrModel(
         PbrLayer layer,

@@ -124,9 +124,9 @@ public readonly struct BindGroupEntry
         return new BindGroupEntry(binding, resource);
     }
 
-    public static BindGroupEntry Buffer<T>(u32 binding, BufferSlice<T> bufferSlice) where T : unmanaged
+    public static BindGroupEntry Buffer(u32 binding, BufferSlice bufferSlice)
     {
-        var resource = new BufferBinding(bufferSlice.Cast<u8>());
+        var resource = new BufferBinding(bufferSlice);
         return new BindGroupEntry(binding, resource);
     }
 
@@ -151,7 +151,7 @@ public readonly struct BindGroupEntry
 
         public bool IsManaged => _buffer.IsManaged;
 
-        public BufferBinding(BufferSlice<u8> bufferSlice) : this(bufferSlice.Buffer, bufferSlice.StartByteOffset, bufferSlice.ByteLength)
+        public BufferBinding(BufferSlice bufferSlice) : this(bufferSlice.Buffer, bufferSlice.StartByteOffset, bufferSlice.ByteLength)
         {
         }
 

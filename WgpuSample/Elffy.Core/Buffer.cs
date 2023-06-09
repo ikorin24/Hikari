@@ -98,14 +98,12 @@ public sealed class Buffer : IScreenManaged, IReadBuffer
         return Own.New(buffer, static x => SafeCast.As<Buffer>(x).Release());
     }
 
-    public BufferSlice<u8> Slice() => BufferSlice<u8>.Full(this);
+    public BufferSlice Slice() => BufferSlice.Full(this);
 
-    public BufferSlice<u8> Slice(u64 byteOffset, u64 byteLength)
+    public BufferSlice Slice(u64 byteOffset, u64 byteLength)
     {
-        return new BufferSlice<u8>(this, byteOffset, byteLength);
+        return new BufferSlice(this, byteOffset, byteLength);
     }
-
-    public BufferSlice<T> Slice<T>() where T : unmanaged => BufferSlice<T>.Full(this);
 
     public unsafe void WriteData<T>(u64 offset, in T data) where T : unmanaged
     {
@@ -144,17 +142,19 @@ public sealed class Buffer : IScreenManaged, IReadBuffer
         => Slice().ReadToArray();
 
     public UniTask<int> Read<TElement>(Memory<TElement> dest) where TElement : unmanaged
-        => Slice<TElement>().Read(dest);
+        => Slice().Read(dest);
 
     public void ReadCallback(ReadOnlySpanAction<byte> onRead, Action<Exception>? onException = null)
         => Slice().ReadCallback(onRead, onException);
 }
 
-public readonly struct BufferSlice<T> : IEquatable<BufferSlice<T>>, IReadBuffer where T : unmanaged
+public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer
 {
     private readonly Buffer? _buffer;
     private readonly u64 _startByte;
-    private readonly u64 _elementCount;
+    private readonly u64 _byteLength;
+
+    //private readonly u64 _elementCount;
 
     public Buffer Buffer
     {
@@ -168,41 +168,24 @@ public readonly struct BufferSlice<T> : IEquatable<BufferSlice<T>>, IReadBuffer 
         }
     }
 
-    public u64 Length => _elementCount;
+    public u64 Length => _byteLength;
     public u64 StartByteOffset => _startByte;
-    public u64 ByteLength => _elementCount * (u64)Unsafe.SizeOf<T>();
+    public u64 ByteLength => _byteLength;
 
-    internal BufferSlice(Buffer buffer, u64 startByte, u64 elementCount)
+    internal BufferSlice(Buffer buffer, u64 startByte, u64 byteLength)
     {
         _buffer = buffer;
         _startByte = startByte;
-        _elementCount = elementCount;
+        _byteLength = byteLength;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public BufferSlice<U> Cast<U>() where U : unmanaged
-    {
-        var (q, rem) = u64.DivRem(ByteLength, (u64)Unsafe.SizeOf<U>());
-        if(rem != 0) {
-            Throw();
-            static void Throw() => throw new InvalidOperationException($"byte length is not multiple of the size of {typeof(U).FullName}");
-        }
-        return new BufferSlice<U>(Buffer, _startByte, q);
-    }
-
-
-    public static BufferSlice<T> Full(Buffer buffer)
+    public static BufferSlice Full(Buffer buffer)
     {
         ArgumentNullException.ThrowIfNull(buffer);
-        var (q, rem) = u64.DivRem(buffer.ByteLength, (u64)Unsafe.SizeOf<T>());
-        if(rem != 0) {
-            Throw();
-            static void Throw() => throw new InvalidOperationException($"byte length is not multiple of the size of {typeof(T).FullName}");
-        }
-        return new BufferSlice<T>(buffer, 0, q);
+        return new BufferSlice(buffer, 0, buffer.ByteLength);
     }
 
-    public void Write(ReadOnlySpan<T> data)
+    public void Write(ReadOnlySpan<byte> data)
     {
         var buffer = Buffer;
         CheckUsageFlag(BufferUsages.CopyDst, buffer.Usage);
@@ -285,27 +268,27 @@ public readonly struct BufferSlice<T> : IEquatable<BufferSlice<T>>, IReadBuffer 
 
     public override bool Equals(object? obj)
     {
-        return obj is BufferSlice<T> slice && Equals(slice);
+        return obj is BufferSlice slice && Equals(slice);
     }
 
-    public bool Equals(BufferSlice<T> other)
+    public bool Equals(BufferSlice other)
     {
         return EqualityComparer<Buffer?>.Default.Equals(_buffer, other._buffer) &&
                _startByte == other._startByte &&
-               _elementCount == other._elementCount;
+               _byteLength == other._byteLength;
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(_buffer, _startByte, _elementCount);
+        return HashCode.Combine(_buffer, _startByte, _byteLength);
     }
 
-    public static bool operator ==(BufferSlice<T> left, BufferSlice<T> right)
+    public static bool operator ==(BufferSlice left, BufferSlice right)
     {
         return left.Equals(right);
     }
 
-    public static bool operator !=(BufferSlice<T> left, BufferSlice<T> right)
+    public static bool operator !=(BufferSlice left, BufferSlice right)
     {
         return !(left == right);
     }

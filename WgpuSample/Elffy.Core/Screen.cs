@@ -36,7 +36,7 @@ public sealed class Screen
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
     internal ThreadId MainThread => _mainThread;
 
-    internal BufferSlice<u8> InfoBuffer => _info.AsValue().Slice();
+    internal BufferSlice InfoBuffer => _info.AsValue().Slice();
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
     public Mouse Mouse => _mouse;
     public Keyboard Keyboard => _keyboard;
