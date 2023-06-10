@@ -7,14 +7,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using Elffy.NativeBind;
 using System.Text;
-using System.Collections.Generic;
 
 namespace Elffy;
 
 internal unsafe static partial class EngineCore
 {
-    [ThreadStatic]
-    private static List<NativeError>? _nativeErrorStore;
     private static EngineCoreConfig _config;
     private static int _isStarted = 0;
 
@@ -34,8 +31,8 @@ internal unsafe static partial class EngineCore
         _config = config;
         var engineConfigNative = new CE.EngineCoreConfig
         {
-            err_dispatcher = new(&DispatchError),
             on_screen_init = new(&OnScreenInit),
+            on_unhandled_error = new(&OnUnhandledError),
             event_cleared = new(&EventCleared),
             event_redraw_requested = new(&EventRedrawRequested),
             event_resized = new(&EventResized),
@@ -66,6 +63,21 @@ internal unsafe static partial class EngineCore
             Rust.Box<CE.HostScreen> screen = *(Rust.Box<CE.HostScreen>*)(&screen_);
 
             return _config.OnStart(screen, *info);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        static void OnUnhandledError(CE.Slice<byte> message)
+        {
+            try {
+                var str = Encoding.UTF8.GetString(message.data, (int)message.len);
+                Console.Error.WriteLine(str);
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine(str);
+                System.Diagnostics.Debugger.Break();
+#endif
+            }
+            catch {
+            }
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -139,15 +151,6 @@ internal unsafe static partial class EngineCore
         static NativePointer EventClosed(CE.ScreenId id)
         {
             return _config.OnClosed(id).AsPtr();
-        }
-
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        static void DispatchError(CE.ErrMessageId id, u8* messagePtr, usize messageByteLen)
-        {
-            var len = (int)usize.Min(messageByteLen, (usize)int.MaxValue);
-            var message = Encoding.UTF8.GetString(messagePtr, len);
-            _nativeErrorStore ??= new();
-            _nativeErrorStore.Add(new(id, message));
         }
     }
 
@@ -690,59 +693,57 @@ internal unsafe static partial class EngineCore
         elffy_set_ime_position(screen, x, y).Validate();
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerNonUserCode]
-    private static void ThrowNativeErrorIfNotZero(usize errorCount)
+    private static string GetTlsLastError()
     {
-        if(errorCount != 0) {
-            ThrowNativeError(errorCount);
+        var len = elffy_get_tls_last_error_len();
+        if(len == 0) {
+            return "";
+        }
+        var pool = System.Buffers.ArrayPool<byte>.Shared;
+        var buf = pool.Rent((int)len);
+        try {
+            elffy_take_tls_last_error(ref MemoryMarshal.GetArrayDataReference(buf));
+            return Encoding.UTF8.GetString(buf.AsSpan(0, (int)len));
+        }
+        finally {
+            pool.Return(buf);
+        }
+    }
 
-            [DoesNotReturn]
-            [DebuggerNonUserCode]
-            static void ThrowNativeError(usize errorCount)
-            {
-                Debug.Assert(errorCount != 0);
-                var store = _nativeErrorStore;
-                if(store == null) {
-                    throw EngineCoreException.NewUnknownError();
-                }
-                else {
-                    EngineCoreException exception;
-                    {
-                        ReadOnlySpan<NativeError> errors = CollectionsMarshal.AsSpan(store);
-                        exception = new EngineCoreException(errors);
-                    }
-                    store.Clear();
-                    throw exception;
-                }
+    private static void ThrowTlsLastError()
+    {
+        var message = GetTlsLastError();
+        throw new EngineCoreException(message);
+    }
+
+
+    private readonly struct ApiResult
+    {
+        private readonly bool _success;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
+        public void Validate()
+        {
+            if(_success == false) {
+                ThrowTlsLastError();
             }
         }
     }
 
-    private readonly struct ApiResult
-    {
-        private readonly usize _errorCount;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DebuggerHidden]
-        public void Validate() => EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
-    }
-
     private readonly struct ApiBoxResult<T> where T : INativeTypeNonReprC
     {
-        // (_errorCount, _nativePtr) is (0, not null) or (not 0, null)
-
-        private readonly usize _errorCount;
+        private readonly bool _success;
         private readonly void* _nativePtr;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         //[DebuggerHidden]
         public Rust.Box<T> Validate()
         {
+            if(_success == false) {
+                ThrowTlsLastError();
+            }
             var nativePtr = _nativePtr;
-            Debug.Assert((_errorCount == 0 && nativePtr != null) || (_errorCount > 0 && nativePtr == null));
-            EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
-            Debug.Assert(_errorCount == 0);
             Debug.Assert(nativePtr != null);
             return *(Rust.Box<T>*)(&nativePtr);
         }
@@ -750,13 +751,15 @@ internal unsafe static partial class EngineCore
 
     private readonly struct ApiValueResult<T> where T : unmanaged
     {
-        private readonly usize _errorCount;
+        private readonly bool _success;
         private readonly T _value;
 
         [UnscopedRef]
         public ref readonly T Validate()
         {
-            EngineCore.ThrowNativeErrorIfNotZero(_errorCount);
+            if(_success == false) {
+                ThrowTlsLastError();
+            }
             return ref _value;
         }
     }

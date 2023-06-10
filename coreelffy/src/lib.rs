@@ -8,7 +8,6 @@ use smallvec::SmallVec;
 use static_assertions::assert_eq_size;
 use std;
 use std::error::Error;
-use std::num::NonZeroUsize;
 use std::{mem, num, ops, str};
 use winit::event::Ime;
 use winit::window;
@@ -16,8 +15,8 @@ use winit::window;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub(crate) struct EngineCoreConfig {
-    pub err_dispatcher: DispatchErrFn,
     pub on_screen_init: HostScreenInitFn,
+    pub on_unhandled_error: EngineUnhandledErrorFn,
     pub event_cleared: ClearedEventFn,
     pub event_redraw_requested: RedrawRequestedEventFn,
     pub event_resized: ResizedEventFn,
@@ -1885,20 +1884,9 @@ impl From<winit::event::MouseButton> for MouseButton {
     }
 }
 
-#[repr(transparent)]
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct ErrMessageId(NonZeroUsize);
-
-impl std::fmt::Display for ErrMessageId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-pub(crate) type DispatchErrFn =
-    extern "cdecl" fn(id: ErrMessageId, message: *const u8, message_len: usize);
 pub(crate) type HostScreenInitFn =
     extern "cdecl" fn(screen: Box<HostScreen>, screen_info: &HostScreenInfo) -> ScreenId;
+pub(crate) type EngineUnhandledErrorFn = extern "cdecl" fn(error: Slice<u8>);
 pub(crate) type ClearedEventFn = extern "cdecl" fn(screen_id: ScreenId);
 pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> bool;
 pub(crate) type ResizedEventFn = extern "cdecl" fn(screen_id: ScreenId, width: u32, height: u32);

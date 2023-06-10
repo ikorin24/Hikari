@@ -1,14 +1,9 @@
 use crate::screen::*;
 use crate::*;
-use once_cell::sync::Lazy;
-use regex::Regex;
 use std::cell::Cell;
 use std::error::Error;
 use std::fmt::Debug;
-use std::num::NonZeroUsize;
 use std::sync;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use winit;
 use winit::event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget};
@@ -20,31 +15,20 @@ pub(crate) struct Engine {
 }
 
 thread_local! {
-    /// thread local error counter
-    static ERROR_COUNTER: Cell<usize>  = Cell::new(0);
+    /// thread local error
+    static TLS_LAST_ERROR: Cell<String>  = Cell::new("".to_owned());
 }
 
-/// increment the error counter and get the incremented value.
-#[inline]
-fn increment_tls_err_count() -> usize {
-    ERROR_COUNTER.with(|cell| cell.replace(cell.get() + 1)) + 1
+pub(crate) fn set_tls_last_error(err: impl std::fmt::Display) {
+    TLS_LAST_ERROR.with(|cell| cell.replace(format!("{}", err)));
 }
 
-/// reset the error counter and get the value before reset.
-#[inline]
-pub(crate) fn reset_tls_err_count() -> usize {
-    ERROR_COUNTER.with(|cell| cell.replace(0))
+pub(crate) fn take_tls_last_error() -> String {
+    TLS_LAST_ERROR.with(|cell| cell.take())
 }
 
-#[inline]
-fn generate_message_id() -> ErrMessageId {
-    static ID_SEED: AtomicUsize = AtomicUsize::new(1);
-
-    // x  = { 1, 3, 5, ..., 2^N -1 }
-    // id = x / 2 + 1
-    //    = { 1, 2, 3, ..., 2^(N-1) }
-    let x = ID_SEED.fetch_add(2, Ordering::Relaxed) / 2 + 1;
-    ErrMessageId(unsafe { NonZeroUsize::new_unchecked(x / 2 + 1) })
+pub(crate) fn get_tls_last_error_len() -> usize {
+    TLS_LAST_ERROR.with(|cell| cell.clone().take().len())
 }
 
 impl Engine {
@@ -52,32 +36,16 @@ impl Engine {
         Engine { config: *config }
     }
 
-    pub fn dispatch_err(err: impl std::fmt::Display) {
-        static ANCI_ESC_SEQ_DECORATION: Lazy<Regex> =
-            Lazy::new(|| Regex::new("\x1b\\[[0-9;]*m").unwrap());
-
-        let message = format!("{}", err);
-
-        // Some error messages contain decorations of ANSI escape sequences.
-        // They should be removed.
-        let message = ANCI_ESC_SEQ_DECORATION.replace_all(&message, "");
-
-        increment_tls_err_count();
-        let id = generate_message_id();
-        if let Some(err_dispatcher) =
-            Self::get_engine_field(|engine| engine.config.err_dispatcher).ok()
-        {
-            let message_bytes = message.as_bytes();
-            err_dispatcher(id, message_bytes.as_ptr(), message_bytes.len());
-        } else {
-            eprintln!("id: {}, {}", id, message);
-        }
-    }
-
     pub fn on_screen_init(screen: Box<HostScreen>) -> ScreenId {
         let f = Self::get_engine_field(|engine| engine.config.on_screen_init).unwrap();
         let screen_info = &screen.get_info();
         f(screen, screen_info)
+    }
+
+    pub fn on_unhandled_error(error: &str) {
+        let f = Self::get_engine_field(|engine| engine.config.on_unhandled_error).unwrap();
+        let bytes = error.as_bytes();
+        f(Slice::new(bytes))
     }
 
     pub fn event_cleared(screen_id: ScreenId) {
@@ -217,7 +185,8 @@ fn create_screen(
     screen_config: &HostScreenConfig,
     event_loop: &EventLoopWindowTarget<ProxyMessage>,
 ) -> Result<(), Box<dyn Error>> {
-    let screen = Box::new(HostScreen::new(screen_config, event_loop)?);
+    let screen = HostScreen::new(screen_config, event_loop)?;
+    let screen = Box::new(screen);
     let window_id = screen.window.id();
     let screen_id = Engine::on_screen_init(screen);
     push_screen(ScreenIdData(window_id, screen_id));
@@ -293,9 +262,10 @@ fn handle_event(
     match event {
         Event::UserEvent(proxy_message) => match proxy_message {
             ProxyMessage::CreateScreen(config) => {
-                if let Err(err) = create_screen(config, event_loop) {
-                    Engine::dispatch_err(err);
-                }
+                // if let Err(err) = create_screen(config, event_loop) {
+                //     Engine::dispatch_err(err);
+                // }
+                create_screen(config, event_loop).unwrap();
             }
         },
         Event::WindowEvent { event, window_id } => {
@@ -434,35 +404,60 @@ impl EngineErr {
 #[repr(transparent)]
 pub(crate) struct ApiResult {
     #[allow(dead_code)]
-    err_count: usize,
+    success: bool,
 }
 
 impl ApiResult {
     #[inline]
-    pub const fn from_err_count(err_count: usize) -> Self {
-        Self { err_count }
+    pub fn ok_or_set_error<E: std::fmt::Display>(result: Result<(), E>) -> Self {
+        match result {
+            Ok(_) => Self::ok(),
+            Err(err) => {
+                set_tls_last_error(err);
+                Self::err()
+            }
+        }
+    }
+
+    pub const fn ok() -> Self {
+        Self { success: true }
+    }
+
+    pub const fn err() -> Self {
+        Self { success: false }
     }
 }
 
 #[repr(C)]
 pub(crate) struct ApiBoxResult<T> {
-    err_count: usize,
+    success: bool,
     value: Option<Box<T>>,
 }
 
 impl<T> ApiBoxResult<T> {
     #[inline]
+    pub fn ok_or_set_error<E: std::fmt::Display>(result: Result<Box<T>, E>) -> Self {
+        match result {
+            Ok(value) => Self::ok(value),
+            Err(err) => {
+                set_tls_last_error(err);
+                Self::err()
+            }
+        }
+    }
+
+    #[inline]
     pub const fn ok(value: Box<T>) -> Self {
         Self {
-            err_count: 0,
+            success: true,
             value: Some(value),
         }
     }
 
     #[inline]
-    pub fn err(err_count: NonZeroUsize) -> Self {
+    pub fn err() -> Self {
         Self {
-            err_count: err_count.into(),
+            success: false,
             value: None,
         }
     }
@@ -470,22 +465,33 @@ impl<T> ApiBoxResult<T> {
 
 #[repr(C)]
 pub(crate) struct ApiValueResult<T: Default + 'static> {
-    err_count: usize,
+    success: bool,
     value: T,
 }
 
 impl<T: Default> ApiValueResult<T> {
     #[inline]
+    pub fn ok_or_set_error<E: std::fmt::Display>(result: Result<T, E>) -> Self {
+        match result {
+            Ok(value) => Self::ok(value),
+            Err(err) => {
+                set_tls_last_error(err);
+                Self::err()
+            }
+        }
+    }
+
+    #[inline]
     pub const fn ok(value: T) -> Self {
         Self {
-            err_count: 0,
+            success: true,
             value,
         }
     }
     #[inline]
-    pub fn err(err_count: NonZeroUsize) -> Self {
+    pub fn err() -> Self {
         Self {
-            err_count: err_count.into(),
+            success: false,
             value: Default::default(),
         }
     }

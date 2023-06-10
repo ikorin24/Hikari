@@ -6,7 +6,7 @@ use macos as platform;
 #[cfg(target_os = "windows")]
 use windows as platform;
 
-use crate::engine::{Engine, ProxyMessage};
+use crate::engine::ProxyMessage;
 use crate::*;
 use pollster::FutureExt;
 use std::cell::Cell;
@@ -75,7 +75,10 @@ impl HostScreen {
                 None,
             )
             .block_on()?;
-        device.on_uncaptured_error(Box::new(|error| Engine::dispatch_err(error)));
+        device.on_uncaptured_error(Box::new(|error| {
+            let message = format!("{:?}", error);
+            crate::engine::Engine::on_unhandled_error(&message);
+        }));
         let surface_config = {
             let surface_caps = surface.get_capabilities(&adapter);
             let surface_format = surface_caps

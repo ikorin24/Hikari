@@ -1,7 +1,7 @@
 use crate::engine::*;
 use crate::screen::*;
 use crate::*;
-use std::num::{NonZeroU32, NonZeroUsize};
+use std::num::NonZeroU32;
 
 /// # Thread Safety
 /// Only from main thread.
@@ -14,10 +14,8 @@ extern "cdecl" fn elffy_engine_start(
     engine_config: &EngineCoreConfig,
     screen_config: &HostScreenConfig,
 ) -> ApiResult {
-    if let Err(err) = engine_start(engine_config, screen_config) {
-        Engine::dispatch_err(err);
-    }
-    make_result()
+    let result = engine_start(engine_config, screen_config);
+    ApiResult::ok_or_set_error(result)
 }
 
 static_assertions::assert_impl_all!(HostScreenConfig: Send, Sync);
@@ -28,11 +26,8 @@ static_assertions::assert_impl_all!(HostScreenConfig: Send, Sync);
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_create_screen(config: &HostScreenConfig) -> ApiResult {
-    match send_proxy_message(ProxyMessage::CreateScreen(*config)) {
-        Ok(_) => {}
-        Err(err) => Engine::dispatch_err(err),
-    };
-    make_result()
+    let result = send_proxy_message(ProxyMessage::CreateScreen(*config));
+    ApiResult::ok_or_set_error(result)
 }
 
 static_assertions::assert_impl_all!(HostScreen: Send, Sync);
@@ -49,7 +44,7 @@ extern "cdecl" fn elffy_screen_resize_surface(
     height: u32,
 ) -> ApiResult {
     screen.resize_surface(width, height);
-    make_result()
+    ApiResult::ok()
 }
 
 /// # Thread Safety
@@ -60,7 +55,7 @@ extern "cdecl" fn elffy_screen_resize_surface(
 #[no_mangle]
 extern "cdecl" fn elffy_screen_request_redraw(screen: &HostScreen) -> ApiResult {
     screen.window.request_redraw();
-    make_result()
+    ApiResult::ok()
 }
 
 /// # Thread Safety
@@ -86,15 +81,18 @@ extern "cdecl" fn elffy_screen_begin_command(
                 Box::new(surface_texture),
                 Box::new(view),
             );
-            make_value_result(value)
+            ApiValueResult::ok(value)
         }
         Err(wgpu::SurfaceError::Lost) => {
             let size = screen.window.inner_size();
             screen.resize_surface(size.width, size.height);
             let value = BeginCommandData::failed();
-            make_value_result(value)
+            ApiValueResult::ok(value)
         }
-        Err(err) => error_value_result(err),
+        Err(err) => {
+            set_tls_last_error(err);
+            ApiValueResult::err()
+        }
     }
 }
 
@@ -117,7 +115,7 @@ extern "cdecl" fn elffy_screen_finish_command(
         .submit(std::iter::once(command_encoder.finish()));
     surface_tex.present();
     drop(surface_tex_view);
-    make_result()
+    ApiResult::ok()
 }
 
 /// # Thread Safety
@@ -126,15 +124,10 @@ extern "cdecl" fn elffy_screen_finish_command(
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_screen_set_title(screen: &HostScreen, title: Slice<u8>) -> ApiResult {
-    match title.as_str() {
-        Ok(title) => {
-            screen.window.set_title(title);
-        }
-        Err(err) => {
-            Engine::dispatch_err(err);
-        }
-    }
-    make_result()
+    let result = title.as_str().map(|title| {
+        screen.window.set_title(title);
+    });
+    ApiResult::ok_or_set_error(result)
 }
 
 /// # Thread Safety
@@ -153,8 +146,7 @@ where
 {
     let render_pass = desc.begin_render_pass_with(command_encoder);
     // `command_encoder` is no longer accessible until `render_pass` will drop.
-
-    make_box_result(Box::new(render_pass))
+    ApiBoxResult::ok(Box::new(render_pass))
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::RenderPass>: Send, Sync);
@@ -190,7 +182,7 @@ extern "cdecl" fn elffy_create_compute_pass(
 ) -> ApiBoxResult<wgpu::ComputePass> {
     let compute_pass =
         command_encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None });
-    make_box_result(Box::new(compute_pass))
+    ApiBoxResult::ok(Box::new(compute_pass))
 }
 
 /// # Thread Safety
@@ -219,7 +211,7 @@ extern "cdecl" fn elffy_screen_set_inner_size(
     if let (Some(w), Some(h)) = (NonZeroU32::new(width), NonZeroU32::new(height)) {
         screen.set_inner_size(w, h);
     }
-    make_result()
+    ApiResult::ok()
 }
 
 /// # Thread Safety
@@ -229,7 +221,7 @@ extern "cdecl" fn elffy_screen_set_inner_size(
 #[no_mangle]
 extern "cdecl" fn elffy_screen_get_inner_size(screen: &HostScreen) -> ApiValueResult<SizeU32> {
     let size: (u32, u32) = screen.window.inner_size().into();
-    make_value_result(size.into())
+    ApiValueResult::ok(size.into())
 }
 
 #[no_mangle]
@@ -250,11 +242,7 @@ extern "cdecl" fn elffy_screen_set_location(
         window.set_outer_position(p);
         Ok(())
     };
-    match f() {
-        Ok(_) => {}
-        Err(err) => Engine::dispatch_err(err),
-    };
-    make_result()
+    ApiResult::ok_or_set_error(f())
 }
 
 /// # Thread Safety
@@ -276,13 +264,9 @@ extern "cdecl" fn elffy_screen_get_location(
         };
         let offset = monitor.position();
         let p = window.outer_position()?;
-        Ok((p.x - offset.x, p.y - offset.y))
+        Ok((p.x - offset.x, p.y - offset.y).into())
     };
-
-    match f() {
-        Ok(location) => make_value_result(location.into()),
-        Err(err) => error_value_result(err),
-    }
+    ApiValueResult::ok_or_set_error(f())
 }
 
 /// # Thread Safety
@@ -293,10 +277,12 @@ extern "cdecl" fn elffy_screen_get_location(
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn elffy_current_monitor(screen: &HostScreen) -> ApiValueResult<Opt<MonitorId>> {
-    match screen.window.current_monitor().ok_or("no monitors") {
-        Ok(monitor) => make_value_result(Some(MonitorId::new(monitor)).into()),
-        Err(err) => error_value_result(err),
-    }
+    let result = screen
+        .window
+        .current_monitor()
+        .map(|monitor| Some(MonitorId::new(monitor)).into())
+        .ok_or("no monitors");
+    ApiValueResult::ok_or_set_error(result)
 }
 
 /// # Thread Safety
@@ -308,7 +294,7 @@ extern "cdecl" fn elffy_current_monitor(screen: &HostScreen) -> ApiValueResult<O
 #[no_mangle]
 extern "cdecl" fn elffy_monitor_count(screen: &HostScreen) -> ApiValueResult<usize> {
     let count = screen.window.available_monitors().count();
-    make_value_result(count)
+    ApiValueResult::ok(count)
 }
 
 /// # Thread Safety
@@ -329,7 +315,7 @@ extern "cdecl" fn elffy_monitors(
         buf[i] = MonitorId::new(monitor);
         i += 1;
     }
-    make_value_result(i)
+    ApiValueResult::ok(i)
 }
 
 /// # Thread Safety
@@ -347,7 +333,7 @@ extern "cdecl" fn elffy_write_texture(
     screen
         .queue
         .write_texture(texture.to_wgpu_type(), &data, *data_layout, *size);
-    make_result()
+    ApiResult::ok()
 }
 
 /// # Thread Safety
@@ -363,7 +349,7 @@ extern "cdecl" fn elffy_create_bind_group_layout(
         let layout = screen.device.create_bind_group_layout(desc);
         Box::new(layout)
     });
-    make_box_result(value)
+    ApiBoxResult::ok(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::BindGroupLayout>: Send, Sync);
@@ -394,7 +380,7 @@ extern "cdecl" fn elffy_create_bind_group(
         let bind_group = screen.device.create_bind_group(desc);
         Box::new(bind_group)
     });
-    make_box_result(value)
+    ApiBoxResult::ok(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::BindGroup>: Send, Sync);
@@ -423,7 +409,7 @@ extern "cdecl" fn elffy_create_pipeline_layout(
 ) -> ApiBoxResult<wgpu::PipelineLayout> {
     let value = screen.device.create_pipeline_layout(&desc.to_wgpu_type());
     let value = Box::new(value);
-    make_box_result(value)
+    ApiBoxResult::ok(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::PipelineLayout>: Send, Sync);
@@ -450,16 +436,11 @@ extern "cdecl" fn elffy_create_render_pipeline(
     screen: &HostScreen,
     desc: &RenderPipelineDescriptor,
 ) -> ApiBoxResult<wgpu::RenderPipeline> {
-    let value = match desc.use_wgpu_type(|desc| {
+    let result = desc.use_wgpu_type(|desc| {
         let value = screen.device.create_render_pipeline(desc);
         Ok(Box::new(value))
-    }) {
-        Ok(value) => value,
-        Err(err) => {
-            return error_box_result(err);
-        }
-    };
-    make_box_result(value)
+    });
+    ApiBoxResult::ok_or_set_error(result)
 }
 
 static_assertions::assert_impl_all!(RenderPipelineDescriptor: Send, Sync);
@@ -487,13 +468,11 @@ extern "cdecl" fn elffy_create_compute_pipeline(
     screen: &HostScreen,
     desc: &ComputePipelineDescriptor,
 ) -> ApiBoxResult<wgpu::ComputePipeline> {
-    match desc.use_wgpu_type(|desc| {
+    let result = desc.use_wgpu_type(|desc| {
         let value = screen.device.create_compute_pipeline(desc);
         Ok(Box::new(value))
-    }) {
-        Ok(value) => make_box_result(value),
-        Err(err) => error_box_result(err),
-    }
+    });
+    ApiBoxResult::ok_or_set_error(result)
 }
 
 static_assertions::assert_impl_all!(ComputePipelineDescriptor: Send, Sync);
@@ -526,7 +505,7 @@ extern "cdecl" fn elffy_create_buffer(
         mapped_at_creation: false,
     });
     let value = Box::new(buffer);
-    make_box_result(value)
+    ApiBoxResult::ok(value)
 }
 
 /// # Thread Safety
@@ -549,7 +528,7 @@ extern "cdecl" fn elffy_create_buffer_init(
             usage,
         });
     let value = Box::new(buffer);
-    make_box_result(value)
+    ApiBoxResult::ok(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::Buffer>: Send, Sync);
@@ -584,7 +563,7 @@ extern "cdecl" fn elffy_copy_texture_to_buffer(
         },
         *copy_size,
     );
-    make_result()
+    ApiResult::ok()
 }
 
 #[no_mangle]
@@ -592,8 +571,8 @@ extern "cdecl" fn elffy_read_buffer(
     screen: &HostScreen,
     buffer_slice: BufferSlice,
     token: usize,
-    callback: extern "cdecl" fn(token: usize, err_count: usize, view: *const u8, len: usize),
-) {
+    callback: extern "cdecl" fn(token: usize, result: ApiResult, view: *const u8, len: usize),
+) -> ApiResult {
     wgpu::util::DownloadBuffer::read_buffer(
         &screen.device,
         &screen.queue,
@@ -601,16 +580,15 @@ extern "cdecl" fn elffy_read_buffer(
         move |result| match result {
             Ok(downloaded) => {
                 let view: &[u8] = &downloaded;
-                let err_count = reset_tls_err_count();
-                callback(token, err_count, view.as_ptr(), view.len());
+                callback(token, ApiResult::ok(), view.as_ptr(), view.len());
             }
             Err(err) => {
-                Engine::dispatch_err(err);
-                let err_count = reset_tls_err_count();
-                callback(token, err_count, std::ptr::null(), 0);
+                set_tls_last_error(err);
+                callback(token, ApiResult::err(), std::ptr::null(), 0);
             }
         },
     );
+    ApiResult::ok()
 }
 
 static_assertions::assert_impl_all!(SamplerDescriptor: Send, Sync);
@@ -626,7 +604,7 @@ extern "cdecl" fn elffy_create_sampler(
 ) -> ApiBoxResult<wgpu::Sampler> {
     let sampler = screen.device.create_sampler(&desc.to_wgpu_type());
     let value = Box::new(sampler);
-    make_box_result(value)
+    ApiBoxResult::ok(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::Sampler>: Send, Sync);
@@ -653,20 +631,16 @@ extern "cdecl" fn elffy_create_shader_module(
     screen: &HostScreen,
     shader_source: Slice<u8>,
 ) -> ApiBoxResult<wgpu::ShaderModule> {
-    let shader_source = match shader_source.as_str() {
-        Ok(s) => s,
-        Err(err) => {
-            return error_box_result(err);
-        }
-    };
-    let shader = screen
-        .device
-        .create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: None,
-            source: wgpu::ShaderSource::Wgsl(shader_source.into()),
-        });
-    let value = Box::new(shader);
-    make_box_result(value)
+    let result = shader_source.as_str().map(|s| {
+        let shader = screen
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: None,
+                source: wgpu::ShaderSource::Wgsl(s.into()),
+            });
+        Box::new(shader)
+    });
+    ApiBoxResult::ok_or_set_error(result)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::ShaderModule>: Send, Sync);
@@ -694,7 +668,7 @@ extern "cdecl" fn elffy_create_texture(
     desc: &TextureDescriptor,
 ) -> ApiBoxResult<wgpu::Texture> {
     let value = Box::new(screen.device.create_texture(&desc.to_wgpu_type()));
-    make_box_result(value)
+    ApiBoxResult::ok(value)
 }
 
 /// # Thread Safety
@@ -714,7 +688,7 @@ extern "cdecl" fn elffy_create_texture_with_data(
             .device
             .create_texture_with_data(&screen.queue, &desc.to_wgpu_type(), &data);
     let value = Box::new(texture);
-    make_box_result(value)
+    ApiBoxResult::ok(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::Texture>: Send, Sync);
@@ -744,7 +718,7 @@ extern "cdecl" fn elffy_texture_format_info(
     info_out: &mut TextureFormatInfo,
 ) -> ApiResult {
     *info_out = format.to_wgpu_type().describe().into();
-    make_result()
+    ApiResult::ok()
 }
 
 /// # Thread Safety
@@ -758,7 +732,7 @@ extern "cdecl" fn elffy_create_texture_view(
 ) -> ApiBoxResult<wgpu::TextureView> {
     let desc = &desc.to_wgpu_type();
     let value = Box::new(texture.create_view(desc));
-    make_box_result(value)
+    ApiBoxResult::ok(value)
 }
 
 static_assertions::assert_impl_all!(Box<wgpu::TextureView>: Send, Sync);
@@ -788,7 +762,7 @@ extern "cdecl" fn elffy_write_buffer(
     data: Slice<u8>,
 ) -> ApiResult {
     screen.queue.write_buffer(buffer, offset, &data);
-    make_result()
+    ApiResult::ok()
 }
 
 static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
@@ -800,7 +774,7 @@ extern "cdecl" fn elffy_compute_set_pipeline<'a>(
     pipeline: &'a wgpu::ComputePipeline,
 ) -> ApiResult {
     pass.set_pipeline(pipeline);
-    make_result()
+    ApiResult::ok()
 }
 
 #[no_mangle]
@@ -810,7 +784,7 @@ extern "cdecl" fn elffy_compute_set_bind_group<'a>(
     bind_group: &'a wgpu::BindGroup,
 ) -> ApiResult {
     pass.set_bind_group(index, bind_group, &[]);
-    make_result()
+    ApiResult::ok()
 }
 
 #[no_mangle]
@@ -821,7 +795,7 @@ extern "cdecl" fn elffy_compute_dispatch_workgroups<'a>(
     z: u32,
 ) -> ApiResult {
     pass.dispatch_workgroups(x, y, z);
-    make_result()
+    ApiResult::ok()
 }
 
 /// # Thread Safety
@@ -837,7 +811,7 @@ extern "cdecl" fn elffy_set_pipeline<'a>(
     render_pipeline: &'a wgpu::RenderPipeline,
 ) -> ApiResult {
     render_pass.set_pipeline(render_pipeline);
-    make_result()
+    ApiResult::ok()
 }
 
 /// # Thread Safety
@@ -858,7 +832,7 @@ extern "cdecl" fn elffy_set_viewport<'a>(
     max_depth: f32,
 ) -> ApiResult {
     render_pass.set_viewport(x, y, w, h, min_depth, max_depth);
-    make_result()
+    ApiResult::ok()
 }
 
 static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
@@ -878,7 +852,7 @@ extern "cdecl" fn elffy_set_bind_group<'a>(
     bind_group: &'a wgpu::BindGroup,
 ) -> ApiResult {
     render_pass.set_bind_group(index, bind_group, &[]);
-    make_result()
+    ApiResult::ok()
 }
 
 static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
@@ -898,7 +872,7 @@ extern "cdecl" fn elffy_set_vertex_buffer<'a>(
     buffer_slice: BufferSlice<'a>,
 ) -> ApiResult {
     render_pass.set_vertex_buffer(slot, buffer_slice.to_wgpu_type());
-    make_result()
+    ApiResult::ok()
 }
 
 static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
@@ -919,7 +893,7 @@ extern "cdecl" fn elffy_set_index_buffer<'a>(
     index_format: wgpu::IndexFormat,
 ) -> ApiResult {
     render_pass.set_index_buffer(buffer_slice.to_wgpu_type(), index_format);
-    make_result()
+    ApiResult::ok()
 }
 
 static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
@@ -939,7 +913,7 @@ extern "cdecl" fn elffy_draw<'a>(
     instances: RangeU32,
 ) -> ApiResult {
     render_pass.draw(vertices.to_range(), instances.to_range());
-    make_result()
+    ApiResult::ok()
 }
 
 static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
@@ -961,7 +935,7 @@ extern "cdecl" fn elffy_draw_indexed<'a>(
     instances: RangeU32,
 ) -> ApiResult {
     render_pass.draw_indexed(indices.to_range(), base_vertex, instances.to_range());
-    make_result()
+    ApiResult::ok()
 }
 
 static_assertions::assert_impl_all!(winit::window::Window: Send, Sync);
@@ -969,50 +943,25 @@ static_assertions::assert_impl_all!(winit::window::Window: Send, Sync);
 #[no_mangle]
 extern "cdecl" fn elffy_set_ime_allowed(screen: &HostScreen, allowed: bool) -> ApiResult {
     screen.window.set_ime_allowed(allowed);
-    make_result()
+    ApiResult::ok()
 }
 
 #[no_mangle]
 extern "cdecl" fn elffy_set_ime_position(screen: &HostScreen, x: u32, y: u32) -> ApiResult {
     let pos = winit::dpi::PhysicalPosition::new(x, y);
     screen.window.set_ime_position(pos);
-    make_result()
+    ApiResult::ok()
 }
 
-#[inline]
-fn make_box_result<T>(value: Box<T>) -> ApiBoxResult<T> {
-    let err_count = reset_tls_err_count();
-    match NonZeroUsize::new(err_count) {
-        Some(err_count) => ApiBoxResult::err(err_count),
-        None => ApiBoxResult::ok(value),
-    }
+#[no_mangle]
+extern "cdecl" fn elffy_get_tls_last_error_len() -> usize {
+    engine::get_tls_last_error_len()
 }
 
-#[inline]
-fn error_box_result<T>(err: impl std::fmt::Display) -> ApiBoxResult<T> {
-    Engine::dispatch_err(err);
-    let err_count = reset_tls_err_count().try_into().unwrap();
-    ApiBoxResult::err(err_count)
-}
-
-#[inline]
-fn make_value_result<T: Default + 'static>(value: T) -> ApiValueResult<T> {
-    let err_count = reset_tls_err_count();
-    match NonZeroUsize::new(err_count) {
-        Some(err_count) => ApiValueResult::err(err_count),
-        None => ApiValueResult::ok(value),
-    }
-}
-
-#[inline]
-fn error_value_result<T: Default + 'static>(err: impl std::fmt::Display) -> ApiValueResult<T> {
-    Engine::dispatch_err(err);
-    let err_count = reset_tls_err_count().try_into().unwrap();
-    ApiValueResult::err(err_count)
-}
-
-#[inline]
-fn make_result() -> ApiResult {
-    let err_count = reset_tls_err_count();
-    ApiResult::from_err_count(err_count)
+#[no_mangle]
+extern "cdecl" fn elffy_take_tls_last_error(buf: *mut u8) {
+    let error = engine::take_tls_last_error();
+    let bytes = error.as_bytes();
+    let slice = unsafe { std::slice::from_raw_parts_mut(buf, bytes.len()) };
+    slice.copy_from_slice(bytes);
 }

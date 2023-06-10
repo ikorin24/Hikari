@@ -275,8 +275,8 @@ internal static class CoreElffy
 
     internal unsafe struct EngineCoreConfig
     {
-        public required DispatchErrFn err_dispatcher;
         public required HostScreenInitFn on_screen_init;
+        public required EngineUnhandledErrorFn on_unhandled_error;
         public required ClearedEventFn event_cleared;
         public required RedrawRequestedEventFn event_redraw_requested;
         public required ResizedEventFn event_resized;
@@ -298,8 +298,6 @@ internal static class CoreElffy
         public required u32 height;
         public required Wgpu.Backends backend;
     }
-
-    internal readonly record struct ErrMessageId(nuint Value);
 
     internal struct HostScreenInfo
     {
@@ -334,11 +332,11 @@ internal static class CoreElffy
         }
     }
 
-    internal unsafe readonly struct DispatchErrFn
+    internal unsafe readonly struct EngineUnhandledErrorFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ErrMessageId, u8*, nuint, void> _func;
+        private readonly delegate* unmanaged[Cdecl]<CE.Slice<u8>, void> _func;
 
-        public DispatchErrFn(delegate* unmanaged[Cdecl]<ErrMessageId, u8*, nuint, void> f) => _func = f;
+        public EngineUnhandledErrorFn(delegate* unmanaged[Cdecl]<CE.Slice<u8>, void> f) => _func = f;
     }
 
     internal unsafe readonly struct ClearedEventFn

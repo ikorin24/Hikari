@@ -21,24 +21,24 @@ unsafe partial class EngineCore
     {
         var token = Callback.NewToken();
         Callback.Register(token, onRead, onException);
-        elffy_read_buffer(screen, buffer_slice, token, &OnCallback);
+        elffy_read_buffer(screen, buffer_slice, token, &OnCallback).Validate();
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        static void OnCallback(usize token, usize errorCount, byte* ptr, usize length)
+        static void OnCallback(usize token, ApiResult result, byte* ptr, usize length)
         {
             Action<Exception>? onException = null;
             try {
-                if(Callback.Take(token, out var callback)) {
-                    (var onRead, onException) = callback;
-                    if(int.MaxValue < length) {
-                        throw new NotImplementedException();
-                    }
-                    var span = new ReadOnlySpan<byte>(ptr, (int)length);
-                    onRead.Invoke(span);
-                }
-                else {
+                if(!Callback.Take(token, out var callback)) {
                     Debug.Fail($"Callback not found. token: {token}");
                 }
+                (var onRead, onException) = callback;
+
+                result.Validate();
+                if(int.MaxValue < length) {
+                    throw new NotImplementedException();
+                }
+                var span = new ReadOnlySpan<byte>(ptr, (int)length);
+                onRead.Invoke(span);
             }
             catch(Exception ex) {
                 onException?.Invoke(ex);
