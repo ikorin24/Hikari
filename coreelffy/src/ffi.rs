@@ -554,7 +554,32 @@ extern "cdecl" fn elffy_copy_texture_to_buffer(
     buffer: &wgpu::Buffer,
     image_layout: &wgpu::ImageDataLayout,
 ) -> ApiResult {
-    // Caller should check args before because this can cause panic.
+    if !source
+        .texture
+        .usage()
+        .contains(wgpu::TextureUsages::COPY_SRC)
+    {
+        engine::set_tls_last_error("texture does not have 'COPY_SRC' flag");
+        return ApiResult::err();
+    }
+    if !buffer.usage().contains(wgpu::BufferUsages::COPY_DST) {
+        engine::set_tls_last_error("buffer does not have 'COPY_DST' flag");
+        return ApiResult::err();
+    }
+    let copy_byte_len =
+        copy_size.width as u64 * copy_size.height as u64 * copy_size.depth_or_array_layers as u64;
+    if buffer.size() < copy_byte_len {
+        engine::set_tls_last_error("dest buffer size is too small");
+        return ApiResult::err();
+    }
+    if buffer.size() % wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as u64 != 0 {
+        engine::set_tls_last_error(format!(
+            "dest buffer size is not aligned to {}",
+            wgpu::COPY_BYTES_PER_ROW_ALIGNMENT
+        ));
+        return ApiResult::err();
+    }
+
     let mut encoder = screen
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });

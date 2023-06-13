@@ -6,7 +6,6 @@ using Elffy.NativeBind;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace Elffy;
 
@@ -262,6 +261,7 @@ public sealed class Texture : IScreenManaged
         unsafe {
             bytesPerPixel = (u32)sizeof(TPixel);
         }
+        // TODO: check format and size of TPixel
 
         var source = new CE.ImageCopyTexture
         {
@@ -284,7 +284,12 @@ public sealed class Texture : IScreenManaged
             bytes_per_row = bytesPerPixel * size.width,
             rows_per_image = size.height,
         };
-        using(var buffer = Buffer.Create(screen, layout.bytes_per_row * layout.rows_per_image, BufferUsages.CopyDst | BufferUsages.CopySrc)) {
+        uint bufferSize = layout.bytes_per_row * layout.rows_per_image;
+
+        // make bufferSize multiply of COPY_BYTES_PER_ROW_ALIGNMENT
+        bufferSize = (bufferSize + EngineConsts.COPY_BYTES_PER_ROW_ALIGNMENT - 1) & ~(EngineConsts.COPY_BYTES_PER_ROW_ALIGNMENT - 1);
+
+        using(var buffer = Buffer.Create(screen, bufferSize, BufferUsages.CopySrc | BufferUsages.CopyDst)) {
             var bufValue = buffer.AsValue();
             EngineCore.CopyTextureToBuffer(screen.AsRefChecked(), source, size, bufValue.NativeRef, layout);
             bufValue.ReadCallback((bytes) =>

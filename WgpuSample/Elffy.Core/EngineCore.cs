@@ -693,27 +693,23 @@ internal unsafe static partial class EngineCore
         elffy_set_ime_position(screen, x, y).Validate();
     }
 
-    private static string GetTlsLastError()
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static EngineCoreException GetTlsLastError()
     {
         var len = elffy_get_tls_last_error_len();
         if(len == 0) {
-            return "";
+            return new EngineCoreException(null);
         }
         var pool = System.Buffers.ArrayPool<byte>.Shared;
         var buf = pool.Rent((int)len);
         try {
             elffy_take_tls_last_error(ref MemoryMarshal.GetArrayDataReference(buf));
-            return Encoding.UTF8.GetString(buf.AsSpan(0, (int)len));
+            var message = Encoding.UTF8.GetString(buf.AsSpan(0, (int)len));
+            return new EngineCoreException(message);
         }
         finally {
             pool.Return(buf);
         }
-    }
-
-    private static void ThrowTlsLastError()
-    {
-        var message = GetTlsLastError();
-        throw new EngineCoreException(message);
     }
 
 
@@ -726,7 +722,7 @@ internal unsafe static partial class EngineCore
         public void Validate()
         {
             if(_success == false) {
-                ThrowTlsLastError();
+                throw GetTlsLastError();
             }
         }
     }
@@ -737,11 +733,11 @@ internal unsafe static partial class EngineCore
         private readonly void* _nativePtr;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //[DebuggerHidden]
+        [DebuggerHidden]
         public Rust.Box<T> Validate()
         {
             if(_success == false) {
-                ThrowTlsLastError();
+                throw GetTlsLastError();
             }
             var nativePtr = _nativePtr;
             Debug.Assert(nativePtr != null);
@@ -755,10 +751,12 @@ internal unsafe static partial class EngineCore
         private readonly T _value;
 
         [UnscopedRef]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [DebuggerHidden]
         public ref readonly T Validate()
         {
             if(_success == false) {
-                ThrowTlsLastError();
+                throw GetTlsLastError();
             }
             return ref _value;
         }

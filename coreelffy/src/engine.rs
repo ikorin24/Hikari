@@ -28,7 +28,12 @@ pub(crate) fn take_tls_last_error() -> String {
 }
 
 pub(crate) fn get_tls_last_error_len() -> usize {
-    TLS_LAST_ERROR.with(|cell| cell.clone().take().len())
+    TLS_LAST_ERROR.with(|cell| {
+        let message = cell.take();
+        let len = message.len();
+        cell.set(message);
+        len
+    })
 }
 
 impl Engine {

@@ -1884,6 +1884,16 @@ impl From<winit::event::MouseButton> for MouseButton {
     }
 }
 
+// If these assertions fail, the constant values in the C# code must also be changed.
+static_assertions::const_assert_eq!(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT, 256);
+static_assertions::const_assert_eq!(wgpu::QUERY_RESOLVE_BUFFER_ALIGNMENT, 256);
+static_assertions::const_assert_eq!(wgpu::COPY_BUFFER_ALIGNMENT, 4);
+static_assertions::const_assert_eq!(wgpu::MAP_ALIGNMENT, 8);
+static_assertions::const_assert_eq!(wgpu::VERTEX_STRIDE_ALIGNMENT, 4);
+static_assertions::const_assert_eq!(wgpu::PUSH_CONSTANT_ALIGNMENT, 4);
+static_assertions::const_assert_eq!(wgpu::QUERY_SET_MAX_QUERIES, 8192);
+static_assertions::const_assert_eq!(wgpu::QUERY_SIZE, 8);
+
 pub(crate) type HostScreenInitFn =
     extern "cdecl" fn(screen: Box<HostScreen>, screen_info: &HostScreenInfo) -> ScreenId;
 pub(crate) type EngineUnhandledErrorFn = extern "cdecl" fn(error: Slice<u8>);
