@@ -62,6 +62,11 @@ internal class Program
             ControlCamera(screen.Mouse, camera, Vector3.Zero);
         });
 
+        material.Albedo.ReadCallback<ColorByte>(pixels =>
+        {
+            Debug.WriteLine(pixels.Length);
+        });
+
         cube.Mesh.VertexBuffer.ReadCallback(data =>
         {
             var vertices = data.MarshalCast<byte, Vertex>();
@@ -84,7 +89,7 @@ internal class Program
     {
         var format = isSrgb ? TextureFormat.Rgba8UnormSrgb : TextureFormat.Rgba8Unorm;
         using var image = LoadImage(filepath);
-        return Texture.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding);
+        return Texture.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding | TextureUsages.CopySrc);
 
         static Image LoadImage(string filepath)
         {
@@ -104,7 +109,7 @@ internal class Program
         for(int i = 0; i < pixels.Length; i++) {
             pixels[i] = new ColorByte(0x00, pixels[i].G, aoPixels[i].R, 0x00);
         }
-        return Texture.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding);
+        return Texture.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding | TextureUsages.CopySrc);
 
         static Image LoadImage(string filepath)
         {

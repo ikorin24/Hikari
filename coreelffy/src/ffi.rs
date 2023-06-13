@@ -498,7 +498,7 @@ extern "cdecl" fn elffy_create_buffer(
     size: u64,
     usage: wgpu::BufferUsages,
 ) -> ApiBoxResult<wgpu::Buffer> {
-    let buffer = screen.device.create_buffer(&wgpu_types::BufferDescriptor {
+    let buffer = screen.device.create_buffer(&wgpu::BufferDescriptor {
         label: None,
         size,
         usage,
@@ -548,13 +548,16 @@ extern "cdecl" fn elffy_destroy_buffer(buffer: Box<wgpu::Buffer>) {
 
 #[no_mangle]
 extern "cdecl" fn elffy_copy_texture_to_buffer(
-    encoder: &mut wgpu::CommandEncoder,
+    screen: &HostScreen,
     source: &ImageCopyTexture,
     copy_size: &wgpu::Extent3d,
     buffer: &wgpu::Buffer,
     image_layout: &wgpu::ImageDataLayout,
 ) -> ApiResult {
     // Caller should check args before because this can cause panic.
+    let mut encoder = screen
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
     encoder.copy_texture_to_buffer(
         source.to_wgpu_type(),
         wgpu::ImageCopyBuffer {
@@ -563,6 +566,7 @@ extern "cdecl" fn elffy_copy_texture_to_buffer(
         },
         *copy_size,
     );
+    screen.queue.submit(Some(encoder.finish()));
     ApiResult::ok()
 }
 

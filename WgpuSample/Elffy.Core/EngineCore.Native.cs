@@ -171,7 +171,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_copy_texture_to_buffer(
-        Rust.MutRef<Wgpu.CommandEncoder> encoder,
+        Rust.Ref<CE.HostScreen> screen,
         in CE.ImageCopyTexture source,
         in Wgpu.Extent3d copy_size,
         Rust.Ref<Wgpu.Buffer> buffer,

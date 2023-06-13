@@ -1,10 +1,12 @@
 ﻿#nullable enable
+using Cysharp.Threading.Tasks;
 using Elffy.Effective;
 using Elffy.Imaging;
 using Elffy.NativeBind;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Elffy;
 
@@ -245,5 +247,78 @@ public sealed class Texture : IScreenManaged
                 },
                 size);
         }
+    }
+
+    public void ReadCallback<TPixel>(
+        ReadOnlySpanAction<TPixel> onRead,
+        Action<Exception>? onException = null)
+    where TPixel : unmanaged
+    {
+        var screen = Screen;
+        if(Usage.HasFlag(TextureUsages.CopySrc) == false) {
+            throw new InvalidOperationException();
+        }
+        u32 bytesPerPixel;
+        unsafe {
+            bytesPerPixel = (u32)sizeof(TPixel);
+        }
+
+        var source = new CE.ImageCopyTexture
+        {
+            aspect = CE.TextureAspect.All,
+            mip_level = 0,
+            origin_x = 0,
+            origin_y = 0,
+            origin_z = 0,
+            texture = NativeRef,
+        };
+        var size = new Wgpu.Extent3d
+        {
+            width = Width,
+            height = Height,
+            depth_or_array_layers = Depth,
+        };
+        var layout = new Wgpu.ImageDataLayout
+        {
+            offset = 0,
+            bytes_per_row = bytesPerPixel * size.width,
+            rows_per_image = size.height,
+        };
+        using(var buffer = Buffer.Create(screen, layout.bytes_per_row * layout.rows_per_image, BufferUsages.CopyDst | BufferUsages.CopySrc)) {
+            var bufValue = buffer.AsValue();
+            EngineCore.CopyTextureToBuffer(screen.AsRefChecked(), source, size, bufValue.NativeRef, layout);
+            bufValue.ReadCallback((bytes) =>
+            {
+                var pixels = MemoryMarshal.Cast<byte, TPixel>(bytes);
+                onRead(pixels);
+            }, onException);
+        }
+    }
+
+    public UniTask<int> Read<TPixel>(Memory<TPixel> dest) where TPixel : unmanaged
+    {
+        var completionSource = new UniTaskCompletionSource<int>();
+        ReadCallback<TPixel>((pixels) =>
+        {
+            pixels.CopyTo(dest.Span);
+            completionSource.TrySetResult(pixels.Length);
+        }, (ex) =>
+        {
+            completionSource.TrySetException(ex);
+        });
+        return completionSource.Task;
+    }
+
+    public UniTask<TPixel[]> ReadToArray<TPixel>() where TPixel : unmanaged
+    {
+        var completionSource = new UniTaskCompletionSource<TPixel[]>();
+        ReadCallback<TPixel>((pixels) =>
+        {
+            completionSource.TrySetResult(pixels.ToArray());
+        }, (ex) =>
+        {
+            completionSource.TrySetException(ex);
+        });
+        return completionSource.Task;
     }
 }
