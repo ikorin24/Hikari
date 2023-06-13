@@ -40,6 +40,7 @@ public readonly struct TextureDescriptor
         {
             TextureDimension.D1 or TextureDimension.D3 => 1,
             TextureDimension.D2 => Size.Z,
+            _ => 0,
         };
     }
 
