@@ -62,9 +62,11 @@ internal class Program
             ControlCamera(screen.Mouse, camera, Vector3.Zero);
         });
 
-        material.Albedo.ReadCallback<ColorByte>(pixels =>
+        var t = material.Albedo;
+        t.ReadCallback<ColorByte>(pixels =>
         {
-            Debug.WriteLine(pixels.Length);
+            var image = new ReadOnlyImageRef(pixels, (int)t.Width, (int)t.Height);
+            //image.SaveAsPng("test.png");
         });
 
         cube.Mesh.VertexBuffer.ReadCallback(data =>

@@ -173,6 +173,36 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Rust.Box<Wgpu.CommandEncoder> CreateCommandEncoder(this Rust.Ref<CE.HostScreen> screen)
+    {
+        return elffy_create_command_encoder(screen).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void DestroyCommandEncoder(this Rust.Box<Wgpu.CommandEncoder> encoder)
+    {
+        elffy_destroy_command_encoder(encoder);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Rust.OptionBox<Wgpu.SurfaceTexture> GetSurfaceTexture(this Rust.Ref<CE.HostScreen> screen)
+    {
+        return elffy_get_surface_texture(screen).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Rust.Ref<Wgpu.Texture> SurfaceTextureToTexture(this Rust.Ref<Wgpu.SurfaceTexture> surface_texture)
+    {
+        return elffy_surface_texture_to_texture(surface_texture);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void PresentSurfaceTexture(this Rust.Box<Wgpu.SurfaceTexture> surface_texture)
+    {
+        elffy_present_surface_texture(surface_texture);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool ScreenBeginCommand(
         Screen screen,
         out CommandEncoder encoder)

@@ -32,6 +32,26 @@ static unsafe partial class EngineCore
         Rust.Ref<CE.HostScreen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiBoxResult<Wgpu.CommandEncoder> elffy_create_command_encoder(
+        Rust.Ref<CE.HostScreen> screen);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial void elffy_destroy_command_encoder(
+        Rust.Box<Wgpu.CommandEncoder> encoder);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiValueResult<Rust.OptionBox<Wgpu.SurfaceTexture>> elffy_get_surface_texture(
+        Rust.Ref<CE.HostScreen> screen);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial Rust.Ref<Wgpu.Texture> elffy_surface_texture_to_texture(
+        Rust.Ref<Wgpu.SurfaceTexture> surface_texture);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial void elffy_present_surface_texture(
+        Rust.Box<Wgpu.SurfaceTexture> surface_texture);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiValueResult<CE.BeginCommandData> elffy_screen_begin_command(
         Rust.Ref<CE.HostScreen> screen);
 

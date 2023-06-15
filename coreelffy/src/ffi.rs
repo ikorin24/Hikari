@@ -58,6 +58,54 @@ extern "cdecl" fn elffy_screen_request_redraw(screen: &HostScreen) -> ApiResult 
     ApiResult::ok()
 }
 
+#[no_mangle]
+extern "cdecl" fn elffy_create_command_encoder(
+    screen: &HostScreen,
+) -> ApiBoxResult<wgpu::CommandEncoder> {
+    let encoder = screen
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+    ApiBoxResult::ok(Box::new(encoder))
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_destroy_command_encoder(encoder: Box<wgpu::CommandEncoder>) {
+    drop(encoder);
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_get_surface_texture(
+    screen: &HostScreen,
+) -> ApiValueResult<Option<Box<wgpu::SurfaceTexture>>> {
+    match screen.surface.get_current_texture() {
+        Ok(surface_texture) => {
+            let value = Some(Box::new(surface_texture));
+            ApiValueResult::ok(value)
+        }
+        Err(wgpu::SurfaceError::Lost) => {
+            let size = screen.window.inner_size();
+            screen.resize_surface(size.width, size.height);
+            ApiValueResult::ok(None)
+        }
+        Err(err) => {
+            set_tls_last_error(err);
+            ApiValueResult::err()
+        }
+    }
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_surface_texture_to_texture(
+    surface_texture: &wgpu::SurfaceTexture,
+) -> &wgpu::Texture {
+    &surface_texture.texture
+}
+
+#[no_mangle]
+extern "cdecl" fn elffy_present_surface_texture(surface_texture: Box<wgpu::SurfaceTexture>) {
+    surface_texture.present()
+}
+
 /// # Thread Safety
 /// Only from main thread.
 /// (I do not know if it is thread safe or not. But that's good enough for me.)
