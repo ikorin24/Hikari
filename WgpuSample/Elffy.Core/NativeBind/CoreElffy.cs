@@ -439,14 +439,6 @@ internal static class CoreElffy
         public static bool operator !=(ScreenId left, ScreenId right) => !(left == right);
     }
 
-    internal readonly struct BeginCommandData
-    {
-        public readonly bool success;
-        public readonly Rust.OptionBox<Wgpu.CommandEncoder> command_encoder;
-        public readonly Rust.OptionBox<Wgpu.SurfaceTexture> surface_texture;
-        public readonly Rust.OptionBox<Wgpu.TextureView> surface_texture_view;
-    }
-
     internal struct SizeU32
     {
         public u32 width;

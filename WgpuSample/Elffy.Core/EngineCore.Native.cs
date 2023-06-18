@@ -53,17 +53,6 @@ static unsafe partial class EngineCore
         Rust.Box<Wgpu.SurfaceTexture> surface_texture);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiValueResult<CE.BeginCommandData> elffy_screen_begin_command(
-        Rust.Ref<CE.HostScreen> screen);
-
-    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiResult elffy_screen_finish_command(
-        Rust.Ref<CE.HostScreen> screen,
-        Rust.Box<Wgpu.CommandEncoder> command_encoder,
-        Rust.Box<Wgpu.SurfaceTexture> surface_tex,
-        Rust.Box<Wgpu.TextureView> surface_tex_view);
-
-    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult elffy_screen_set_title(
         Rust.Ref<CE.HostScreen> screen,
         CE.Slice<u8> title);

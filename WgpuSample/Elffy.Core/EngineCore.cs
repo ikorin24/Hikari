@@ -217,36 +217,6 @@ internal unsafe static partial class EngineCore
         elffy_present_surface_texture(surface_texture);
     }
 
-    [Obsolete("Don't use", true)]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool ScreenBeginCommand(
-        Screen screen,
-        out CommandEncoder encoder)
-    {
-        ref readonly var data = ref elffy_screen_begin_command(screen.AsRefChecked()).Validate();
-        if(data.success) {
-            encoder = new CommandEncoder(
-                screen,
-                data.command_encoder.Unwrap(),
-                data.surface_texture.Unwrap(),
-                data.surface_texture_view.Unwrap());
-            return true;
-        }
-        else {
-            encoder = CommandEncoder.Invalid;
-            return false;
-        }
-    }
-
-    [Obsolete("Don't use", true)]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void ScreenFinishCommand(
-        CommandEncoder encoder)
-    {
-        var (screen, commandEncoder, surfaceTexture, surfaceTextureView) = encoder;
-        elffy_screen_finish_command(screen.AsRefChecked(), commandEncoder, surfaceTexture, surfaceTextureView).Validate();
-    }
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe static void ScreenSetTitle(this Rust.Ref<CE.HostScreen> screen, ReadOnlySpan<byte> title)
     {

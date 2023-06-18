@@ -113,66 +113,6 @@ extern "cdecl" fn elffy_present_surface_texture(surface_texture: Box<wgpu::Surfa
 }
 
 /// # Thread Safety
-/// Only from main thread.
-/// (I do not know if it is thread safe or not. But that's good enough for me.)
-/// ## NG
-/// - called from any thread
-/// - called from multiple threads simultaneously with same args
-#[no_mangle]
-extern "cdecl" fn elffy_screen_begin_command(
-    screen: &HostScreen,
-) -> ApiValueResult<BeginCommandData> {
-    match screen.surface.get_current_texture() {
-        Ok(surface_texture) => {
-            let view = surface_texture
-                .texture
-                .create_view(&wgpu::TextureViewDescriptor::default());
-            let command_encoder = screen
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-            let value = BeginCommandData::new(
-                Box::new(command_encoder),
-                Box::new(surface_texture),
-                Box::new(view),
-            );
-            ApiValueResult::ok(value)
-        }
-        Err(wgpu::SurfaceError::Lost) => {
-            let size = screen.window.inner_size();
-            screen.resize_surface(size.width, size.height);
-            let value = BeginCommandData::failed();
-            ApiValueResult::ok(value)
-        }
-        Err(err) => {
-            set_tls_last_error(err);
-            ApiValueResult::err()
-        }
-    }
-}
-
-/// # Thread Safety
-/// Only from main thread.
-/// (I do not know if it is thread safe or not. But that's good enough for me.)
-/// ## NG
-/// - called from any thread
-/// - called from multiple threads simultaneously with same args
-#[no_mangle]
-extern "cdecl" fn elffy_screen_finish_command(
-    screen: &HostScreen,
-    command_encoder: Box<wgpu::CommandEncoder>,
-    surface_tex: Box<wgpu::SurfaceTexture>,
-    surface_tex_view: Box<wgpu::TextureView>,
-) -> ApiResult {
-    let command_encoder = *command_encoder;
-    screen
-        .queue
-        .submit(std::iter::once(command_encoder.finish()));
-    surface_tex.present();
-    drop(surface_tex_view);
-    ApiResult::ok()
-}
-
-/// # Thread Safety
 /// ## OK
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args

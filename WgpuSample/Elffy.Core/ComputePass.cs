@@ -4,7 +4,6 @@ using System;
 
 namespace Elffy;
 
-// an instance cannot move to another thread
 public readonly struct ComputePass  // TODO: make ref sturct
 {
     private readonly Screen _screen;
