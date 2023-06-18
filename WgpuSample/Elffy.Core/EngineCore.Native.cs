@@ -45,6 +45,10 @@ static unsafe partial class EngineCore
         Rust.Ref<CE.HostScreen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial void elffy_destroy_surface_texture(
+        Rust.Box<Wgpu.SurfaceTexture> surface_texture);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial Rust.Ref<Wgpu.Texture> elffy_surface_texture_to_texture(
         Rust.Ref<Wgpu.SurfaceTexture> surface_texture);
 

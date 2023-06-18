@@ -195,20 +195,13 @@ internal unsafe static partial class EngineCore
                 return new SurfaceData(surfaceTexture, view);
             }
             catch {
-                // TODO:
-                // drop(surfaceTexture);
+                elffy_destroy_surface_texture(surfaceTexture);
                 throw;
             }
         }
         else {
             return SurfaceData.None;
         }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Rust.Ref<Wgpu.Texture> SurfaceTextureToTexture(this Rust.Ref<Wgpu.SurfaceTexture> surface_texture)
-    {
-        return elffy_surface_texture_to_texture(surface_texture);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -101,6 +101,11 @@ static_assertions::assert_impl_all!(Box<wgpu::SurfaceTexture>: Send, Sync);
 static_assertions::assert_impl_all!(wgpu::SurfaceTexture: Send, Sync);
 
 #[no_mangle]
+extern "cdecl" fn elffy_destroy_surface_texture(surface_texture: Box<wgpu::SurfaceTexture>) {
+    drop(surface_texture);
+}
+
+#[no_mangle]
 extern "cdecl" fn elffy_surface_texture_to_texture(
     surface_texture: &wgpu::SurfaceTexture,
 ) -> &wgpu::Texture {
