@@ -63,9 +63,9 @@ internal class Program
         });
 
         var t = material.Albedo;
-        t.ReadCallback<ColorByte>(pixels =>
+        t.ReadCallback(data =>
         {
-            var image = new ReadOnlyImageRef(pixels, (int)t.Width, (int)t.Height);
+            var image = new ReadOnlyImageRef(data.MarshalCast<byte, ColorByte>(), (int)t.Width, (int)t.Height);
             //image.SaveAsPng("test.png");
         });
 

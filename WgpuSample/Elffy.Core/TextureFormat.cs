@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
 
 namespace Elffy;
 
@@ -75,4 +74,71 @@ public enum TextureFormat : u32
     [EnumMapTo(CE.TextureFormat.EacR11Snorm)] EacR11Snorm,
     [EnumMapTo(CE.TextureFormat.EacRg11Unorm)] EacRg11Unorm,
     [EnumMapTo(CE.TextureFormat.EacRg11Snorm)] EacRg11Snorm,
+}
+
+public static class TextureFormatHelper
+{
+    public static TextureFormatInfo TextureFormatInfo(this TextureFormat format)
+    {
+        var info = format.MapOrThrow().TextureFormatInfo();
+        return new TextureFormatInfo(info);
+    }
+}
+
+public readonly struct TextureFormatInfo
+{
+    public readonly TextureSampleType SampleType { get; init; }
+    /// <summary>Dimension of a "block" of texels. This is always (1, 1) on uncompressed textures.</summary>
+    public readonly Vector2u BlockDimensions { get; init; }
+    /// <summary>
+    /// Size in bytes of a "block" of texels. This is the size per pixel on uncompressed textures.
+    /// (For example, 4 if format is 'Rgba8Unorm')
+    /// </summary>
+    public readonly u8 BlockSize { get; init; }
+    /// <summary>
+    /// Number of components in the format. 
+    /// (For example, 4 if format is 'Rgba8Unorm', which has 4 components (R, G, B, A))
+    /// </summary>
+    public readonly u8 ComponentCount { get; init; }
+    public readonly bool IsSrgb { get; init; }
+
+    public bool IsCompressed => BlockDimensions != new Vector2u(1, 1);
+
+    internal TextureFormatInfo(in CE.TextureFormatInfo info)
+    {
+        SampleType = info.sample_type.MapOrThrow();
+        BlockDimensions = new(info.block_dimensions.Value1, info.block_dimensions.Value2);
+        BlockSize = info.block_size;
+        ComponentCount = info.components;
+        IsSrgb = info.srgb;
+    }
+
+    private Vector3u PhysicalSize(Vector3u mipSize)
+    {
+        var (w, h) = BlockDimensions;
+        var block_width = (u32)w;
+        var block_height = (u32)h;
+
+        var width = ((mipSize.X + block_width - 1) / block_width) * block_width;
+        var height = ((mipSize.Y + block_height - 1) / block_height) * block_height;
+
+        return new Vector3u
+        {
+            X = width,
+            Y = height,
+            Z = mipSize.Z,
+        };
+    }
+
+    public (Vector3u PhysicalSize, u32 BytesPerRow, u32 RowCount) MipInfo(Vector3u mipSize)
+    {
+        var mipPhysicalSize = PhysicalSize(mipSize);
+        u32 widthBlocks = mipPhysicalSize.X / BlockDimensions.X;
+        u32 bytesPerRow = widthBlocks * BlockSize;
+        u32 heightBlocks = mipPhysicalSize.Y / BlockDimensions.Y;
+        return (
+            PhysicalSize: mipPhysicalSize,
+            BytesPerRow: bytesPerRow,
+            RowCount: heightBlocks * mipSize.Z);
+    }
 }

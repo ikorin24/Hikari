@@ -190,7 +190,7 @@ public sealed class Texture : IScreenManaged
     private static void CalcMipDataSize(in TextureDescriptor desc, Span<(Vector3u MipSize, u32 ByteLength)> mipData, out usize totalByteSize)
     {
         totalByteSize = 0;
-        var formatInfo = desc.Format.MapOrThrow().TextureFormatInfo();
+        var formatInfo = desc.Format.TextureFormatInfo();
         var arrayLayerCount = desc.ArrayLayerCount();
         for(uint layer = 0; layer < arrayLayerCount; layer++) {
             for(uint mip = 0; mip < desc.MipLevelCount; mip++) {
@@ -241,16 +241,15 @@ public sealed class Texture : IScreenManaged
         return _desc.MipLevelSize(mip).GetOrThrow();
     }
 
-    public void ReadCallback<TPixel>(
-        ReadOnlySpanAction<TPixel> onRead,
+    public void ReadCallback(
+        ReadOnlySpanAction<byte> onRead,
         Action<Exception>? onException = null)
-    where TPixel : unmanaged
     {
         CheckUsageFlag(TextureUsages.CopySrc, Usage);
 
         var mip = 0u;
 
-        var formatInfo = Format.MapOrThrow().TextureFormatInfo();
+        var formatInfo = Format.TextureFormatInfo();
         var mipSize = MipLevelSize(mip);
         var mipInfo = formatInfo.MipInfo(mipSize);
         var screen = Screen;
@@ -283,68 +282,14 @@ public sealed class Texture : IScreenManaged
         using(var buffer = Buffer.Create(screen, bufferSize, BufferUsages.CopySrc | BufferUsages.CopyDst)) {
             var bufValue = buffer.AsValue();
             EngineCore.CopyTextureToBuffer(screen.AsRefChecked(), source, size, bufValue.NativeRef, layout);
-            bufValue.ReadCallback((bytes) =>
-            {
-                var pixels = MemoryMarshal.Cast<byte, TPixel>(bytes);
-                onRead(pixels);
-            }, onException);
+            bufValue.ReadCallback(onRead, onException);
         }
     }
 
-    public void ReadCallback_original<TPixel>(
-        ReadOnlySpanAction<TPixel> onRead,
-        Action<Exception>? onException = null)
-    where TPixel : unmanaged
-    {
-        CheckUsageFlag(TextureUsages.CopySrc, Usage);
-        var screen = Screen;
-        u32 bytesPerPixel;
-        unsafe {
-            bytesPerPixel = (u32)sizeof(TPixel);
-        }
-        // TODO: check format and size of TPixel
-
-        var source = new CE.ImageCopyTexture
-        {
-            aspect = CE.TextureAspect.All,
-            mip_level = 0,
-            origin_x = 0,
-            origin_y = 0,
-            origin_z = 0,
-            texture = NativeRef,
-        };
-        var size = new Wgpu.Extent3d
-        {
-            width = Width,
-            height = Height,
-            depth_or_array_layers = Depth,
-        };
-        var layout = new Wgpu.ImageDataLayout
-        {
-            offset = 0,
-            bytes_per_row = bytesPerPixel * size.width,
-            rows_per_image = size.height,
-        };
-        uint bufferSize = layout.bytes_per_row * layout.rows_per_image;
-
-        // make bufferSize multiply of COPY_BYTES_PER_ROW_ALIGNMENT
-        bufferSize = (bufferSize + EngineConsts.COPY_BYTES_PER_ROW_ALIGNMENT - 1) & ~(EngineConsts.COPY_BYTES_PER_ROW_ALIGNMENT - 1);
-
-        using(var buffer = Buffer.Create(screen, bufferSize, BufferUsages.CopySrc | BufferUsages.CopyDst)) {
-            var bufValue = buffer.AsValue();
-            EngineCore.CopyTextureToBuffer(screen.AsRefChecked(), source, size, bufValue.NativeRef, layout);
-            bufValue.ReadCallback((bytes) =>
-            {
-                var pixels = MemoryMarshal.Cast<byte, TPixel>(bytes);
-                onRead(pixels);
-            }, onException);
-        }
-    }
-
-    public UniTask<int> Read<TPixel>(Memory<TPixel> dest) where TPixel : unmanaged
+    public UniTask<int> Read(Memory<byte> dest)
     {
         var completionSource = new UniTaskCompletionSource<int>();
-        ReadCallback<TPixel>((pixels) =>
+        ReadCallback((pixels) =>
         {
             pixels.CopyTo(dest.Span);
             completionSource.TrySetResult(pixels.Length);
@@ -355,10 +300,10 @@ public sealed class Texture : IScreenManaged
         return completionSource.Task;
     }
 
-    public UniTask<TPixel[]> ReadToArray<TPixel>() where TPixel : unmanaged
+    public UniTask<byte[]> ReadToArray()
     {
-        var completionSource = new UniTaskCompletionSource<TPixel[]>();
-        ReadCallback<TPixel>((pixels) =>
+        var completionSource = new UniTaskCompletionSource<byte[]>();
+        ReadCallback((pixels) =>
         {
             completionSource.TrySetResult(pixels.ToArray());
         }, (ex) =>

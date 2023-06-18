@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using Elffy.Effective;
-using Elffy.Imaging;
 using Elffy.NativeBind;
 using System;
 using System.Collections.Generic;
@@ -73,11 +72,19 @@ public sealed class Operations
             }
 
             //if(screen.FrameNum == 1000) {
-            //    context.ShadowMap.Texture.ReadCallback<ColorByte>(pixels =>
+            //    var texture = context.ShadowMap.Texture;
+            //    texture.ReadCallback(data =>
             //    {
-            //        Debug.WriteLine(pixels.Length);
-            //        var image = new ReadOnlyImageRef(pixels, 1024, 1024);
-            //        //image.SaveAsPng("shadow.png");
+            //        Debug.WriteLine(data.Length);
+            //        var pixels = System.Runtime.InteropServices.MemoryMarshal.Cast<byte, float>(data);
+            //        using var image = new Elffy.Imaging.Image((int)texture.Width, (int)texture.Height, false);
+            //        var dest = image.GetPixels();
+            //        for(int i = 0; i < pixels.Length; i++) {
+            //            var p = (byte)float.Clamp(pixels[i] * 255, 0, 255);
+            //            p = (byte)(255 - p);
+            //            dest[i] = new ColorByte(p, p, p, 255);
+            //        }
+            //        Elffy.Imaging.ImageExtensions.SaveAsPng(image, "shadow.png");
             //    });
             //}
         }

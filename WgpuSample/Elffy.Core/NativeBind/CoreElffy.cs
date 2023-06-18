@@ -68,37 +68,6 @@ internal static class CoreElffy
         public readonly u8 components;
         public readonly bool srgb;
         public readonly TextureFormatFeatures guaranteed_format_features;
-
-        public bool IsCompressed => (block_dimensions.Value1, block_dimensions.Value2) != (1, 1);
-
-        private Vector3u PhysicalSize(Vector3u mipSize)
-        {
-            var (w, h) = block_dimensions;
-            var block_width = (u32)w;
-            var block_height = (u32)h;
-
-            var width = ((mipSize.X + block_width - 1) / block_width) * block_width;
-            var height = ((mipSize.Y + block_height - 1) / block_height) * block_height;
-
-            return new Vector3u
-            {
-                X = width,
-                Y = height,
-                Z = mipSize.Z,
-            };
-        }
-
-        public (Vector3u PhysicalSize, u32 BytesPerRow, u32 RowCount) MipInfo(Vector3u mipSize)
-        {
-            var mipPhysicalSize = PhysicalSize(mipSize);
-            u32 widthBlocks = mipPhysicalSize.X / block_dimensions.Value1;
-            u32 bytesPerRow = widthBlocks * block_size;
-            u32 heightBlocks = mipPhysicalSize.Y / block_dimensions.Value2;
-            return (
-                PhysicalSize: mipPhysicalSize,
-                BytesPerRow: bytesPerRow,
-                RowCount: heightBlocks * mipSize.Z);
-        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -877,11 +846,11 @@ internal static class CoreElffy
 
     internal enum TextureSampleType
     {
-        FloatFilterable = 0,
-        FloatNotFilterable = 1,
-        Depth = 2,
-        Sint = 3,
-        Uint = 4,
+        [EnumMapTo(Elffy.TextureSampleType.FloatFilterable)] FloatFilterable = 0,
+        [EnumMapTo(Elffy.TextureSampleType.FloatNotFilterable)] FloatNotFilterable = 1,
+        [EnumMapTo(Elffy.TextureSampleType.Depth)] Depth = 2,
+        [EnumMapTo(Elffy.TextureSampleType.Sint)] Sint = 3,
+        [EnumMapTo(Elffy.TextureSampleType.Uint)] Uint = 4,
     }
 
     internal enum TextureViewDimension
