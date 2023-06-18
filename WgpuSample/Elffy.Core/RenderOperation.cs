@@ -25,15 +25,15 @@ public abstract class RenderOperation<TShader, TMaterial>
         _shader = shader;
     }
 
-    protected sealed override void Execute(in CommandEncoder encoder)
+    protected sealed override void Execute(in OperationContext context)
     {
-        using var pass = CreateRenderPass(in encoder);
+        using var pass = CreateRenderPass(in context);
         Render(pass.AsValue(), _pipeline.AsValue());
     }
 
-    protected virtual Own<RenderPass> CreateRenderPass(in CommandEncoder encoder)
+    protected virtual Own<RenderPass> CreateRenderPass(in OperationContext context)
     {
-        return RenderPass.SurfaceRenderPass(in encoder);
+        return context.CreateSurfaceRenderPass();
     }
 
     protected abstract void Render(in RenderPass pass, RenderPipeline pipeline);

@@ -179,15 +179,30 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void DestroyCommandEncoder(this Rust.Box<Wgpu.CommandEncoder> encoder)
+    public static void FinishCommandEncoder(this Rust.Ref<CE.HostScreen> screen, Rust.Box<Wgpu.CommandEncoder> encoder)
     {
-        elffy_destroy_command_encoder(encoder);
+        elffy_finish_command_encoder(screen, encoder);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Rust.OptionBox<Wgpu.SurfaceTexture> GetSurfaceTexture(this Rust.Ref<CE.HostScreen> screen)
+    public static SurfaceData GetSurfaceTexture(this Rust.Ref<CE.HostScreen> screen)
     {
-        return elffy_get_surface_texture(screen).Validate();
+        var value = elffy_get_surface_texture(screen).Validate();
+        if(value.IsSome(out var surfaceTexture)) {
+            var texture = elffy_surface_texture_to_texture(surfaceTexture);
+            try {
+                var desc = CE.TextureViewDescriptor.Default;
+                var view = elffy_create_texture_view(texture, &desc).Validate();
+                return new SurfaceData(surfaceTexture, view);
+            }
+            catch {
+                // TODO:
+                // drop(surfaceTexture);
+                throw;
+            }
+        }
+        else {
+            return SurfaceData.None;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -202,6 +217,7 @@ internal unsafe static partial class EngineCore
         elffy_present_surface_texture(surface_texture);
     }
 
+    [Obsolete("Don't use", true)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool ScreenBeginCommand(
         Screen screen,
@@ -222,6 +238,7 @@ internal unsafe static partial class EngineCore
         }
     }
 
+    [Obsolete("Don't use", true)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void ScreenFinishCommand(
         CommandEncoder encoder)

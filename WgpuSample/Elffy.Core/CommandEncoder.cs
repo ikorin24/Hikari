@@ -5,6 +5,7 @@ using System.ComponentModel;
 
 namespace Elffy;
 
+[Obsolete("Don't use", true)]
 public readonly ref struct CommandEncoder
 {
     private readonly Screen _screen;

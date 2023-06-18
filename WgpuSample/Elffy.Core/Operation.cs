@@ -1,5 +1,7 @@
 ﻿#nullable enable
+using Elffy.NativeBind;
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -30,7 +32,7 @@ public abstract class Operation
 
     protected abstract void RenderShadowMap(in RenderShadowMapContext context);
 
-    protected abstract void Execute(in CommandEncoder encoder);
+    protected abstract void Execute(in OperationContext context);
 
     protected abstract void EarlyUpdate();
     protected abstract void Update();
@@ -48,7 +50,7 @@ public abstract class Operation
     internal void InvokeFrameInit() => FrameInit();
     internal void InvokeFrameEnd() => FrameEnd();
     internal void InvokeRenderShadowMap(in RenderShadowMapContext context) => RenderShadowMap(in context);
-    internal void InvokeExecute(in CommandEncoder encoder) => Execute(in encoder);
+    internal void InvokeExecute(in OperationContext context) => Execute(in context);
     internal void InvokeEarlyUpdate() => EarlyUpdate();
     internal void InvokeUpdate() => Update();
     internal void InvokeLateUpdate() => LateUpdate();
@@ -83,5 +85,29 @@ public abstract class Operation
     {
         _onDead.Invoke(this);
         _subscriptions.Dispose();
+    }
+}
+
+public readonly ref struct OperationContext
+{
+    private readonly Screen _screen;
+    private readonly Rust.Ref<Wgpu.TextureView> _surfaceView;
+
+    public Screen Screen => _screen;
+    internal readonly Rust.Ref<Wgpu.TextureView> SurfaceView => _surfaceView;
+
+    [Obsolete("Don't use default constructor.", true)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public OperationContext() => throw new NotSupportedException("Don't use default constructor.");
+
+    internal OperationContext(Screen screen, Rust.Ref<Wgpu.TextureView> surfaceView)
+    {
+        _screen = screen;
+        _surfaceView = surfaceView;
+    }
+
+    public Own<RenderPass> CreateSurfaceRenderPass()
+    {
+        return RenderPass.SurfaceRenderPass(_screen, _surfaceView);
     }
 }

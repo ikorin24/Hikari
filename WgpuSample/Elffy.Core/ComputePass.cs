@@ -5,30 +5,30 @@ using System;
 namespace Elffy;
 
 // an instance cannot move to another thread
-public readonly struct ComputePass
+public readonly struct ComputePass  // TODO: make ref sturct
 {
+    private readonly Screen _screen;
     private readonly Rust.Box<Wgpu.ComputePass> _native;
+    private readonly Rust.Box<Wgpu.CommandEncoder> _encoder;
 
-    private ComputePass(Rust.Box<Wgpu.ComputePass> native)
+    private ComputePass(Screen screen, Rust.Box<Wgpu.ComputePass> native, Rust.Box<Wgpu.CommandEncoder> encoder)
     {
+        _screen = screen;
         _native = native;
+        _encoder = encoder;
     }
 
     private static readonly Action<ComputePass> _release = static self =>
     {
         self._native.DestroyComputePass();
+        self._screen.AsRefChecked().FinishCommandEncoder(self._encoder);
     };
 
-    internal static Own<ComputePass> Create(in CommandEncoder encoder)
+    internal static Own<ComputePass> Create(Screen screen)
     {
-        var native = encoder.NativeMut.CreateComputePass();
-        return Own.New(new ComputePass(native), _release);
-    }
-
-    internal static Own<ComputePass> Create(Rust.MutRef<Wgpu.CommandEncoder> encoder)
-    {
-        var native = encoder.CreateComputePass();
-        return Own.New(new ComputePass(native), _release);
+        var encoder = screen.AsRefChecked().CreateCommandEncoder();
+        var native = encoder.AsMut().CreateComputePass();
+        return Own.New(new ComputePass(screen, native, encoder), _release);
     }
 
     public void SetPipeline(ComputePipeline pipeline)

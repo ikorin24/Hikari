@@ -69,8 +69,11 @@ extern "cdecl" fn elffy_create_command_encoder(
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_command_encoder(encoder: Box<wgpu::CommandEncoder>) {
-    drop(encoder);
+extern "cdecl" fn elffy_finish_command_encoder(
+    screen: &HostScreen,
+    encoder: Box<wgpu::CommandEncoder>,
+) {
+    screen.queue.submit(std::iter::once(encoder.finish()));
 }
 
 #[no_mangle]
@@ -93,6 +96,9 @@ extern "cdecl" fn elffy_get_surface_texture(
         }
     }
 }
+
+static_assertions::assert_impl_all!(Box<wgpu::SurfaceTexture>: Send, Sync);
+static_assertions::assert_impl_all!(wgpu::SurfaceTexture: Send, Sync);
 
 #[no_mangle]
 extern "cdecl" fn elffy_surface_texture_to_texture(

@@ -80,9 +80,9 @@ public sealed class PbrLayer
         _gBufferChanged.Invoke(_gBuffer.AsValue());
     }
 
-    protected override Own<RenderPass> CreateRenderPass(in CommandEncoder encoder)
+    protected override Own<RenderPass> CreateRenderPass(in OperationContext context)
     {
-        return _gBuffer.AsValue().CreateRenderPass(encoder);
+        return _gBuffer.AsValue().CreateRenderPass();
     }
 
     private static Own<RenderPipeline> CreateShadowPipeline(PbrShader shader)

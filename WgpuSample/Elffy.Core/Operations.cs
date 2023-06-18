@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Elffy.Effective;
+using Elffy.NativeBind;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -59,18 +60,23 @@ public sealed class Operations
         }
     }
 
-    internal void Execute(in CommandEncoder encoder)
+    internal void Execute(Rust.Ref<Wgpu.TextureView> surfaceView)
     {
         var screen = _screen;
         var lights = screen.Lights;
         lights.UpdateLightMatrix();
-        var context = new RenderShadowMapContext(encoder, lights);
-        foreach(var op in _list.AsSpan()) {
-            op.InvokeRenderShadowMap(in context);
+        {
+            var context = new RenderShadowMapContext(lights);
+            foreach(var op in _list.AsSpan()) {
+                op.InvokeRenderShadowMap(in context);
+            }
         }
 
-        foreach(var op in _list.AsSpan()) {
-            op.InvokeExecute(in encoder);
+        {
+            var context = new OperationContext(screen, surfaceView);
+            foreach(var op in _list.AsSpan()) {
+                op.InvokeExecute(in context);
+            }
         }
     }
 

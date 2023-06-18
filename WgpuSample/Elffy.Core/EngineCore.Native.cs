@@ -36,7 +36,8 @@ static unsafe partial class EngineCore
         Rust.Ref<CE.HostScreen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial void elffy_destroy_command_encoder(
+    private static partial void elffy_finish_command_encoder(
+        Rust.Ref<CE.HostScreen> screen,
         Rust.Box<Wgpu.CommandEncoder> encoder);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]

@@ -4,31 +4,37 @@ using System;
 
 namespace Elffy;
 
-public readonly struct RenderPass
+public readonly struct RenderPass   // TODO: make ref struct
 {
+    private readonly Screen _screen;
     private readonly Rust.Box<Wgpu.RenderPass> _native;
+    private readonly Rust.Box<Wgpu.CommandEncoder> _encoder;
 
-    private RenderPass(Rust.Box<Wgpu.RenderPass> native)
+    private RenderPass(Screen screen, Rust.Box<Wgpu.RenderPass> native, Rust.Box<Wgpu.CommandEncoder> encoder)
     {
+        _screen = screen;
         _native = native;
+        _encoder = encoder;
     }
 
     private static readonly Action<RenderPass> _release = static self =>
     {
         self._native.DestroyRenderPass();
+        self._screen.AsRefChecked().FinishCommandEncoder(self._encoder);
     };
 
-    internal static Own<RenderPass> Create(Rust.MutRef<Wgpu.CommandEncoder> encoder, in CE.RenderPassDescriptor desc)
+    internal static Own<RenderPass> Create(Screen screen, in CE.RenderPassDescriptor desc)
     {
-        var native = encoder.CreateRenderPass(desc);
-        return Own.New(new(native), _release);
+        var encoder = screen.AsRefChecked().CreateCommandEncoder();
+        var native = encoder.AsMut().CreateRenderPass(desc);
+        return Own.New(new(screen, native, encoder), _release);
     }
 
-    internal static unsafe Own<RenderPass> SurfaceRenderPass(in CommandEncoder encoder)
+    internal static unsafe Own<RenderPass> SurfaceRenderPass(Screen screen, Rust.Ref<Wgpu.TextureView> surfaceTextureView)
     {
         var colorAttachment = new CE.Opt<CE.RenderPassColorAttachment>(new()
         {
-            view = encoder.SurfaceView,
+            view = surfaceTextureView,
             clear = new Wgpu.Color(0, 0, 0, 0),
         });
         var desc = new CE.RenderPassDescriptor
@@ -36,12 +42,12 @@ public readonly struct RenderPass
             color_attachments_clear = new() { data = &colorAttachment, len = 1 },
             depth_stencil_attachment_clear = new(new()
             {
-                view = encoder.Screen.DepthTexture.View.NativeRef,
+                view = screen.DepthTexture.View.NativeRef,
                 depth_clear = CE.Opt<float>.Some(1f),
                 stencil_clear = CE.Opt<uint>.None,
             }),
         };
-        return Create(encoder.NativeMut, desc);
+        return Create(screen, desc);
     }
 
     public void SetPipeline(RenderPipeline renderPipeline)

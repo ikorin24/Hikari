@@ -82,9 +82,10 @@ public sealed class GBuffer : IScreenManaged
         }
     }
 
-    public unsafe Own<RenderPass> CreateRenderPass(in CommandEncoder encoder)
+    public unsafe Own<RenderPass> CreateRenderPass()
     {
         this.ThrowIfNotScreenManaged();
+        var screen = Screen;
         var attachmentsNative = _colorsNative;
         fixed(CE.Opt<CE.RenderPassColorAttachment>* p = attachmentsNative) {
             var desc = new CE.RenderPassDescriptor
@@ -92,12 +93,12 @@ public sealed class GBuffer : IScreenManaged
                 color_attachments_clear = new(p, attachmentsNative.Length),
                 depth_stencil_attachment_clear = new(new()
                 {
-                    view = encoder.Screen.DepthTexture.View.NativeRef,
+                    view = screen.DepthTexture.View.NativeRef,
                     depth_clear = CE.Opt<float>.Some(1f),
                     stencil_clear = CE.Opt<uint>.None,
                 }),
             };
-            return RenderPass.Create(encoder.NativeMut, in desc);
+            return RenderPass.Create(screen, in desc);
         }
     }
 }

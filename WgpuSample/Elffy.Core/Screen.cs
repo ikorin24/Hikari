@@ -208,22 +208,25 @@ public sealed class Screen
 
     internal unsafe bool OnRedrawRequested()
     {
-        if(EngineCore.ScreenBeginCommand(this, out var encoder) == false) {
-            return true;
+        var surfaceData = AsRefChecked().GetSurfaceTexture();
+        if(surfaceData.IsSome(out var surface, out var surfaceView)) {
+            try {
+                Render(surfaceView);
+                var isCloseRequested = _isCloseRequested;
+                _isCloseRequested = false;
+                return !isCloseRequested;
+            }
+            finally {
+                surface.PresentSurfaceTexture();
+                _frameNum++;
+            }
         }
-        try {
-            Render(in encoder);
-            var isCloseRequested = _isCloseRequested;
-            _isCloseRequested = false;
-            return !isCloseRequested;
-        }
-        finally {
-            EngineCore.ScreenFinishCommand(encoder);
-            _frameNum++;
+        else {
+            return false;
         }
     }
 
-    private void Render(in CommandEncoder encoder)
+    private void Render(Rust.Ref<Wgpu.TextureView> surfaceView)
     {
         var operations = _operations;
         _mouse.InitFrame();
@@ -244,7 +247,7 @@ public sealed class Screen
 
         // render
         _camera.UpdateUniformBuffer();
-        operations.Execute(in encoder);
+        operations.Execute(surfaceView);
 
         operations.ApplyRemove();
         _keyboard.PrepareNextFrame();
