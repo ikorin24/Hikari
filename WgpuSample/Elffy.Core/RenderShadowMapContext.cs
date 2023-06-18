@@ -21,7 +21,7 @@ public unsafe readonly ref struct RenderShadowMapContext
         _shadowMap = lights.DirectionalLight.ShadowMap.View;
     }
 
-    public Own<RenderPass> CreateRenderPass()
+    public OwnRenderPass CreateRenderPass()
     {
         var screen = _lights.Screen;
         return RenderPass.Create(screen, new CE.RenderPassDescriptor()

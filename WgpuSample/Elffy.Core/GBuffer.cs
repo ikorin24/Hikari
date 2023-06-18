@@ -82,7 +82,7 @@ public sealed class GBuffer : IScreenManaged
         }
     }
 
-    public unsafe Own<RenderPass> CreateRenderPass()
+    public unsafe OwnRenderPass CreateRenderPass()
     {
         this.ThrowIfNotScreenManaged();
         var screen = Screen;

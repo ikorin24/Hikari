@@ -7,6 +7,8 @@ using System.Text;
 
 namespace Elffy.NativeBind;
 
+#pragma warning disable IDE1006 // naming rule
+
 /// <summary>
 /// `coreelffy` crate in Rust
 /// </summary>
@@ -251,7 +253,9 @@ internal static class CoreElffy
 
     internal readonly struct ImeInputData
     {
+#pragma warning disable CS0649 // フィールド 'CoreElffy.ImeInputData.tag' は割り当てられません。常に既定値  を使用します
         public readonly Tag tag;
+#pragma warning restore CS0649 // フィールド 'CoreElffy.ImeInputData.tag' は割り当てられません。常に既定値  を使用します
         public readonly Slice<u8> text;
         public readonly Opt<RangeValue> range;
 

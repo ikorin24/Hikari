@@ -1,14 +1,22 @@
 ﻿#nullable enable
 using Elffy.NativeBind;
 using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-public readonly struct RenderPass   // TODO: make ref struct
+public readonly ref struct RenderPass
 {
     private readonly Screen _screen;
     private readonly Rust.Box<Wgpu.RenderPass> _native;
     private readonly Rust.Box<Wgpu.CommandEncoder> _encoder;
+
+    [Obsolete("Don't use default constructor.", true)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public RenderPass() => throw new NotSupportedException("Don't use default constructor.");
 
     private RenderPass(Screen screen, Rust.Box<Wgpu.RenderPass> native, Rust.Box<Wgpu.CommandEncoder> encoder)
     {
@@ -17,20 +25,20 @@ public readonly struct RenderPass   // TODO: make ref struct
         _encoder = encoder;
     }
 
-    private static readonly Action<RenderPass> _release = static self =>
+    private static readonly ReleaseRenderPass _release = static self =>
     {
         self._native.DestroyRenderPass();
         self._screen.AsRefChecked().FinishCommandEncoder(self._encoder);
     };
 
-    internal static Own<RenderPass> Create(Screen screen, in CE.RenderPassDescriptor desc)
+    internal static OwnRenderPass Create(Screen screen, scoped in CE.RenderPassDescriptor desc)
     {
         var encoder = screen.AsRefChecked().CreateCommandEncoder();
         var native = encoder.AsMut().CreateRenderPass(desc);
-        return Own.New(new(screen, native, encoder), _release);
+        return new OwnRenderPass(new(screen, native, encoder), _release);
     }
 
-    internal static unsafe Own<RenderPass> SurfaceRenderPass(Screen screen, Rust.Ref<Wgpu.TextureView> surfaceTextureView)
+    internal static unsafe OwnRenderPass SurfaceRenderPass(Screen screen, Rust.Ref<Wgpu.TextureView> surfaceTextureView)
     {
         var colorAttachment = new CE.Opt<CE.RenderPassColorAttachment>(new()
         {
@@ -106,3 +114,63 @@ public readonly struct RenderPass   // TODO: make ref struct
         _native.AsMut().DrawIndexed(indexRange, baseVertex, instanceRange);
     }
 }
+
+public readonly ref struct OwnRenderPass
+{
+    private readonly RenderPass _value;
+    internal readonly ReleaseRenderPass? _release;
+
+    [MemberNotNullWhen(false, nameof(_value))]
+    [MemberNotNullWhen(false, nameof(_release))]
+    public bool IsNone => _release == null;
+
+    public static OwnRenderPass None => default;
+
+    [Obsolete("Don't use default constructor.", true)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public OwnRenderPass() => throw new NotSupportedException("Don't use default constructor.");
+
+    internal OwnRenderPass(RenderPass value, ReleaseRenderPass release)
+    {
+        ArgumentNullException.ThrowIfNull(release);
+        _value = value;
+        _release = release;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RenderPass AsValue()
+    {
+        if(IsNone) {
+            ThrowNoValue();
+        }
+        return _value;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RenderPass AsValue(out OwnRenderPass self)
+    {
+        self = this;
+        return AsValue();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryAsValue(out RenderPass value)
+    {
+        value = _value;
+        return !IsNone;
+    }
+
+    public void Dispose()
+    {
+        if(IsNone) { return; }
+        _release.Invoke(_value);
+    }
+
+    [DoesNotReturn]
+    [DebuggerHidden]
+    private static void ThrowNoValue() => throw new InvalidOperationException("no value exists");
+
+    public static explicit operator RenderPass(OwnRenderPass own) => own.AsValue();
+}
+
+internal delegate void ReleaseRenderPass(RenderPass renderPass);

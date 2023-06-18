@@ -106,7 +106,7 @@ public readonly ref struct OperationContext
         _surfaceView = surfaceView;
     }
 
-    public Own<RenderPass> CreateSurfaceRenderPass()
+    public OwnRenderPass CreateSurfaceRenderPass()
     {
         return RenderPass.SurfaceRenderPass(_screen, _surfaceView);
     }

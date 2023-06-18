@@ -80,7 +80,7 @@ public sealed class PbrLayer
         _gBufferChanged.Invoke(_gBuffer.AsValue());
     }
 
-    protected override Own<RenderPass> CreateRenderPass(in OperationContext context)
+    protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
         return _gBuffer.AsValue().CreateRenderPass();
     }
