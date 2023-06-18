@@ -54,15 +54,51 @@ internal static class CoreElffy
         }
     }
 
-    internal struct TextureFormatInfo
+    internal readonly struct TextureFormatInfo
     {
-        public Wgpu.Features required_features;
-        public TextureSampleType sample_type;
-        public TupleU8U8 block_dimensions;
-        public u8 block_size;
-        public u8 components;
-        public bool srgb;
-        public TextureFormatFeatures guaranteed_format_features;
+        public readonly Wgpu.Features required_features;
+        public readonly TextureSampleType sample_type;
+        /// <summary>Dimension of a "block" of texels. This is always (1, 1) on uncompressed textures.</summary>
+        public readonly TupleU8U8 block_dimensions;
+        /// <summary>
+        /// Size in bytes of a "block" of texels. This is the size per pixel on uncompressed textures.
+        /// (For example, 4 if format is 'Rgba8Unorm')
+        /// </summary>
+        public readonly u8 block_size;
+        public readonly u8 components;
+        public readonly bool srgb;
+        public readonly TextureFormatFeatures guaranteed_format_features;
+
+        public bool IsCompressed => (block_dimensions.Value1, block_dimensions.Value2) != (1, 1);
+
+        private Vector3u PhysicalSize(Vector3u mipSize)
+        {
+            var (w, h) = block_dimensions;
+            var block_width = (u32)w;
+            var block_height = (u32)h;
+
+            var width = ((mipSize.X + block_width - 1) / block_width) * block_width;
+            var height = ((mipSize.Y + block_height - 1) / block_height) * block_height;
+
+            return new Vector3u
+            {
+                X = width,
+                Y = height,
+                Z = mipSize.Z,
+            };
+        }
+
+        public (Vector3u PhysicalSize, u32 BytesPerRow, u32 RowCount) MipInfo(Vector3u mipSize)
+        {
+            var mipPhysicalSize = PhysicalSize(mipSize);
+            u32 widthBlocks = mipPhysicalSize.X / block_dimensions.Value1;
+            u32 bytesPerRow = widthBlocks * block_size;
+            u32 heightBlocks = mipPhysicalSize.Y / block_dimensions.Value2;
+            return (
+                PhysicalSize: mipPhysicalSize,
+                BytesPerRow: bytesPerRow,
+                RowCount: heightBlocks * mipSize.Z);
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]

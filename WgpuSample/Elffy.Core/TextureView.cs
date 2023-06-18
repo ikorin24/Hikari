@@ -14,6 +14,8 @@ public sealed class TextureView : IScreenManaged, ITextureView
 
     public bool IsManaged => _native.IsNone == false;
 
+    public Texture Texture => _texture;
+
     internal Rust.Ref<Wgpu.TextureView> NativeRef => _native.Unwrap();
 
     public TextureViewHandle Handle => new TextureViewHandle(_native.Unwrap());

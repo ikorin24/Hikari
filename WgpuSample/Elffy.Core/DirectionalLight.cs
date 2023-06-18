@@ -90,7 +90,7 @@ public sealed class DirectionalLight : IScreenManaged
             Format = TextureFormat.Depth32Float,            // TODO: depth16unorm
             MipLevelCount = 1,
             SampleCount = 1,
-            Usage = TextureUsages.TextureBinding | TextureUsages.RenderAttachment,
+            Usage = TextureUsages.TextureBinding | TextureUsages.RenderAttachment | TextureUsages.CopySrc,
         });
     }
 

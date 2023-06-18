@@ -1,13 +1,35 @@
 ﻿#nullable enable
 using Elffy.NativeBind;
 using System;
+using System.Diagnostics;
 
 namespace Elffy;
 
 public readonly struct TextureDescriptor
 {
-    public required Vector3u Size { get; init; }
-    public required u32 MipLevelCount { get; init; }
+    private readonly Vector3u _size;
+    private readonly u32 _mipLevelCount;
+
+    public required Vector3u Size
+    {
+        get => _size;
+        init
+        {
+            if(value.X == 0) { ThrowSize("Size.X"); }
+            if(value.Y == 0) { ThrowSize("Size.Y"); }
+            if(value.Z == 0) { ThrowSize("Size.Z"); }
+            _size = value;
+        }
+    }
+    public required u32 MipLevelCount
+    {
+        get => _mipLevelCount;
+        init
+        {
+            if(value == 0) { ThrowMipLevelCount(); }
+            _mipLevelCount = value;
+        }
+    }
     public required u32 SampleCount { get; init; }
     public required TextureDimension Dimension { get; init; }
     public required TextureFormat Format { get; init; }
@@ -46,10 +68,10 @@ public readonly struct TextureDescriptor
 
     internal CE.TextureDescriptor ToNative()
     {
-        if(Size.X == 0) { throw new ArgumentOutOfRangeException("Size.X", "The value should not be 0"); }
-        if(Size.Y == 0) { throw new ArgumentOutOfRangeException("Size.Y", "The value should not be 0"); }
-        if(Size.Z == 0) { throw new ArgumentOutOfRangeException("Size.Z", "The value should not be 0"); }
-        if(MipLevelCount == 0) { throw new ArgumentOutOfRangeException(nameof(MipLevelCount), $"The value should not be 0"); }
+        if(Size.X == 0) { ThrowSize("Size.X"); }
+        if(Size.Y == 0) { ThrowSize("Size.Y"); }
+        if(Size.Z == 0) { ThrowSize("Size.Z"); }
+        if(MipLevelCount == 0) { ThrowMipLevelCount(); }
         return new CE.TextureDescriptor
         {
             size = new Wgpu.Extent3d
@@ -65,6 +87,12 @@ public readonly struct TextureDescriptor
             usage = Usage.FlagsMap(),
         };
     }
+
+    [DebuggerHidden]
+    private static void ThrowMipLevelCount() => throw new ArgumentOutOfRangeException(nameof(MipLevelCount), $"The value should not be 0");
+
+    [DebuggerHidden]
+    private static void ThrowSize(string name) => throw new ArgumentOutOfRangeException(name, "The value should not be 0");
 }
 [Flags]
 public enum TextureUsages : u32

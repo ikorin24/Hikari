@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Elffy.Effective;
+using Elffy.Imaging;
 using Elffy.NativeBind;
 using System;
 using System.Collections.Generic;
@@ -70,6 +71,15 @@ public sealed class Operations
             foreach(var op in _list.AsSpan()) {
                 op.InvokeRenderShadowMap(in context);
             }
+
+            //if(screen.FrameNum == 1000) {
+            //    context.ShadowMap.Texture.ReadCallback<ColorByte>(pixels =>
+            //    {
+            //        Debug.WriteLine(pixels.Length);
+            //        var image = new ReadOnlyImageRef(pixels, 1024, 1024);
+            //        //image.SaveAsPng("shadow.png");
+            //    });
+            //}
         }
 
         {

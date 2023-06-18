@@ -4,12 +4,13 @@ using System.ComponentModel;
 
 namespace Elffy;
 
-public unsafe readonly ref struct RenderShadowMapContext
+public readonly ref struct RenderShadowMapContext
 {
     private readonly Lights _lights;
     private readonly TextureView _shadowMap;
 
     public Lights Lights => _lights;
+    public TextureView ShadowMap => _shadowMap;
 
     [Obsolete("Don't use default constructor.", true)]
     [EditorBrowsable(EditorBrowsableState.Never)]

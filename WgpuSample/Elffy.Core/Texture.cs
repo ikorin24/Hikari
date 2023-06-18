@@ -83,6 +83,17 @@ public sealed class Texture : IScreenManaged
 
     public unsafe static Own<Texture> CreateFromRawData(Screen screen, in TextureDescriptor desc, ReadOnlySpan<u8> data)
     {
+        // data is a raw data of texture in the current format.
+        // data = [ mipmap0, mipmap1, mipmap2, ... ]
+        //
+        // If texture is texture array,
+        // data =
+        // [
+        //     [ mipmap0, mipmap1, mipmap2, ... ],  // layer 0
+        //     [ mipmap0, mipmap1, mipmap2, ... ],  // layer 1
+        //     ...
+        // ]
+
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
         Rust.Box<Wgpu.Texture> textureNative;
@@ -184,34 +195,11 @@ public sealed class Texture : IScreenManaged
         for(uint layer = 0; layer < arrayLayerCount; layer++) {
             for(uint mip = 0; mip < desc.MipLevelCount; mip++) {
                 var mipSize = desc.MipLevelSize(mip).GetOrThrow();
-                if(desc.Dimension != TextureDimension.D3) {
-                    mipSize.Z = 1;
-                }
-                var mipPhysicalSize = physicalSize(mipSize, formatInfo);
-                u32 widthBlocks = mipPhysicalSize.X / formatInfo.block_dimensions.Value1;
-                u32 heightBlocks = mipPhysicalSize.Y / formatInfo.block_dimensions.Value2;
-                u32 bytesPerRow = widthBlocks * formatInfo.block_size;
-                u32 dataSize = bytesPerRow * heightBlocks * mipSize.Z;
+                var info = formatInfo.MipInfo(mipSize);
+                u32 dataSize = info.BytesPerRow * info.RowCount;
                 mipData[(int)mip] = (MipSize: mipSize, ByteLength: dataSize);
                 totalByteSize += dataSize;
             }
-        }
-
-        static Vector3u physicalSize(Vector3u mipSize, in CE.TextureFormatInfo formatInfo)
-        {
-            var (w, h) = formatInfo.block_dimensions;
-            var block_width = (u32)w;
-            var block_height = (u32)h;
-
-            var width = ((mipSize.X + block_width - 1) / block_width) * block_width;
-            var height = ((mipSize.Y + block_height - 1) / block_height) * block_height;
-
-            return new Vector3u
-            {
-                X = width,
-                Y = height,
-                Z = mipSize.Z,
-            };
         }
     }
 
@@ -248,15 +236,68 @@ public sealed class Texture : IScreenManaged
         }
     }
 
+    public Vector3u MipLevelSize(u32 mip)
+    {
+        return _desc.MipLevelSize(mip).GetOrThrow();
+    }
+
     public void ReadCallback<TPixel>(
         ReadOnlySpanAction<TPixel> onRead,
         Action<Exception>? onException = null)
     where TPixel : unmanaged
     {
+        CheckUsageFlag(TextureUsages.CopySrc, Usage);
+
+        var mip = 0u;
+
+        var formatInfo = Format.MapOrThrow().TextureFormatInfo();
+        var mipSize = MipLevelSize(mip);
+        var mipInfo = formatInfo.MipInfo(mipSize);
         var screen = Screen;
-        if(Usage.HasFlag(TextureUsages.CopySrc) == false) {
-            throw new InvalidOperationException();
+        var source = new CE.ImageCopyTexture
+        {
+            aspect = CE.TextureAspect.All,
+            mip_level = mip,
+            origin_x = 0,
+            origin_y = 0,
+            origin_z = 0,
+            texture = NativeRef,
+        };
+        var size = new Wgpu.Extent3d
+        {
+            width = Width,
+            height = Height,
+            depth_or_array_layers = Depth,
+        };
+        var layout = new Wgpu.ImageDataLayout
+        {
+            offset = 0,
+            bytes_per_row = mipInfo.BytesPerRow,
+            rows_per_image = mipInfo.RowCount,
+        };
+        uint bufferSize = layout.bytes_per_row * layout.rows_per_image;
+
+        // make bufferSize multiply of COPY_BYTES_PER_ROW_ALIGNMENT
+        bufferSize = (bufferSize + EngineConsts.COPY_BYTES_PER_ROW_ALIGNMENT - 1) & ~(EngineConsts.COPY_BYTES_PER_ROW_ALIGNMENT - 1);
+
+        using(var buffer = Buffer.Create(screen, bufferSize, BufferUsages.CopySrc | BufferUsages.CopyDst)) {
+            var bufValue = buffer.AsValue();
+            EngineCore.CopyTextureToBuffer(screen.AsRefChecked(), source, size, bufValue.NativeRef, layout);
+            bufValue.ReadCallback((bytes) =>
+            {
+                var pixels = MemoryMarshal.Cast<byte, TPixel>(bytes);
+                onRead(pixels);
+            }, onException);
         }
+    }
+
+    public void ReadCallback_original<TPixel>(
+        ReadOnlySpanAction<TPixel> onRead,
+        Action<Exception>? onException = null)
+    where TPixel : unmanaged
+    {
+        CheckUsageFlag(TextureUsages.CopySrc, Usage);
+        var screen = Screen;
         u32 bytesPerPixel;
         unsafe {
             bytesPerPixel = (u32)sizeof(TPixel);
@@ -325,5 +366,13 @@ public sealed class Texture : IScreenManaged
             completionSource.TrySetException(ex);
         });
         return completionSource.Task;
+    }
+
+    [DebuggerHidden]
+    private static void CheckUsageFlag(TextureUsages needed, TextureUsages actual)
+    {
+        if(actual.HasFlag(needed) == false) {
+            throw new InvalidOperationException($"'{needed}' flag is needed, but the flag the texture has is '{actual}'.");
+        }
     }
 }
