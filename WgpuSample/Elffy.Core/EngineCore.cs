@@ -482,7 +482,7 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
+    //[DebuggerHidden]
     public static Rust.Box<Wgpu.ShaderModule> CreateShaderModule(
         this Rust.Ref<CE.HostScreen> screen,
         ReadOnlySpan<byte> shaderSource)
@@ -743,7 +743,7 @@ internal unsafe static partial class EngineCore
         private readonly void* _nativePtr;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DebuggerHidden]
+        //[DebuggerHidden]
         public Rust.Box<T> Validate()
         {
             if(_success == false) {

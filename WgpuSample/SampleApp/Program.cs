@@ -62,25 +62,22 @@ internal class Program
             ControlCamera(screen.Mouse, camera, Vector3.Zero);
         });
 
-        var t = material.Albedo;
-        t.ReadCallback(data =>
+        material.Albedo.ReadCallback((data, texture) =>
         {
-            var image = new ReadOnlyImageRef(data.MarshalCast<byte, ColorByte>(), (int)t.Width, (int)t.Height);
+            var image = new ReadOnlyImageRef(data.MarshalCast<byte, ColorByte>(), (int)texture.Width, (int)texture.Height);
             //image.SaveAsPng("test.png");
         });
 
-        cube.Mesh.VertexBuffer.ReadCallback(data =>
+        cube.Mesh.VertexBuffer.ReadCallback((bytes, _) =>
         {
-            var vertices = data.MarshalCast<byte, Vertex>();
+            var vertices = bytes.MarshalCast<byte, Vertex>();
             return;
         });
 
-        UniTask.Void(async () =>
+        var mesh = cube.Mesh;
+        cube.Mesh.IndexBuffer.ReadCallback((bytes, _) =>
         {
-            var mesh = cube.Mesh;
-            var array = new ushort[mesh.IndexCount];
-            var len = await cube.Mesh.IndexBuffer.Read(array.AsMemory());
-            var indices = array[..len];
+            var indices = bytes.MarshalCast<byte, ushort>();
             for(int i = 0; i < indices.Length / 3; i++) {
                 Debug.WriteLine($"{indices[i * 3 + 0]}, {indices[i * 3 + 1]}, {indices[i * 3 + 2]}");
             }

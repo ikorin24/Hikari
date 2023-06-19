@@ -17,7 +17,7 @@ unsafe partial class EngineCore
         this Rust.Ref<CE.HostScreen> screen,
         CE.BufferSlice buffer_slice,
         ReadOnlySpanAction<byte> onRead,
-        Action<Exception> onException)
+        Action<Exception>? onException)
     {
         var token = Callback.NewToken();
         Callback.Register(token, onRead, onException);
@@ -47,14 +47,14 @@ unsafe partial class EngineCore
     }
 }
 
-file record struct Callback(ReadOnlySpanAction<byte> OnRead, Action<Exception> OnException)
+file record struct Callback(ReadOnlySpanAction<byte> OnRead, Action<Exception>? OnException)
 {
     private static ulong _token;
     private static readonly ConcurrentDictionary<usize, Callback> _callbacks = new();
 
     public static usize NewToken() => (usize)Interlocked.Increment(ref _token);
 
-    public static bool Register(usize token, ReadOnlySpanAction<byte> onRead, Action<Exception> onException)
+    public static bool Register(usize token, ReadOnlySpanAction<byte> onRead, Action<Exception>? onException)
     {
         return _callbacks.TryAdd(token, new(onRead, onException));
     }

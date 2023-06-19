@@ -85,7 +85,9 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             output.tangent_camera_coord = normalize(mv33 * v.tangent);
             output.bitangent_camera_coord = normalize(mv33 * cross(v.normal, v.tangent));
             output.normal_camera_coord = normalize(mv33 * v.normal);
-            output.shadowmap_pos0 = to_vec3(lightMatrices[0] * u.model * vec4(v.pos, 1.0));
+            //output.shadowmap_pos0 = to_vec3(lightMatrices[0] * u.model * vec4(v.pos, 1.0));
+            let tmp = to_vec3(lightMatrices[0] * u.model * vec4(v.pos, 1.0));
+            output.shadowmap_pos0 = vec3<f32>(tmp.xy * 0.5 + 0.5, tmp.z);
             return output;
         }
 

@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-public sealed class Buffer : IScreenManaged, IReadBuffer
+public sealed class Buffer : IScreenManaged, IReadBuffer<Buffer>
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Buffer> _native;
@@ -141,14 +141,16 @@ public sealed class Buffer : IScreenManaged, IReadBuffer
     public UniTask<byte[]> ReadToArray()
         => Slice().ReadToArray();
 
-    public UniTask<int> Read<TElement>(Memory<TElement> dest) where TElement : unmanaged
-        => Slice().Read(dest);
+    public UniTask<int> Read(Memory<byte> dest) => Slice().Read(dest);
 
-    public void ReadCallback(ReadOnlySpanAction<byte> onRead, Action<Exception>? onException = null)
-        => Slice().ReadCallback(onRead, onException);
+    public void ReadCallback(ReadOnlySpanAction<byte, Buffer> onRead, Action<Exception>? onException = null)
+    {
+        var slice = Slice();
+        slice.ReadCallback((bytes, slice) => onRead(bytes, slice.Buffer), onException);
+    }
 }
 
-public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer
+public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer<BufferSlice>
 {
     private readonly Buffer? _buffer;
     private readonly u64 _offset;
@@ -197,43 +199,48 @@ public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer
     {
         var completionSource = new UniTaskCompletionSource<byte[]>();
         ReadCore(
-            (span) => completionSource.TrySetResult(span.ToArray()),
+            (span, _) => completionSource.TrySetResult(span.ToArray()),
             (ex) => completionSource.TrySetException(ex));
         return completionSource.Task;
     }
 
-    public UniTask<int> Read<TElement>(Memory<TElement> dest) where TElement : unmanaged
+    public UniTask<int> Read(Memory<byte> dest)
     {
         var completionSource = new UniTaskCompletionSource<int>();
         ReadCore(
-            (bytes) =>
+            (bytes, _) =>
             {
-                var source = bytes.MarshalCast<byte, TElement>();
-                source.CopyTo(dest.Span);
-                completionSource.TrySetResult(source.Length);
+                bytes.CopyTo(dest.Span);
+                completionSource.TrySetResult(bytes.Length);
             },
             (ex) => completionSource.TrySetException(ex));
         return completionSource.Task;
     }
 
-    public void ReadCallback(ReadOnlySpanAction<byte> onRead, Action<Exception>? onException = null)
+    public void ReadCallback(ReadOnlySpanAction<byte, BufferSlice> onRead, Action<Exception>? onException = null)
     {
         ArgumentNullException.ThrowIfNull(onRead);
-        onException ??= (ex) => { };
         ReadCore(onRead, onException);
     }
 
-    private void ReadCore(ReadOnlySpanAction<byte> onRead, Action<Exception> onException)
+    private void ReadCore(ReadOnlySpanAction<byte, BufferSlice> onRead, Action<Exception>? onException)
     {
         var buffer = Buffer;
         CheckUsageFlag(BufferUsages.CopySrc, buffer.Usage);
         var len = Length;
         var screen = buffer.Screen;
         if(len == 0) {
-            onRead(Span<byte>.Empty);
+            onRead(Span<byte>.Empty, this);
         }
         else {
-            screen.AsRefChecked().ReadBuffer(Native(), onRead, onException);
+            var self = this;
+            screen.AsRefChecked().ReadBuffer(
+                Native(),
+                (bytes) =>
+                {
+                    onRead(bytes, self);
+                },
+                onException);
         }
     }
 
@@ -284,11 +291,11 @@ public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer
     public static implicit operator BufferSlice(Buffer buffer) => Full(buffer);
 }
 
-internal interface IReadBuffer
+internal interface IReadBuffer<TSelf>
 {
     UniTask<byte[]> ReadToArray();
 
-    UniTask<int> Read<TElement>(Memory<TElement> dest) where TElement : unmanaged;
+    UniTask<int> Read(Memory<byte> dest);
 
-    void ReadCallback(ReadOnlySpanAction<byte> onRead, Action<Exception>? onException = null);
+    void ReadCallback(ReadOnlySpanAction<byte, TSelf> onRead, Action<Exception>? onException = null);
 }

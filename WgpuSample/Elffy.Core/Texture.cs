@@ -242,7 +242,7 @@ public sealed class Texture : IScreenManaged
     }
 
     public void ReadCallback(
-        ReadOnlySpanAction<byte> onRead,
+        ReadOnlySpanAction<byte, Texture> onRead,
         Action<Exception>? onException = null)
     {
         CheckUsageFlag(TextureUsages.CopySrc, Usage);
@@ -282,14 +282,14 @@ public sealed class Texture : IScreenManaged
         using(var buffer = Buffer.Create(screen, bufferSize, BufferUsages.CopySrc | BufferUsages.CopyDst)) {
             var bufValue = buffer.AsValue();
             EngineCore.CopyTextureToBuffer(screen.AsRefChecked(), source, size, bufValue.NativeRef, layout);
-            bufValue.ReadCallback(onRead, onException);
+            bufValue.ReadCallback((bytes, _) => onRead(bytes, this), onException);
         }
     }
 
     public UniTask<int> Read(Memory<byte> dest)
     {
         var completionSource = new UniTaskCompletionSource<int>();
-        ReadCallback((pixels) =>
+        ReadCallback((pixels, texture) =>
         {
             pixels.CopyTo(dest.Span);
             completionSource.TrySetResult(pixels.Length);
@@ -303,7 +303,7 @@ public sealed class Texture : IScreenManaged
     public UniTask<byte[]> ReadToArray()
     {
         var completionSource = new UniTaskCompletionSource<byte[]>();
-        ReadCallback((pixels) =>
+        ReadCallback((pixels, texture) =>
         {
             completionSource.TrySetResult(pixels.ToArray());
         }, (ex) =>
