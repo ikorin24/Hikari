@@ -33,9 +33,6 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             @location(3) bitangent_camera_coord: vec3<f32>,
             @location(4) normal_camera_coord: vec3<f32>,
             @location(5) shadowmap_pos0: vec3<f32>,
-            //@location(6) shadowmap_pos1: vec3<f32>,
-            //@location(7) shadowmap_pos2: vec3<f32>,
-            //@location(8) shadowmap_pos3: vec3<f32>,
         }
 
         struct GBuffer {
@@ -85,9 +82,11 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             output.tangent_camera_coord = normalize(mv33 * v.tangent);
             output.bitangent_camera_coord = normalize(mv33 * cross(v.normal, v.tangent));
             output.normal_camera_coord = normalize(mv33 * v.normal);
-            //output.shadowmap_pos0 = to_vec3(lightMatrices[0] * u.model * vec4(v.pos, 1.0));
-            let tmp = to_vec3(lightMatrices[0] * u.model * vec4(v.pos, 1.0));
-            output.shadowmap_pos0 = vec3<f32>(tmp.xy * 0.5 + 0.5, tmp.z);
+            let p0 = to_vec3(lightMatrices[0] * u.model * vec4(v.pos, 1.0));
+            output.shadowmap_pos0 = vec3<f32>(
+                p0.x * 0.5 + 0.5,
+                -p0.y * 0.5 + 0.5,
+                p0.z);
             return output;
         }
 
@@ -106,10 +105,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             output.g0 = vec4(in.pos_camera_coord, mrao.r);
             output.g1 = vec4(normal_camera_coord, mrao.g);
             output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
-            output.g3 = vec4(mrao.b, visibility, 1.0, 1.0);
-
-            //output.g2 = vec4(visibility, visibility, visibility, 1.0);
-            
+            output.g3 = vec4(mrao.b, visibility, 1.0, 1.0);            
             return output;
         }
 

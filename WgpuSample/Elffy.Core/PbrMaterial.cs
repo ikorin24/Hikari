@@ -127,7 +127,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
                     MagFilter = FilterMode.Linear,
                     MinFilter = FilterMode.Linear,
                     MipmapFilter = FilterMode.Linear,
-                    Compare = CompareFunction.LessEqual,
+                    Compare = CompareFunction.Less,
                 }).AsValue(out var shadowSampler)),
                 BindGroupEntry.Buffer(2, directionalLight.LightMatricesBuffer)
             },

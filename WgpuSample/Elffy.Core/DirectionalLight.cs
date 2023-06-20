@@ -174,15 +174,21 @@ public sealed class DirectionalLight : IScreenManaged
         var center = new Vector3(0, 0, 0);
         lightUp = Vector3.UnitY;
         var lview = Matrix4.LookAt(center - lightDir, center, lightUp);
-        var x = 1;
+        var x = 3;
         Matrix4.OrthographicProjection(
                 -x, x,
                 -x, x,
-                -3,
-                3,
+                -6,
+                6,
                 out var lproj);
-        lightMatrices[0] = lproj * lview;
+        lightMatrices[0] = GLToWebGpu * lproj * lview;
     }
+
+    private static Matrix4 GLToWebGpu => new Matrix4(
+        new Vector4(1, 0, 0, 0),
+        new Vector4(0, 1, 0, 0),
+        new Vector4(0, 0, 0.5f, 0),
+        new Vector4(0, 0, 0.5f, 1));
 
     //private static void CalcLightMatrix(
     //    in Vector3 lightDir, in Vector3 lightUp,

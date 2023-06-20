@@ -33,6 +33,12 @@ public sealed class Camera
     private static Vector3 InitialDirection => new Vector3(0, 0, -1);
     private static Vector3 InitialUp => Vector3.UnitY;
 
+    private static Matrix4 GLToWebGpu => new Matrix4(
+        new Vector4(1, 0, 0, 0),
+        new Vector4(0, 1, 0, 0),
+        new Vector4(0, 0, 0.5f, 0),
+        new Vector4(0, 0, 0.5f, 1));
+
     private readonly Screen _screen;
     private readonly Own<Buffer> _cameraMatrixBuffer;
     private readonly Own<BindGroupLayout> _bindGroupLayout;
@@ -370,13 +376,13 @@ public sealed class Camera
 
         if(mode.IsPerspective(out var fovy)) {
             Matrix4.PerspectiveProjection(fovy, aspect, near, far, out var projection);
-            return projection;
+            return GLToWebGpu * projection;
         }
         else if(mode.IsOrthographic(out var height)) {
             var y = height / 2f;
             var x = y * aspect;
             Matrix4.OrthographicProjection(-x, x, -y, y, near, far, out var projection);
-            return projection;
+            return GLToWebGpu * projection;
         }
         else {
             throw new UnreachableException("invalid camera projection mode");
