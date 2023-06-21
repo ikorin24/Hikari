@@ -124,9 +124,9 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
                     AddressModeU = AddressMode.ClampToEdge,
                     AddressModeV = AddressMode.ClampToEdge,
                     AddressModeW = AddressMode.ClampToEdge,
-                    MagFilter = FilterMode.Linear,
-                    MinFilter = FilterMode.Linear,
-                    MipmapFilter = FilterMode.Linear,
+                    MagFilter = FilterMode.Nearest,
+                    MinFilter = FilterMode.Nearest,
+                    MipmapFilter = FilterMode.Nearest,
                     Compare = CompareFunction.Less,
                 }).AsValue(out var shadowSampler)),
                 BindGroupEntry.Buffer(2, directionalLight.LightMatricesBuffer)

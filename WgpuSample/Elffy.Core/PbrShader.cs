@@ -96,10 +96,20 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             var mrao: vec3<f32> = textureSample(mr_tex, tex_sampler, in.uv).rgb;
             var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, tex_sampler, in.uv).rgb * 2.0 - 1.0);
 
-            let visibility: f32 = textureSampleCompare(
-                shadowmap, shadowmap_sampler,
-                in.shadowmap_pos0.xy, in.shadowmap_pos0.z - 0.007
-            );
+            let bias = 0.007;
+            var visibility: f32 = 0.0;
+            let shadowmap_size_inv = 1.0 / vec2<f32>(textureDimensions(shadowmap, 0));
+            // PCF (3x3 kernel)
+            for(var y: i32 = -1; y <= 1; y++) {
+                for(var x: i32 = -1; x <= 1; x++) {
+                    let offset = vec2(f32(x), f32(y)) * shadowmap_size_inv;
+                    visibility += textureSampleCompare(
+                        shadowmap, shadowmap_sampler,
+                        in.shadowmap_pos0.xy + offset, in.shadowmap_pos0.z - bias
+                    );
+                }
+            }
+            visibility /= 9.0;
 
             var output: GBuffer;
             output.g0 = vec4(in.pos_camera_coord, mrao.r);
