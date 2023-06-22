@@ -66,14 +66,15 @@ internal unsafe static partial class EngineCore
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        static void OnUnhandledError(CE.Slice<byte> message)
+        static void OnUnhandledError(byte* message, nuint len)
         {
             try {
-                var str = Encoding.UTF8.GetString(message.data, (int)message.len);
+                var str = Encoding.UTF8.GetString(message, (int)len);
                 Console.Error.WriteLine(str);
 #if DEBUG
                 System.Diagnostics.Debug.WriteLine(str);
                 System.Diagnostics.Debugger.Break();
+                Environment.Exit(-1);
 #endif
             }
             catch {

@@ -8,7 +8,9 @@ use windows as platform;
 
 use crate::engine::ProxyMessage;
 use crate::*;
+use once_cell::sync::Lazy;
 use pollster::FutureExt;
+use regex::Regex;
 use std::cell::Cell;
 use std::error::Error;
 use std::num;
@@ -76,7 +78,12 @@ impl HostScreen {
             )
             .block_on()?;
         device.on_uncaptured_error(Box::new(|error| {
-            let message = format!("{:?}", error);
+            static ANCI_ESC_SEQ_DECORATION: Lazy<Regex> =
+                Lazy::new(|| Regex::new("\x1b\\[[0-9;]*m").unwrap());
+            let message: String = error.to_string();
+            // Some error messages contain decorations of ANSI escape sequences.
+            // They should be removed.
+            let message = ANCI_ESC_SEQ_DECORATION.replace_all(&message, "");
             crate::engine::Engine::on_unhandled_error(&message);
         }));
         let surface_config = {

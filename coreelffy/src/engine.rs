@@ -50,7 +50,7 @@ impl Engine {
     pub fn on_unhandled_error(error: &str) {
         let f = Self::get_engine_field(|engine| engine.config.on_unhandled_error).unwrap();
         let bytes = error.as_bytes();
-        f(Slice::new(bytes))
+        f(bytes.as_ptr(), bytes.len())
     }
 
     pub fn event_cleared(screen_id: ScreenId) {

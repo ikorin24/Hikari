@@ -343,9 +343,9 @@ internal static class CoreElffy
 
     internal unsafe readonly struct EngineUnhandledErrorFn
     {
-        private readonly delegate* unmanaged[Cdecl]<CE.Slice<u8>, void> _func;
+        private readonly delegate* unmanaged[Cdecl]<u8*, nuint, void> _func;
 
-        public EngineUnhandledErrorFn(delegate* unmanaged[Cdecl]<CE.Slice<u8>, void> f) => _func = f;
+        public EngineUnhandledErrorFn(delegate* unmanaged[Cdecl]<u8*, nuint, void> f) => _func = f;
     }
 
     internal unsafe readonly struct ClearedEventFn

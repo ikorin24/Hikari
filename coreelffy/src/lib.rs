@@ -1859,7 +1859,7 @@ static_assertions::const_assert_eq!(wgpu::QUERY_SIZE, 8);
 
 pub(crate) type HostScreenInitFn =
     extern "cdecl" fn(screen: Box<HostScreen>, screen_info: &HostScreenInfo) -> ScreenId;
-pub(crate) type EngineUnhandledErrorFn = extern "cdecl" fn(error: Slice<u8>);
+pub(crate) type EngineUnhandledErrorFn = extern "cdecl" fn(message: *const u8, len: usize);
 pub(crate) type ClearedEventFn = extern "cdecl" fn(screen_id: ScreenId);
 pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> bool;
 pub(crate) type ResizedEventFn = extern "cdecl" fn(screen_id: ScreenId, width: u32, height: u32);

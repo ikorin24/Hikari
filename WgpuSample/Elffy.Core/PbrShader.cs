@@ -122,9 +122,19 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         fn mat44_to_33(m: mat4x4<f32>) -> mat3x3<f32> {
             return mat3x3<f32>(m[0].xyz, m[1].xyz, m[2].xyz);
         }
-        """u8;
 
-    // see https://webgpu.github.io/webgpu-samples/samples/shadowMapping#./fragment.wgsl
+        fn random(p: vec2<f32>) -> vec2<f32> {
+            let k: vec2<u32> = vec2<u32>(0x456789abu, 0x6789ab45u);
+            let s: vec2<f32> = vec2<f32>(1.0 / f32(0xffffffffu), 1.0 / f32(0xffffffffu));
+            var n: vec2<u32> = bitcast<vec2<u32>>(p);
+            n ^= (n.yx << 9u);
+            n ^= (n.yx >> 1u);
+            n *= k;
+            n ^= (n.yx << 1u);
+            n *= k;
+            return vec2<f32>(n) * s;
+        }
+        """u8;
 
     private readonly Own<ShaderModule> _shadowModule;
     private readonly Own<PipelineLayout> _shadowPipelineLayout;
