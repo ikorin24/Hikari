@@ -174,7 +174,7 @@ public sealed class DirectionalLight : IScreenManaged
         var center = new Vector3(0, 0, 0);
         lightUp = Vector3.UnitY;
         var lview = Matrix4.LookAt(center - lightDir, center, lightUp);
-        var x = 3;
+        var x = 1;
         Matrix4.OrthographicProjection(
                 -x, x,
                 -x, x,

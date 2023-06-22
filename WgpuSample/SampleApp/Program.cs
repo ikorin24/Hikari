@@ -54,7 +54,7 @@ internal class Program
             //System.Diagnostics.Debug.WriteLine(screen.FrameNum);
             var a = (screen.FrameNum * 10 / 360f).ToRadian();
             cube.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, a);
-            model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, -a) * Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
+            //model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, -a) * Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
         });
 
         screen.Update.Subscribe(screen =>

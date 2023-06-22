@@ -57,7 +57,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         @group(0) @binding(4) var normal_tex: texture_2d<f32>;
         @group(1) @binding(0) var<uniform> c: CameraMat;
         @group(2) @binding(0) var shadowmap: texture_depth_2d;
-        @group(2) @binding(1) var shadowmap_sampler: sampler_comparison;
+        @group(2) @binding(1) var sm_sampler: sampler_comparison;
         @group(2) @binding(2) var<storage, read> lightMatrices: array<mat4x4<f32>>;
 
         fn cascade_count() -> u32 {
@@ -98,18 +98,47 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
 
             let bias = 0.007;
             var visibility: f32 = 0.0;
-            let shadowmap_size_inv = 1.0 / vec2<f32>(textureDimensions(shadowmap, 0));
+            let sm_size_inv = 1.0 / vec2<f32>(textureDimensions(shadowmap, 0));
             // PCF (3x3 kernel)
-            for(var y: i32 = -1; y <= 1; y++) {
-                for(var x: i32 = -1; x <= 1; x++) {
-                    let offset = vec2(f32(x), f32(y)) * shadowmap_size_inv;
-                    visibility += textureSampleCompare(
-                        shadowmap, shadowmap_sampler,
-                        in.shadowmap_pos0.xy + offset, in.shadowmap_pos0.z - bias
-                    );
-                }
+
+            //for(var y: i32 = -1; y <= 1; y++) {
+            //    for(var x: i32 = -1; x <= 1; x++) {
+            //        let offset = vec2(f32(x), f32(y)) * sm_size_inv;
+            //        let ref_z = in.shadowmap_pos0.z - bias;
+            //        visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + offset, ref_z);
+            //    }
+            //}
+            
+            //let ref_z = in.shadowmap_pos0.z - bias;
+            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2(-1.0, -1.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 0.0, -1.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 1.0, -1.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2(-1.0,  0.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 0.0,  0.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 1.0,  0.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2(-1.0,  1.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 0.0,  1.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 1.0,  1.0) * sm_size_inv, ref_z);
+            //visibility /= 9.0;
+
+            var seed: vec2<u32> = random_vec2_u32(in.clip_pos.xy);
+            
+            // Now, n is a random number
+            // Use it as a seed of xorshift
+
+            let ref_z = in.shadowmap_pos0.z - bias;
+            let R = 4.0;
+            let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
+            for(var i: i32 = 0; i < 4; i++) {
+                seed ^= (seed << 13u); seed ^= (seed >> 17u); seed ^= (seed << 5u);
+                let r = R * sqrt(f32(seed.x) * u32_max_inv);
+                let offset = vec2<f32>(
+                    r * cos(2.0 * 3.14159265 * f32(seed.y) * u32_max_inv),
+                    r * sin(2.0 * 3.14159265 * f32(seed.y) * u32_max_inv),
+                );
+                visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + offset * sm_size_inv, ref_z);
             }
-            visibility /= 9.0;
+            visibility /= 4.0;
 
             var output: GBuffer;
             output.g0 = vec4(in.pos_camera_coord, mrao.r);
@@ -124,15 +153,28 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         }
 
         fn random(p: vec2<f32>) -> vec2<f32> {
-            let k: vec2<u32> = vec2<u32>(0x456789abu, 0x6789ab45u);
-            let s: vec2<f32> = vec2<f32>(1.0 / f32(0xffffffffu), 1.0 / f32(0xffffffffu));
+            let K: vec2<u32> = vec2<u32>(0x456789abu, 0x6789ab45u);
+            let S: vec2<f32> = vec2<f32>(2.3283064E-10, 2.3283064E-10);   // 1.0 / u32.maxvalue
+
             var n: vec2<u32> = bitcast<vec2<u32>>(p);
             n ^= (n.yx << 9u);
             n ^= (n.yx >> 1u);
-            n *= k;
+            n *= K;
             n ^= (n.yx << 1u);
-            n *= k;
-            return vec2<f32>(n) * s;
+            n *= K;
+            return vec2<f32>(n) * S;
+        }
+
+        fn random_vec2_u32(p: vec2<f32>) -> vec2<u32> {
+            let K: vec2<u32> = vec2<u32>(0x456789abu, 0x6789ab45u);
+
+            var n: vec2<u32> = bitcast<vec2<u32>>(p);
+            n ^= (n.yx << 9u);
+            n ^= (n.yx >> 1u);
+            n *= K;
+            n ^= (n.yx << 1u);
+            n *= K;
+            return n;
         }
         """u8;
 
