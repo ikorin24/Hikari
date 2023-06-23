@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using Elffy.Effective;
-using Elffy.Mathematics;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -106,82 +105,69 @@ public sealed class DirectionalLight : IScreenManaged
     internal void UpdateLightMatrix()
     {
         var camera = _screen.Camera;
-        var lightDir = Direction;
-        Vector3 lightUp;
-        {
-            var dirX0Z = new Vector3(lightDir.X, 0, lightDir.Z).Normalized();
-            lightUp = dirX0Z.ContainsNaNOrInfinity ?
-                Vector3.UnitX :
-                Quaternion.FromTwoVectors(dirX0Z, lightDir) * Vector3.UnitY;
-        }
-
+        var lightDirection = Direction;
         Span<Matrix4> lightMatrices = stackalloc Matrix4[CascadeCountConst];
-        CalcLightMatrix(lightDir, lightUp, camera, lightMatrices);
-        //lightMatrices[0] = camera.GetProjection() * camera.GetView();
+        CalcLightMatrix(lightDirection, camera.ReadState(), lightMatrices);
         var buffer = _lightMatricesBuffer.AsValue();
         buffer.WriteSpan(0, lightMatrices.AsReadOnly());
     }
 
     private static void CalcLightMatrix(
-        in Vector3 lightDir, Vector3 lightUp,
-        Camera camera,
+        in Vector3 lightDir,
+        in Camera.CameraState camera,
         Span<Matrix4> lightMatrices)
     {
-        //var (far, near, aspect, projMode, view) = camera.ReadState(
-        //    (in Camera.CameraState s) => (s.Far, s.Near, s.Aspect, s.ProjectionMode, s.Matrix.View)
-        //);
+        Vector3 lUp;
+        {
+            var dirX0Z = new Vector3(lightDir.X, 0, lightDir.Z).Normalized();
+            lUp = dirX0Z.ContainsNaNOrInfinity ?
+                Vector3.UnitX :
+                Quaternion.FromTwoVectors(dirX0Z, lightDir) * Vector3.UnitY;
+        }
 
-        //var nearToFar = far - near;
-        //for(int i = 0; i < lightMatrices.Length; i++) {
-        //    // TODO: 線形ではない分割方法を考える
-        //    var n = near + nearToFar * (float)i / lightMatrices.Length;        // i 番目のカスケードシャドウの NearPlane の中心位置
-        //    var f = near + nearToFar * (float)(i + 1) / lightMatrices.Length;  // i 番目のカスケードシャドウの FarPlane の中心位置
-        //    Matrix4 cascadedProj;
-        //    if(projMode.IsPerspective(out var fovy)) {
-        //        Matrix4.PerspectiveProjection(fovy, aspect, n, f, out cascadedProj);
-        //    }
-        //    else if(projMode.IsOrthographic(out var height)) {
-        //        throw new NotImplementedException();        // TODO:
-        //    }
-        //    else {
-        //        throw new NotSupportedException();
-        //    }
+        float maxFar = 10;
+        float logNear = float.Log(camera.Near);
+        float logFar = float.Log(maxFar);
+        float logStep = (logFar - logNear) / lightMatrices.Length;
 
-        //    Frustum.FromMatrix(cascadedProj, view, out var cascadedFrustum);
-        //    var center = cascadedFrustum.Center;
-        //    var lview = Matrix4.LookAt(center - lightDir, center, lightUp);
+        for(int i = 0; i < lightMatrices.Length; i++) {
+            var n = float.Exp(logNear + i * logStep);
+            var f = float.Exp(logNear + (i + 1) * logStep);
 
-        //    var min = Vector3.MaxValue;
-        //    var max = Vector3.MinValue;
-        //    foreach(var corner in cascadedFrustum.Corners) {
-        //        var p = lview.Transform(corner);
-        //        min = Vector3.Min(min, p);
-        //        max = Vector3.Max(max, p);
-        //    }
+            var cameraDir = camera.GetDirection();
+            var cascadeNearPoint = camera.Position + cameraDir * n;
+            var cascadeFarPoint = camera.Position + cameraDir * f;
+            var cascadedCenter = (cascadeNearPoint + cascadeFarPoint) / 2;
 
-        //    var lAabb = Bounds.FromMinMax(min, max);
-        //    var lightFar = -lAabb.Min.Z + float.Clamp(lAabb.Size.Z * 5, 10, 1000);  // TODO: depth ちゃんと決める
-        //    var lightNear = -lAabb.Max.Z - float.Clamp(lAabb.Size.Z * 5, 10, 1000); // TODO: depth ちゃんと決める
-        //    Matrix4.OrthographicProjection(
-        //        lAabb.Min.X, lAabb.Max.X,
-        //        lAabb.Min.Y, lAabb.Max.Y,
-        //        lightNear,
-        //        lightFar,
-        //        out var lproj);
-        //    lightMatrices[i] = lproj * lview;
-        //}
+            Matrix4 cascadedProj;
+            if(camera.ProjectionMode.IsPerspective(out var fovy)) {
+                Matrix4.PerspectiveProjection(fovy, camera.Aspect, n, f, out cascadedProj);
+            }
+            else if(camera.ProjectionMode.IsOrthographic(out var height)) {
+                throw new NotImplementedException();        // TODO:
+            }
+            else {
+                throw new NotSupportedException();
+            }
+            Frustum.FromMatrix(cascadedProj, camera.Matrix.View, out var cascadedFrustum);
+            var lview = Matrix4.LookAt(cascadedCenter - lightDir, cascadedCenter, lUp);
 
-        var center = new Vector3(0, 0, 0);
-        lightUp = Vector3.UnitY;
-        var lview = Matrix4.LookAt(center - lightDir, center, lightUp);
-        var x = 1;
-        Matrix4.OrthographicProjection(
-                -x, x,
-                -x, x,
-                -6,
-                6,
+            var min = Vector3.MaxValue;
+            var max = Vector3.MinValue;
+            foreach(var corner in cascadedFrustum.Corners) {
+                var p = lview.Transform(corner);
+                min = Vector3.Min(min, p);
+                max = Vector3.Max(max, p);
+            }
+            var aabbInLightSpace = Bounds.FromMinMax(min, max);
+            Matrix4.OrthographicProjection(
+                aabbInLightSpace.Min.X, aabbInLightSpace.Max.X,
+                aabbInLightSpace.Min.Y, aabbInLightSpace.Max.Y,
+                -aabbInLightSpace.Max.Z - float.Clamp(aabbInLightSpace.Size.Z * 2.0f, 10, 200),  // TODO:
+                -aabbInLightSpace.Min.Z,
                 out var lproj);
-        lightMatrices[0] = GLToWebGpu * lproj * lview;
+            lightMatrices[i] = GLToWebGpu * lproj * lview;
+        }
     }
 
     private static Matrix4 GLToWebGpu => new Matrix4(
@@ -189,56 +175,6 @@ public sealed class DirectionalLight : IScreenManaged
         new Vector4(0, 1, 0, 0),
         new Vector4(0, 0, 0.5f, 0),
         new Vector4(0, 0, 0.5f, 1));
-
-    //private static void CalcLightMatrix(
-    //    in Vector3 lightDir, in Vector3 lightUp,
-    //    Camera camera,
-    //    Span<Matrix4> lightMatrices)
-    //{
-    //    var (far, near, aspect, projMode, view) = camera.ReadState(
-    //        (in Camera.CameraState s) => (s.Far, s.Near, s.Aspect, s.ProjectionMode, s.Matrix.View)
-    //    );
-
-    //    var nearToFar = far - near;
-    //    for(int i = 0; i < lightMatrices.Length; i++) {
-    //        // TODO: 線形ではない分割方法を考える
-    //        var n = near + nearToFar * (float)i / lightMatrices.Length;        // i 番目のカスケードシャドウの NearPlane の中心位置
-    //        var f = near + nearToFar * (float)(i + 1) / lightMatrices.Length;  // i 番目のカスケードシャドウの FarPlane の中心位置
-    //        Matrix4 cascadedProj;
-    //        if(projMode.IsPerspective(out var fovy)) {
-    //            Matrix4.PerspectiveProjection(fovy, aspect, n, f, out cascadedProj);
-    //        }
-    //        else if(projMode.IsOrthographic(out var height)) {
-    //            throw new NotImplementedException();        // TODO:
-    //        }
-    //        else {
-    //            throw new NotSupportedException();
-    //        }
-
-    //        Frustum.FromMatrix(cascadedProj, view, out var cascadedFrustum);
-    //        var center = cascadedFrustum.Center;
-    //        var lview = Matrix4.LookAt(center - lightDir, center, lightUp);
-
-    //        var min = Vector3.MaxValue;
-    //        var max = Vector3.MinValue;
-    //        foreach(var corner in cascadedFrustum.Corners) {
-    //            var p = lview.Transform(corner);
-    //            min = Vector3.Min(min, p);
-    //            max = Vector3.Max(max, p);
-    //        }
-
-    //        var lAabb = Bounds.FromMinMax(min, max);
-    //        var lightFar = -lAabb.Min.Z + float.Clamp(lAabb.Size.Z * 5, 10, 1000);  // TODO: depth ちゃんと決める
-    //        var lightNear = -lAabb.Max.Z - float.Clamp(lAabb.Size.Z * 5, 10, 1000); // TODO: depth ちゃんと決める
-    //        Matrix4.OrthographicProjection(
-    //            lAabb.Min.X, lAabb.Max.X,
-    //            lAabb.Min.Y, lAabb.Max.Y,
-    //            lightNear,
-    //            lightFar,
-    //            out var lproj);
-    //        lightMatrices[i] = lproj * lview;
-    //    }
-    //}
 
     [StructLayout(LayoutKind.Sequential, Pack = 16)]
     private readonly struct DirectionalLightData

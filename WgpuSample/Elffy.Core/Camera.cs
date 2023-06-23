@@ -28,8 +28,8 @@ public sealed class Camera
         public float Near;
         public float Far;
 
-        public Vector3 Direction => Rotation * InitialDirection;
-        public Vector3 Up => Rotation * InitialUp;
+        public Vector3 GetDirection() => Rotation * InitialDirection;
+        public Vector3 GetUp() => Rotation * InitialUp;
     }
 
     private static Vector3 InitialPos => new Vector3(0, 0, 10);
@@ -119,7 +119,7 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _state.Direction;
+                return _state.GetDirection();
             }
         }
     }
@@ -129,7 +129,7 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _state.Up;
+                return _state.GetUp();
             }
         }
     }
