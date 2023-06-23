@@ -27,6 +27,9 @@ public sealed class Camera
         public float Aspect;    // Aspect ratio (width / height).
         public float Near;
         public float Far;
+
+        public Vector3 Direction => Rotation * InitialDirection;
+        public Vector3 Up => Rotation * InitialUp;
     }
 
     private static Vector3 InitialPos => new Vector3(0, 0, 10);
@@ -116,7 +119,7 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _state.Rotation * InitialDirection;
+                return _state.Direction;
             }
         }
     }
@@ -126,7 +129,7 @@ public sealed class Camera
         get
         {
             lock(_sync) {
-                return _state.Rotation * InitialUp;
+                return _state.Up;
             }
         }
     }
@@ -198,8 +201,7 @@ public sealed class Camera
         var mode = CameraProjectionMode.Perspective(25f / 180f * MathF.PI);
         var aspect = 1f;
         var near = 0.5f;
-        //var far = 1000f;
-        var far = 100f;
+        var far = 1000f;
         var rot = Quaternion.Identity;
         var projection = CalcProjection(mode, near, far, aspect);
         Matrix4 view;
