@@ -105,20 +105,20 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             //    for(var x: i32 = -1; x <= 1; x++) {
             //        let offset = vec2(f32(x), f32(y)) * sm_size_inv;
             //        let ref_z = in.shadowmap_pos0.z - bias;
-            //        visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + offset, ref_z);
+            //        visibility += textureSampleCompareLevel(shadowmap, sm_sampler, in.shadowmap_pos0.xy + offset, ref_z);
             //    }
             //}
             
             //let ref_z = in.shadowmap_pos0.z - bias;
-            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2(-1.0, -1.0) * sm_size_inv, ref_z);
-            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 0.0, -1.0) * sm_size_inv, ref_z);
-            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 1.0, -1.0) * sm_size_inv, ref_z);
-            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2(-1.0,  0.0) * sm_size_inv, ref_z);
-            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 0.0,  0.0) * sm_size_inv, ref_z);
-            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 1.0,  0.0) * sm_size_inv, ref_z);
-            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2(-1.0,  1.0) * sm_size_inv, ref_z);
-            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 0.0,  1.0) * sm_size_inv, ref_z);
-            //visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 1.0,  1.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompareLevel(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2(-1.0, -1.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompareLevel(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 0.0, -1.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompareLevel(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 1.0, -1.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompareLevel(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2(-1.0,  0.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompareLevel(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 0.0,  0.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompareLevel(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 1.0,  0.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompareLevel(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2(-1.0,  1.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompareLevel(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 0.0,  1.0) * sm_size_inv, ref_z);
+            //visibility += textureSampleCompareLevel(shadowmap, sm_sampler, in.shadowmap_pos0.xy + vec2( 1.0,  1.0) * sm_size_inv, ref_z);
             //visibility /= 9.0;
 
             var seed: vec2<u32> = random_vec2_u32(in.clip_pos.xy);
@@ -126,19 +126,26 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             // Now, n is a random number
             // Use it as a seed of xorshift
 
+            let sample_count: i32 = 4;
             let ref_z = in.shadowmap_pos0.z - bias;
             let R = 4.0;
             let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
-            for(var i: i32 = 0; i < 4; i++) {
+            for(var i: i32 = 0; i < sample_count; i++) {
                 seed ^= (seed << 13u); seed ^= (seed >> 17u); seed ^= (seed << 5u);
                 let r = R * sqrt(f32(seed.x) * u32_max_inv);
                 let offset = vec2<f32>(
                     r * cos(2.0 * 3.14159265 * f32(seed.y) * u32_max_inv),
                     r * sin(2.0 * 3.14159265 * f32(seed.y) * u32_max_inv),
                 );
-                visibility += textureSampleCompare(shadowmap, sm_sampler, in.shadowmap_pos0.xy + offset * sm_size_inv, ref_z);
+                let shadow_uv = in.shadowmap_pos0.xy + offset * sm_size_inv;
+                if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0) {
+                    visibility += 1.0;
+                }
+                else {
+                    visibility += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
+                }
             }
-            visibility /= 4.0;
+            visibility /= f32(sample_count);
 
             var output: GBuffer;
             output.g0 = vec4(in.pos_camera_coord, mrao.r);

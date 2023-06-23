@@ -70,7 +70,7 @@ impl HostScreen {
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
-                    features: wgpu::Features::empty(),
+                    features: wgpu::Features::ADDRESS_MODE_CLAMP_TO_BORDER,
                     limits: wgpu::Limits::default(),
                     label: None,
                 },
