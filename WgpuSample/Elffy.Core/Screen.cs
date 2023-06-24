@@ -185,7 +185,7 @@ public sealed class Screen
             SampleCount = 1,
             Dimension = TextureDimension.D2,
             Format = TextureFormat.Depth32Float,
-            Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
+            Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding | TextureUsages.CopySrc,
         });
         _depthTexture.Dispose();
         _depthTexture = depth;

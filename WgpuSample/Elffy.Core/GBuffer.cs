@@ -72,7 +72,7 @@ public sealed class GBuffer : IScreenManaged
                 SampleCount = 1,
                 Dimension = TextureDimension.D2,
                 Format = formats[i],
-                Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding,
+                Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding | TextureUsages.CopySrc,
             });
             colorsNative[i] = new(new()
             {
