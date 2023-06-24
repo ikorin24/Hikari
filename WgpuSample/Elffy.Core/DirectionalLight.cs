@@ -125,7 +125,7 @@ public sealed class DirectionalLight : IScreenManaged
                 Quaternion.FromTwoVectors(dirX0Z, lightDir) * Vector3.UnitY;
         }
 
-        float maxFar = 10;
+        float maxFar = 10;  // TODO:
         float logNear = float.Log(camera.Near);
         float logFar = float.Log(maxFar);
         float logStep = (logFar - logNear) / lightMatrices.Length;
@@ -163,7 +163,7 @@ public sealed class DirectionalLight : IScreenManaged
             Matrix4.OrthographicProjection(
                 aabbInLightSpace.Min.X, aabbInLightSpace.Max.X,
                 aabbInLightSpace.Min.Y, aabbInLightSpace.Max.Y,
-                -aabbInLightSpace.Max.Z - float.Clamp(aabbInLightSpace.Size.Z * 2.0f, 10, 200),  // TODO:
+                -(aabbInLightSpace.Max.Z + float.Clamp(aabbInLightSpace.Size.Z * 2.0f, 10, 200)),  // TODO:
                 -aabbInLightSpace.Min.Z,
                 out var lproj);
             lightMatrices[i] = GLToWebGpu * lproj * lview;

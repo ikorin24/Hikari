@@ -83,13 +83,8 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             let specular: vec3<f32> = max(vec3<f32>(), V * D * F * irradiance);
 
             //let bias: f32 = clamp(_shadowMapBias * tan(acos(dot_nl)), 0.0, _shadowMapBias * 10);
-            let bias: f32 = 0.0;
-
-            //float shadow = CalcShadow(_lightMatData, _viewInv * vec4(pos, 1), _shadowMap, bias);
-            //let shadow: f32 = 0.0;
-            let shadow: f32 = 1.0 - c3.g;
-
-            fragColor = (diffuse + specular) * (1.0 - shadow);
+            let vis: f32 = c3.g;
+            fragColor = (diffuse + specular) * vis;
 
             fragColor *= c3.r;  // ao
             let ssao: f32 = 1.0;

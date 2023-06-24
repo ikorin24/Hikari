@@ -37,6 +37,7 @@ internal class Program
 
         var model = new PbrModel(layer, Shapes.Plane(screen, true), albedo, mr, normal);
         model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
+        model.Scale = 10;
         var material = model.Material;
         var cube = new PbrModel(layer, Shapes.Cube(screen, true),
             material.Albedo, material.MetallicRoughness, material.Normal);
@@ -44,15 +45,30 @@ internal class Program
         cube.Position = new Vector3(0, 0.2f, 0);
 
         var camera = screen.Camera;
-        camera.SetNearFar(0.5f, 20);
+        camera.SetNearFar(0.5f, 1000);
         camera.LookAt(Vector3.Zero, new Vector3(0, 2f, 3) * 0.6f);
 
         screen.Lights.DirectionalLight.SetLightData(new Vector3(-0.5f, -1, 0), Color3.White);
 
+        var sw = new Stopwatch();
+        sw.Start();
+        var elapsed = TimeSpan.Zero;
+        var sum = TimeSpan.Zero;
+        var N = 300;
         screen.Update.Subscribe(screen =>
         {
-            //System.Diagnostics.Debug.WriteLine(screen.FrameNum);
-            var a = (screen.FrameNum * 10 / 360f).ToRadian();
+            var tmp = sw.Elapsed;
+            var delta = tmp - elapsed;
+            elapsed = tmp;
+            sum += delta;
+            if(screen.FrameNum % (ulong)N == 0) {
+                var fps = 1.0 / (sum / N).TotalSeconds;
+                Console.WriteLine($"{fps:N1}");
+                sum = TimeSpan.Zero;
+            }
+
+            var a = (screen.FrameNum * 10f / 360f).ToRadian();
+            //var a = (360 * (float)delta.TotalSeconds).ToRadian();
             cube.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, a);
             //model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, -a) * Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
         });
