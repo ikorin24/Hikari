@@ -13,8 +13,8 @@ public sealed class DirectionalLight : IScreenManaged
     private readonly Screen _screen;
     private readonly Own<Buffer> _buffer;       // DirectionalLightData
     private DirectionalLightData _data;
-    private Own<Texture> _shadowMap;
-    private Own<Buffer> _lightMatricesBuffer;   // Matrix4[CascadeCount]
+    private readonly Own<Texture> _shadowMap;
+    private readonly Own<Buffer> _lightMatricesBuffer;   // Matrix4[CascadeCount]
     private readonly SubscriptionBag _subscriptionBag = new();
     private readonly object _sync = new();
 
