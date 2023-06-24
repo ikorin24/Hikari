@@ -126,6 +126,7 @@ public sealed class Screen
         _native = screen;
         _mainThread = mainThread;
         _subscriptions = new SubscriptionBag();
+        _operations = new Operations(this);
         _camera = new Camera(this);
         _lights = new Lights(this);
         _earlyUpdate = new Timing(this);
@@ -133,7 +134,6 @@ public sealed class Screen
         _lateUpdate = new Timing(this);
         _mouse = new Mouse(this);
         _keyboard = new Keyboard(this);
-        _operations = new Operations(this);
         _info = Buffer.CreateInitData(this, new ScreenInfo
         {
             Size = Vector2u.Zero,

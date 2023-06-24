@@ -64,7 +64,6 @@ public sealed class Operations
     {
         var screen = _screen;
         var lights = screen.Lights;
-        lights.UpdateLightMatrix();
         {
             var context = new RenderShadowMapContext(lights);
             foreach(var op in _list.AsSpan()) {

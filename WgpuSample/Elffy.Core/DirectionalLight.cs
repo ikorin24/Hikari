@@ -8,14 +8,14 @@ namespace Elffy;
 
 public sealed class DirectionalLight : IScreenManaged
 {
+    private const int CascadeCountConst = 1;
+
     private readonly Screen _screen;
     private readonly Own<Buffer> _buffer;       // DirectionalLightData
     private DirectionalLightData _data;
     private Own<Texture> _shadowMap;
     private Own<Buffer> _lightMatricesBuffer;   // Matrix4[CascadeCount]
-
-    private const int CascadeCountConst = 1;
-
+    private readonly SubscriptionBag _subscriptionBag = new();
     private readonly object _sync = new();
 
     public Screen Screen => _screen;
@@ -77,6 +77,9 @@ public sealed class DirectionalLight : IScreenManaged
         _shadowMap = CreateShadowMap(screen);
 
         _lightMatricesBuffer = Buffer.Create(screen, (usize)CascadeCountConst * (usize)Matrix4.SizeInBytes, BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
+
+        screen.Camera.MatrixChanged.Subscribe(_ => UpdateLightMatrix()).AddTo(_subscriptionBag);
+        UpdateLightMatrix();
     }
 
     private static Own<Texture> CreateShadowMap(Screen screen)
@@ -99,6 +102,7 @@ public sealed class DirectionalLight : IScreenManaged
         _buffer.Dispose();
         _shadowMap.Dispose();
         _lightMatricesBuffer.Dispose();
+        _subscriptionBag.Dispose();
     }
 
     [SkipLocalsInit]
