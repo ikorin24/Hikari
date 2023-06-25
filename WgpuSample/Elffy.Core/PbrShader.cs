@@ -32,7 +32,6 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             @location(2) tangent_camera_coord: vec3<f32>,
             @location(3) bitangent_camera_coord: vec3<f32>,
             @location(4) normal_camera_coord: vec3<f32>,
-            @location(5) shadowmap_pos0: vec3<f32>,
         }
 
         struct GBuffer {
@@ -45,9 +44,11 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             model: mat4x4<f32>,
         }
 
-        struct CameraMat {
+        struct CameraMatrix {
             proj: mat4x4<f32>,
             view: mat4x4<f32>,
+            inv_proj: mat4x4<f32>,
+            inv_view: mat4x4<f32>,
         }
 
         @group(0) @binding(0) var<uniform> u: UniformValue;
@@ -55,14 +56,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         @group(0) @binding(2) var albedo_tex: texture_2d<f32>;
         @group(0) @binding(3) var mr_tex: texture_2d<f32>;
         @group(0) @binding(4) var normal_tex: texture_2d<f32>;
-        @group(1) @binding(0) var<uniform> c: CameraMat;
-        @group(2) @binding(0) var shadowmap: texture_depth_2d;
-        @group(2) @binding(1) var sm_sampler: sampler_comparison;
-        @group(2) @binding(2) var<storage, read> lightMatrices: array<mat4x4<f32>>;
-
-        fn cascade_count() -> u32 {
-            return arrayLength(&lightMatrices);
-        }
+        @group(1) @binding(0) var<uniform> c: CameraMatrix;
 
         fn to_vec3(v: vec4<f32>) -> vec3<f32> {
             return v.xyz / v.w;
@@ -82,11 +76,6 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             output.tangent_camera_coord = normalize(mv33 * v.tangent);
             output.bitangent_camera_coord = normalize(mv33 * cross(v.normal, v.tangent));
             output.normal_camera_coord = normalize(mv33 * v.normal);
-            let p0 = to_vec3(lightMatrices[0] * u.model * vec4(v.pos, 1.0));
-            output.shadowmap_pos0 = vec3<f32>(
-                p0.x * 0.5 + 0.5,
-                -p0.y * 0.5 + 0.5,
-                p0.z);
             return output;
         }
 
@@ -97,9 +86,9 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, tex_sampler, in.uv).rgb * 2.0 - 1.0);
 
             //let bias = 0.007;
-            let bias = 0.001;
-            var visibility: f32 = 0.0;
-            let sm_size_inv = 1.0 / vec2<f32>(textureDimensions(shadowmap, 0));
+            //let bias = 0.001;
+            //var visibility: f32 = 0.0;
+            //let sm_size_inv = 1.0 / vec2<f32>(textureDimensions(shadowmap, 0));
 
 
             //// PCF (3x3 kernel)
@@ -127,33 +116,33 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             //    visibility = textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
             //}
 
-            var seed: vec2<u32> = random_vec2_u32(in.clip_pos.xy);
-            let sample_count: i32 = 4;
-            let ref_z = in.shadowmap_pos0.z - bias;
-            let R = 1.5;
-            let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
-            for(var i: i32 = 0; i < sample_count; i++) {
-                seed ^= (seed << 13u); seed ^= (seed >> 17u); seed ^= (seed << 5u);
-                let r = R * sqrt(f32(seed.x) * u32_max_inv);
-                let offset = vec2<f32>(
-                    r * cos(2.0 * 3.14159265 * f32(seed.y) * u32_max_inv),
-                    r * sin(2.0 * 3.14159265 * f32(seed.y) * u32_max_inv),
-                );
-                let shadow_uv = in.shadowmap_pos0.xy + offset * sm_size_inv;
-                if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
-                    visibility += 1.0;
-                }
-                else {
-                    visibility += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
-                }
-            }
-            visibility /= f32(sample_count);
+            //var seed: vec2<u32> = random_vec2_u32(in.clip_pos.xy);
+            //let sample_count: i32 = 4;
+            //let ref_z = in.shadowmap_pos0.z - bias;
+            //let R = 1.5;
+            //let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
+            //for(var i: i32 = 0; i < sample_count; i++) {
+            //    seed ^= (seed << 13u); seed ^= (seed >> 17u); seed ^= (seed << 5u);
+            //    let r = R * sqrt(f32(seed.x) * u32_max_inv);
+            //    let offset = vec2<f32>(
+            //        r * cos(2.0 * 3.14159265 * f32(seed.y) * u32_max_inv),
+            //        r * sin(2.0 * 3.14159265 * f32(seed.y) * u32_max_inv),
+            //    );
+            //    let shadow_uv = in.shadowmap_pos0.xy + offset * sm_size_inv;
+            //    if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
+            //        visibility += 1.0;
+            //    }
+            //    else {
+            //        visibility += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
+            //    }
+            //}
+            //visibility /= f32(sample_count);
 
             var output: GBuffer;
             output.g0 = vec4(in.pos_camera_coord, mrao.r);
             output.g1 = vec4(normal_camera_coord, mrao.g);
             output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
-            output.g3 = vec4(mrao.b, visibility, 1.0, 1.0);
+            output.g3 = vec4(mrao.b, 1.0, 1.0, 1.0);
             return output;
         }
 
@@ -191,14 +180,12 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
     private readonly Own<PipelineLayout> _shadowPipelineLayout;
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly BindGroupLayout _bindGroupLayout1;
-    private readonly Own<BindGroupLayout> _bindGroupLayout2;
 
     private readonly Own<BindGroupLayout> _shadowBindGroupLayout0;
 
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
 
     public BindGroupLayout BindGroupLayout1 => _bindGroupLayout1;
-    public BindGroupLayout BindGroupLayout2 => _bindGroupLayout2.AsValue();
 
     public BindGroupLayout ShadowBindGroupLayout0 => _shadowBindGroupLayout0.AsValue();
 
@@ -212,12 +199,10 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             BuildPipelineLayoutDescriptor(
                 screen,
                 out var bindGroupLayout0,
-                out var bindGroupLayout1,
-                out var bindGroupLayout2))
+                out var bindGroupLayout1))
     {
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout1 = bindGroupLayout1;
-        _bindGroupLayout2 = bindGroupLayout2;
         _shadowModule = ShaderModule.Create(screen, ShadowShaderSource);
         _shadowPipelineLayout = BuildShadowPipeline(screen, out var shadowBgl0);
         _shadowBindGroupLayout0 = shadowBgl0;
@@ -240,7 +225,6 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         base.Release(manualRelease);
         if(manualRelease) {
             _bindGroupLayout0.Dispose();
-            _bindGroupLayout2.Dispose();
             _shadowBindGroupLayout0.Dispose();
             _shadowModule.Dispose();
             _shadowPipelineLayout.Dispose();
@@ -250,8 +234,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
     private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(
         Screen screen,
         out Own<BindGroupLayout> bindGroupLayout0,
-        out BindGroupLayout bindGroupLayout1,
-        out Own<BindGroupLayout> bindGroupLayout2)
+        out BindGroupLayout bindGroupLayout1)
     {
         bindGroupLayout1 = screen.Camera.CameraDataBindGroupLayout;
         return new PipelineLayoutDescriptor
@@ -288,20 +271,6 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
                     },
                 }).AsValue(out bindGroupLayout0),
                 bindGroupLayout1,
-                BindGroupLayout.Create(screen, new()
-                {
-                    Entries = new[]
-                    {
-                        BindGroupLayoutEntry.Texture(0, ShaderStages.Fragment, new()
-                        {
-                            ViewDimension = TextureViewDimension.D2,
-                            Multisampled = false,
-                            SampleType = TextureSampleType.Depth,
-                        }),
-                        BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Comparison),
-                        BindGroupLayoutEntry.Buffer(2, ShaderStages.Vertex, new() { Type = BufferBindingType.StorateReadOnly }),
-                    },
-                }).AsValue(out bindGroupLayout2),
             },
         };
     }

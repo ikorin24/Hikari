@@ -18,9 +18,11 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             @location(0) color: vec4<f32>,
             @builtin(frag_depth) depth: f32,
         }
-        struct CameraMat {
+        struct CameraMatrix {
             proj: mat4x4<f32>,
             view: mat4x4<f32>,
+            inv_proj: mat4x4<f32>,
+            inv_view: mat4x4<f32>,
         }
         struct DirLightData {
             dir: vec4<f32>,
@@ -31,8 +33,11 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         @group(0) @binding(2) var g1: texture_2d<f32>;
         @group(0) @binding(3) var g2: texture_2d<f32>;
         @group(0) @binding(4) var g3: texture_2d<f32>;
-        @group(1) @binding(0) var<uniform> camera: CameraMat;
+        @group(1) @binding(0) var<uniform> camera: CameraMatrix;
         @group(2) @binding(0) var<storage> dir_light: DirLightData;
+        @group(3) @binding(0) var shadowmap: texture_depth_2d;
+        @group(3) @binding(1) var sm_sampler: sampler_comparison;
+        @group(3) @binding(2) var<storage, read> lightMatrices: array<mat4x4<f32>>;
 
         @vertex fn vs_main(
             v: Vin,
@@ -42,8 +47,10 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             output.uv = v.uv;
             return output;
         }
+        const PI = 3.141592653589793;
         const INV_PI = 0.3183098861837907;
         const DIELECTRIC_F0 = 0.04;
+        const INV_U32_MAX_VALUE = 2.3283064E-10;    // 1.0 / u32.max_value
 
         @fragment fn fs_main(in: V2F) -> Fout {
             let c0: vec4<f32> = textureSample(g0, g_sampler, in.uv);
@@ -82,9 +89,59 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             let F = FresnelSchlick(f0, vec3(1.0, 1.0, 1.0), dot_lh);
             let specular: vec3<f32> = max(vec3<f32>(), V * D * F * irradiance);
 
-            //let bias: f32 = clamp(_shadowMapBias * tan(acos(dot_nl)), 0.0, _shadowMapBias * 10);
-            let vis: f32 = c3.g;
-            fragColor = (diffuse + specular) * vis;
+            // Shadow
+            var shadow_visibility: f32 = 1.0;
+
+            let p0 = to_vec3(lightMatrices[0] * camera.inv_view * vec4(pos_camera_coord, 1.0));
+            let shadowmap_pos0 = vec3<f32>(
+                p0.x * 0.5 + 0.5,
+                -p0.y * 0.5 + 0.5,
+                p0.z);
+            //let bias = 0.007;
+            let bias = 0.01;
+            var visibility: f32 = 0.0;
+            let sm_size_inv = 1.0 / vec2<f32>(textureDimensions(shadowmap, 0));
+
+
+            //// PCF (3x3 kernel)
+            //let ref_z = shadowmap_pos0.z - bias;
+            //for(var y: i32 = -1; y <= 1; y++) {
+            //    for(var x: i32 = -1; x <= 1; x++) {
+            //        let shadow_uv = shadowmap_pos0.xy + vec2(f32(x), f32(y)) * sm_size_inv;
+            //        if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
+            //            visibility += 1.0;
+            //        }
+            //        else {
+            //            visibility += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
+            //        }
+            //    }
+            //}
+            //visibility /= 9.0;
+
+            // PCF
+            var seed: vec2<u32> = random_vec2_u32(in.uv);
+            let sample_count: i32 = 4;
+            let ref_z = shadowmap_pos0.z - bias;
+            let R = 1.5;
+            let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
+            for(var i: i32 = 0; i < sample_count; i++) {
+                seed ^= (seed << 13u); seed ^= (seed >> 17u); seed ^= (seed << 5u);
+                let r = R * sqrt(f32(seed.x) * u32_max_inv);
+                let offset = vec2<f32>(
+                    r * cos(2.0 * PI * f32(seed.y) * u32_max_inv),
+                    r * sin(2.0 * PI * f32(seed.y) * u32_max_inv),
+                );
+                let shadow_uv = shadowmap_pos0.xy + offset * sm_size_inv;
+                if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
+                    visibility += 1.0;
+                }
+                else {
+                    visibility += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
+                }
+            }
+            visibility /= f32(sample_count);
+
+            fragColor = (diffuse + specular) * visibility;
 
             fragColor *= c3.r;  // ao
             let ssao: f32 = 1.0;
@@ -92,10 +149,15 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
 
             var out: Fout;
             out.color = vec4<f32>(fragColor, 1.0);
+            //out.color = camera.inv_view * vec4<f32>(pos_camera_coord, 1.0);
 
             var pos_dnc = camera.proj * vec4(pos_camera_coord, 1.0);
             out.depth = (pos_dnc.z / pos_dnc.w) * 0.5 + 0.5;
             return out;
+        }
+
+        fn to_vec3(v: vec4<f32>) -> vec3<f32> {
+            return v.xyz / v.w;
         }
 
         fn Lambert() -> f32 {
@@ -141,6 +203,19 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                 vec3<f32>(m[2].x, m[2].y, m[2].z),
             );
         }
+
+        // Return random vec2<u32> in [0, u32.maxvalue]
+        fn random_vec2_u32(p: vec2<f32>) -> vec2<u32> {
+            let K: vec2<u32> = vec2<u32>(0x456789abu, 0x6789ab45u);
+
+            var n: vec2<u32> = bitcast<vec2<u32>>(p);
+            n ^= (n.yx << 9u);
+            n ^= (n.yx >> 1u);
+            n *= K;
+            n ^= (n.yx << 1u);
+            n *= K;
+            return n;
+        }
         """u8;
 
     private static readonly BindGroupLayoutDescriptor _bindGroupLayoutDesc0 = new()
@@ -176,14 +251,16 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
     };
 
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
+    private readonly Own<BindGroupLayout> _bindGroupLayout3;
 
     private DeferredProcessShader(Screen screen)
         : base(
             screen,
             ShaderSource,
-            BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0))
+            BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0, out var bindGroupLayout3))
     {
         _bindGroupLayout0 = bindGroupLayout0;
+        _bindGroupLayout3 = bindGroupLayout3;
     }
 
     internal static Own<DeferredProcessShader> Create(Screen screen)
@@ -197,50 +274,103 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         base.Release(manualRelease);
         if(manualRelease) {
             _bindGroupLayout0.Dispose();
+            _bindGroupLayout3.Dispose();
         }
     }
 
     internal BindGroup[] CreateBindGroups(GBuffer gBuffer, out IDisposable[] disposables)
     {
         var screen = Screen;
-        var sampler = Sampler.NoMipmap(screen, AddressMode.ClampToEdge, FilterMode.Nearest, FilterMode.Nearest);
-        var bg0 = BindGroup.Create(screen, new()
+        var directionalLight = screen.Lights.DirectionalLight;
+
+        var bindGroups = new BindGroup[]
         {
-            Layout = _bindGroupLayout0.AsValue(),
-            Entries = new BindGroupEntry[]
+            // [0]
+            BindGroup.Create(screen, new()
             {
-                BindGroupEntry.Sampler(0, sampler.AsValue()),
-                BindGroupEntry.TextureView(1, gBuffer.ColorAttachment(0).View),
-                BindGroupEntry.TextureView(2, gBuffer.ColorAttachment(1).View),
-                BindGroupEntry.TextureView(3, gBuffer.ColorAttachment(2).View),
-                BindGroupEntry.TextureView(4, gBuffer.ColorAttachment(3).View),
-            },
-        });
+                Layout = _bindGroupLayout0.AsValue(),
+                Entries = new BindGroupEntry[]
+                {
+                    BindGroupEntry.Sampler(0, Sampler.Create(screen, new()
+                    {
+                        AddressModeU = AddressMode.ClampToEdge,
+                        AddressModeV = AddressMode.ClampToEdge,
+                        AddressModeW = AddressMode.ClampToEdge,
+                        MagFilter = FilterMode.Nearest,
+                        MinFilter = FilterMode.Nearest,
+                        MipmapFilter = FilterMode.Nearest,
+                    }).AsValue(out var sampler)),
+                    BindGroupEntry.TextureView(1, gBuffer.ColorAttachment(0).View),
+                    BindGroupEntry.TextureView(2, gBuffer.ColorAttachment(1).View),
+                    BindGroupEntry.TextureView(3, gBuffer.ColorAttachment(2).View),
+                    BindGroupEntry.TextureView(4, gBuffer.ColorAttachment(3).View),
+                },
+            }).AsValue(out var bindGroup0),
+            // [1]
+            screen.Camera.CameraDataBindGroup,
+            // [2]
+            screen.Lights.DataBindGroup,
+            // [3]
+            BindGroup.Create(screen, new()
+            {
+                Layout = _bindGroupLayout3.AsValue(),
+                Entries = new[]
+                {
+                    BindGroupEntry.TextureView(0, directionalLight.ShadowMap.View),
+                    BindGroupEntry.Sampler(1, Sampler.Create(screen, new()
+                    {
+                        AddressModeU = AddressMode.ClampToEdge,
+                        AddressModeV = AddressMode.ClampToEdge,
+                        AddressModeW = AddressMode.ClampToEdge,
+                        MagFilter = FilterMode.Nearest,
+                        MinFilter = FilterMode.Nearest,
+                        MipmapFilter = FilterMode.Nearest,
+                        Compare = CompareFunction.Less,
+                    }).AsValue(out var shadowSampler)),
+                    BindGroupEntry.Buffer(2, directionalLight.LightMatricesBuffer)
+                },
+            }).AsValue(out var bindGroup3),
+        };
         disposables = new IDisposable[]
         {
             sampler,
-            bg0,
+            bindGroup0,
+            shadowSampler,
+            bindGroup3
         };
-        return new BindGroup[]
-        {
-            bg0.AsValue(),
-            screen.Camera.CameraDataBindGroup,
-            screen.Lights.DataBindGroup,
-        };
+        return bindGroups;
     }
 
     private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(
         Screen screen,
-        out Own<BindGroupLayout> bindGroupLayout0)
+        out Own<BindGroupLayout> bindGroupLayout0,
+        out Own<BindGroupLayout> bindGroupLayout3)
     {
-        bindGroupLayout0 = BindGroupLayout.Create(screen, _bindGroupLayoutDesc0);
         return new PipelineLayoutDescriptor
         {
             BindGroupLayouts = new[]
             {
-                bindGroupLayout0.AsValue(),
+                // [0]
+                BindGroupLayout.Create(screen, _bindGroupLayoutDesc0).AsValue(out bindGroupLayout0),
+                // [1]
                 screen.Camera.CameraDataBindGroupLayout,
+                // [2]
                 screen.Lights.DataBindGroupLayout,
+                // [3]
+                BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new[]
+                    {
+                        BindGroupLayoutEntry.Texture(0, ShaderStages.Fragment, new()
+                        {
+                            ViewDimension = TextureViewDimension.D2,
+                            Multisampled = false,
+                            SampleType = TextureSampleType.Depth,
+                        }),
+                        BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Comparison),
+                        BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorateReadOnly }),
+                    },
+                }).AsValue(out bindGroupLayout3),
             },
         };
     }

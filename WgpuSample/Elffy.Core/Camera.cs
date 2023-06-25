@@ -16,6 +16,10 @@ public sealed class Camera
         public Matrix4 Projection;
         [FieldOffset(64)]   // 64 ~ 127 (size: 64)
         public Matrix4 View;
+        [FieldOffset(128)]  // 128 ~ 191 (size: 64)
+        public Matrix4 InvProjection;
+        [FieldOffset(192)]  // 192 ~ 255 (size: 64)
+        public Matrix4 InvView;
     }
 
     internal struct CameraState
@@ -74,6 +78,7 @@ public sealed class Camera
             lock(_sync) {
                 _state.ProjectionMode = value;
                 _state.Matrix.Projection = CalcProjection(_state.ProjectionMode, _state.Near, _state.Far, _state.Aspect);
+                _state.Matrix.InvProjection = _state.Matrix.Projection.Inverted();
                 _isCameraMatrixChanged = true;
             }
             _matrixChanged.Invoke(this);
@@ -98,6 +103,7 @@ public sealed class Camera
                 Debug.Assert(valid);
                 _state.Position = value;
                 _state.Matrix.View = view;
+                _state.Matrix.InvView = view.Inverted();
                 _isCameraMatrixChanged = true;
             }
             _matrixChanged.Invoke(this);
@@ -215,6 +221,8 @@ public sealed class Camera
             {
                 Projection = projection,
                 View = view,
+                InvProjection = projection.Inverted(),
+                InvView = view.Inverted(),
             },
             Position = InitialPos,
             Rotation = rot,
@@ -268,6 +276,7 @@ public sealed class Camera
             _state.Near = near;
             _state.Far = far;
             _state.Matrix.Projection = CalcProjection(_state.ProjectionMode, _state.Near, _state.Far, _state.Aspect);
+            _state.Matrix.InvProjection = _state.Matrix.Projection.Inverted();
             _isCameraMatrixChanged = true;
         }
         _matrixChanged.Invoke(this);
@@ -286,6 +295,7 @@ public sealed class Camera
             }
             _state.Rotation = Quaternion.FromTwoVectors(InitialDirection, dir);
             _state.Matrix.View = view;
+            _state.Matrix.InvView = view.Inverted();
             _isCameraMatrixChanged = true;
         }
         _matrixChanged.Invoke(this);
@@ -307,6 +317,7 @@ public sealed class Camera
             _state.Rotation = rotation;
             _state.Position = cameraPos;
             _state.Matrix.View = view;
+            _state.Matrix.InvView = view.Inverted();
             _isCameraMatrixChanged = true;
         }
         _matrixChanged.Invoke(this);
@@ -335,6 +346,7 @@ public sealed class Camera
         lock(_sync) {
             _state.Aspect = aspect;
             _state.Matrix.Projection = CalcProjection(_state.ProjectionMode, _state.Near, _state.Far, _state.Aspect);
+            _state.Matrix.InvProjection = _state.Matrix.Projection.Inverted();
             _isCameraMatrixChanged = true;
         }
         _matrixChanged.Invoke(this);
