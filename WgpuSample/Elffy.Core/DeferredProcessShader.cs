@@ -97,26 +97,9 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                 p0.x * 0.5 + 0.5,
                 -p0.y * 0.5 + 0.5,
                 p0.z);
-            //let bias = 0.007;
-            let bias = 0.01;
+            let bias = 0.005;
             var visibility: f32 = 0.0;
             let sm_size_inv = 1.0 / vec2<f32>(textureDimensions(shadowmap, 0));
-
-
-            //// PCF (3x3 kernel)
-            //let ref_z = shadowmap_pos0.z - bias;
-            //for(var y: i32 = -1; y <= 1; y++) {
-            //    for(var x: i32 = -1; x <= 1; x++) {
-            //        let shadow_uv = shadowmap_pos0.xy + vec2(f32(x), f32(y)) * sm_size_inv;
-            //        if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
-            //            visibility += 1.0;
-            //        }
-            //        else {
-            //            visibility += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
-            //        }
-            //    }
-            //}
-            //visibility /= 9.0;
 
             // PCF
             var seed: vec2<u32> = random_vec2_u32(in.uv);
@@ -149,9 +132,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
 
             var out: Fout;
             out.color = vec4<f32>(fragColor, 1.0);
-            //out.color = camera.inv_view * vec4<f32>(pos_camera_coord, 1.0);
-
-            var pos_dnc = camera.proj * vec4(pos_camera_coord, 1.0);
+            let pos_dnc = camera.proj * vec4(pos_camera_coord, 1.0);
             out.depth = (pos_dnc.z / pos_dnc.w) * 0.5 + 0.5;
             return out;
         }

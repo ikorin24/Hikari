@@ -58,10 +58,6 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         @group(0) @binding(4) var normal_tex: texture_2d<f32>;
         @group(1) @binding(0) var<uniform> c: CameraMatrix;
 
-        fn to_vec3(v: vec4<f32>) -> vec3<f32> {
-            return v.xyz / v.w;
-        }
-
         @vertex fn vs_main(
             v: Vin,
         ) -> V2F {
@@ -85,59 +81,6 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
             var mrao: vec3<f32> = textureSample(mr_tex, tex_sampler, in.uv).rgb;
             var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, tex_sampler, in.uv).rgb * 2.0 - 1.0);
 
-            //let bias = 0.007;
-            //let bias = 0.001;
-            //var visibility: f32 = 0.0;
-            //let sm_size_inv = 1.0 / vec2<f32>(textureDimensions(shadowmap, 0));
-
-
-            //// PCF (3x3 kernel)
-            //let ref_z = in.shadowmap_pos0.z - bias;
-            //for(var y: i32 = -1; y <= 1; y++) {
-            //    for(var x: i32 = -1; x <= 1; x++) {
-            //        let shadow_uv = in.shadowmap_pos0.xy + vec2(f32(x), f32(y)) * sm_size_inv;
-            //        if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
-            //            visibility += 1.0;
-            //        }
-            //        else {
-            //            visibility += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
-            //        }
-            //    }
-            //}
-            //visibility /= 9.0;
-
-            //// no PCF
-            //let ref_z = in.shadowmap_pos0.z - bias;
-            //let shadow_uv = in.shadowmap_pos0.xy;
-            //if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
-            //    visibility = 1.0;
-            //}
-            //else {
-            //    visibility = textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
-            //}
-
-            //var seed: vec2<u32> = random_vec2_u32(in.clip_pos.xy);
-            //let sample_count: i32 = 4;
-            //let ref_z = in.shadowmap_pos0.z - bias;
-            //let R = 1.5;
-            //let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
-            //for(var i: i32 = 0; i < sample_count; i++) {
-            //    seed ^= (seed << 13u); seed ^= (seed >> 17u); seed ^= (seed << 5u);
-            //    let r = R * sqrt(f32(seed.x) * u32_max_inv);
-            //    let offset = vec2<f32>(
-            //        r * cos(2.0 * 3.14159265 * f32(seed.y) * u32_max_inv),
-            //        r * sin(2.0 * 3.14159265 * f32(seed.y) * u32_max_inv),
-            //    );
-            //    let shadow_uv = in.shadowmap_pos0.xy + offset * sm_size_inv;
-            //    if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
-            //        visibility += 1.0;
-            //    }
-            //    else {
-            //        visibility += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
-            //    }
-            //}
-            //visibility /= f32(sample_count);
-
             var output: GBuffer;
             output.g0 = vec4(in.pos_camera_coord, mrao.r);
             output.g1 = vec4(normal_camera_coord, mrao.g);
@@ -148,31 +91,6 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
 
         fn mat44_to_33(m: mat4x4<f32>) -> mat3x3<f32> {
             return mat3x3<f32>(m[0].xyz, m[1].xyz, m[2].xyz);
-        }
-
-        fn random(p: vec2<f32>) -> vec2<f32> {
-            let K: vec2<u32> = vec2<u32>(0x456789abu, 0x6789ab45u);
-            let S: vec2<f32> = vec2<f32>(2.3283064E-10, 2.3283064E-10);   // 1.0 / u32.maxvalue
-
-            var n: vec2<u32> = bitcast<vec2<u32>>(p);
-            n ^= (n.yx << 9u);
-            n ^= (n.yx >> 1u);
-            n *= K;
-            n ^= (n.yx << 1u);
-            n *= K;
-            return vec2<f32>(n) * S;
-        }
-
-        fn random_vec2_u32(p: vec2<f32>) -> vec2<u32> {
-            let K: vec2<u32> = vec2<u32>(0x456789abu, 0x6789ab45u);
-
-            var n: vec2<u32> = bitcast<vec2<u32>>(p);
-            n ^= (n.yx << 9u);
-            n ^= (n.yx >> 1u);
-            n *= K;
-            n ^= (n.yx << 1u);
-            n *= K;
-            return n;
         }
         """u8;
 
