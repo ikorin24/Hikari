@@ -1,5 +1,9 @@
 ﻿#nullable enable
 using System;
+using System.Buffers;
+using System.Buffers.Text;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
@@ -7,21 +11,20 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
 {
     private static T ShadowShaderSource<TArg, T>(uint cascade, TArg arg, ReadOnlySpanFunc<byte, TArg, T> func)
     {
-        // TODO: avoid memory allocation
-        var source = $$"""
+        using var builder = new Utf8StringBuilder();
+        builder.Append("const CASCADE: u32 = "u8);
+        builder.Append(cascade);
+        builder.Append("""
+        u;
         @group(0) @binding(0) var<uniform> model: mat4x4<f32>;
         @group(0) @binding(1) var<storage, read> lightMatrices: array<mat4x4<f32>>;
-
         @vertex fn vs_main(
             @location(0) pos: vec3<f32>,
         ) -> @builtin(position) vec4<f32> {
-            return lightMatrices[{{cascade}}] * model * vec4<f32>(pos, 1.0);
+            return lightMatrices[CASCADE] * model * vec4<f32>(pos, 1.0);
         }
-        @fragment fn fs_main() {
-        }
-        """;
-        var utf8Source = System.Text.Encoding.UTF8.GetBytes(source);
-        return func(utf8Source, arg);
+        """u8);
+        return func(builder.Utf8String, arg);
     }
 
     private static ReadOnlySpan<byte> ShaderSource => """
@@ -225,5 +228,62 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
                 }).AsValue(out bgl0),
             },
         });
+    }
+}
+
+file ref struct Utf8StringBuilder
+{
+    private byte[] _buffer;
+    private int _length;
+
+    public ReadOnlySpan<byte> Utf8String => _buffer.AsSpan(0, _length);
+
+    public Utf8StringBuilder()
+    {
+        _buffer = ArrayPool<byte>.Shared.Rent(0);
+    }
+
+    public Utf8StringBuilder(int capacity = 0)
+    {
+        _buffer = ArrayPool<byte>.Shared.Rent(capacity);
+    }
+
+    public void AppendLine(ReadOnlySpan<byte> utf8String)
+    {
+        Append(utf8String);
+        if(OperatingSystem.IsWindows()) {
+            Append("\r\n"u8);
+        }
+        else {
+            Append("\n"u8);
+        }
+    }
+
+    [SkipLocalsInit]
+    public void Append(uint value)
+    {
+        Span<byte> buf = stackalloc byte[10];
+        var result = Utf8Formatter.TryFormat(value, buf, out var writtenLen);
+        Debug.Assert(result);
+        Append(buf.Slice(0, writtenLen));
+    }
+
+    public void Append(scoped ReadOnlySpan<byte> utf8String)
+    {
+        if(utf8String.Length > _buffer.Length - _length) {
+            var c = int.Max(_length + utf8String.Length, checked(_buffer.Length * 2));
+            var newBuffer = ArrayPool<byte>.Shared.Rent(c);
+            _buffer.AsSpan(0, _length).CopyTo(newBuffer);
+            ArrayPool<byte>.Shared.Return(_buffer);
+            _buffer = newBuffer;
+        }
+        Debug.Assert(_buffer.Length - _length >= utf8String.Length);
+        utf8String.CopyTo(_buffer.AsSpan(_length));
+        _length += utf8String.Length;
+    }
+
+    public void Dispose()
+    {
+        ArrayPool<byte>.Shared.Return(_buffer);
     }
 }

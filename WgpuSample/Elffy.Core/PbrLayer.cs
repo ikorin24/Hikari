@@ -107,12 +107,7 @@ public sealed class PbrLayer
                     }),
                 },
             },
-            Fragment = new FragmentState
-            {
-                Module = shader.ShadowModule(cascade),
-                EntryPoint = "fs_main"u8.ToArray(),
-                Targets = null,
-            },
+            Fragment = null,
             Primitive = new PrimitiveState
             {
                 Topology = PrimitiveTopology.TriangleList,
@@ -127,7 +122,7 @@ public sealed class PbrLayer
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Less,
                 Stencil = StencilState.Default,
-                Bias = DepthBiasState.Default,  // TODO: change bias
+                Bias = DepthBiasState.Default,
             },
             Multisample = MultisampleState.Default,
             Multiview = 0,
