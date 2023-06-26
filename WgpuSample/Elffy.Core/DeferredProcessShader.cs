@@ -94,8 +94,9 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             var shadow_visibility: f32 = 1.0;
 
             let distance: f32 = length(pos_camera_coord);
-            var cascade: u32 = arrayLength(&cascadeFars);
-            for(var i: u32 = 0u; i < arrayLength(&cascadeFars); i++) {
+            let cascade_count: u32 = arrayLength(&cascadeFars);
+            var cascade: u32 = cascade_count;
+            for(var i: u32 = 0u; i < cascade_count; i++) {
                 if(distance < cascadeFars[i]) {
                     cascade = i;
                     break;
@@ -103,22 +104,29 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             }
             
             var visibility: f32 = 1.0;
-            if(cascade < arrayLength(&cascadeFars)) {
+            if(cascade < cascade_count) {
                 let pos_world_coord = camera.inv_view * vec4(pos_camera_coord, 1.0);
                 let p0 = to_vec3(lightMatrices[cascade] * pos_world_coord);
-                let shadowmap_pos0 = vec3<f32>(
+                let shadowmap_pos = vec3<f32>(
                     p0.x * 0.5 + 0.5,
                     -p0.y * 0.5 + 0.5,
                     p0.z);
-                let bias = 0.001;       // TODO:
+                let bias = 0.005;
+                //let bias = 0.005 / pow(f32(cascade + 1u), 1.2);
+                let slope_scaled_bias = bias * acos(cos(dot_nl));
                 var vis: f32 = 0.0;
-                let sm_size_inv = 1.0 / vec2<f32>(textureDimensions(shadowmap, 0));
+
+                let shadowmap_size: vec2<i32> = textureDimensions(shadowmap, 0);
+                let sm_size_inv = vec2<f32>(
+                    1.0 / f32(shadowmap_size.x) / f32(cascade_count),
+                    1.0 / f32(shadowmap_size.y),
+                );
 
                 // PCF
                 var seed: vec2<u32> = random_vec2_u32(in.uv);
                 let sample_count: i32 = 4;
-                let ref_z = shadowmap_pos0.z - bias;
-                let R = 1.5;
+                let ref_z = shadowmap_pos.z - slope_scaled_bias;
+                let R = 2.0;
                 let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
                 for(var i: i32 = 0; i < sample_count; i++) {
                     seed ^= (seed << 13u); seed ^= (seed >> 17u); seed ^= (seed << 5u);
@@ -127,16 +135,21 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                         r * cos(2.0 * PI * f32(seed.y) * u32_max_inv),
                         r * sin(2.0 * PI * f32(seed.y) * u32_max_inv),
                     );
-                    var shadow_uv = shadowmap_pos0.xy + offset * sm_size_inv;
+                    var shadow_uv = shadowmap_pos.xy + offset * sm_size_inv;
                     if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
                         vis += 1.0;
                     }
                     else {
-                        shadow_uv.x = shadow_uv.x / f32(arrayLength(&cascadeFars)) + f32(cascade) / f32(arrayLength(&cascadeFars));
+                        shadow_uv.x = shadow_uv.x / f32(cascade_count) + f32(cascade) / f32(cascade_count);
                         vis += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
                     }
                 }
                 visibility = vis / f32(sample_count);
+            }
+
+            if (cascade == cascade_count - 1u) {
+                let coeff: f32 = (cascadeFars[cascade] - distance) / (cascadeFars[cascade] - cascadeFars[cascade - 1u]);
+                visibility = 1.0 - (1.0 - visibility) * coeff;
             }
 
             fragColor = (diffuse + specular) * visibility;

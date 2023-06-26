@@ -8,7 +8,7 @@ namespace Elffy;
 
 public sealed class DirectionalLight : IScreenManaged
 {
-    private const uint CascadeCountConst = 3;
+    private const uint CascadeCountConst = 4;       // 2 ~
 
     private readonly Screen _screen;
     private readonly Own<Buffer> _buffer;       // DirectionalLightData
@@ -87,7 +87,7 @@ public sealed class DirectionalLight : IScreenManaged
 
     private static Own<Texture> CreateShadowMap(Screen screen)
     {
-        const u32 Width = 1024;
+        const u32 Width = 1024 * CascadeCountConst;
         const u32 Height = 1024;
         return Texture.Create(screen, new()
         {
@@ -138,7 +138,7 @@ public sealed class DirectionalLight : IScreenManaged
                 Quaternion.FromTwoVectors(dirX0Z, lightDir) * Vector3.UnitY;
         }
 
-        float maxFar = 30;  // TODO:
+        float maxFar = 500;  // TODO:
         float logNear = float.Log(camera.Near);
         float logFar = float.Log(maxFar);
         float logStep = (logFar - logNear) / lightMatrices.Length;
@@ -178,7 +178,7 @@ public sealed class DirectionalLight : IScreenManaged
                 aabbInLightSpace.Min.X, aabbInLightSpace.Max.X,
                 aabbInLightSpace.Min.Y, aabbInLightSpace.Max.Y,
                 -(aabbInLightSpace.Max.Z + float.Clamp(aabbInLightSpace.Size.Z * 2.0f, 10, 200)),  // TODO:
-                - aabbInLightSpace.Min.Z,
+                -aabbInLightSpace.Min.Z,
                 out var lproj);
             lightMatrices[i] = GLToWebGpu * lproj * lview;
         }
