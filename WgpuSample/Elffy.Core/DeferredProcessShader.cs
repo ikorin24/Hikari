@@ -38,6 +38,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         @group(3) @binding(0) var shadowmap: texture_depth_2d;
         @group(3) @binding(1) var sm_sampler: sampler_comparison;
         @group(3) @binding(2) var<storage, read> lightMatrices: array<mat4x4<f32>>;
+        @group(3) @binding(3) var<storage, read> cascadeFars: array<f32>;
 
         @vertex fn vs_main(
             v: Vin,
@@ -92,37 +93,51 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             // Shadow
             var shadow_visibility: f32 = 1.0;
 
-            let p0 = to_vec3(lightMatrices[0] * camera.inv_view * vec4(pos_camera_coord, 1.0));
-            let shadowmap_pos0 = vec3<f32>(
-                p0.x * 0.5 + 0.5,
-                -p0.y * 0.5 + 0.5,
-                p0.z);
-            let bias = 0.005;
-            var visibility: f32 = 0.0;
-            let sm_size_inv = 1.0 / vec2<f32>(textureDimensions(shadowmap, 0));
-
-            // PCF
-            var seed: vec2<u32> = random_vec2_u32(in.uv);
-            let sample_count: i32 = 4;
-            let ref_z = shadowmap_pos0.z - bias;
-            let R = 1.5;
-            let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
-            for(var i: i32 = 0; i < sample_count; i++) {
-                seed ^= (seed << 13u); seed ^= (seed >> 17u); seed ^= (seed << 5u);
-                let r = R * sqrt(f32(seed.x) * u32_max_inv);
-                let offset = vec2<f32>(
-                    r * cos(2.0 * PI * f32(seed.y) * u32_max_inv),
-                    r * sin(2.0 * PI * f32(seed.y) * u32_max_inv),
-                );
-                let shadow_uv = shadowmap_pos0.xy + offset * sm_size_inv;
-                if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
-                    visibility += 1.0;
-                }
-                else {
-                    visibility += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
+            let distance: f32 = length(pos_camera_coord);
+            var cascade: u32 = arrayLength(&cascadeFars);
+            for(var i: u32 = 0u; i < arrayLength(&cascadeFars); i++) {
+                if(distance < cascadeFars[i]) {
+                    cascade = i;
+                    break;
                 }
             }
-            visibility /= f32(sample_count);
+            
+            var visibility: f32 = 1.0;
+            if(cascade < arrayLength(&cascadeFars)) {
+                let pos_world_coord = camera.inv_view * vec4(pos_camera_coord, 1.0);
+                let p0 = to_vec3(lightMatrices[cascade] * pos_world_coord);
+                let shadowmap_pos0 = vec3<f32>(
+                    p0.x * 0.5 + 0.5,
+                    -p0.y * 0.5 + 0.5,
+                    p0.z);
+                let bias = 0.001;       // TODO:
+                var vis: f32 = 0.0;
+                let sm_size_inv = 1.0 / vec2<f32>(textureDimensions(shadowmap, 0));
+
+                // PCF
+                var seed: vec2<u32> = random_vec2_u32(in.uv);
+                let sample_count: i32 = 4;
+                let ref_z = shadowmap_pos0.z - bias;
+                let R = 1.5;
+                let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
+                for(var i: i32 = 0; i < sample_count; i++) {
+                    seed ^= (seed << 13u); seed ^= (seed >> 17u); seed ^= (seed << 5u);
+                    let r = R * sqrt(f32(seed.x) * u32_max_inv);
+                    let offset = vec2<f32>(
+                        r * cos(2.0 * PI * f32(seed.y) * u32_max_inv),
+                        r * sin(2.0 * PI * f32(seed.y) * u32_max_inv),
+                    );
+                    var shadow_uv = shadowmap_pos0.xy + offset * sm_size_inv;
+                    if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
+                        vis += 1.0;
+                    }
+                    else {
+                        shadow_uv.x = shadow_uv.x / f32(arrayLength(&cascadeFars)) + f32(cascade) / f32(arrayLength(&cascadeFars));
+                        vis += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
+                    }
+                }
+                visibility = vis / f32(sample_count);
+            }
 
             fragColor = (diffuse + specular) * visibility;
 
@@ -308,7 +323,8 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                         MipmapFilter = FilterMode.Nearest,
                         Compare = CompareFunction.Less,
                     }).AsValue(out var shadowSampler)),
-                    BindGroupEntry.Buffer(2, directionalLight.LightMatricesBuffer)
+                    BindGroupEntry.Buffer(2, directionalLight.LightMatricesBuffer),
+                    BindGroupEntry.Buffer(3, directionalLight.CascadeFarsBuffer),
                 },
             }).AsValue(out var bindGroup3),
         };
@@ -350,6 +366,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                         }),
                         BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Comparison),
                         BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorateReadOnly }),
+                        BindGroupLayoutEntry.Buffer(3, ShaderStages.Fragment, new() { Type = BufferBindingType.StorateReadOnly }),
                     },
                 }).AsValue(out bindGroupLayout3),
             },

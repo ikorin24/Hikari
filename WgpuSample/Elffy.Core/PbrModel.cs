@@ -43,16 +43,24 @@ public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrM
         pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
     }
 
-    internal void RenderShadowMap(in RenderPass pass, Lights lights, PbrMaterial material, Mesh<V> mesh)
+    internal void RenderShadowMap(in RenderPass pass, uint cascade, Lights lights, PbrMaterial material, Mesh<V> mesh)
     {
         var directionalLight = lights.DirectionalLight;
+        var shadowMapSize = directionalLight.ShadowMap.Size;
+        var cascadeCount = directionalLight.CascadeCount;
 
-        for(int i = 0; i < directionalLight.CascadeCount; i++) {
-            pass.SetBindGroup(0, material.ShadowBindGroup0);
-            pass.SetVertexBuffer(0, mesh.VertexBuffer);
-            pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
-            //pass.SetViewport(-1, -1, 2, 2, 0, 1);           // TODO: viewport
-            pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
-        }
+        var size = new Vector2u(shadowMapSize.X / cascadeCount, shadowMapSize.Y);
+        var viewPort = (
+            X: size.X * cascade,
+            Y: 0,
+            Width: size.X,
+            Height: size.Y,
+            MinDepth: 0,
+            MaxDepth: 1);
+        pass.SetBindGroup(0, material.ShadowBindGroup0);
+        pass.SetVertexBuffer(0, mesh.VertexBuffer);
+        pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+        pass.SetViewport(viewPort.X, viewPort.Y, viewPort.Width, viewPort.Height, viewPort.MinDepth, viewPort.MaxDepth);
+        pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
     }
 }

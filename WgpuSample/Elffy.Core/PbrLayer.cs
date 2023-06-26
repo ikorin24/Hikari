@@ -46,7 +46,7 @@ public sealed class PbrLayer
 
     private Own<GBuffer> _gBuffer;
     private EventSource<GBuffer> _gBufferChanged = new();
-    private readonly Own<RenderPipeline> _shadowPipeline;
+    private readonly Own<RenderPipeline>[] _shadowPipeline;
 
     public GBuffer CurrentGBuffer => _gBuffer.AsValue();
 
@@ -57,7 +57,11 @@ public sealed class PbrLayer
     {
         RecreateGBuffer(screen, screen.ClientSize);
 
-        _shadowPipeline = CreateShadowPipeline(Shader);
+        var shadowPipeline = new Own<RenderPipeline>[screen.Lights.DirectionalLight.CascadeCount];
+        for(var i = 0; i < shadowPipeline.Length; i++) {
+            shadowPipeline[i] = CreateShadowPipeline(Shader, (uint)i);
+        }
+        _shadowPipeline = shadowPipeline;
 
         screen.Resized.Subscribe(x =>
         {
@@ -85,7 +89,7 @@ public sealed class PbrLayer
         return _gBuffer.AsValue().CreateRenderPass();
     }
 
-    private static Own<RenderPipeline> CreateShadowPipeline(PbrShader shader)
+    private static Own<RenderPipeline> CreateShadowPipeline(PbrShader shader, uint cascade)
     {
         var screen = shader.Screen;
         return RenderPipeline.Create(screen, new()
@@ -93,7 +97,7 @@ public sealed class PbrLayer
             Layout = shader.ShadowPipelineLayout,
             Vertex = new VertexState
             {
-                Module = shader.ShadowModule,
+                Module = shader.ShadowModule(cascade),
                 EntryPoint = "vs_main"u8.ToArray(),
                 Buffers = new VertexBufferLayout[]
                 {
@@ -105,7 +109,7 @@ public sealed class PbrLayer
             },
             Fragment = new FragmentState
             {
-                Module = shader.ShadowModule,
+                Module = shader.ShadowModule(cascade),
                 EntryPoint = "fs_main"u8.ToArray(),
                 Targets = null,
             },
@@ -196,9 +200,13 @@ public sealed class PbrLayer
     {
         using var pass = context.CreateRenderPass();
         var p = pass.AsValue();
-        p.SetPipeline(_shadowPipeline.AsValue());
-        foreach(var obj in objects) {
-            obj.RenderShadowMap(in p, context.Lights, obj.Material, obj.Mesh);
+        var directionalLight = context.Lights.DirectionalLight;
+
+        for(uint i = 0; i < directionalLight.CascadeCount; i++) {
+            p.SetPipeline(_shadowPipeline[i].AsValue());
+            foreach(var obj in objects) {
+                obj.RenderShadowMap(in p, i, context.Lights, obj.Material, obj.Mesh);
+            }
         }
     }
 }

@@ -8,13 +8,14 @@ namespace Elffy;
 
 public sealed class DirectionalLight : IScreenManaged
 {
-    private const int CascadeCountConst = 1;
+    private const uint CascadeCountConst = 3;
 
     private readonly Screen _screen;
     private readonly Own<Buffer> _buffer;       // DirectionalLightData
     private DirectionalLightData _data;
     private readonly Own<Texture> _shadowMap;
     private readonly Own<Buffer> _lightMatricesBuffer;   // Matrix4[CascadeCount]
+    private readonly Own<Buffer> _cascadeFarsBuffer;     // float[CascadeCount]
     private readonly SubscriptionBag _subscriptionBag = new();
     private readonly object _sync = new();
 
@@ -27,8 +28,9 @@ public sealed class DirectionalLight : IScreenManaged
     public Texture ShadowMap => _shadowMap.AsValue();
 
     public BufferSlice LightMatricesBuffer => _lightMatricesBuffer.AsValue().Slice();
+    public BufferSlice CascadeFarsBuffer => _cascadeFarsBuffer.AsValue().Slice();
 
-    public int CascadeCount => CascadeCountConst;
+    public uint CascadeCount => CascadeCountConst;
 
     public Vector3 Direction
     {
@@ -77,6 +79,7 @@ public sealed class DirectionalLight : IScreenManaged
         _shadowMap = CreateShadowMap(screen);
 
         _lightMatricesBuffer = Buffer.Create(screen, (usize)CascadeCountConst * (usize)Matrix4.SizeInBytes, BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
+        _cascadeFarsBuffer = Buffer.Create(screen, (usize)CascadeCountConst * sizeof(float), BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
 
         screen.Camera.MatrixChanged.Subscribe(_ => UpdateLightMatrix()).AddTo(_subscriptionBag);
         UpdateLightMatrix();
@@ -102,6 +105,7 @@ public sealed class DirectionalLight : IScreenManaged
         _buffer.Dispose();
         _shadowMap.Dispose();
         _lightMatricesBuffer.Dispose();
+        _cascadeFarsBuffer.Dispose();
         _subscriptionBag.Dispose();
     }
 
@@ -110,16 +114,21 @@ public sealed class DirectionalLight : IScreenManaged
     {
         var camera = _screen.Camera;
         var lightDirection = Direction;
-        Span<Matrix4> lightMatrices = stackalloc Matrix4[CascadeCountConst];
-        CalcLightMatrix(lightDirection, camera.ReadState(), lightMatrices);
-        var buffer = _lightMatricesBuffer.AsValue();
-        buffer.WriteSpan(0, lightMatrices.AsReadOnly());
+        Span<Matrix4> lightMatrices = stackalloc Matrix4[(int)CascadeCountConst];
+        Span<float> cascadeFars = stackalloc float[(int)CascadeCountConst];
+        CalcLightMatrix(lightDirection, camera.ReadState(), lightMatrices, cascadeFars);
+
+        var lightMatricesBuffer = _lightMatricesBuffer.AsValue();
+        var cascadeFarsBuffer = _cascadeFarsBuffer.AsValue();
+        lightMatricesBuffer.WriteSpan(0, lightMatrices.AsReadOnly());
+        cascadeFarsBuffer.WriteSpan(0, cascadeFars.AsReadOnly());
     }
 
     private static void CalcLightMatrix(
         in Vector3 lightDir,
         in Camera.CameraState camera,
-        Span<Matrix4> lightMatrices)
+        Span<Matrix4> lightMatrices,
+        Span<float> cascadeFars)
     {
         Vector3 lUp;
         {
@@ -129,7 +138,7 @@ public sealed class DirectionalLight : IScreenManaged
                 Quaternion.FromTwoVectors(dirX0Z, lightDir) * Vector3.UnitY;
         }
 
-        float maxFar = 10;  // TODO:
+        float maxFar = 30;  // TODO:
         float logNear = float.Log(camera.Near);
         float logFar = float.Log(maxFar);
         float logStep = (logFar - logNear) / lightMatrices.Length;
@@ -137,6 +146,7 @@ public sealed class DirectionalLight : IScreenManaged
         for(int i = 0; i < lightMatrices.Length; i++) {
             var n = float.Exp(logNear + i * logStep);
             var f = float.Exp(logNear + (i + 1) * logStep);
+            cascadeFars[i] = f;
 
             var cameraDir = camera.GetDirection();
             var cascadeNearPoint = camera.Position + cameraDir * n;
@@ -168,7 +178,7 @@ public sealed class DirectionalLight : IScreenManaged
                 aabbInLightSpace.Min.X, aabbInLightSpace.Max.X,
                 aabbInLightSpace.Min.Y, aabbInLightSpace.Max.Y,
                 -(aabbInLightSpace.Max.Z + float.Clamp(aabbInLightSpace.Size.Z * 2.0f, 10, 200)),  // TODO:
-                -aabbInLightSpace.Min.Z,
+                - aabbInLightSpace.Min.Z,
                 out var lproj);
             lightMatrices[i] = GLToWebGpu * lproj * lview;
         }

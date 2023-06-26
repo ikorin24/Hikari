@@ -22,15 +22,16 @@ public readonly ref struct RenderShadowMapContext
         _shadowMap = lights.DirectionalLight.ShadowMap.View;
     }
 
-    public OwnRenderPass CreateRenderPass()
+    public OwnRenderPass CreateRenderPass(bool clear = true)
     {
         var screen = _lights.Screen;
+        var depthClear = clear ? CE.Opt<float>.Some(1f) : CE.Opt<float>.None;
         return RenderPass.Create(screen, new CE.RenderPassDescriptor()
         {
             color_attachments_clear = new() { data = null, len = 0 },
             depth_stencil_attachment_clear = new(new()
             {
-                depth_clear = CE.Opt<float>.Some(1f),
+                depth_clear = depthClear,
                 stencil_clear = CE.Opt<u32>.None,
                 view = _shadowMap.NativeRef,
             }),

@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
@@ -65,6 +66,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
             _metallicRoughness.Dispose();
             _normal.Dispose();
             _bindGroup0.Dispose();
+            _shadowBindGroup0.Dispose();
         }
     }
 
@@ -81,7 +83,6 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 
         var screen = shader.Screen;
         var lights = screen.Lights;
-        var directionalLight = lights.DirectionalLight;
         var modelUniform = Buffer.Create(screen, (usize)Matrix4.SizeInBytes, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
         var sampler = Sampler.Create(screen, new()
         {

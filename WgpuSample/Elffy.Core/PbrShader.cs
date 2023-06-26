@@ -5,18 +5,24 @@ namespace Elffy;
 
 public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
 {
-    private static ReadOnlySpan<byte> ShadowShaderSource => """
+    private static T ShadowShaderSource<TArg, T>(uint cascade, TArg arg, ReadOnlySpanFunc<byte, TArg, T> func)
+    {
+        // TODO: avoid memory allocation
+        var source = $$"""
         @group(0) @binding(0) var<uniform> model: mat4x4<f32>;
-        @group(0) @binding(1) var<uniform> lightMat: mat4x4<f32>;
+        @group(0) @binding(1) var<storage, read> lightMatrices: array<mat4x4<f32>>;
 
         @vertex fn vs_main(
             @location(0) pos: vec3<f32>,
         ) -> @builtin(position) vec4<f32> {
-            return lightMat * model * vec4<f32>(pos, 1.0);
+            return lightMatrices[{{cascade}}] * model * vec4<f32>(pos, 1.0);
         }
         @fragment fn fs_main() {
         }
-        """u8;
+        """;
+        var utf8Source = System.Text.Encoding.UTF8.GetBytes(source);
+        return func(utf8Source, arg);
+    }
 
     private static ReadOnlySpan<byte> ShaderSource => """
         struct Vin {
@@ -94,7 +100,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         }
         """u8;
 
-    private readonly Own<ShaderModule> _shadowModule;
+    private readonly Own<ShaderModule>[] _shadowModules;
     private readonly Own<PipelineLayout> _shadowPipelineLayout;
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly BindGroupLayout _bindGroupLayout1;
@@ -107,7 +113,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
 
     public BindGroupLayout ShadowBindGroupLayout0 => _shadowBindGroupLayout0.AsValue();
 
-    public ShaderModule ShadowModule => _shadowModule.AsValue();
+    public ShaderModule ShadowModule(uint cascade) => _shadowModules[cascade].AsValue();
     public PipelineLayout ShadowPipelineLayout => _shadowPipelineLayout.AsValue();
 
     private PbrShader(Screen screen)
@@ -121,7 +127,13 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
     {
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout1 = bindGroupLayout1;
-        _shadowModule = ShaderModule.Create(screen, ShadowShaderSource);
+
+        var cascadeCount = screen.Lights.DirectionalLight.CascadeCount;
+        var shadowModules = new Own<ShaderModule>[cascadeCount];
+        for(uint i = 0; i < shadowModules.Length; i++) {
+            shadowModules[i] = ShadowShaderSource(i, screen, (source, screen) => ShaderModule.Create(screen, source));
+        }
+        _shadowModules = shadowModules;
         _shadowPipelineLayout = BuildShadowPipeline(screen, out var shadowBgl0);
         _shadowBindGroupLayout0 = shadowBgl0;
     }
@@ -144,7 +156,9 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
         if(manualRelease) {
             _bindGroupLayout0.Dispose();
             _shadowBindGroupLayout0.Dispose();
-            _shadowModule.Dispose();
+            foreach(var item in _shadowModules) {
+                item.Dispose();
+            }
             _shadowPipelineLayout.Dispose();
         }
     }
@@ -206,7 +220,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
                     Entries = new[]
                     {
                         BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new() { Type = BufferBindingType.Uniform }),
-                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex, new() { Type = BufferBindingType.Uniform }),
+                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex, new() { Type = BufferBindingType.StorateReadOnly }),
                     },
                 }).AsValue(out bgl0),
             },
