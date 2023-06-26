@@ -106,13 +106,12 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             var visibility: f32 = 1.0;
             if(cascade < cascade_count) {
                 let pos_world_coord = camera.inv_view * vec4(pos_camera_coord, 1.0);
-                let p0 = to_vec3(lightMatrices[cascade] * pos_world_coord);
+                let p = to_vec3(lightMatrices[cascade] * pos_world_coord);
                 let shadowmap_pos = vec3<f32>(
-                    p0.x * 0.5 + 0.5,
-                    -p0.y * 0.5 + 0.5,
-                    p0.z);
-                let bias = 0.005;
-                //let bias = 0.005 / pow(f32(cascade + 1u), 1.2);
+                    p.x * 0.5 + 0.5,
+                    -p.y * 0.5 + 0.5,
+                    p.z);
+                let bias = 0.001;       // TODO:
                 let slope_scaled_bias = bias * acos(cos(dot_nl));
                 var vis: f32 = 0.0;
 
