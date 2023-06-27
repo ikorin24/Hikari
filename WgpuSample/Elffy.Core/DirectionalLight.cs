@@ -138,9 +138,10 @@ public sealed class DirectionalLight : IScreenManaged
                 Quaternion.FromTwoVectors(dirX0Z, lightDir) * Vector3.UnitY;
         }
 
-        float maxFar = 500;  // TODO:
+        const float MaxShadowMapFar = 500;
+
         float logNear = float.Log(camera.Near);
-        float logFar = float.Log(maxFar);
+        float logFar = float.Log(MaxShadowMapFar);
         float logStep = (logFar - logNear) / lightMatrices.Length;
 
         for(int i = 0; i < lightMatrices.Length; i++) {
