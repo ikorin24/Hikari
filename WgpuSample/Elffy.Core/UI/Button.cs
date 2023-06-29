@@ -16,7 +16,7 @@ public class Button : UIElement, IFromJson<Button>
 {
     private EventSource<Button> _clicked;
 
-    static Button() => Serializer.Register(FromJson);
+    static Button() => Serializer.RegisterConstructor(FromJson);
     public static Button FromJson(JsonNode? node) => new Button(node);
 
     protected override JsonNode? ToJsonProtected(JsonSerializerOptions? options)
@@ -36,7 +36,7 @@ public class Button : UIElement, IFromJson<Button>
 
 public class Panel : UIElement, IFromJson<Panel>
 {
-    static Panel() => Serializer.Register(FromJson);
+    static Panel() => Serializer.RegisterConstructor(FromJson);
     public static Panel FromJson(JsonNode? node) => new Panel(node);
 
     public Panel()
@@ -162,7 +162,7 @@ public static class Serializer
         SkipValidation = false,
     };
 
-    public static void Register<T>(Func<JsonNode?, T> constructoFunc) where T : notnull
+    public static void RegisterConstructor<T>(Func<JsonNode?, T> constructoFunc) where T : notnull
     {
         Func<JsonNode?, object> f = arg => constructoFunc(arg);
         var value = new ConstructorFunc(typeof(T), f);
