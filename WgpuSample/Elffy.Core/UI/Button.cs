@@ -5,7 +5,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -18,19 +17,19 @@ public class Button : UIElement, IFromJson<Button>
     private EventSource<Button> _clicked;
 
     static Button() => Serializer.Register(FromJson);
-    public static Button FromJson(JsonObject obj) => new Button(obj);
+    public static Button FromJson(JsonNode? node) => new Button(node);
 
-    protected override JsonObject ToJsonProtected()
+    protected override JsonNode? ToJsonProtected(JsonSerializerOptions? options)
     {
-        var obj = base.ToJsonProtected();
-        return obj;
+        var node = base.ToJsonProtected(options);
+        return node;
     }
 
     public Button()
     {
     }
 
-    protected Button(JsonObject obj) : base(obj)
+    protected Button(JsonNode? node) : base(node)
     {
     }
 }
@@ -38,20 +37,20 @@ public class Button : UIElement, IFromJson<Button>
 public class Panel : UIElement, IFromJson<Panel>
 {
     static Panel() => Serializer.Register(FromJson);
-    public static Panel FromJson(JsonObject obj) => new Panel(obj);
+    public static Panel FromJson(JsonNode? node) => new Panel(node);
 
     public Panel()
     {
     }
 
-    protected Panel(JsonObject obj) : base(obj)
+    protected Panel(JsonNode? node) : base(node)
     {
     }
 
-    protected override JsonObject ToJsonProtected()
+    protected override JsonNode? ToJsonProtected(JsonSerializerOptions? options)
     {
-        var obj = base.ToJsonProtected();
-        return obj;
+        var node = base.ToJsonProtected(options);
+        return node;
     }
 }
 
@@ -81,9 +80,11 @@ public abstract class UIElement : IToJson
     {
     }
 
-    protected UIElement(JsonObject obj)
+    protected UIElement(JsonNode? node)
     {
-        ArgumentNullException.ThrowIfNull(obj);
+        ArgumentNullException.ThrowIfNull(node);
+        var obj = node.AsObject();
+
         obj.MaySetTo("width", ref _width);
         obj.MaySetTo("height", ref _height);
 
@@ -93,26 +94,36 @@ public abstract class UIElement : IToJson
         }
     }
 
-    protected virtual JsonObject ToJsonProtected()
+    protected virtual JsonNode? ToJsonProtected(JsonSerializerOptions? options)
     {
-        return new JsonObject()
+        var obj = new JsonObject()
         {
+            ["@type"] = GetType().FullName,
             ["width"] = _width,
             ["height"] = _height,
         };
+        var children = _children;
+        if(children != null) {
+            var array = new JsonArray();
+            foreach(var child in children) {
+                var childJson = ((IToJson)child).ToJson(options);
+                array.Add(childJson);
+            }
+            obj["children"] = array;
+        }
+        return obj;
     }
 
-    JsonObject IToJson.ToJson(JsonSerializerOptions? options)
+    JsonNode? IToJson.ToJson(JsonSerializerOptions? options)
     {
-        var obj = ToJsonProtected();
-        obj["@type"] = GetType().FullName;
-        return obj;
+        var node = ToJsonProtected(options);
+        return node;
     }
 }
 
 public static class Serializer
 {
-    private record ConstructorFunc(Type Type, Func<JsonObject, object> Func);
+    private record ConstructorFunc(Type Type, Func<JsonNode?, object> Func);
 
     private static readonly ConcurrentDictionary<string, ConstructorFunc> _constructorFuncs = new();
     private static readonly ConcurrentDictionary<string, Type> _shortNames = new()
@@ -151,36 +162,39 @@ public static class Serializer
         SkipValidation = false,
     };
 
-    public static void Register<T>(Func<JsonObject, T> constructoFunc) where T : notnull
+    public static void Register<T>(Func<JsonNode?, T> constructoFunc) where T : notnull
     {
-        Func<JsonObject, object> f = arg => constructoFunc(arg);
+        Func<JsonNode?, object> f = arg => constructoFunc(arg);
         var value = new ConstructorFunc(typeof(T), f);
         _constructorFuncs.TryAdd(typeof(T).FullName!, value);
     }
 
     public static string Serialize<T>(T value) where T : notnull, IToJson
     {
-        var obj = value.ToJson(DefaultWriteSerializerOptions);
-        return obj.ToJsonString(DefaultWriteSerializerOptions);
+        var node = value.ToJson(DefaultWriteSerializerOptions);
+        return node?.ToJsonString(DefaultWriteSerializerOptions) ?? "null";
     }
 
     public static void Serialize<T>(T value, IBufferWriter<byte> bufferWriter) where T : notnull, IToJson
     {
         using var writer = new Utf8JsonWriter(bufferWriter, DefaultWriterOptions);
-        var obj = value.ToJson(DefaultWriteSerializerOptions);
-        obj.WriteTo(writer, DefaultWriteSerializerOptions);
+        var node = value.ToJson(DefaultWriteSerializerOptions);
+        if(node is null) {
+            writer.WriteNullValue();
+        }
+        else {
+            node.WriteTo(writer, DefaultWriteSerializerOptions);
+        }
     }
 
     public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlySpan<byte> utf8Json) where T : notnull
     {
-        RuntimeHelpers.RunClassConstructor(typeof(T).TypeHandle);
         var node = JsonNode.Parse(utf8Json, documentOptions: ParseOptions) ?? throw new FormatException("null");
         return (T)ParseJsonNode(node, typeof(T));
     }
 
     public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] string json) where T : notnull
     {
-        RuntimeHelpers.RunClassConstructor(typeof(T).TypeHandle);
         var node = JsonNode.Parse(json, documentOptions: ParseOptions) ?? throw new FormatException("null");
         return (T)ParseJsonNode(node, typeof(T));
     }
@@ -195,20 +209,14 @@ public static class Serializer
     [return: NotNullIfNotNull(nameof(node))]
     private static object? ParseJsonNode(JsonNode? node, Type hint)
     {
-        switch(node) {
-            case JsonObject obj: {
-                return ParseJsonObject(obj, hint);
-            }
-            case JsonArray array: {
-                return ParseJsonArray(array, hint);
-            }
-            case JsonValue value: {
-                return ParseJsonValue(value, hint);
-            }
-            default:
-                throw new UnreachableException();
-        }
-
+        return node switch
+        {
+            JsonArray array => ParseJsonArray(array, hint),
+            JsonObject obj => ParseJsonObject(obj, hint),
+            JsonValue value => ParseJsonValue(value, hint),
+            null => null,
+            _ => throw new NotSupportedException(),
+        };
     }
 
     private static object ParseJsonObject(JsonObject obj, Type hint)
@@ -217,9 +225,7 @@ public static class Serializer
         if(typename == null) {
             throw new FormatException($"type is null");
         }
-
         ConstructorFunc? ctor;
-
         if(_shortNames.TryGetValue(typename, out var type)) {
             if(FindCtorFromType(type, out ctor) == false) {
                 throw new FormatException($"type \"{typename}\" cannot be created from json");
@@ -233,40 +239,23 @@ public static class Serializer
         if(ctor.Type.IsAssignableTo(hint) == false) {
             throw new FormatException($"{ctor.Type.FullName} is not assignable to {hint.FullName}");
         }
-
         return ctor.Func(obj);
+    }
 
-        static bool FindCtorFromType(Type type, [MaybeNullWhen(false)] out ConstructorFunc ctor)
-        {
-            if(_constructorFuncs.TryGetValue(type.FullName!, out ctor)) {
-                return true;
-            }
-            RuntimeHelpers.RunClassConstructor(type.TypeHandle);
-            if(_constructorFuncs.TryGetValue(type.FullName!, out ctor)) {
-                return true;
-            }
-            ctor = null;
-            return false;
+    private static object ParseJsonValue(JsonValue value, Type hint)
+    {
+        if(FindCtorFromType(hint, out var ctor) == false) {
+            throw new FormatException($"type \"{hint.FullName}\" cannot be created from json");
         }
-
-        static bool FindCtorFromName(string typeFullName, [MaybeNullWhen(false)] out ConstructorFunc ctor)
-        {
-            if(_constructorFuncs.TryGetValue(typeFullName, out ctor)) {
-                return true;
-            }
-            var type = Type.GetType(typeFullName);
-            if(type != null) {
-                RuntimeHelpers.RunClassConstructor(type.TypeHandle);
-                if(_constructorFuncs.TryGetValue(typeFullName, out ctor)) {
-                    return true;
-                }
-            }
-            return false;
-        }
+        return ctor.Func(value);
     }
 
     private static object ParseJsonArray(JsonArray array, Type hint)
     {
+        if(FindCtorFromType(hint, out var ctor)) {
+            return ctor.Func(array);
+        }
+
         if(hint.IsSZArray) {
             var elementType = hint.GetElementType() ?? throw new UnreachableException();
             var a = Array.CreateInstance(elementType, array.Count);
@@ -275,23 +264,46 @@ public static class Serializer
             }
             return a;
         }
-        throw new FormatException();
+        throw new FormatException($"type \"{hint.FullName}\" cannot be created from json");
     }
 
-    private static object ParseJsonValue(JsonValue value, Type hint)
+    private static bool FindCtorFromType(Type type, [MaybeNullWhen(false)] out ConstructorFunc ctor)
     {
-        throw new NotImplementedException();
+        if(_constructorFuncs.TryGetValue(type.FullName!, out ctor)) {
+            return true;
+        }
+        RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+        if(_constructorFuncs.TryGetValue(type.FullName!, out ctor)) {
+            return true;
+        }
+        ctor = null;
+        return false;
+    }
+
+    private static bool FindCtorFromName(string typeFullName, [MaybeNullWhen(false)] out ConstructorFunc ctor)
+    {
+        if(_constructorFuncs.TryGetValue(typeFullName, out ctor)) {
+            return true;
+        }
+        var type = Type.GetType(typeFullName);
+        if(type != null) {
+            RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+            if(_constructorFuncs.TryGetValue(typeFullName, out ctor)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
 public interface IFromJson<TSelf>
 {
-    abstract static TSelf FromJson(JsonObject obj);
+    abstract static TSelf FromJson(JsonNode? node);
 }
 
 public interface IToJson
 {
-    JsonObject ToJson(JsonSerializerOptions? options = null);
+    JsonNode? ToJson(JsonSerializerOptions? options = null);
 }
 
 internal static class JsonObjectExtensions
@@ -372,10 +384,4 @@ internal sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShade
     {
         throw new NotImplementedException();
     }
-}
-
-public enum LayoutLengthType
-{
-    Length,
-    Proportion,
 }
