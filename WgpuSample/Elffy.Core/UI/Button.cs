@@ -164,6 +164,7 @@ public static class Serializer
 
     public static void RegisterConstructor<T>(Func<JsonNode?, T> constructoFunc) where T : notnull
     {
+        ArgumentNullException.ThrowIfNull(constructoFunc);
         Func<JsonNode?, object> f = arg => constructoFunc(arg);
         var value = new ConstructorFunc(typeof(T), f);
         _constructorFuncs.TryAdd(typeof(T).FullName!, value);
