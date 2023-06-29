@@ -3,7 +3,9 @@ using System;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -87,14 +89,7 @@ public abstract class UIElement : IToJson
 
         var children = obj["children"];
         if(children != null) {
-            var array = children.AsArray();
-            var list = new List<UIElement>(array.Count);
-            for(int i = 0; i < array.Count; i++) {
-                var element = array[i]?.AsObject() ?? throw new FormatException();
-                var e = Serializer.Instantiate<UIElement>(element);
-                list.Add(e);
-            }
-            _children = list;
+            _children = new List<UIElement>(Serializer.Instantiate<UIElement[]>(children));
         }
     }
 
@@ -179,58 +174,113 @@ public static class Serializer
     public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlySpan<byte> utf8Json) where T : notnull
     {
         RuntimeHelpers.RunClassConstructor(typeof(T).TypeHandle);
-        var obj = JsonNode.Parse(utf8Json, documentOptions: ParseOptions)?.AsObject() ?? throw new FormatException("not json object");
-        return (T)ParseJsonObject(obj);
+        var node = JsonNode.Parse(utf8Json, documentOptions: ParseOptions) ?? throw new FormatException("null");
+        return (T)ParseJsonNode(node, typeof(T));
     }
 
     public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] string json) where T : notnull
     {
         RuntimeHelpers.RunClassConstructor(typeof(T).TypeHandle);
-        var obj = JsonNode.Parse(json, documentOptions: ParseOptions)?.AsObject() ?? throw new FormatException("not json object");
-        return (T)ParseJsonObject(obj);
+        var node = JsonNode.Parse(json, documentOptions: ParseOptions) ?? throw new FormatException("null");
+        return (T)ParseJsonNode(node, typeof(T));
     }
 
-    public static T Instantiate<T>(JsonObject obj) where T : notnull
+    public static T Instantiate<T>(JsonNode? node) where T : notnull
     {
-        ArgumentNullException.ThrowIfNull(obj);
-        RuntimeHelpers.RunClassConstructor(typeof(T).TypeHandle);
-        return (T)ParseJsonObject(obj);
+        ArgumentNullException.ThrowIfNull(node);
+        return (T)ParseJsonNode(node, typeof(T));
     }
 
 
-    private static object ParseJsonObject(JsonObject obj)
+    [return: NotNullIfNotNull(nameof(node))]
+    private static object? ParseJsonNode(JsonNode? node, Type hint)
     {
-        obj.MustSetTo("@type", out var typename);
+        switch(node) {
+            case JsonObject obj: {
+                return ParseJsonObject(obj, hint);
+            }
+            case JsonArray array: {
+                return ParseJsonArray(array, hint);
+            }
+            case JsonValue value: {
+                return ParseJsonValue(value, hint);
+            }
+            default:
+                throw new UnreachableException();
+        }
+
+    }
+
+    private static object ParseJsonObject(JsonObject obj, Type hint)
+    {
+        obj.MustSetTo("@type", out string? typename);
         if(typename == null) {
             throw new FormatException($"type is null");
         }
 
-        {
-            if(_shortNames.TryGetValue(typename, out var actualType)) {
-                if(_constructorFuncs.TryGetValue(actualType.FullName!, out var v)) {
-                    return v.Func.Invoke(obj);
-                }
-                RuntimeHelpers.RunClassConstructor(actualType.TypeHandle);
-                if(_constructorFuncs.TryGetValue(actualType.FullName!, out v)) {
-                    return v.Func.Invoke(obj);
-                }
-            }
-            else {
-                if(_constructorFuncs.TryGetValue(typename, out var v)) {
-                    return v.Func.Invoke(obj);
-                }
+        ConstructorFunc? ctor;
 
-                var t = Type.GetType(typename);
-                if(t != null) {
-                    RuntimeHelpers.RunClassConstructor(t.TypeHandle);
-                    if(_constructorFuncs.TryGetValue(typename, out v)) {
-                        return v.Func.Invoke(obj);
-                    }
-                }
+        if(_shortNames.TryGetValue(typename, out var type)) {
+            if(FindCtorFromType(type, out ctor) == false) {
+                throw new FormatException($"type \"{typename}\" cannot be created from json");
             }
         }
+        else {
+            if(FindCtorFromName(typename, out ctor) == false) {
+                throw new FormatException($"type \"{typename}\" cannot be created from json");
+            }
+        }
+        if(ctor.Type.IsAssignableTo(hint) == false) {
+            throw new FormatException($"{ctor.Type.FullName} is not assignable to {hint.FullName}");
+        }
 
-        throw new FormatException($"type \"{typename}\" cannot be created from json");
+        return ctor.Func(obj);
+
+        static bool FindCtorFromType(Type type, [MaybeNullWhen(false)] out ConstructorFunc ctor)
+        {
+            if(_constructorFuncs.TryGetValue(type.FullName!, out ctor)) {
+                return true;
+            }
+            RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+            if(_constructorFuncs.TryGetValue(type.FullName!, out ctor)) {
+                return true;
+            }
+            ctor = null;
+            return false;
+        }
+
+        static bool FindCtorFromName(string typeFullName, [MaybeNullWhen(false)] out ConstructorFunc ctor)
+        {
+            if(_constructorFuncs.TryGetValue(typeFullName, out ctor)) {
+                return true;
+            }
+            var type = Type.GetType(typeFullName);
+            if(type != null) {
+                RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+                if(_constructorFuncs.TryGetValue(typeFullName, out ctor)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    private static object ParseJsonArray(JsonArray array, Type hint)
+    {
+        if(hint.IsSZArray) {
+            var elementType = hint.GetElementType() ?? throw new UnreachableException();
+            var a = Array.CreateInstance(elementType, array.Count);
+            for(int i = 0; i < a.Length; i++) {
+                a.SetValue(ParseJsonNode(array[i], elementType), i);
+            }
+            return a;
+        }
+        throw new FormatException();
+    }
+
+    private static object ParseJsonValue(JsonValue value, Type hint)
+    {
+        throw new NotImplementedException();
     }
 }
 
