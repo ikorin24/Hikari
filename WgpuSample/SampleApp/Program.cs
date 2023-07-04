@@ -21,6 +21,7 @@ internal class Program
             Width = 1280,
             Height = 720,
             Style = WindowStyle.Default,
+            PresentMode = SurfacePresentMode.VsyncOn,
         };
         Engine.Run(screenConfig, OnInitialized);
     }

@@ -38,6 +38,32 @@ pub(crate) struct HostScreenConfig {
     pub width: u32,
     pub height: u32,
     pub backend: wgpu::Backends,
+    pub present_mode: PresentMode,
+}
+
+#[repr(u32)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[allow(dead_code)] // because values are from FFI
+pub(crate) enum PresentMode {
+    AutoVsync = 0,
+    AutoNoVsync = 1,
+    Fifo = 2,
+    FifoRelaxed = 3,
+    Immediate = 4,
+    Mailbox = 5,
+}
+
+impl PresentMode {
+    pub fn to_wgpu_type(&self) -> wgpu::PresentMode {
+        match self {
+            Self::AutoVsync => wgpu::PresentMode::AutoVsync,
+            Self::AutoNoVsync => wgpu::PresentMode::AutoNoVsync,
+            Self::Fifo => wgpu::PresentMode::Fifo,
+            Self::FifoRelaxed => wgpu::PresentMode::FifoRelaxed,
+            Self::Immediate => wgpu::PresentMode::Immediate,
+            Self::Mailbox => wgpu::PresentMode::Mailbox,
+        }
+    }
 }
 
 #[repr(u32)]

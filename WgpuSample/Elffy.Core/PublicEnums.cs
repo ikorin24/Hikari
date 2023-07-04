@@ -58,3 +58,15 @@ public enum GraphicsBackend : byte
     [EnumMapTo(Wgpu.Backends.GL | Wgpu.Backends.DX11)]
     Legacy = 253,
 }
+
+public enum SurfacePresentMode
+{
+    [EnumMapTo(CE.PresentMode.Fifo)]
+    VsyncOn = 0,
+    [EnumMapTo(CE.PresentMode.Immediate)]
+    VsyncOff = 1,
+    [EnumMapTo(CE.PresentMode.FifoRelaxed)]
+    AdaptiveVsync = 2,
+    [EnumMapTo(CE.PresentMode.Mailbox)]
+    FastVsync = 3,
+}

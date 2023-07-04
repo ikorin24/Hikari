@@ -313,6 +313,7 @@ public readonly struct ScreenConfig
     public required u32 Width { get; init; }
     public required u32 Height { get; init; }
     public required GraphicsBackend Backend { get; init; }
+    public required SurfacePresentMode PresentMode { get; init; }
 
     internal CE.HostScreenConfig ToCoreType()
     {
@@ -322,6 +323,7 @@ public readonly struct ScreenConfig
             width = Width,
             height = Height,
             backend = Backend.MapOrThrow(),
+            present_mode = PresentMode.MapOrThrow(),
         };
     }
 }

@@ -275,6 +275,16 @@ internal static class CoreElffy
         internal record struct RangeValue(usize Start, usize End);
     }
 
+    internal enum PresentMode : u32
+    {
+        AutoVsync = 0,
+        AutoNoVsync = 1,
+        Fifo = 2,
+        FifoRelaxed = 3,
+        Immediate = 4,
+        Mailbox = 5,
+    }
+
     internal enum WindowStyle
     {
         Default = 0,
@@ -306,6 +316,7 @@ internal static class CoreElffy
         public required u32 width;
         public required u32 height;
         public required Wgpu.Backends backend;
+        public required CE.PresentMode present_mode;
     }
 
     internal struct HostScreenInfo

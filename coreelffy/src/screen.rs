@@ -46,12 +46,13 @@ impl HostScreen {
         }
         window.set_ime_allowed(true);
         window.focus_window();
-        Self::initialize(window, &config.backend)
+        Self::initialize(window, &config.backend, &config.present_mode.to_wgpu_type())
     }
 
     fn initialize(
         window: window::Window,
         backends: &wgpu::Backends,
+        present_mode: &wgpu::PresentMode,
     ) -> Result<HostScreen, Box<dyn Error>> {
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
@@ -88,6 +89,14 @@ impl HostScreen {
         }));
         let surface_config = {
             let surface_caps = surface.get_capabilities(&adapter);
+            if surface_caps.present_modes.contains(present_mode) == false {
+                return Err(format!(
+                    "PresentMode '{:?}' is not supported in the current instance",
+                    *present_mode
+                )
+                .into());
+            }
+
             let surface_format = surface_caps
                 .formats
                 .iter()
@@ -100,7 +109,7 @@ impl HostScreen {
                 surface_format,
                 size.width,
                 size.height,
-                surface_caps.present_modes[0],
+                *present_mode,
                 surface_caps.alpha_modes[0],
             )
         };
