@@ -23,7 +23,7 @@ public enum GraphicsBackend : byte
     Vulkan = 1,
     /// <summary>OpenGL</summary>
     [EnumMapTo(Wgpu.Backends.GL)]
-    Gl = 2,
+    GL = 2,
     /// <summary>Metal</summary>
     [EnumMapTo(Wgpu.Backends.METAL)]
     Metal = 3,

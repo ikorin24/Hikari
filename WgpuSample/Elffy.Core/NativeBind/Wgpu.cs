@@ -320,7 +320,7 @@ internal static class Wgpu
         [EnumMapTo(GraphicsBackend.Metal)] Metal = 2,
         [EnumMapTo(GraphicsBackend.Dx12)] Dx12 = 3,
         [EnumMapTo(GraphicsBackend.Dx11)] Dx11 = 4,
-        [EnumMapTo(GraphicsBackend.Gl)] Gl = 5,
+        [EnumMapTo(GraphicsBackend.GL)] Gl = 5,
         [EnumMapTo(GraphicsBackend.BrowserWebGpu)] BrowserWebGpu = 6,
     }
 
