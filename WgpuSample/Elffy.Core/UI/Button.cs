@@ -3,8 +3,10 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -59,34 +61,66 @@ public abstract class UIElement : IToJson
     private UIElement? _parent;
     private readonly UIElementCollection _children;
 
-    private float _width;
-    private float _height;
-    private Vector2 _position;
+    private LayoutLength _width;
+    private LayoutLength _height;
+    private LayoutThickness _margin;
+    private LayoutThickness _padding;
+    private HorizontalAlignment _horizontalAlignment;
+    private VerticalAlignment _verticalAlignment;
+
+    private Vector2 _actualPosition;
+    private Vector2 _actualSize;
 
     public UIElement? Parent => _parent;
     internal UIModel? Model => _model;
+    public Screen? Screen => _model?.Screen;
 
-    public float Width
+    public Vector2 ActualPosition
+    {
+        get => _actualPosition;
+        internal set => _actualPosition = value;
+    }
+
+    public Vector2 ActualSize
+    {
+        get => _actualSize;
+        internal set => _actualSize = value;
+    }
+
+
+    public LayoutLength Width
     {
         get => _width;
         set => _width = value;
     }
-    public float Height
+    public LayoutLength Height
     {
         get => _height;
         set => _height = value;
     }
 
-    public float X
+    public LayoutThickness Margin
     {
-        get => _position.X;
-        set => _position.X = value;
+        get => _margin;
+        set => _margin = value;
     }
 
-    public float Y
+    public LayoutThickness Padding
     {
-        get => _position.Y;
-        set => _position.Y = value;
+        get => _padding;
+        set => _padding = value;
+    }
+
+    public HorizontalAlignment HorizontalAlignment
+    {
+        get => _horizontalAlignment;
+        set => _horizontalAlignment = value;
+    }
+
+    public VerticalAlignment VerticalAlignment
+    {
+        get => _verticalAlignment;
+        set => _verticalAlignment = value;
     }
 
     public UIElementCollection Children
@@ -112,19 +146,11 @@ public abstract class UIElement : IToJson
 
     internal void CreateModel(UILayer layer)
     {
-        var model = new UIModel(this, layer);
-
-        var mat = new Matrix4(
-            new Vector4(_width, 0, 0, 0),
-            new Vector4(0, _height, 0, 0),
-            new Vector4(0, 0, 1, 0),
-            new Vector4(_position.X, _position.Y, 0, 1));
-
-        model.Material.WriteUniform(new()
-        {
-            Mvp = mat,
-        });
-        _model = model;
+        Debug.Assert(_model == null);
+        _model = new UIModel(this, layer);
+        foreach(var child in _children) {
+            child.CreateModel(layer);
+        }
     }
 
     protected UIElement(JsonNode? node)
@@ -132,8 +158,8 @@ public abstract class UIElement : IToJson
         ArgumentNullException.ThrowIfNull(node);
         var obj = node.AsObject();
 
-        obj.MaySetTo("width", ref _width);
-        obj.MaySetTo("height", ref _height);
+        //obj.MaySetTo("width", ref _width);
+        //obj.MaySetTo("height", ref _height);
 
         var children = obj["children"];
         if(children != null) {
@@ -149,8 +175,8 @@ public abstract class UIElement : IToJson
         var obj = new JsonObject()
         {
             ["@type"] = GetType().FullName,
-            ["width"] = _width,
-            ["height"] = _height,
+            //["width"] = _width,
+            //["height"] = _height,
         };
         var children = _children;
         if(children != null) {
@@ -173,18 +199,29 @@ public abstract class UIElement : IToJson
     internal void Layout()
     {
         var model = _model;
+        var actualRect = UIElementLayouter.Default.LayoutSelf(this);
+        _actualPosition = actualRect.Position;
+        _actualSize = actualRect.Size;
+
+        //_actualSize = new Vector2(100, 100);  // TODO:
+
         if(model != null) {
-            var screen = model.Screen;
-            var w = _width / screen.ClientSize.X * 2f;
-            var h = _height / screen.ClientSize.Y * 2f;
-            var x = _position.X / screen.ClientSize.X * 2f - 1f;
-            var y = _position.Y / screen.ClientSize.Y * 2f - 1f;
+            var screenSize = model.Screen.ClientSize.ToVector2();
+            var s0 = _actualSize / screenSize;
+            var p0 = _actualPosition / screenSize;
+
+            var s = s0 * 2f;
+            var p = new Vector2
+            {
+                X = p0.X * 2f - 1f,
+                Y = (1f - p0.Y - s0.Y) * 2f - 1f,
+            };
 
             var mat = new Matrix4(
-                new(w, 0, 0, 0),
-                new(0, h, 0, 0),
+                new(s.X, 0, 0, 0),
+                new(0, s.Y, 0, 0),
                 new(0, 0, 1, 0),
-                new(x, y, 0, 1));
+                new(p.X, p.Y, 0, 1));
             model.Material.WriteUniform(new()
             {
                 Mvp = mat,
@@ -193,6 +230,37 @@ public abstract class UIElement : IToJson
         foreach(var child in _children) {
             child.Layout();
         }
+    }
+
+    internal void LayoutChildren()
+    {
+        var screen = Screen;
+        if(screen == null) {
+            throw new InvalidOperationException();  // TODO:
+        }
+        var actualPosition = _actualPosition;
+
+        foreach(var child in _children) {
+            var contentArea = MesureContentArea(child);
+            var rect = DecideRect(child, contentArea);
+            child._actualPosition = rect.Position + actualPosition;
+            child._actualSize = rect.Size;
+            child.LayoutChildren();
+        }
+    }
+
+    protected virtual ContentAreaInfo MesureContentArea(UIElement child)
+    {
+        return new ContentAreaInfo
+        {
+            Rect = new RectF(Vector2.Zero, _actualSize),
+            Padding = _padding,
+        };
+    }
+
+    protected virtual RectF DecideRect(UIElement child, in ContentAreaInfo area)
+    {
+        return UIDefaultLayouter.DecideRect(child, in area);
     }
 }
 
@@ -276,8 +344,20 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
 
     internal void Layout()
     {
-        foreach(var element in _rootElements) {
-            element.Layout();
+        var screenSize = Screen.ClientSize.ToVector2();
+        var contentArea = new ContentAreaInfo
+        {
+            Rect = new RectF(Vector2.Zero, screenSize),
+            Padding = LayoutThickness.Zero,
+        };
+        foreach(var root in _rootElements) {
+            var rect = UIDefaultLayouter.DecideRect(root, contentArea);
+            root.ActualPosition = rect.Position;
+            root.ActualSize = rect.Size;
+
+            // TODO: root.Material.WriteUniform(new() { Mvp = mat });
+
+            root.LayoutChildren();
         }
     }
 
@@ -290,6 +370,7 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         _rootElements.Add(element);
         element.CreateModel(this);
         element.Layout();
+        //Layout();
     }
 
     protected override void RenderShadowMap(in RenderShadowMapContext context, ReadOnlySpan<UIModel> objects)
@@ -381,9 +462,9 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         }
 
         @fragment fn fs_main(
-            v: V2F,
+            f: V2F,
         ) -> @location(0) vec4<f32> {
-            return vec4<f32>(1.0, 1.0, 1.0, 1.0);
+            return vec4<f32>(f.uv.x, f.uv.y, 0.0, 1.0);
         }
         """u8;
 
@@ -540,4 +621,186 @@ public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader,
             _mesh = mesh;
         }
     }
+}
+
+
+
+
+
+
+
+// --------------------
+
+internal static class UIDefaultLayouter
+{
+    public static RectF DecideRect(UIElement target, in ContentAreaInfo area)
+    {
+        var areaSize = Vector2.Max(Vector2.Zero, area.Rect.Size);
+
+        var margin = target.Margin;
+        var width = target.Width;
+        var height = target.Height;
+        var horizontalAlignment = target.HorizontalAlignment;
+        var verticalAlignment = target.VerticalAlignment;
+
+        var blankSize = new Vector2
+        {
+            X = area.Padding.Left + area.Padding.Right + margin.Left + margin.Right,
+            Y = area.Padding.Top + area.Padding.Bottom + margin.Top + margin.Bottom,
+        };
+        var fullSize = Vector2.Max(Vector2.Zero, areaSize - blankSize);
+
+        var sizeCoeff = new Vector2
+        {
+            X = width.Type switch
+            {
+                LayoutLengthType.Proportion => areaSize.X,
+                LayoutLengthType.Length or _ => 1f,
+            },
+            Y = height.Type switch
+            {
+                LayoutLengthType.Proportion => areaSize.Y,
+                LayoutLengthType.Length or _ => 1f,
+            },
+        };
+        var size = new Vector2
+        {
+            X = float.Clamp(width.Value * sizeCoeff.X, 0, fullSize.X),
+            Y = float.Clamp(height.Value * sizeCoeff.Y, 0, fullSize.Y),
+        };
+
+        var pos = new Vector2
+        {
+            X = horizontalAlignment switch
+            {
+                HorizontalAlignment.Left => area.Padding.Left + margin.Left,
+                HorizontalAlignment.Right => areaSize.X - area.Padding.Right - margin.Right - size.X,
+                HorizontalAlignment.Center or _ => area.Padding.Left + margin.Left + (fullSize.X - size.X) / 2f,
+            },
+            Y = verticalAlignment switch
+            {
+                VerticalAlignment.Top => area.Padding.Top + margin.Top,
+                VerticalAlignment.Bottom => areaSize.Y - area.Padding.Bottom - margin.Bottom - size.Y,
+                VerticalAlignment.Center or _ => area.Padding.Top + margin.Top + (fullSize.Y - size.Y) / 2f,
+            },
+        } + area.Rect.Position;
+        return new RectF(pos, size);
+    }
+}
+
+public class UIElementLayouter
+{
+    private static readonly UIElementLayouter _default = new UIElementLayouter();
+
+    public static UIElementLayouter Default => _default;
+
+    internal RectF LayoutSelf(UIElement element)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        var screen = element.Screen;
+        if(screen == null) {
+            throw new InvalidOperationException();  // TODO:
+        }
+        var (contentArea, offset) = element.Parent switch
+        {
+            UIElement parent =>
+            (
+                ContentArea: MesureContentArea(parent, element),
+                Offset: parent.ActualPosition
+            ),
+            null =>
+            (
+                ContentArea: new ContentAreaInfo
+                {
+                    Rect = new RectF(Vector2.Zero, screen.ClientSize.ToVector2()),
+                    Padding = LayoutThickness.Zero,
+                },
+                Offset: Vector2.Zero
+            ),
+        };
+        var rectInParent = DecideRect(element, contentArea);
+        var absRect = new RectF(rectInParent.Position + offset, rectInParent.Size);
+        return absRect;
+    }
+
+    protected virtual ContentAreaInfo MesureContentArea(UIElement parent, UIElement child)
+    {
+        return new ContentAreaInfo
+        {
+            Rect = new RectF(Vector2.Zero, parent.ActualSize),
+            Padding = parent.Padding,
+        };
+    }
+
+    protected virtual RectF DecideRect(UIElement target, in ContentAreaInfo area)
+    {
+        var areaSize = Vector2.Max(Vector2.Zero, area.Rect.Size);
+
+        var margin = target.Margin;
+        var width = target.Width;
+        var height = target.Height;
+        var horizontalAlignment = target.HorizontalAlignment;
+        var verticalAlignment = target.VerticalAlignment;
+
+        var blankSize = new Vector2
+        {
+            X = area.Padding.Left + area.Padding.Right + margin.Left + margin.Right,
+            Y = area.Padding.Top + area.Padding.Bottom + margin.Top + margin.Bottom,
+        };
+        var fullSize = Vector2.Max(Vector2.Zero, areaSize - blankSize);
+
+        var sizeCoeff = new Vector2
+        {
+            X = width.Type switch
+            {
+                LayoutLengthType.Proportion => areaSize.X,
+                LayoutLengthType.Length or _ => 1f,
+            },
+            Y = height.Type switch
+            {
+                LayoutLengthType.Proportion => areaSize.Y,
+                LayoutLengthType.Length or _ => 1f,
+            },
+        };
+        var size = new Vector2
+        {
+            X = float.Clamp(width.Value * sizeCoeff.X, 0, fullSize.X),
+            Y = float.Clamp(height.Value * sizeCoeff.Y, 0, fullSize.Y),
+        };
+
+        var pos = new Vector2
+        {
+            X = horizontalAlignment switch
+            {
+                HorizontalAlignment.Left => area.Padding.Left + margin.Left,
+                HorizontalAlignment.Right => areaSize.X - area.Padding.Right - margin.Right - size.X,
+                HorizontalAlignment.Center or _ => area.Padding.Left + margin.Left + (fullSize.X - size.X) / 2f,
+            },
+            Y = verticalAlignment switch
+            {
+                VerticalAlignment.Top => area.Padding.Top + margin.Top,
+                VerticalAlignment.Bottom => areaSize.Y - area.Padding.Bottom - margin.Bottom - size.Y,
+                VerticalAlignment.Center or _ => area.Padding.Top + margin.Top + (fullSize.Y - size.Y) / 2f,
+            },
+        } + area.Rect.Position;
+        return new RectF(pos, size);
+    }
+}
+
+public readonly struct ContentAreaInfo : IEquatable<ContentAreaInfo>
+{
+    public required RectF Rect { get; init; }
+    public required LayoutThickness Padding { get; init; }
+
+    public override bool Equals(object? obj) => obj is ContentAreaInfo info && Equals(info);
+
+    public bool Equals(ContentAreaInfo other)
+        => Rect.Equals(other.Rect) &&
+           Padding.Equals(other.Padding);
+
+    public override int GetHashCode() => HashCode.Combine(Rect, Padding);
+
+    public static bool operator ==(ContentAreaInfo left, ContentAreaInfo right) => left.Equals(right);
+
+    public static bool operator !=(ContentAreaInfo left, ContentAreaInfo right) => !(left == right);
 }
