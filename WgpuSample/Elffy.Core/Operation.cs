@@ -106,8 +106,15 @@ public readonly ref struct OperationContext
         _surfaceView = surfaceView;
     }
 
-    public OwnRenderPass CreateSurfaceRenderPass()
+    public OwnRenderPass CreateSurfaceRenderPass(
+        (f64 R, f64 G, f64 B, f64 A)? colorClear,
+        (f32? DepthClear, u32? StencilClear)? depthStencil)
     {
-        return RenderPass.SurfaceRenderPass(_screen, _surfaceView);
+        return RenderPass.SurfaceRenderPass(
+            _screen,
+            _surfaceView,
+            _screen.DepthTexture.View.NativeRef,
+            colorClear,
+            depthStencil);
     }
 }

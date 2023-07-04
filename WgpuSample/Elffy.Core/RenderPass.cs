@@ -38,22 +38,35 @@ public readonly ref struct RenderPass
         return new OwnRenderPass(new(screen, native, encoder), _release);
     }
 
-    internal static unsafe OwnRenderPass SurfaceRenderPass(Screen screen, Rust.Ref<Wgpu.TextureView> surfaceTextureView)
+    internal static unsafe OwnRenderPass SurfaceRenderPass(
+        Screen screen,
+        Rust.Ref<Wgpu.TextureView> surfaceTextureView,
+        Rust.Ref<Wgpu.TextureView> depthTextureView,
+        (f64 R, f64 G, f64 B, f64 A)? colorClear,
+        (f32? DepthClear, u32? StencilClear)? depthStencil)
     {
         var colorAttachment = new CE.Opt<CE.RenderPassColorAttachment>(new()
         {
             view = surfaceTextureView,
-            clear = new Wgpu.Color(0, 0, 0, 0),
+            clear = colorClear != null ?
+                new(new Wgpu.Color(colorClear.Value.R, colorClear.Value.G, colorClear.Value.B, colorClear.Value.A)) :
+                CE.Opt<Wgpu.Color>.None,
         });
         var desc = new CE.RenderPassDescriptor
         {
             color_attachments_clear = new() { data = &colorAttachment, len = 1 },
-            depth_stencil_attachment_clear = new(new()
-            {
-                view = screen.DepthTexture.View.NativeRef,
-                depth_clear = CE.Opt<float>.Some(1f),
-                stencil_clear = CE.Opt<uint>.None,
-            }),
+            depth_stencil_attachment_clear = depthStencil != null ?
+                new(new()
+                {
+                    view = depthTextureView,
+                    depth_clear = depthStencil.Value.DepthClear != null ?
+                        new(depthStencil.Value.DepthClear.Value) :
+                        CE.Opt<float>.None,
+                    stencil_clear = depthStencil.Value.StencilClear != null ?
+                        new(depthStencil.Value.StencilClear.Value) :
+                        CE.Opt<uint>.None,
+                }) :
+                CE.Opt<CE.RenderPassDepthStencilAttachment>.None,
         };
         return Create(screen, desc);
     }
@@ -105,6 +118,11 @@ public readonly ref struct RenderPass
         f32 maxDepth)
     {
         _native.AsMut().SetViewport(x, y, w, h, minDepth, maxDepth);
+    }
+
+    public void DrawIndexed(u32 indexCount)
+    {
+        DrawIndexed(0, indexCount, 0, 0, 1);
     }
 
     public void DrawIndexed(u32 indexStart, u32 indexCount, i32 baseVertex, u32 instanceStart, u32 instanceCount)

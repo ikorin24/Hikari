@@ -43,6 +43,11 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
         _material = DeferredProcessMaterial.Create(Shader, gBuffer);
     }
 
+    protected override OwnRenderPass CreateRenderPass(in OperationContext context)
+    {
+        return context.CreateSurfaceRenderPass((0, 0, 0, 0), (1f, null));
+    }
+
     private static Own<DeferredProcessShader> CreateShader(IGBufferProvider gBufferProvider, out GBuffer gBuffer, out Own<RenderPipeline> pipeline)
     {
         ArgumentNullException.ThrowIfNull(gBufferProvider);

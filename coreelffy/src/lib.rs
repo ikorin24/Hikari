@@ -92,18 +92,19 @@ impl<'tex, 'desc> RenderPassDescriptor<'tex, 'desc> {
 #[derive(Debug)]
 pub(crate) struct RenderPassColorAttachment<'tex> {
     pub view: &'tex wgpu::TextureView,
-    pub clear: wgpu::Color,
+    pub clear: Opt<wgpu::Color>,
 }
 
 impl<'tex> RenderPassColorAttachment<'tex> {
-    pub const fn to_wgpu_type(&self) -> wgpu::RenderPassColorAttachment<'tex> {
+    pub fn to_wgpu_type(&self) -> wgpu::RenderPassColorAttachment<'tex> {
+        let load = match self.clear.map_to_option(|c| *c) {
+            Some(color) => wgpu::LoadOp::Clear(color),
+            None => wgpu::LoadOp::Load,
+        };
         wgpu::RenderPassColorAttachment {
             view: self.view,
             resolve_target: None,
-            ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(self.clear),
-                store: true,
-            },
+            ops: wgpu::Operations { load, store: true },
         }
     }
 }

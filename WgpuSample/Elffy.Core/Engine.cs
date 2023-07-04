@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 
 namespace Elffy;
 
@@ -16,7 +17,9 @@ public static class Engine
     public static void Run(in ScreenConfig screenConfig, Action<Screen> onInitialized)
     {
         ArgumentNullException.ThrowIfNull(onInitialized);
-        _onInitialized = onInitialized;
+        if(Interlocked.CompareExchange(ref _onInitialized, onInitialized, null) != null) {
+            throw new InvalidOperationException("The engine is already running.");
+        }
         var engineConfig = new EngineCoreConfig
         {
             OnStart = _onStart,

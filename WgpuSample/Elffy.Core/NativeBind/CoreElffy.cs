@@ -549,7 +549,7 @@ internal static class CoreElffy
     internal readonly struct RenderPassColorAttachment
     {
         private readonly NativePointer _view;   // Rust.Ref<Wgpu.TextureView>
-        private readonly Wgpu.Color _clear;
+        private readonly Opt<Wgpu.Color> _clear;
 
         public unsafe required Rust.Ref<Wgpu.TextureView> view
         {
@@ -561,7 +561,7 @@ internal static class CoreElffy
             init => _view = value.AsPtr();
         }
 
-        public required Wgpu.Color clear { get => _clear; init => _clear = value; }
+        public required Opt<Wgpu.Color> clear { get => _clear; init => _clear = value; }
     }
 
     internal readonly struct BindGroupDescriptor

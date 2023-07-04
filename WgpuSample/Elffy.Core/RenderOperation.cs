@@ -31,10 +31,7 @@ public abstract class RenderOperation<TShader, TMaterial>
         Render(pass.AsValue(), _pipeline.AsValue());
     }
 
-    protected virtual OwnRenderPass CreateRenderPass(in OperationContext context)
-    {
-        return context.CreateSurfaceRenderPass();
-    }
+    protected abstract OwnRenderPass CreateRenderPass(in OperationContext context);
 
     protected abstract void Render(in RenderPass pass, RenderPipeline pipeline);
 }

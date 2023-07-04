@@ -1,8 +1,13 @@
 ﻿#nullable enable
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 
 namespace Elffy.UI;
 
@@ -50,9 +55,16 @@ public class Panel : UIElement, IFromJson<Panel>
 
 public abstract class UIElement : IToJson
 {
-    private readonly List<UIElement>? _children;
+    private UIModel? _model;
+    private UIElement? _parent;
+    private readonly UIElementCollection _children;
+
     private float _width;
     private float _height;
+    private Vector2 _position;
+
+    public UIElement? Parent => _parent;
+    internal UIModel? Model => _model;
 
     public float Width
     {
@@ -65,13 +77,54 @@ public abstract class UIElement : IToJson
         set => _height = value;
     }
 
-    public UIElement[] Children
+    public float X
     {
-        init => (_children ??= new()).AddRange(value);
+        get => _position.X;
+        set => _position.X = value;
+    }
+
+    public float Y
+    {
+        get => _position.Y;
+        set => _position.Y = value;
+    }
+
+    public UIElementCollection Children
+    {
+        init
+        {
+            _children = value;
+            value.Parent = this;
+        }
+        get => _children;
     }
 
     protected UIElement()
     {
+        _children = new UIElementCollection();
+    }
+
+    internal void SetParent(UIElement parent)
+    {
+        Debug.Assert(_parent == null);
+        _parent = parent;
+    }
+
+    internal void CreateModel(UILayer layer)
+    {
+        var model = new UIModel(this, layer);
+
+        var mat = new Matrix4(
+            new Vector4(_width, 0, 0, 0),
+            new Vector4(0, _height, 0, 0),
+            new Vector4(0, 0, 1, 0),
+            new Vector4(_position.X, _position.Y, 0, 1));
+
+        model.Material.WriteUniform(new()
+        {
+            Mvp = mat,
+        });
+        _model = model;
     }
 
     protected UIElement(JsonNode? node)
@@ -84,7 +137,10 @@ public abstract class UIElement : IToJson
 
         var children = obj["children"];
         if(children != null) {
-            _children = new List<UIElement>(Serializer.Instantiate<UIElement[]>(children));
+            _children = new UIElementCollection(Serializer.Instantiate<UIElement[]>(children));
+        }
+        else {
+            _children = new UIElementCollection();
         }
     }
 
@@ -113,49 +169,375 @@ public abstract class UIElement : IToJson
         var node = ToJsonProtected(options);
         return node;
     }
+
+    internal void Layout()
+    {
+        var model = _model;
+        if(model != null) {
+            var screen = model.Screen;
+            var w = _width / screen.ClientSize.X * 2f;
+            var h = _height / screen.ClientSize.Y * 2f;
+            var x = _position.X / screen.ClientSize.X * 2f - 1f;
+            var y = _position.Y / screen.ClientSize.Y * 2f - 1f;
+
+            var mat = new Matrix4(
+                new(w, 0, 0, 0),
+                new(0, h, 0, 0),
+                new(0, 0, 1, 0),
+                new(x, y, 0, 1));
+            model.Material.WriteUniform(new()
+            {
+                Mvp = mat,
+            });
+        }
+        foreach(var child in _children) {
+            child.Layout();
+        }
+    }
 }
 
-
-internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMaterial, UIModel>
+public sealed class UIElementCollection : IEnumerable<UIElement>
 {
-    private readonly List<UIElement> _elements = new List<UIElement>();
+    private UIElement? _parent;
+    private readonly List<UIElement> _children = new List<UIElement>();
 
-    public UILayer(Screen screen, Own<UIShader> shader, Func<UIShader, Own<RenderPipeline>> pipelineGen, int sortOrder) : base(screen, shader, pipelineGen, sortOrder)
+    internal UIElement? Parent
     {
+        get => _parent;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            if(Interlocked.CompareExchange(ref _parent, value, null) != null) {
+                ThrowInvalidInstance();
+            }
+            var layer = value.Model?.Layer;
+            foreach(var child in _children) {
+                child.SetParent(value);
+                if(layer != null) {
+                    child.CreateModel(layer);
+                }
+            }
+        }
+    }
+
+    public UIElementCollection()
+    {
+    }
+
+    internal UIElementCollection(ReadOnlySpan<UIElement> elements)
+    {
+        foreach(var element in elements) {
+            ArgumentNullException.ThrowIfNull(element);
+            _children.Add(element);
+        }
+    }
+
+    public void Add(UIElement element)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        _children.Add(element);
+        var parent = _parent;
+        if(parent != null) {
+            element.SetParent(parent);
+            var layer = parent.Model?.Layer;
+            if(layer != null) {
+                element.CreateModel(layer);
+            }
+        }
+    }
+
+    [DoesNotReturn]
+    private static void ThrowInvalidInstance() => throw new InvalidOperationException("invalid instance");
+
+    public IEnumerator<UIElement> GetEnumerator()
+    {
+        // TODO: 
+        return _children.GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return _children.GetEnumerator();
+    }
+}
+
+public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMaterial, UIModel>
+{
+    private readonly List<UIElement> _rootElements = new List<UIElement>();
+
+    public UILayer(Screen screen, int sortOrder)
+        : base(
+            screen,
+            UIShader.Create(screen),
+            CreatePipeline,
+            sortOrder)
+    {
+    }
+
+    internal void Layout()
+    {
+        foreach(var element in _rootElements) {
+            element.Layout();
+        }
+    }
+
+    public void AddRootElement(UIElement element)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        if(element.Parent != null) {
+            throw new ArgumentException();
+        }
+        _rootElements.Add(element);
+        element.CreateModel(this);
+        element.Layout();
     }
 
     protected override void RenderShadowMap(in RenderShadowMapContext context, ReadOnlySpan<UIModel> objects)
     {
     }
-}
 
-internal sealed class UIShader : Shader<UIShader, UIMaterial>
-{
-    public UIShader(Screen screen, ReadOnlySpan<byte> shaderSource, in PipelineLayoutDescriptor pipelineLayoutDesc) : base(screen, shaderSource, pipelineLayoutDesc)
+    protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
+        return context.CreateSurfaceRenderPass(colorClear: null, depthStencil: null);
+    }
+
+    private static Own<RenderPipeline> CreatePipeline(UIShader shader)
+    {
+        var screen = shader.Screen;
+        return RenderPipeline.Create(screen, new()
+        {
+            Layout = shader.PipelineLayout,
+            Vertex = new VertexState()
+            {
+                Module = shader.Module,
+                EntryPoint = "vs_main"u8.ToArray(),
+                Buffers = new VertexBufferLayout[]
+                {
+                    VertexBufferLayout.FromVertex<VertexSlim>(stackalloc[]
+                    {
+                        (0, VertexFieldSemantics.Position),
+                        (1, VertexFieldSemantics.UV),
+                    }),
+                },
+            },
+            Fragment = new FragmentState()
+            {
+                Module = shader.Module,
+                EntryPoint = "fs_main"u8.ToArray(),
+                Targets = new ColorTargetState?[]
+                {
+                    new ColorTargetState
+                    {
+                        Format = screen.SurfaceFormat,
+                        Blend = null,
+                        WriteMask = ColorWrites.All,
+                    },
+                },
+            },
+            Primitive = new PrimitiveState()
+            {
+                Topology = PrimitiveTopology.TriangleList,
+                FrontFace = FrontFace.Ccw,
+                CullMode = Face.Back,
+                PolygonMode = PolygonMode.Fill,
+                StripIndexFormat = null,
+            },
+            DepthStencil = null,
+            Multisample = MultisampleState.Default,
+            Multiview = 0,
+        });
     }
 }
 
-internal sealed class UIMaterial : Material<UIMaterial, UIShader>
+public sealed class UIShader : Shader<UIShader, UIMaterial>
 {
-    public UIMaterial(UIShader shader) : base(shader)
+    private static ReadOnlySpan<byte> ShaderSource => """
+        struct Vin {
+            @location(0) pos: vec3<f32>,
+            @location(1) uv: vec2<f32>,
+        }
+        struct V2F {
+            @builtin(position) clip_pos: vec4<f32>,
+            @location(0) uv: vec2<f32>,
+        }
+        struct ScreenInfo {
+            size: vec2<u32>,
+        }
+        struct BufferData
+        {
+            mvp: mat4x4<f32>,
+        }
+
+        @group(0) @binding(0) var<uniform> screen: ScreenInfo;
+        @group(0) @binding(1) var<uniform> data: BufferData;
+
+        @vertex fn vs_main(
+            v: Vin,
+        ) -> V2F {
+            var o: V2F;
+            o.clip_pos = data.mvp * vec4<f32>(v.pos, 1.0);
+            o.uv = v.uv;
+            return o;
+        }
+
+        @fragment fn fs_main(
+            v: V2F,
+        ) -> @location(0) vec4<f32> {
+            return vec4<f32>(1.0, 1.0, 1.0, 1.0);
+        }
+        """u8;
+
+    private readonly Own<BindGroupLayout> _layout0;
+
+    internal BindGroupLayout Layout0 => _layout0.AsValue();
+
+    private UIShader(Screen screen) :
+        base(screen, ShaderSource, Desc(screen, out var layout0))
     {
+        _layout0 = layout0;
+    }
+
+    protected override void Release(bool manualRelease)
+    {
+        base.Release(manualRelease);
+        if(manualRelease) {
+            _layout0.Dispose();
+        }
+    }
+
+    internal static Own<UIShader> Create(Screen screen)
+    {
+        var self = new UIShader(screen);
+        return CreateOwn(self);
+    }
+
+    private static PipelineLayoutDescriptor Desc(Screen screen, out Own<BindGroupLayout> layout0)
+    {
+        return new()
+        {
+            BindGroupLayouts = new[]
+            {
+                BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new[]
+                    {
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
+                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
+                    }
+                }).AsValue(out layout0),
+            },
+        };
     }
 }
 
-internal sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader, UIMaterial>
+public sealed class UIMaterial : Material<UIMaterial, UIShader>
+{
+    private readonly Own<Buffer> _buffer;
+    private readonly Own<BindGroup> _bindGroup0;
+
+    internal struct BufferData
+    {
+        public Matrix4 Mvp;
+    }
+
+    internal BindGroup BindGroup0 => _bindGroup0.AsValue();
+
+    private UIMaterial(UIShader shader, Own<BindGroup> bindGroup0, Own<Buffer> buffer) : base(shader)
+    {
+        _bindGroup0 = bindGroup0;
+        _buffer = buffer;
+    }
+
+    protected override void Release(bool manualRelease)
+    {
+        base.Release(manualRelease);
+        if(manualRelease) {
+            _bindGroup0.Dispose();
+            _buffer.Dispose();
+        }
+    }
+
+    internal void WriteUniform(in BufferData data)
+    {
+        var buffer = _buffer.AsValue();
+        buffer.WriteData(0, data);
+    }
+
+    internal static Own<UIMaterial> Create(UIShader shader)
+    {
+        var screen = shader.Screen;
+        var buffer = Buffer.CreateInitData(screen, new BufferData
+        {
+            Mvp = Matrix4.Identity,
+        }, BufferUsages.Uniform | BufferUsages.CopyDst);
+        var bindGroup0 = BindGroup.Create(screen, new()
+        {
+            Layout = shader.Layout0,
+            Entries = new[]
+            {
+                BindGroupEntry.Buffer(0, screen.InfoBuffer),
+                BindGroupEntry.Buffer(1, buffer.AsValue()),
+            },
+        });
+        var self = new UIMaterial(shader, bindGroup0, buffer);
+        return CreateOwn(self);
+    }
+}
+
+public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader, UIMaterial>
 {
     private readonly UIElement _element;
 
-    public UIElement Element => _element;
+    internal UIElement Element => _element;
 
-    public UIModel(UIElement element, UILayer layer, MaybeOwn<Mesh<VertexSlim>> mesh, Own<UIMaterial> material) : base(layer, mesh, material)
+    internal UIModel(UIElement element, UILayer layer)
+        : base(
+            layer,
+            GetMesh(layer.Screen),
+            UIMaterial.Create(layer.Shader))
     {
         _element = element;
     }
 
     protected override void Render(in RenderPass pass, UIMaterial material, Mesh<VertexSlim> mesh)
     {
-        throw new NotImplementedException();
+        pass.SetVertexBuffer(0, mesh.VertexBuffer);
+        pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+        pass.SetBindGroup(0, material.BindGroup0);
+        pass.DrawIndexed(mesh.IndexCount);
+    }
+
+    private static Mesh<VertexSlim> GetMesh(Screen screen)
+    {
+        // TODO: remove cache when screen is disposed
+
+        var cache = _cache.GetOrAdd(screen, static screen =>
+        {
+            ReadOnlySpan<VertexSlim> vertices = stackalloc VertexSlim[4]
+            {
+                new VertexSlim(0, 1, 0, 0, 1),
+                new VertexSlim(0, 0, 0, 0, 0),
+                new VertexSlim(1, 0, 0, 1, 0),
+                new VertexSlim(1, 1, 0, 1, 1),
+            };
+            ReadOnlySpan<ushort> indices = stackalloc ushort[6] { 0, 1, 2, 2, 3, 0 };
+            var mesh = Elffy.Mesh.Create(screen, vertices, indices);
+            return new MeshCache(mesh);
+        });
+        return cache.Mesh;
+    }
+
+    private static readonly ConcurrentDictionary<Screen, MeshCache> _cache = new();
+
+    private sealed class MeshCache
+    {
+        private readonly Own<Mesh<VertexSlim>> _mesh;
+
+        public Mesh<VertexSlim> Mesh => _mesh.AsValue();
+
+        public MeshCache(Own<Mesh<VertexSlim>> mesh)
+        {
+            _mesh = mesh;
+        }
     }
 }

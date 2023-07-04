@@ -77,7 +77,7 @@ public sealed class GBuffer : IScreenManaged
             colorsNative[i] = new(new()
             {
                 view = colors[i].AsValue().View.NativeRef,
-                clear = new Wgpu.Color(0, 0, 0, 0),
+                clear = CE.Opt<Wgpu.Color>.Some(new Wgpu.Color(0, 0, 0, 0)),
             });
         }
     }
