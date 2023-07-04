@@ -565,11 +565,30 @@ public sealed class UIMaterial : Material<UIMaterial, UIShader>
     }
 }
 
-public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader, UIMaterial>
+public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader, UIMaterial, Vector3>
 {
     private readonly UIElement _element;
+    private Vector3 _position;
+    private Quaternion _rotation = Quaternion.Identity;
+    private Vector3 _scale = Vector3.One;
 
     internal UIElement Element => _element;
+
+    public override Vector3 Position
+    {
+        get => _position;
+        set => _position = value;
+    }
+    public override Quaternion Rotation
+    {
+        get => _rotation;
+        set => _rotation = value;
+    }
+    public override Vector3 Scale
+    {
+        get => _scale;
+        set => _scale = value;
+    }
 
     internal UIModel(UIElement element, UILayer layer)
         : base(
@@ -606,6 +625,26 @@ public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader,
             return new MeshCache(mesh);
         });
         return cache.Mesh;
+    }
+
+    public override Matrix4 GetModel()
+    {
+        // TODO: cache
+        // TODO: thread safe
+        return CalcModel();
+    }
+
+    private Matrix4 CalcModel()
+    {
+        var s = _scale;
+        return
+            _position.ToTranslationMatrix4() *
+            _rotation.ToMatrix4() *
+            new Matrix4(
+                new Vector4(s.X, 0, 0, 0),
+                new Vector4(0, s.Y, 0, 0),
+                new Vector4(0, 0, s.Z, 0),
+                new Vector4(0, 0, 0, 1));
     }
 
     private static readonly ConcurrentDictionary<Screen, MeshCache> _cache = new();

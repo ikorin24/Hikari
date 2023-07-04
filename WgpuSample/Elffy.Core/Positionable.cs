@@ -2,6 +2,7 @@
 
 namespace Elffy;
 
+[System.Obsolete("obsolete", true)]
 public abstract class Positionable<TSelf, TLayer, TVertex, TShader, TMaterial>
     : FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     where TSelf : Positionable<TSelf, TLayer, TVertex, TShader, TMaterial>

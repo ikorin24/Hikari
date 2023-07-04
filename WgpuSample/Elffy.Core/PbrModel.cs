@@ -4,9 +4,28 @@ using V = Elffy.Vertex;
 
 namespace Elffy;
 
-public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrMaterial>
+public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrMaterial, float>
 {
     private readonly BufferSlice _tangent;
+    private Vector3 _position;
+    private Quaternion _rotation = Quaternion.Identity;
+    private float _scale = 1f;
+
+    public override Vector3 Position
+    {
+        get => _position;
+        set => _position = value;
+    }
+    public override Quaternion Rotation
+    {
+        get => _rotation;
+        set => _rotation = value;
+    }
+    public override float Scale
+    {
+        get => _scale;
+        set => _scale = value;
+    }
 
     public PbrModel(
         PbrLayer layer,
@@ -30,6 +49,26 @@ public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrM
         {
             var self = SafeCast.As<PbrModel>(x);
         }).AddTo(Subscriptions);
+    }
+
+    public override Matrix4 GetModel()
+    {
+        // TODO: cache
+        // TODO: thread safe
+        return CalcModel();
+    }
+
+    private Matrix4 CalcModel()
+    {
+        var s = _scale;
+        return
+            _position.ToTranslationMatrix4() *
+            _rotation.ToMatrix4() *
+            new Matrix4(
+                new Vector4(s, 0, 0, 0),
+                new Vector4(0, s, 0, 0),
+                new Vector4(0, 0, s, 0),
+                new Vector4(0, 0, 0, 1));
     }
 
     protected override void Render(in RenderPass pass, PbrMaterial material, Mesh<V> mesh)
