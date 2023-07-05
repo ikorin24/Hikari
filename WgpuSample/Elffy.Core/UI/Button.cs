@@ -68,8 +68,8 @@ public abstract class UIElement : IToJson
     private HorizontalAlignment _horizontalAlignment;
     private VerticalAlignment _verticalAlignment;
 
-    private Vector2 _actualPosition;
-    private Vector2 _actualSize;
+    internal Vector2 _actualPosition;
+    internal Vector2 _actualSize;
 
     public UIElement? Parent => _parent;
     internal UIModel? Model => _model;
@@ -77,14 +77,34 @@ public abstract class UIElement : IToJson
 
     public Vector2 ActualPosition
     {
-        get => _actualPosition;
-        internal set => _actualPosition = value;
+        get
+        {
+            var model = _model;
+            return model != null ? model.Position.Xy : Vector2.Zero;
+        }
+        //internal set
+        //{
+        //    var model = _model;
+        //    if(model != null) {
+        //        model.Position = new Vector3(value.X, value.Y, 1f);
+        //    }
+        //}
     }
 
     public Vector2 ActualSize
     {
-        get => _actualSize;
-        internal set => _actualSize = value;
+        get
+        {
+            var model = _model;
+            return model != null ? model.Scale : Vector2.Zero;
+        }
+        //internal set
+        //{
+        //    var model = _model;
+        //    if(model != null) {
+        //        model.Scale = value;
+        //    }
+        //}
     }
 
 
@@ -243,8 +263,16 @@ public abstract class UIElement : IToJson
         foreach(var child in _children) {
             var contentArea = MesureContentArea(child);
             var rect = DecideRect(child, contentArea);
+
+            var pos = rect.Position + actualPosition;
             child._actualPosition = rect.Position + actualPosition;
             child._actualSize = rect.Size;
+
+            var model = child._model;
+            Debug.Assert(model is not null);
+            model.Position = new Vector3(pos.X, pos.Y, 0f);
+            model.Scale = rect.Size;
+
             child.LayoutChildren();
         }
     }
@@ -332,6 +360,15 @@ public sealed class UIElementCollection : IEnumerable<UIElement>
 public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMaterial, UIModel>
 {
     private readonly List<UIElement> _rootElements = new List<UIElement>();
+    private Matrix4 _uiProjection;
+
+    internal Matrix4 UIProjection => _uiProjection;
+
+    private static Matrix4 GLToWebGpu => new Matrix4(
+        new Vector4(1, 0, 0, 0),
+        new Vector4(0, 1, 0, 0),
+        new Vector4(0, 0, 0.5f, 0),
+        new Vector4(0, 0, 0.5f, 1));
 
     public UILayer(Screen screen, int sortOrder)
         : base(
@@ -340,6 +377,15 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
             CreatePipeline,
             sortOrder)
     {
+        var size = screen.ClientSize;
+        Matrix4.OrthographicProjection(0, (float)size.X, 0, (float)size.Y, -1f, 1f, out var proj); // TODO: GL to Wgpuk
+        _uiProjection = GLToWebGpu * proj;
+        screen.Resized.Subscribe(arg =>
+        {
+            var size = arg.Size;
+            Matrix4.OrthographicProjection(0, (float)size.X, 0, (float)size.Y, -1f, 1f, out var proj); // TODO: GL to Wgpuk
+            _uiProjection = GLToWebGpu * proj;
+        }); // TODO: unsubscribe
     }
 
     internal void Layout()
@@ -352,11 +398,21 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         };
         foreach(var root in _rootElements) {
             var rect = UIDefaultLayouter.DecideRect(root, contentArea);
-            root.ActualPosition = rect.Position;
-            root.ActualSize = rect.Size;
 
-            // TODO: root.Material.WriteUniform(new() { Mvp = mat });
+            var model = root.Model;
+            Debug.Assert(model is not null);
+            model.Position = new Vector3(rect.X, rect.Y, 0f);
+            model.Scale = rect.Size;
 
+            var modelMat = model.GetModel();
+            var a = model.Layer.UIProjection * modelMat;
+            //Debug.WriteLine(a.Mvp);
+            //var row3 = new Vector3(a.Mvp.Column0[3], a.Mvp.Column1[3], a.Mvp.Column2[3]);
+            //var row3 = new Vector3(a.Mvp.Column0.W, a.Mvp.Column1.W, a.Mvp.Column2.W);
+            var row3 = new Vector3(a.M03, a.M13, a.M23);
+            Debug.WriteLine(a);
+            Debug.WriteLine(row3);
+            model.Material.WriteUniform(new() { Mvp = a });
             root.LayoutChildren();
         }
     }
@@ -369,6 +425,7 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         }
         _rootElements.Add(element);
         element.CreateModel(this);
+
         element.Layout();
         //Layout();
     }
@@ -565,26 +622,26 @@ public sealed class UIMaterial : Material<UIMaterial, UIShader>
     }
 }
 
-public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader, UIMaterial, Vector3>
+public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader, UIMaterial>
 {
     private readonly UIElement _element;
     private Vector3 _position;
     private Quaternion _rotation = Quaternion.Identity;
-    private Vector3 _scale = Vector3.One;
+    private Vector2 _scale = Vector2.One;
 
     internal UIElement Element => _element;
 
-    public override Vector3 Position
+    internal Vector3 Position
     {
         get => _position;
         set => _position = value;
     }
-    public override Quaternion Rotation
+    internal Quaternion Rotation
     {
         get => _rotation;
         set => _rotation = value;
     }
-    public override Vector3 Scale
+    internal Vector2 Scale
     {
         get => _scale;
         set => _scale = value;
@@ -601,6 +658,10 @@ public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader,
 
     protected override void Render(in RenderPass pass, UIMaterial material, Mesh<VertexSlim> mesh)
     {
+        //material.WriteUniform(new UIMaterial.BufferData
+        //{
+        //    Mvp = Layer.UIProjection * GetModel(),
+        //});
         pass.SetVertexBuffer(0, mesh.VertexBuffer);
         pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
         pass.SetBindGroup(0, material.BindGroup0);
@@ -627,7 +688,7 @@ public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader,
         return cache.Mesh;
     }
 
-    public override Matrix4 GetModel()
+    internal Matrix4 GetModel()
     {
         // TODO: cache
         // TODO: thread safe
@@ -643,7 +704,7 @@ public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader,
             new Matrix4(
                 new Vector4(s.X, 0, 0, 0),
                 new Vector4(0, s.Y, 0, 0),
-                new Vector4(0, 0, s.Z, 0),
+                new Vector4(0, 0, 1, 0),
                 new Vector4(0, 0, 0, 1));
     }
 
@@ -745,7 +806,7 @@ public class UIElementLayouter
             UIElement parent =>
             (
                 ContentArea: MesureContentArea(parent, element),
-                Offset: parent.ActualPosition
+                Offset: parent._actualPosition
             ),
             null =>
             (
@@ -766,7 +827,7 @@ public class UIElementLayouter
     {
         return new ContentAreaInfo
         {
-            Rect = new RectF(Vector2.Zero, parent.ActualSize),
+            Rect = new RectF(Vector2.Zero, parent._actualSize),
             Padding = parent.Padding,
         };
     }

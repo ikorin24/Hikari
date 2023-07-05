@@ -4,24 +4,26 @@ using V = Elffy.Vertex;
 
 namespace Elffy;
 
-public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrMaterial, float>
+public sealed class PbrModel
+    : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrMaterial>,
+      IModel<float>
 {
     private readonly BufferSlice _tangent;
     private Vector3 _position;
     private Quaternion _rotation = Quaternion.Identity;
     private float _scale = 1f;
 
-    public override Vector3 Position
+    public Vector3 Position
     {
         get => _position;
         set => _position = value;
     }
-    public override Quaternion Rotation
+    public Quaternion Rotation
     {
         get => _rotation;
         set => _rotation = value;
     }
-    public override float Scale
+    public float Scale
     {
         get => _scale;
         set => _scale = value;
@@ -51,7 +53,7 @@ public sealed class PbrModel : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrM
         }).AddTo(Subscriptions);
     }
 
-    public override Matrix4 GetModel()
+    public Matrix4 GetModel()
     {
         // TODO: cache
         // TODO: thread safe

@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using Elffy.Effective;
 using Elffy.Imaging;
 using Elffy.Mathematics;
+using Elffy.UI;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -15,6 +16,7 @@ internal class Program
     private static void Main(string[] args)
     {
         Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1");
+        Environment.SetEnvironmentVariable("RUST_LOG", "INFO");
         var screenConfig = new ScreenConfig
         {
             Backend = GraphicsBackend.Dx12,
@@ -28,6 +30,72 @@ internal class Program
 
     private static void OnInitialized(Screen screen)
     {
+        var panel = Serializer.Deserialize<Panel>("""
+        {
+            "@type": "panel",
+            "width": 100,
+            "height": 100,
+            "horizontalAlignment": "Right",
+            "children":
+            [{
+                "@type": "button",
+                "width": 50,
+                "height": 50
+            },
+            {
+                "@type": "button",
+                "width": 80,
+                "height": 30
+            }]
+        }
+        """);
+        var panel2 = new Panel
+        {
+            Width = 600,
+            Height = LayoutLength.Proportion(0.8f),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            //Layouter = new StackLayouter
+            //{
+            //    Orientation = Orientation.Vertical,
+            //    Spacing = 10,
+            //},
+            Children = new()
+            {
+                new Button
+                {
+                    Width = 250,
+                    Height = 150,
+                },
+                new Button
+                {
+                    Width = 80,
+                    Height = 100,
+                },
+            },
+        };
+
+        //var texture = Serializer.Deserialize<Own<Texture>>("""
+        //{
+        //    "@type": "Elffy.Own`1[Elffy.Texture]",
+        //    "descriptor": {
+        //        "dimension": "D2",
+        //        "format": "Rgba8UnormSrgb",
+        //        "mipLevelCount": 1,
+        //        "sampleCount": 1,
+        //        "size": [1, 1, 1],
+        //        "usage": "CopyDst|CopySrc"
+        //    },
+        //    "image": "resources/ground_0036_color_1k.jpg"
+        //}
+        //"""u8);
+
+        //var json = Serializer.Serialize(panel);
+        //Debug.WriteLine(json);
+
+        var uiLayer = new UILayer(screen, 2);
+        uiLayer.AddRootElement(panel2);
+
+
         screen.Title = "sample";
         var layer = new PbrLayer(screen, 0);
         var deferredProcess = new DeferredProcess(layer, 1);
@@ -55,9 +123,10 @@ internal class Program
         sw.Start();
         var elapsed = TimeSpan.Zero;
         var sum = TimeSpan.Zero;
-        var N = 300;
+        var N = 100;
         screen.Update.Subscribe(screen =>
         {
+            System.Threading.Thread.Sleep(11);
             var tmp = sw.Elapsed;
             var delta = tmp - elapsed;
             elapsed = tmp;
