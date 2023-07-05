@@ -16,7 +16,7 @@ internal class Program
     private static void Main(string[] args)
     {
         Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1");
-        Environment.SetEnvironmentVariable("RUST_LOG", "INFO");
+        //Environment.SetEnvironmentVariable("RUST_LOG", "INFO");
         var screenConfig = new ScreenConfig
         {
             Backend = GraphicsBackend.Dx12,

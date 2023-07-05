@@ -178,6 +178,8 @@ public sealed class Screen
 
     private void UpdateDepthTexture(Vector2u size)
     {
+        _depthTexture.Dispose();
+        _depthTexture = Own<Texture>.None;
         var depth = Texture.Create(this, new TextureDescriptor
         {
             Size = new Vector3u(size.X, size.Y, 1),
@@ -187,7 +189,6 @@ public sealed class Screen
             Format = TextureFormat.Depth32Float,
             Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding | TextureUsages.CopySrc,
         });
-        _depthTexture.Dispose();
         _depthTexture = depth;
     }
 
