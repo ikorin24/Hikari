@@ -35,7 +35,7 @@ public readonly struct LayoutLength
             case JsonValue value: {
                 // [value pattern]
                 // 10
-                // "10px"
+                // "10"
                 // "0.8*"
 
                 if(value.TryGetValue<float>(out var number)) {
@@ -43,17 +43,16 @@ public readonly struct LayoutLength
                 }
                 else if(value.TryGetValue<string>(out var str)) {
                     return
-                        str.EndsWith("px") ? new()
-                        {
-                            Value = float.Parse(str.AsSpan(0, str.Length - 2)),
-                            Type = LayoutLengthType.Length,
-                        } :
                         str.EndsWith("*") ? new()
                         {
                             Value = float.Parse(str.AsSpan(0, str.Length - 1)),
                             Type = LayoutLengthType.Proportion,
                         } :
-                        throw new FormatException("no unit. 'px' or '*' is needed.");
+                        new()
+                        {
+                            Value = float.Parse(str),
+                            Type = LayoutLengthType.Length,
+                        };
                 }
                 else {
                     throw new FormatException("value should be number or string");
@@ -69,7 +68,7 @@ public readonly struct LayoutLength
     {
         return Type switch
         {
-            LayoutLengthType.Length => $"{Value}px",
+            LayoutLengthType.Length => Value,
             LayoutLengthType.Proportion => $"{Value}*",
             _ => 0,
         };
@@ -89,7 +88,7 @@ public readonly struct LayoutLength
     {
         return Type switch
         {
-            LayoutLengthType.Length => $"{Value}px",
+            LayoutLengthType.Length => Value.ToString(),
             LayoutLengthType.Proportion => $"{Value}*",
             _ => base.ToString() ?? "",
         };
