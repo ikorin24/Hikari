@@ -89,6 +89,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
             _list.AddRange(addedList);
             foreach(var addedObject in addedList.AsSpan()) {
                 addedObject.SetLifeStateAlive();
+                addedObject.OnAlive();
             }
             addedList.Clear();
         }
@@ -128,8 +129,19 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     protected sealed override void Render(in RenderPass pass, RenderPipeline pipeline)
     {
         pass.SetPipeline(pipeline);
-        foreach(var obj in _list.AsSpan()) {
-            obj.InvokeRender(in pass);
+        ReadOnlySpan<TObject> objects = _list.AsSpan();
+        Render(
+            pass,
+            objects,
+            (in RenderPass pass, TObject obj) => obj.InvokeRender(in pass));
+    }
+
+    public delegate void RenderObjectAction(in RenderPass pass, TObject obj);
+
+    protected virtual void Render(in RenderPass pass, ReadOnlySpan<TObject> objects, RenderObjectAction render)
+    {
+        foreach(var obj in objects) {
+            render(in pass, obj);
         }
     }
 

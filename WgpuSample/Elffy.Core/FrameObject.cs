@@ -46,6 +46,7 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     private EventSource<FrameObject> _lateUpdate;
     private EventSource<FrameObject> _earlyUpdate;
 
+    private EventSource<TSelf> _alive;
     private EventSource<FrameObject> _dead;
 
     private LifeState _state;
@@ -55,6 +56,7 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     public sealed override LifeState LifeState => _state;
     public sealed override SubscriptionRegister Subscriptions => _subscriptions.Register;
 
+    public Event<TSelf> Alive => _alive.Event;
     public Event<FrameObject> Dead => _dead.Event;
 
     public Event<FrameObject> EarlyUpdate => _earlyUpdate.Event;
@@ -74,6 +76,9 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
         _layer = layer;
         _isFrozen = false;
         _state = LifeState.New;
+
+        // `this` must be of type `TSelf`.
+        // This is true as long as a derived class is implemented correctly.
         if(this is TSelf self) {
             layer.Add(self);
         }
@@ -99,6 +104,15 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     {
         Debug.Assert(_state == LifeState.New);
         _state = LifeState.Alive;
+    }
+
+    internal void OnAlive()
+    {
+        Debug.Assert(_state == LifeState.Alive);
+
+        // It is verified in the constructor that `this` is always of type `TSelf`.
+        var self = SafeCast.As<TSelf>(this);
+        _alive.Invoke(self);
     }
 
     internal void SetLifeStateDead()

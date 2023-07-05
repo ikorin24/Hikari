@@ -150,13 +150,15 @@ public abstract class UIElement : IToJson
         _parent = parent;
     }
 
-    internal void CreateModel(UILayer layer)
+    internal UIModel CreateModel(UILayer layer)
     {
         Debug.Assert(_model == null);
-        _model = new UIModel(this, layer);
+        var model = new UIModel(this, layer);
+        _model = model;
         foreach(var child in _children) {
             child.CreateModel(layer);
         }
+        return model;
     }
 
     protected UIElement(JsonNode? node)
@@ -297,6 +299,7 @@ public sealed class UIElementCollection : IEnumerable<UIElement>
 public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMaterial, UIModel>
 {
     private readonly List<UIElement> _rootElements = new List<UIElement>();
+    private bool _isLayoutDirty = false;
 
     public UILayer(Screen screen, int sortOrder)
         : base(
@@ -307,11 +310,11 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
     {
         screen.Resized.Subscribe(arg =>
         {
-            Layout();
-        }); // TODO: unsubscribe
+            _isLayoutDirty = true;
+        }).AddTo(Subscriptions);
     }
 
-    internal void Layout()
+    private void Layout()
     {
         var screenSize = Screen.ClientSize;
         Matrix4.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, -1f, 1f, out var proj);
@@ -338,15 +341,44 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
     {
         ArgumentNullException.ThrowIfNull(element);
         if(element.Parent != null) {
-            throw new ArgumentException();
+            throw new ArgumentException("the element is already in UI tree");
         }
-        _rootElements.Add(element);
-        element.CreateModel(this);
-        Layout();
+        var model = element.CreateModel(this);
+        model.Alive.Subscribe(model =>
+        {
+            _rootElements.Add(model.Element);
+            _isLayoutDirty = true;
+        }).AddTo(Subscriptions);
+        _isLayoutDirty = true;
     }
 
     protected override void RenderShadowMap(in RenderShadowMapContext context, ReadOnlySpan<UIModel> objects)
     {
+    }
+
+    protected override void Render(in RenderPass pass, ReadOnlySpan<UIModel> objects, RenderObjectAction render)
+    {
+        // UI rendering disables depth buffer.
+        // Render in the order of UIElement tree so that child elements are rendered in front.
+
+        if(_isLayoutDirty) {
+            _isLayoutDirty = false;
+            Layout();
+        }
+
+        foreach(var element in _rootElements) {
+            RenderElementRecursively(pass, element, render);
+        }
+
+        static void RenderElementRecursively(in RenderPass pass, UIElement element, RenderObjectAction render)
+        {
+            var model = element.Model;
+            Debug.Assert(model != null);
+            render(in pass, model);
+            foreach(var child in element.Children) {
+                RenderElementRecursively(pass, child, render);
+            }
+        }
     }
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
