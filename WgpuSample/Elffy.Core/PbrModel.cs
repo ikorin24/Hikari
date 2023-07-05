@@ -37,20 +37,10 @@ public sealed class PbrModel
         MaybeOwn<Texture> normal)
         : base(layer, mesh, PbrMaterial.Create(layer.Shader, albedo, metallicRoughness, normal))
     {
-        var m = Mesh;
-        if(m.TryGetOptionalTangent(out var tangent) == false) {
+        if(Mesh.TryGetOptionalTangent(out var tangent) == false) {
             throw new ArgumentException("The mesh does not have Tangent vertex buffer", nameof(mesh));
         }
         _tangent = tangent;
-
-        var screen = Screen;
-        var mat = Material;
-        var model = mat.ModelUniform;
-
-        Dead.Subscribe(x =>
-        {
-            var self = SafeCast.As<PbrModel>(x);
-        }).AddTo(Subscriptions);
     }
 
     public Matrix4 GetModel()

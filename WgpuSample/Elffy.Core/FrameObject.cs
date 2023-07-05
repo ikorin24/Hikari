@@ -42,12 +42,12 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     private readonly TLayer _layer;
     private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
 
-    private EventSource<FrameObject> _update;
-    private EventSource<FrameObject> _lateUpdate;
-    private EventSource<FrameObject> _earlyUpdate;
+    private EventSource<TSelf> _update;
+    private EventSource<TSelf> _lateUpdate;
+    private EventSource<TSelf> _earlyUpdate;
 
     private EventSource<TSelf> _alive;
-    private EventSource<FrameObject> _dead;
+    private EventSource<TSelf> _dead;
 
     private LifeState _state;
     private bool _isFrozen;
@@ -57,19 +57,22 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     public sealed override SubscriptionRegister Subscriptions => _subscriptions.Register;
 
     public Event<TSelf> Alive => _alive.Event;
-    public Event<FrameObject> Dead => _dead.Event;
+    public Event<TSelf> Dead => _dead.Event;
 
-    public Event<FrameObject> EarlyUpdate => _earlyUpdate.Event;
+    public Event<TSelf> EarlyUpdate => _earlyUpdate.Event;
 
-    public Event<FrameObject> LateUpdate => _lateUpdate.Event;
+    public Event<TSelf> LateUpdate => _lateUpdate.Event;
 
-    public Event<FrameObject> Update => _update.Event;
+    public Event<TSelf> Update => _update.Event;
 
     public bool IsFrozen
     {
         get => _isFrozen;
         set => _isFrozen = value;
     }
+
+    /// <summary>Strong typed `this`</summary>
+    protected TSelf Self => SafeCast.As<TSelf>(this);
 
     protected FrameObject(TLayer layer) : base(layer.Screen)
     {
@@ -96,9 +99,9 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     {
     }
 
-    public virtual void InvokeEarlyUpdate() => _earlyUpdate.Invoke(this);
-    public virtual void InvokeUpdate() => _update.Invoke(this);
-    public virtual void InvokeLateUpdate() => _lateUpdate.Invoke(this);
+    public virtual void InvokeEarlyUpdate() => _earlyUpdate.Invoke(Self);
+    public virtual void InvokeUpdate() => _update.Invoke(Self);
+    public virtual void InvokeLateUpdate() => _lateUpdate.Invoke(Self);
 
     internal void SetLifeStateAlive()
     {
@@ -109,10 +112,7 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     internal void OnAlive()
     {
         Debug.Assert(_state == LifeState.Alive);
-
-        // It is verified in the constructor that `this` is always of type `TSelf`.
-        var self = SafeCast.As<TSelf>(this);
-        _alive.Invoke(self);
+        _alive.Invoke(Self);
     }
 
     internal void SetLifeStateDead()
@@ -123,8 +123,7 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
 
     internal virtual void OnDead()
     {
-        Debug.Assert(_state == LifeState.Dead);
-        _dead.Invoke(this);
+        _dead.Invoke(Self);
         _subscriptions.Dispose();
     }
 }
