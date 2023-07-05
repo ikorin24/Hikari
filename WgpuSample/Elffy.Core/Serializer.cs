@@ -123,10 +123,7 @@ public static class Serializer
 
     private static object ParseJsonObject(JsonObject obj, Type hint)
     {
-        obj.MustSetTo("@type", out string? typename);
-        if(typename == null) {
-            throw new FormatException($"type is null");
-        }
+        obj.GetPropOrThrow("@type", out string typename);
         ConstructorFunc? ctor;
         if(_shortNames.TryGetValue(typename, out var type)) {
             if(FindCtorFromType(type, out ctor) == false) {
@@ -208,39 +205,101 @@ public interface IToJson
     JsonNode? ToJson(JsonSerializerOptions? options = null);
 }
 
+public static class EnumJsonHelper
+{
+    public static JsonValue ToJson<T>(this T self) where T : struct, Enum
+    {
+        var str = self.ToString();
+        return JsonValue.Create(str)!;
+    }
+
+    public static T ToEnum<T>(this JsonNode self) where T : struct, Enum
+    {
+        var str = self.AsValue().GetValue<string>();
+        return Enum.Parse<T>(str);
+    }
+}
+
 internal static class JsonObjectExtensions
 {
-    // obj.GetPropValue("hoge", ref _hoge);
-    public static bool MaySetTo(this JsonObject obj, string propname, ref sbyte value) => SetPrivate(obj, propname, ref value);
-    public static bool MaySetTo(this JsonObject obj, string propname, ref byte value) => SetPrivate(obj, propname, ref value);
-    public static bool MaySetTo(this JsonObject obj, string propname, ref short value) => SetPrivate(obj, propname, ref value);
-    public static bool MaySetTo(this JsonObject obj, string propname, ref ushort value) => SetPrivate(obj, propname, ref value);
-    public static bool MaySetTo(this JsonObject obj, string propname, ref int value) => SetPrivate(obj, propname, ref value);
-    public static bool MaySetTo(this JsonObject obj, string propname, ref uint value) => SetPrivate(obj, propname, ref value);
-    public static bool MaySetTo(this JsonObject obj, string propname, ref long value) => SetPrivate(obj, propname, ref value);
-    public static bool MaySetTo(this JsonObject obj, string propname, ref ulong value) => SetPrivate(obj, propname, ref value);
-    public static bool MaySetTo(this JsonObject obj, string propname, ref float value) => SetPrivate(obj, propname, ref value);
-    public static bool MaySetTo(this JsonObject obj, string propname, ref double value) => SetPrivate(obj, propname, ref value);
-    public static bool MaySetTo(this JsonObject obj, string propname, ref bool value) => SetPrivate(obj, propname, ref value);
-    public static bool MaySetTo(this JsonObject obj, string propname, [MaybeNullWhen(false)] ref string value) => SetPrivate(obj, propname, ref value);
-    public static void MustSetTo(this JsonObject obj, string propname, [MaybeNullWhen(false)] out string value)
+    public static bool GetProp(this JsonObject obj, string propname, ref sbyte value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp(this JsonObject obj, string propname, ref byte value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp(this JsonObject obj, string propname, ref short value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp(this JsonObject obj, string propname, ref ushort value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp(this JsonObject obj, string propname, ref int value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp(this JsonObject obj, string propname, ref uint value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp(this JsonObject obj, string propname, ref long value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp(this JsonObject obj, string propname, ref ulong value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp(this JsonObject obj, string propname, ref float value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp(this JsonObject obj, string propname, ref double value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp(this JsonObject obj, string propname, ref bool value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp(this JsonObject obj, string propname, [MaybeNullWhen(false)] ref string value) => GetPropCore(obj, propname, ref value);
+    public static bool GetProp<T>(this JsonObject obj, string propname, ref T value) where T : IFromJson<T>
     {
-        Unsafe.SkipInit(out value);
-        if(SetPrivate(obj, propname, ref value) == false) {
+        var prop = obj[propname];
+        if(prop == null) { return false; }
+        value = T.FromJson(prop);
+        return true;
+    }
+
+    public static bool GetEnumProp<T>(this JsonObject obj, string propname, ref T value) where T : struct, Enum
+    {
+        var prop = obj[propname];
+        if(prop == null) { return false; }
+        value = EnumJsonHelper.ToEnum<T>(prop);
+        return true;
+    }
+
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out sbyte value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out byte value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out short value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out ushort value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out int value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out uint value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out long value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out ulong value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out float value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out double value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out bool value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow(this JsonObject obj, string propname, out string value) => GetPropOrThrowCore(obj, propname, out value);
+    public static void GetPropOrThrow<T>(this JsonObject obj, string propname, out T value) where T : IFromJson<T>
+    {
+        var prop = obj[propname];
+        if(prop == null) {
             ThrowPropertyNotFound(propname);
         }
+        value = T.FromJson(prop);
     }
-
-    private static void ThrowPropertyNotFound(string propname)
+    public static bool GetEnumPropOrThrow<T>(this JsonObject obj, string propname, out T value) where T : struct, Enum
     {
-        throw new FormatException($"property \"{propname}\" is not found");
+        var prop = obj[propname];
+        if(prop == null) {
+            ThrowPropertyNotFound(propname);
+        }
+        value = EnumJsonHelper.ToEnum<T>(prop);
+        return true;
     }
 
-    private static bool SetPrivate<T>(JsonObject obj, string propname, [MaybeNullWhen(false)] ref T value)
+    private static bool GetPropCore<T>(JsonObject obj, string propname, [MaybeNullWhen(false)] ref T value)
     {
         var prop = obj[propname];
         if(prop == null) { return false; }
         value = prop.AsValue().GetValue<T>();
         return true;
+    }
+
+    private static void GetPropOrThrowCore<T>(this JsonObject obj, string propname, out T value)
+    {
+        var prop = obj[propname];
+        if(prop == null) {
+            ThrowPropertyNotFound(propname);
+        }
+        value = prop.AsValue().GetValue<T>();
+    }
+
+    [DoesNotReturn]
+    private static void ThrowPropertyNotFound(string propname)
+    {
+        throw new FormatException($"property \"{propname}\" is not found");
     }
 }

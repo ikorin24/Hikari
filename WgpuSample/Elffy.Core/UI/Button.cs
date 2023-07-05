@@ -165,17 +165,15 @@ public abstract class UIElement : IToJson
     {
         ArgumentNullException.ThrowIfNull(node);
         var obj = node.AsObject();
-
-        //obj.MaySetTo("width", ref _width);
-        //obj.MaySetTo("height", ref _height);
-
-        var children = obj["children"];
-        if(children != null) {
-            _children = new UIElementCollection(Serializer.Instantiate<UIElement[]>(children));
-        }
-        else {
-            _children = new UIElementCollection();
-        }
+        obj.GetProp("width", ref _width);
+        obj.GetProp("height", ref _height);
+        _children = obj["children"] switch
+        {
+            JsonNode a => new UIElementCollection(Serializer.Instantiate<UIElement[]>(a)),
+            null => new UIElementCollection(),
+        };
+        obj.GetEnumProp("horizontalAlignment", ref _horizontalAlignment);
+        obj.GetEnumProp("verticalAlignment", ref _verticalAlignment);
     }
 
     protected virtual JsonNode? ToJsonProtected(JsonSerializerOptions? options)
@@ -183,8 +181,10 @@ public abstract class UIElement : IToJson
         var obj = new JsonObject()
         {
             ["@type"] = GetType().FullName,
-            //["width"] = _width,
-            //["height"] = _height,
+            ["width"] = _width.ToJson(),
+            ["height"] = _height.ToJson(),
+            ["horizontalAlignment"] = _horizontalAlignment.ToJson(),
+            ["verticalAlignment"] = _verticalAlignment.ToJson(),
         };
         var children = _children;
         if(children != null) {

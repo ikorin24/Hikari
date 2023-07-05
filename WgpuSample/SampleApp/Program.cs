@@ -33,19 +33,20 @@ internal class Program
         var panel = Serializer.Deserialize<Panel>("""
         {
             "@type": "panel",
-            "width": 100,
-            "height": 100,
-            "horizontalAlignment": "Right",
+            "width": 600,
+            "height": "0.8*",
+            "horizontalAlignment": "Center",
             "children":
             [{
                 "@type": "button",
-                "width": 50,
-                "height": 50
+                "horizontalAlignment": "Left",
+                "width": 250,
+                "height": 150
             },
             {
                 "@type": "button",
                 "width": 80,
-                "height": 30
+                "height": 100
             }]
         }
         """);
@@ -53,7 +54,7 @@ internal class Program
         {
             Width = 600,
             Height = LayoutLength.Proportion(0.8f),
-            HorizontalAlignment = HorizontalAlignment.Right,
+            HorizontalAlignment = HorizontalAlignment.Center,
             //Layouter = new StackLayouter
             //{
             //    Orientation = Orientation.Vertical,
@@ -65,6 +66,7 @@ internal class Program
                 {
                     Width = 250,
                     Height = 150,
+                    HorizontalAlignment = HorizontalAlignment.Left,
                 },
                 new Button
                 {
@@ -93,8 +95,7 @@ internal class Program
         //Debug.WriteLine(json);
 
         var uiLayer = new UILayer(screen, 2);
-        uiLayer.AddRootElement(panel2);
-
+        uiLayer.AddRootElement(panel);
 
         screen.Title = "sample";
         var layer = new PbrLayer(screen, 0);

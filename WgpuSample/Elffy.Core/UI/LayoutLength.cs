@@ -2,14 +2,22 @@
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
 
-public readonly struct LayoutLength : IEquatable<LayoutLength>
+public readonly struct LayoutLength
+    : IEquatable<LayoutLength>,
+      IFromJson<LayoutLength>,
+      IToJson
 {
-    public readonly float Value;
-    public readonly LayoutLengthType Type;
+    public required float Value { get; init; }
+    public required LayoutLengthType Type { get; init; }
 
+    static LayoutLength() => Serializer.RegisterConstructor(FromJson);
+
+    [SetsRequiredMembers]
     public LayoutLength(float value, LayoutLengthType type)
     {
         if(value < 0) {
@@ -19,6 +27,52 @@ public readonly struct LayoutLength : IEquatable<LayoutLength>
         Type = type;
 
         [DoesNotReturn] static void ThrowOutOfRange() => throw new ArgumentOutOfRangeException(nameof(value));
+    }
+
+    public static LayoutLength FromJson(JsonNode? node)
+    {
+        switch(node) {
+            case JsonValue value: {
+                // [value pattern]
+                // 10
+                // "10px"
+                // "0.8*"
+
+                if(value.TryGetValue<float>(out var number)) {
+                    return new LayoutLength(number, LayoutLengthType.Length);
+                }
+                else if(value.TryGetValue<string>(out var str)) {
+                    return
+                        str.EndsWith("px") ? new()
+                        {
+                            Value = float.Parse(str.AsSpan(0, str.Length - 2)),
+                            Type = LayoutLengthType.Length,
+                        } :
+                        str.EndsWith("*") ? new()
+                        {
+                            Value = float.Parse(str.AsSpan(0, str.Length - 1)),
+                            Type = LayoutLengthType.Proportion,
+                        } :
+                        throw new FormatException("no unit. 'px' or '*' is needed.");
+                }
+                else {
+                    throw new FormatException("value should be number or string");
+                }
+            }
+            default: {
+                throw new FormatException("invalid format");
+            }
+        }
+    }
+
+    public JsonNode? ToJson(JsonSerializerOptions? options = null)
+    {
+        return Type switch
+        {
+            LayoutLengthType.Length => $"{Value}px",
+            LayoutLengthType.Proportion => $"{Value}*",
+            _ => 0,
+        };
     }
 
     public static LayoutLength Length(float length) => new LayoutLength(length, LayoutLengthType.Length);
@@ -35,8 +89,8 @@ public readonly struct LayoutLength : IEquatable<LayoutLength>
     {
         return Type switch
         {
-            LayoutLengthType.Length => Value.ToString("px"),
-            LayoutLengthType.Proportion => Value.ToString("0.00%"),
+            LayoutLengthType.Length => $"{Value}px",
+            LayoutLengthType.Proportion => $"{Value}*",
             _ => base.ToString() ?? "",
         };
     }
@@ -51,7 +105,7 @@ public readonly struct LayoutLength : IEquatable<LayoutLength>
 
 public enum LayoutLengthType
 {
-    Length,
+    Length = 0,
     Proportion,
 }
 
