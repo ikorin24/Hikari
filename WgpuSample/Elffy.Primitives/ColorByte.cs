@@ -22,7 +22,7 @@ namespace Elffy
         public byte A;
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private readonly string DebugView => $"(R, G, B, A) = ({R}, {G}, {B}, {A})";
+        private readonly string DebugView => $"(R: {R}, G: {G}, B: {B}, A: {A})";
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ColorByte(byte r, byte g, byte b, byte a)
@@ -52,8 +52,6 @@ namespace Elffy
         public static bool operator ==(in ColorByte left, in ColorByte right) => left.Equals(right);
 
         public static bool operator !=(in ColorByte left, in ColorByte right) => !(left == right);
-
-        public readonly override string ToString() => DebugView;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ColorByte FromHexCode(string hexCode) => FromHexCode(hexCode.AsSpan());
