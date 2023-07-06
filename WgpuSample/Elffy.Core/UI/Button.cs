@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace Elffy.UI;
 
-public class Button : UIElement, IFromJson<Button>
+public sealed class Button : UIElement, IFromJson<Button>
 {
     private EventSource<Button> _clicked;
 
@@ -28,12 +28,12 @@ public class Button : UIElement, IFromJson<Button>
     {
     }
 
-    protected Button(JsonNode? node) : base(node)
+    private Button(JsonNode? node) : base(node)
     {
     }
 }
 
-public class Panel : UIElement, IFromJson<Panel>
+public sealed class Panel : UIElement, IFromJson<Panel>
 {
     static Panel() => Serializer.RegisterConstructor(FromJson);
     public static Panel FromJson(JsonNode? node) => new Panel(node);
@@ -42,7 +42,7 @@ public class Panel : UIElement, IFromJson<Panel>
     {
     }
 
-    protected Panel(JsonNode? node) : base(node)
+    private Panel(JsonNode? node) : base(node)
     {
     }
 
@@ -65,6 +65,10 @@ public abstract class UIElement : IToJson
     private LayoutThickness _padding;
     private HorizontalAlignment _horizontalAlignment;
     private VerticalAlignment _verticalAlignment;
+    private Brush _background;
+
+    // border (width,type,color)  : Border(float Width, BorderType Type, Color4 Color)
+    // background (color)         : SolidBrush(Color4 Color)  LinearGradientBrush(float Angle, (Color4 Color, float P)[] Points)  Brush(Image Image, FillMode Mode)
     private RectF _actualRect;
 
     public UIElement? Parent => _parent;
@@ -141,39 +145,27 @@ public abstract class UIElement : IToJson
 
     protected UIElement()
     {
+        _width = new LayoutLength(100f, LayoutLengthType.Length);
+        _height = new LayoutLength(100f, LayoutLengthType.Length);
+        _background = Brush.Default;
         _children = new UIElementCollection();
     }
 
-    internal void SetParent(UIElement parent)
-    {
-        Debug.Assert(_parent == null);
-        _parent = parent;
-    }
-
-    internal UIModel CreateModel(UILayer layer)
-    {
-        Debug.Assert(_model == null);
-        var model = new UIModel(this, layer);
-        _model = model;
-        foreach(var child in _children) {
-            child.CreateModel(layer);
-        }
-        return model;
-    }
-
-    protected UIElement(JsonNode? node)
+    protected UIElement(JsonNode? node) : this()
     {
         ArgumentNullException.ThrowIfNull(node);
         var obj = node.AsObject();
         obj.GetProp("width", ref _width);
         obj.GetProp("height", ref _height);
+        obj.GetProp("margin", ref _margin);
+        obj.GetProp("padding", ref _padding);
+        obj.GetEnumProp("horizontalAlignment", ref _horizontalAlignment);
+        obj.GetEnumProp("verticalAlignment", ref _verticalAlignment);
         _children = obj["children"] switch
         {
             JsonNode a => new UIElementCollection(Serializer.Instantiate<UIElement[]>(a)),
-            null => new UIElementCollection(),
+            null => _children,
         };
-        obj.GetEnumProp("horizontalAlignment", ref _horizontalAlignment);
-        obj.GetEnumProp("verticalAlignment", ref _verticalAlignment);
     }
 
     protected virtual JsonNode? ToJsonProtected(JsonSerializerOptions? options)
@@ -183,6 +175,8 @@ public abstract class UIElement : IToJson
             ["@type"] = GetType().FullName,
             ["width"] = _width.ToJson(),
             ["height"] = _height.ToJson(),
+            ["margin"] = _margin.ToJson(),
+            ["padding"] = _padding.ToJson(),
             ["horizontalAlignment"] = _horizontalAlignment.ToJson(),
             ["verticalAlignment"] = _verticalAlignment.ToJson(),
         };
@@ -202,6 +196,23 @@ public abstract class UIElement : IToJson
     {
         var node = ToJsonProtected(options);
         return node;
+    }
+
+    internal void SetParent(UIElement parent)
+    {
+        Debug.Assert(_parent == null);
+        _parent = parent;
+    }
+
+    internal UIModel CreateModel(UILayer layer)
+    {
+        Debug.Assert(_model == null);
+        var model = new UIModel(this, layer);
+        _model = model;
+        foreach(var child in _children) {
+            child.CreateModel(layer);
+        }
+        return model;
     }
 
     internal void LayoutChildren(in Matrix4 uiProjection)

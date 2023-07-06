@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -120,46 +119,4 @@ public enum VerticalAlignment
     Center = 0,
     Top,
     Bottom,
-}
-
-[DebuggerDisplay("{DebugDisplay}")]
-public struct LayoutThickness : IEquatable<LayoutThickness>
-{
-    public float Left;
-    public float Top;
-    public float Right;
-    public float Bottom;
-
-    public static LayoutThickness Zero => default;
-
-    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private string DebugDisplay => $"({Left}, {Top}, {Right}, {Bottom})";
-
-    public LayoutThickness(float value)
-    {
-        Left = value;
-        Top = value;
-        Right = value;
-        Bottom = value;
-    }
-
-    public LayoutThickness(float left, float top, float right, float bottom)
-    {
-        Left = left;
-        Top = top;
-        Right = right;
-        Bottom = bottom;
-    }
-
-    public override string ToString() => DebugDisplay;
-
-    public override bool Equals(object? obj) => obj is LayoutThickness thickness && Equals(thickness);
-
-    public bool Equals(LayoutThickness other) => Left == other.Left && Top == other.Top && Right == other.Right && Bottom == other.Bottom;
-
-    public override int GetHashCode() => HashCode.Combine(Left, Top, Right, Bottom);
-
-    public static bool operator ==(LayoutThickness left, LayoutThickness right) => left.Equals(right);
-
-    public static bool operator !=(LayoutThickness left, LayoutThickness right) => !(left == right);
 }

@@ -30,12 +30,28 @@ internal class Program
 
     private static void OnInitialized(Screen screen)
     {
-        var panel = Serializer.Deserialize<Panel>("""
+        //FC fc = (prop) =>
+        //{
+        //    var count = new State<int>(0);
+
+        //    return $$"""
+        //    {
+        //        "@type": "button",
+        //        "width": "{{prop.Width}}",
+        //        "text": "click {{count}}",
+        //        "click": "{{() => count.Set(count.Get() + 1)}}"
+        //    }
+        //    """;
+        //};
+
+        var panel = Serializer.Deserialize<Panel>($$"""
         {
             "@type": "panel",
             "width": 600,
             "height": "0.8*",
             "horizontalAlignment": "Center",
+            "padding": "40 80",
+            "background": "#ffee23",
             "children":
             [{
                 "@type": "button",
