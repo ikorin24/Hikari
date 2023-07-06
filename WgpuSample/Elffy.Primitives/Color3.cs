@@ -19,8 +19,7 @@ namespace Elffy
         public float B;
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private readonly string DebugView
-            => $"(R, G, B) = ({R}, {G}, {B}) = ({(byte)(R * byte.MaxValue)}, {(byte)(G * byte.MaxValue)}, {(byte)(B * byte.MaxValue)})";
+        private readonly string DebugView => $"(R: {R}, G: {G}, B: {B})";
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Color3(float r, float g, float b) => (R, G, B) = (r, g, b);
@@ -37,8 +36,6 @@ namespace Elffy
 
         public readonly override int GetHashCode() => HashCode.Combine(R, G, B);
 
-        public readonly override string ToString() => DebugView;
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly Color4 ToColor4() => new(R, G, B, 1f);
 
@@ -46,10 +43,22 @@ namespace Elffy
         public readonly Color4 ToColor4(float alpha) => new(R, G, B, alpha);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly ColorByte ToColorByte() => new((byte)(R * byte.MaxValue), (byte)(G * byte.MaxValue), (byte)(B * byte.MaxValue), byte.MaxValue);
+        public readonly ColorByte ToColorByte() => new()
+        {
+            R = (byte)(float.Clamp(R, 0f, 1f) * byte.MaxValue),
+            G = (byte)(float.Clamp(G, 0f, 1f) * byte.MaxValue),
+            B = (byte)(float.Clamp(B, 0f, 1f) * byte.MaxValue),
+            A = byte.MaxValue,
+        };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly ColorByte ToColorByte(byte alpha) => new((byte)(R * byte.MaxValue), (byte)(G * byte.MaxValue), (byte)(B * byte.MaxValue), alpha);
+        public readonly ColorByte ToColorByte(byte alpha) => new()
+        {
+            R = (byte)(float.Clamp(R, 0f, 1f) * byte.MaxValue),
+            G = (byte)(float.Clamp(G, 0f, 1f) * byte.MaxValue),
+            B = (byte)(float.Clamp(B, 0f, 1f) * byte.MaxValue),
+            A = alpha,
+        };
 
         public static bool operator ==(in Color3 left, in Color3 right) => left.Equals(right);
 

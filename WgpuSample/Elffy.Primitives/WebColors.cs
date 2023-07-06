@@ -5,7 +5,7 @@ namespace Elffy;
 
 internal static class WebColors
 {
-    private static Dictionary<string, Color4> _color4Table = new()
+    private static readonly Dictionary<string, Color4> _color4Table = new()
     {
         // black (r, g, b, a) = (0, 0, 0, 255)
         ["black"] = new Color4(0f, 0f, 0f, 1f),

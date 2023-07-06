@@ -22,8 +22,7 @@ namespace Elffy
         public float A;
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private readonly string DebugView
-            => $"(R, G, B, A) = ({R}, {G}, {B}, {A}) = ({(byte)(R * byte.MaxValue)}, {(byte)(G * byte.MaxValue)}, {(byte)(B * byte.MaxValue)}, {(byte)(A * byte.MaxValue)})";
+        private readonly string DebugView => $"(R: {R}, G: {G}, B: {B}, A: {A})";
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Color4(float r, float g, float b) => (R, G, B, A) = (r, g, b, 1f);
@@ -46,10 +45,10 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly ColorByte ToColorByte() => new()
         {
-            R = (byte)MathF.Max(0, MathF.Min(byte.MaxValue, R * byte.MaxValue)),
-            G = (byte)MathF.Max(0, MathF.Min(byte.MaxValue, G * byte.MaxValue)),
-            B = (byte)MathF.Max(0, MathF.Min(byte.MaxValue, B * byte.MaxValue)),
-            A = (byte)MathF.Max(0, MathF.Min(byte.MaxValue, A * byte.MaxValue)),
+            R = (byte)(float.Clamp(R, 0f, 1f) * byte.MaxValue),
+            G = (byte)(float.Clamp(G, 0f, 1f) * byte.MaxValue),
+            B = (byte)(float.Clamp(B, 0f, 1f) * byte.MaxValue),
+            A = (byte)(float.Clamp(A, 0f, 1f) * byte.MaxValue),
         };
 
         public readonly override bool Equals(object? obj) => obj is Color4 color && Equals(color);
@@ -58,7 +57,6 @@ namespace Elffy
         public readonly bool Equals(Color4 other) => AsNVec4(this) == AsNVec4(other);
 
         public readonly override int GetHashCode() => HashCode.Combine(R, G, B, A);
-        public readonly override string ToString() => DebugView;
 
         public static bool operator ==(in Color4 left, in Color4 right) => left.Equals(right);
 
