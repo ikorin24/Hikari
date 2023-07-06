@@ -73,14 +73,14 @@ public static class Serializer
 
     public static string Serialize<T>(T value) where T : notnull, IToJson
     {
-        var node = value.ToJson(DefaultWriteSerializerOptions);
+        var node = value.ToJson();
         return node?.ToJsonString(DefaultWriteSerializerOptions) ?? "null";
     }
 
     public static void Serialize<T>(T value, IBufferWriter<byte> bufferWriter) where T : notnull, IToJson
     {
         using var writer = new Utf8JsonWriter(bufferWriter, DefaultWriterOptions);
-        var node = value.ToJson(DefaultWriteSerializerOptions);
+        var node = value.ToJson();
         if(node is null) {
             writer.WriteNullValue();
         }
@@ -202,7 +202,7 @@ public interface IFromJson<TSelf>
 
 public interface IToJson
 {
-    JsonNode? ToJson(JsonSerializerOptions? options = null);
+    JsonNode? ToJson();
 }
 
 public static class EnumJsonHelper

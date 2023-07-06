@@ -19,9 +19,9 @@ public sealed class Button : UIElement, IFromJson<Button>
     static Button() => Serializer.RegisterConstructor(FromJson);
     public static Button FromJson(JsonNode? node) => new Button(node);
 
-    protected override JsonNode? ToJsonProtected(JsonSerializerOptions? options)
+    protected override JsonNode? ToJsonProtected()
     {
-        var node = base.ToJsonProtected(options);
+        var node = base.ToJsonProtected();
         return node;
     }
 
@@ -47,9 +47,9 @@ public sealed class Panel : UIElement, IFromJson<Panel>
     {
     }
 
-    protected override JsonNode? ToJsonProtected(JsonSerializerOptions? options)
+    protected override JsonNode? ToJsonProtected()
     {
-        var node = base.ToJsonProtected(options);
+        var node = base.ToJsonProtected();
         return node;
     }
 }
@@ -192,7 +192,7 @@ public abstract class UIElement : IToJson
         };
     }
 
-    protected virtual JsonNode? ToJsonProtected(JsonSerializerOptions? options)
+    protected virtual JsonNode? ToJsonProtected()
     {
         var obj = new JsonObject()
         {
@@ -208,7 +208,7 @@ public abstract class UIElement : IToJson
         if(children != null) {
             var array = new JsonArray();
             foreach(var child in children) {
-                var childJson = ((IToJson)child).ToJson(options);
+                var childJson = ((IToJson)child).ToJson();
                 array.Add(childJson);
             }
             obj["children"] = array;
@@ -216,9 +216,9 @@ public abstract class UIElement : IToJson
         return obj;
     }
 
-    JsonNode? IToJson.ToJson(JsonSerializerOptions? options)
+    public JsonNode? ToJson()
     {
-        var node = ToJsonProtected(options);
+        var node = ToJsonProtected();
         return node;
     }
 

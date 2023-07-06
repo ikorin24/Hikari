@@ -68,7 +68,7 @@ public sealed class Brush
         }
     }
 
-    public JsonNode? ToJson(JsonSerializerOptions? options = null)
+    public JsonNode? ToJson()
     {
         throw new NotImplementedException();
 

@@ -104,7 +104,7 @@ public readonly struct LayoutThickness
         }
     }
 
-    public JsonNode? ToJson(JsonSerializerOptions? options = null)
+    public JsonNode? ToJson()
     {
         return $"{Top} {Right} {Bottom} {Left}";
     }

@@ -63,7 +63,7 @@ public readonly struct LayoutLength
         }
     }
 
-    public JsonNode? ToJson(JsonSerializerOptions? options = null)
+    public JsonNode? ToJson()
     {
         return Type switch
         {
