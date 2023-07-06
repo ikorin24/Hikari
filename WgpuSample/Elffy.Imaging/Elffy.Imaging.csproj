@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>net7.0</TargetFrameworks>
+    <LangVersion>11</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Authors>ikorin24</Authors>
+    <Version>0.0.0</Version>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <RootNamespace>Elffy</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>1591;</NoWarn>
+    <RootNamespace>Elffy.Imaging</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="2.80.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Elffy.Memory\Elffy.Memory.csproj" />
+    <ProjectReference Include="..\Elffy.Primitives\Elffy.Primitives.csproj" />
+  </ItemGroup>
+
+</Project>
