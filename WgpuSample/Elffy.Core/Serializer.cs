@@ -109,19 +109,19 @@ public static class Serializer
 
 
     [return: NotNullIfNotNull(nameof(node))]
-    private static object? ParseJsonNode(JsonNode? node, Type hint)
+    private static object? ParseJsonNode(JsonNode? node, Type leftSideType)
     {
         return node switch
         {
-            JsonArray array => ParseJsonArray(array, hint),
-            JsonObject obj => ParseJsonObject(obj, hint),
-            JsonValue value => ParseJsonValue(value, hint),
+            JsonArray array => ParseJsonArray(array, leftSideType),
+            JsonObject obj => ParseJsonObject(obj, leftSideType),
+            JsonValue value => ParseJsonValue(value, leftSideType),
             null => null,
             _ => throw new NotSupportedException(),
         };
     }
 
-    private static object ParseJsonObject(JsonObject obj, Type hint)
+    private static object ParseJsonObject(JsonObject obj, Type leftSideType)
     {
         obj.GetPropOrThrow("@type", out string typename);
         ConstructorFunc? ctor;
@@ -135,35 +135,35 @@ public static class Serializer
                 throw new FormatException($"type \"{typename}\" cannot be created from json");
             }
         }
-        if(ctor.Type.IsAssignableTo(hint) == false) {
-            throw new FormatException($"{ctor.Type.FullName} is not assignable to {hint.FullName}");
+        if(ctor.Type.IsAssignableTo(leftSideType) == false) {
+            throw new FormatException($"{ctor.Type.FullName} is not assignable to {leftSideType.FullName}");
         }
         return ctor.Func(obj);
     }
 
-    private static object ParseJsonValue(JsonValue value, Type hint)
+    private static object ParseJsonValue(JsonValue value, Type leftSideType)
     {
-        if(FindCtorFromType(hint, out var ctor) == false) {
-            throw new FormatException($"type \"{hint.FullName}\" cannot be created from json");
+        if(FindCtorFromType(leftSideType, out var ctor) == false) {
+            throw new FormatException($"type \"{leftSideType.FullName}\" cannot be created from json");
         }
         return ctor.Func(value);
     }
 
-    private static object ParseJsonArray(JsonArray array, Type hint)
+    private static object ParseJsonArray(JsonArray array, Type leftSideType)
     {
-        if(FindCtorFromType(hint, out var ctor)) {
+        if(FindCtorFromType(leftSideType, out var ctor)) {
             return ctor.Func(array);
         }
 
-        if(hint.IsSZArray) {
-            var elementType = hint.GetElementType() ?? throw new UnreachableException();
+        if(leftSideType.IsSZArray) {
+            var elementType = leftSideType.GetElementType() ?? throw new UnreachableException();
             var a = Array.CreateInstance(elementType, array.Count);
             for(int i = 0; i < a.Length; i++) {
                 a.SetValue(ParseJsonNode(array[i], elementType), i);
             }
             return a;
         }
-        throw new FormatException($"type \"{hint.FullName}\" cannot be created from json");
+        throw new FormatException($"type \"{leftSideType.FullName}\" cannot be created from json");
     }
 
     private static bool FindCtorFromType(Type type, [MaybeNullWhen(false)] out ConstructorFunc ctor)
