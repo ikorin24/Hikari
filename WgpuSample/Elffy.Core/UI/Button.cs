@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -91,9 +92,16 @@ public abstract class UIElement : IToJson
                     new Vector4(0, rect.Size.Y, 0, 0),
                     new Vector4(0, 0, 1, 0),
                     new Vector4(0, 0, 0, 1));
+
+            var background = _background;
             model.Material.WriteUniform(new UIMaterial.BufferData
             {
                 Mvp = uiProjection * modelMatrix,
+                SolidColor = background.Type switch
+                {
+                    BrushType.Solid => background.SolidColor,
+                    _ => default,
+                },
             });
         }
     }
@@ -133,6 +141,16 @@ public abstract class UIElement : IToJson
         set => _verticalAlignment = value;
     }
 
+    public Brush Background
+    {
+        get => _background;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _background = value;
+        }
+    }
+
     public UIElementCollection Children
     {
         init
@@ -145,8 +163,13 @@ public abstract class UIElement : IToJson
 
     protected UIElement()
     {
+        // set default values
         _width = new LayoutLength(100f, LayoutLengthType.Length);
         _height = new LayoutLength(100f, LayoutLengthType.Length);
+        _margin = new LayoutThickness(0f);
+        _padding = new LayoutThickness(0f);
+        _horizontalAlignment = HorizontalAlignment.Center;
+        _verticalAlignment = VerticalAlignment.Center;
         _background = Brush.Default;
         _children = new UIElementCollection();
     }
@@ -161,6 +184,7 @@ public abstract class UIElement : IToJson
         obj.GetProp("padding", ref _padding);
         obj.GetEnumProp("horizontalAlignment", ref _horizontalAlignment);
         obj.GetEnumProp("verticalAlignment", ref _verticalAlignment);
+        obj.GetProp("background", ref _background);
         _children = obj["children"] switch
         {
             JsonNode a => new UIElementCollection(Serializer.Instantiate<UIElement[]>(a)),
@@ -462,6 +486,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         struct BufferData
         {
             mvp: mat4x4<f32>,
+            solid_color: vec4<f32>,
         }
 
         @group(0) @binding(0) var<uniform> screen: ScreenInfo;
@@ -479,7 +504,8 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         @fragment fn fs_main(
             f: V2F,
         ) -> @location(0) vec4<f32> {
-            return vec4<f32>(f.uv.x, f.uv.y, 0.0, 1.0);
+            //return vec4<f32>(f.uv.x, f.uv.y, 0.0, 1.0);
+            return data.solid_color;
         }
         """u8;
 
@@ -526,14 +552,22 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
     }
 }
 
+
+internal static class WgslConst
+{
+    public const int AlignOf_mat4x4_f32 = 16;
+}
+
 public sealed class UIMaterial : Material<UIMaterial, UIShader>
 {
     private readonly Own<Buffer> _buffer;
     private readonly Own<BindGroup> _bindGroup0;
 
-    internal struct BufferData
+    [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_mat4x4_f32)]
+    internal readonly struct BufferData
     {
-        public Matrix4 Mvp;
+        public required Matrix4 Mvp { get; init; }
+        public required Color4 SolidColor { get; init; }
     }
 
     internal BindGroup BindGroup0 => _bindGroup0.AsValue();
@@ -565,6 +599,7 @@ public sealed class UIMaterial : Material<UIMaterial, UIShader>
         var buffer = Buffer.CreateInitData(screen, new BufferData
         {
             Mvp = Matrix4.Identity,
+            SolidColor = Color4.White,
         }, BufferUsages.Uniform | BufferUsages.CopyDst);
         var bindGroup0 = BindGroup.Create(screen, new()
         {

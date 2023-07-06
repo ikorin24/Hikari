@@ -44,7 +44,7 @@ internal class Program
         //    """;
         //};
 
-        var panel = Serializer.Deserialize<Panel>($$"""
+        var panel = Serializer.Deserialize<Panel>("""
         {
             "@type": "panel",
             "width": 600,
@@ -56,59 +56,43 @@ internal class Program
             [{
                 "@type": "button",
                 "horizontalAlignment": "Left",
+                "background": "#22B7FF",
                 "width": 250,
                 "height": 150
             },
             {
                 "@type": "button",
                 "width": 80,
-                "height": 100
+                "height": 100,
+                "background": "#9622FF"
             }]
         }
         """);
-        var panel2 = new Panel
-        {
-            Width = 600,
-            Height = LayoutLength.Proportion(0.8f),
-            HorizontalAlignment = HorizontalAlignment.Center,
-            //Layouter = new StackLayouter
-            //{
-            //    Orientation = Orientation.Vertical,
-            //    Spacing = 10,
-            //},
-            Children = new()
-            {
-                new Button
-                {
-                    Width = 250,
-                    Height = 150,
-                    HorizontalAlignment = HorizontalAlignment.Left,
-                },
-                new Button
-                {
-                    Width = 80,
-                    Height = 100,
-                },
-            },
-        };
-
-        //var texture = Serializer.Deserialize<Own<Texture>>("""
+        //var panel2 = new Panel
         //{
-        //    "@type": "Elffy.Own`1[Elffy.Texture]",
-        //    "descriptor": {
-        //        "dimension": "D2",
-        //        "format": "Rgba8UnormSrgb",
-        //        "mipLevelCount": 1,
-        //        "sampleCount": 1,
-        //        "size": [1, 1, 1],
-        //        "usage": "CopyDst|CopySrc"
+        //    Width = 600,
+        //    Height = LayoutLength.Proportion(0.8f),
+        //    HorizontalAlignment = HorizontalAlignment.Center,
+        //    //Layouter = new StackLayouter
+        //    //{
+        //    //    Orientation = Orientation.Vertical,
+        //    //    Spacing = 10,
+        //    //},
+        //    Children = new()
+        //    {
+        //        new Button
+        //        {
+        //            Width = 250,
+        //            Height = 150,
+        //            HorizontalAlignment = HorizontalAlignment.Left,
+        //        },
+        //        new Button
+        //        {
+        //            Width = 80,
+        //            Height = 100,
+        //        },
         //    },
-        //    "image": "resources/ground_0036_color_1k.jpg"
-        //}
-        //"""u8);
-
-        //var json = Serializer.Serialize(panel);
-        //Debug.WriteLine(json);
+        //};
 
         var uiLayer = new UILayer(screen, 2);
         uiLayer.AddRootElement(panel);
