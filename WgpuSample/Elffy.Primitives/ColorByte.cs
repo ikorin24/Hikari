@@ -67,21 +67,60 @@ namespace Elffy
 
         public static bool TryFromHexCode(ReadOnlySpan<char> hexCode, out ColorByte color)
         {
-            if(hexCode.Length < 7) { goto FAILURE; }
-            if(hexCode[0] != '#') { goto FAILURE; }
-            if(HexToByte(hexCode[1], hexCode[2], out color.R) == false) { goto FAILURE; }
-            if(HexToByte(hexCode[3], hexCode[4], out color.G) == false) { goto FAILURE; }
-            if(HexToByte(hexCode[5], hexCode[6], out color.B) == false) { goto FAILURE; }
+            // #FFEE2380 | R: FF, G: EE, B: 23, A: 80 | 32bits color
+            // #FFEE23   | R: FF, G: EE, B: 23, A: FF | 24bits color
+            // #F0E5     | R: FF, G: 00, B: EE, A: 55 | short format of 32bits color
+            // #F0E      | R: FF, G: 00, B: EE, A: FF | short format of 24bits color
 
-            if(hexCode.Length == 9) {
-                if(HexToByte(hexCode[7], hexCode[8], out color.A) == false) { goto FAILURE; }
+            switch(hexCode.Length) {
+                case 9: {
+                    // 32bits color
+                    if(hexCode[0] == '#' &&
+                        HexToByte(hexCode[1], hexCode[2], out color.R) &&
+                        HexToByte(hexCode[3], hexCode[4], out color.G) &&
+                        HexToByte(hexCode[5], hexCode[6], out color.B) &&
+                        HexToByte(hexCode[7], hexCode[8], out color.A)) {
+                        return true;
+                    }
+                    break;
+                }
+                case 7: {
+                    // 24bits color
+                    if(hexCode[0] == '#' &&
+                        HexToByte(hexCode[1], hexCode[2], out color.R) &&
+                        HexToByte(hexCode[3], hexCode[4], out color.G) &&
+                        HexToByte(hexCode[5], hexCode[6], out color.B)) {
+                        color.A = byte.MaxValue;
+                        return true;
+                    }
+                    break;
+                }
+                case 5: {
+                    // short format of 32bits color
+                    if(hexCode[0] == '#' &&
+                        HexToByte(hexCode[1], hexCode[1], out color.R) &&
+                        HexToByte(hexCode[2], hexCode[2], out color.G) &&
+                        HexToByte(hexCode[3], hexCode[3], out color.B) &&
+                        HexToByte(hexCode[4], hexCode[4], out color.A)) {
+                        return true;
+                    }
+                    break;
+                }
+                case 4: {
+                    // short format of 24bits color
+                    if(hexCode[0] == '#' &&
+                        HexToByte(hexCode[1], hexCode[1], out color.R) &&
+                        HexToByte(hexCode[2], hexCode[2], out color.G) &&
+                        HexToByte(hexCode[3], hexCode[3], out color.B)) {
+                        color.A = byte.MaxValue;
+                        return true;
+                    }
+                    break;
+                }
+                default: {
+                    break;
+                }
             }
-            else {
-                color.A = byte.MaxValue;
-            }
-            return true;
-
-        FAILURE:
             color = default;
             return false;
 
