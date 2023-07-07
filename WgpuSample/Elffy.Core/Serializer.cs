@@ -56,11 +56,7 @@ public static class Serializer
 
     static Serializer()
     {
-        RegisterConstructor(node =>
-        {
-            ArgumentNullException.ThrowIfNull(node);
-            return new object();
-        });
+        RegisterConstructor(ExternalConstructor.Color4FromJson);
     }
 
     public static void RegisterConstructor<T>(Func<JsonElement, T> constructoFunc) where T : notnull
@@ -313,6 +309,56 @@ public static class Serializer
             }
         }
         return false;
+    }
+}
+
+internal static class ExternalConstructor
+{
+    public static Color4 Color4FromJson(JsonElement element)
+    {
+        switch(element.ValueKind) {
+            case JsonValueKind.String: {
+                var str = element.GetStringNotNull();
+                if(Color4.TryFromHexCode(str, out var color) || Color4.TryFromWebColorName(str, out color)) {
+                    return color;
+                }
+                break;
+            }
+            case JsonValueKind.Object: {
+                if(element.GetProperty("@type").GetStringNotNull() == typeof(Color4).FullName) {
+                    var color = new Color4();
+                    if(element.TryGetProperty("r", out var r)) {
+                        color.R = r.GetSingle();
+                    }
+                    if(element.TryGetProperty("g", out var g)) {
+                        color.G = g.GetSingle();
+                    }
+                    if(element.TryGetProperty("b", out var b)) {
+                        color.B = b.GetSingle();
+                    }
+                    if(element.TryGetProperty("a", out var a)) {
+                        color.A = a.GetSingle();
+                    }
+                    return color;
+                }
+                break;
+            }
+            default:
+                break;
+        }
+        throw new FormatException($"invalid format: {element}");
+    }
+
+    public static JsonNode ToJson(this Color4 self)
+    {
+        return new JsonObject
+        {
+            ["@type"] = typeof(Color4).FullName,
+            ["r"] = self.R,
+            ["g"] = self.G,
+            ["b"] = self.B,
+            ["a"] = self.A
+        };
     }
 }
 

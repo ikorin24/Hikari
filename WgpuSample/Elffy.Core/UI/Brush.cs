@@ -52,11 +52,8 @@ public sealed class Brush
         // "red"
         switch(element.ValueKind) {
             case JsonValueKind.String: {
-                var str = element.GetStringNotNull();
-                if(Color4.TryFromHexCode(str, out var color) || Color4.TryFromWebColorName(str, out color)) {
-                    return Solid(color);
-                }
-                throw new FormatException($"invalid format: {str}");
+                var color = ExternalConstructor.Color4FromJson(element);
+                return Solid(color);
             }
             default: {
                 throw new FormatException($"invalid format: {element}");
@@ -66,13 +63,13 @@ public sealed class Brush
 
     public JsonNode? ToJson()
     {
-        throw new NotImplementedException();
+        //throw new NotImplementedException();
 
-        //return _type switch
-        //{
-        //    BrushType.Solid => _solidColor,
-        //    _ => "#FFFFFF",
-        //};
+        return _type switch
+        {
+            BrushType.Solid => _solidColor.ToJson(),
+            _ => "#FFFFFF",
+        };
     }
 }
 
