@@ -17,7 +17,7 @@ public sealed class Button : UIElement, IFromJson<Button>
     private EventSource<Button> _clicked;
 
     static Button() => Serializer.RegisterConstructor(FromJson);
-    public static Button FromJson(JsonNode? node) => new Button(node);
+    public static Button FromJson(JsonElement element) => new Button(element);
 
     protected override JsonNode? ToJsonProtected()
     {
@@ -29,7 +29,7 @@ public sealed class Button : UIElement, IFromJson<Button>
     {
     }
 
-    private Button(JsonNode? node) : base(node)
+    private Button(JsonElement element) : base(element)
     {
     }
 }
@@ -37,13 +37,13 @@ public sealed class Button : UIElement, IFromJson<Button>
 public sealed class Panel : UIElement, IFromJson<Panel>
 {
     static Panel() => Serializer.RegisterConstructor(FromJson);
-    public static Panel FromJson(JsonNode? node) => new Panel(node);
+    public static Panel FromJson(JsonElement element) => new Panel(element);
 
     public Panel()
     {
     }
 
-    private Panel(JsonNode? node) : base(node)
+    private Panel(JsonElement element) : base(element)
     {
     }
 
@@ -174,22 +174,32 @@ public abstract class UIElement : IToJson
         _children = new UIElementCollection();
     }
 
-    protected UIElement(JsonNode? node) : this()
+    protected UIElement(JsonElement element) : this()
     {
-        ArgumentNullException.ThrowIfNull(node);
-        var obj = node.AsObject();
-        obj.GetProp("width", ref _width);
-        obj.GetProp("height", ref _height);
-        obj.GetProp("margin", ref _margin);
-        obj.GetProp("padding", ref _padding);
-        obj.GetEnumProp("horizontalAlignment", ref _horizontalAlignment);
-        obj.GetEnumProp("verticalAlignment", ref _verticalAlignment);
-        obj.GetProp("background", ref _background);
-        _children = obj["children"] switch
-        {
-            JsonNode a => new UIElementCollection(Serializer.Instantiate<UIElement[]>(a)),
-            null => _children,
-        };
+        if(element.TryGetProperty("width", out var width)) {
+            _width = LayoutLength.FromJson(width);
+        }
+        if(element.TryGetProperty("height", out var height)) {
+            _height = LayoutLength.FromJson(height);
+        }
+        if(element.TryGetProperty("margin", out var margin)) {
+            _margin = LayoutThickness.FromJson(margin);
+        }
+        if(element.TryGetProperty("padding", out var padding)) {
+            _padding = LayoutThickness.FromJson(padding);
+        }
+        if(element.TryGetProperty("horizontalAlignment", out var horizontalAlignment)) {
+            _horizontalAlignment = Enum.Parse<HorizontalAlignment>(horizontalAlignment.GetStringNotNull());
+        }
+        if(element.TryGetProperty("verticalAlignment", out var verticalAlignment)) {
+            _verticalAlignment = Enum.Parse<VerticalAlignment>(verticalAlignment.GetStringNotNull());
+        }
+        if(element.TryGetProperty("background", out var background)) {
+            _background = Brush.FromJson(background);
+        }
+        if(element.TryGetProperty("children", out var children)) {
+            _children = UIElementCollection.FromJson(children);
+        }
     }
 
     protected virtual JsonNode? ToJsonProtected()
@@ -266,10 +276,13 @@ public abstract class UIElement : IToJson
     }
 }
 
-public sealed class UIElementCollection : IEnumerable<UIElement>
+public sealed class UIElementCollection
+    : IEnumerable<UIElement>,
+      IFromJson<UIElementCollection>
+
 {
     private UIElement? _parent;
-    private readonly List<UIElement> _children = new List<UIElement>();
+    private readonly List<UIElement> _children;
 
     internal UIElement? Parent
     {
@@ -290,12 +303,21 @@ public sealed class UIElementCollection : IEnumerable<UIElement>
         }
     }
 
+    static UIElementCollection() => Serializer.RegisterConstructor(FromJson);
+
     public UIElementCollection()
     {
+        _children = new List<UIElement>();
+    }
+
+    private UIElementCollection(List<UIElement> inner)
+    {
+        _children = inner;
     }
 
     internal UIElementCollection(ReadOnlySpan<UIElement> elements)
     {
+        _children = new List<UIElement>(elements.Length);
         foreach(var element in elements) {
             ArgumentNullException.ThrowIfNull(element);
             _children.Add(element);
@@ -328,6 +350,16 @@ public sealed class UIElementCollection : IEnumerable<UIElement>
     IEnumerator IEnumerable.GetEnumerator()
     {
         return _children.GetEnumerator();
+    }
+
+    public static UIElementCollection FromJson(JsonElement element)
+    {
+        var list = new List<UIElement>(element.GetArrayLength());
+        foreach(var item in element.EnumerateArray()) {
+            var child = Serializer.Instantiate<UIElement>(item);
+            list.Add(child);
+        }
+        return new UIElementCollection(list);
     }
 }
 

@@ -1,5 +1,4 @@
 ﻿#nullable enable
-
 using System;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -47,23 +46,20 @@ public sealed class Brush
         return new Brush(color);
     }
 
-    public static Brush FromJson(JsonNode? node)
+    public static Brush FromJson(JsonElement element)
     {
         // "#ffee23"
-
-        switch(node) {
-            case JsonValue value: {
-                var str = value.GetValue<string>();
-                if(str.StartsWith("#")) {
-                    var color = Color4.FromHexCode(str);    // TODO: use Color4.FromJson
+        // "red"
+        switch(element.ValueKind) {
+            case JsonValueKind.String: {
+                var str = element.GetStringNotNull();
+                if(Color4.TryFromHexCode(str, out var color) || Color4.TryFromWebColorName(str, out color)) {
                     return Solid(color);
                 }
-                else {
-                    throw new FormatException();
-                }
+                throw new FormatException($"invalid format: {str}");
             }
             default: {
-                throw new FormatException();
+                throw new FormatException($"invalid format: {element}");
             }
         }
     }

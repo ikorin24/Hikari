@@ -14,7 +14,7 @@ namespace Elffy;
 
 public static class Serializer
 {
-    private record ConstructorFunc(Type Type, Func<JsonNode?, object> Func);
+    private record ConstructorFunc(Type Type, Func<JsonElement, object> Func);
 
     private static readonly ConcurrentDictionary<string, ConstructorFunc> _constructorFuncs = new();
     private static readonly ConcurrentDictionary<string, Type> _shortNames = new()
@@ -63,10 +63,10 @@ public static class Serializer
         });
     }
 
-    public static void RegisterConstructor<T>(Func<JsonNode?, T> constructoFunc) where T : notnull
+    public static void RegisterConstructor<T>(Func<JsonElement, T> constructoFunc) where T : notnull
     {
         ArgumentNullException.ThrowIfNull(constructoFunc);
-        Func<JsonNode?, object> f = arg => constructoFunc(arg);
+        Func<JsonElement, object> f = arg => constructoFunc(arg);
         var value = new ConstructorFunc(typeof(T), f);
         _constructorFuncs.TryAdd(typeof(T).FullName!, value);
     }
@@ -89,79 +89,200 @@ public static class Serializer
         }
     }
 
-    public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlySpan<byte> utf8Json) where T : notnull
+    public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlyMemory<byte> utf8Json)
     {
-        var node = JsonNode.Parse(utf8Json, documentOptions: ParseOptions) ?? throw new FormatException("null");
-        return (T)ParseJsonNode(node, typeof(T));
+        using var doc = JsonDocument.Parse(utf8Json, ParseOptions);
+        return DeserializeCore<T>(doc.RootElement);
     }
 
-    public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] string json) where T : notnull
+    public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] string json)
     {
-        var node = JsonNode.Parse(json, documentOptions: ParseOptions) ?? throw new FormatException("null");
-        return (T)ParseJsonNode(node, typeof(T));
+        using var doc = JsonDocument.Parse(json, ParseOptions);
+        return DeserializeCore<T>(doc.RootElement);
     }
 
-    public static T Instantiate<T>(JsonNode? node) where T : notnull
+    public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlyMemory<char> json)
     {
-        ArgumentNullException.ThrowIfNull(node);
-        return (T)ParseJsonNode(node, typeof(T));
+        using var doc = JsonDocument.Parse(json, ParseOptions);
+        return DeserializeCore<T>(doc.RootElement);
     }
 
-
-    [return: NotNullIfNotNull(nameof(node))]
-    private static object? ParseJsonNode(JsonNode? node, Type leftSideType)
+    public static T Instantiate<T>(JsonElement element)
     {
-        return node switch
+        return DeserializeCore<T>(element);
+    }
+
+    private static T DeserializeCore<T>(JsonElement element)
+    {
+        if(typeof(T) == typeof(string)) { var x = element.GetStringNotNull(); return Unsafe.As<string, T>(ref x); }
+        if(typeof(T) == typeof(bool)) { var x = element.GetBoolean(); return Unsafe.As<bool, T>(ref x); }
+        if(typeof(T) == typeof(sbyte)) { var x = element.GetSByte(); return Unsafe.As<sbyte, T>(ref x); }
+        if(typeof(T) == typeof(byte)) { var x = element.GetByte(); return Unsafe.As<byte, T>(ref x); }
+        if(typeof(T) == typeof(short)) { var x = element.GetInt16(); return Unsafe.As<short, T>(ref x); }
+        if(typeof(T) == typeof(ushort)) { var x = element.GetUInt16(); return Unsafe.As<ushort, T>(ref x); }
+        if(typeof(T) == typeof(int)) { var x = element.GetInt32(); return Unsafe.As<int, T>(ref x); }
+        if(typeof(T) == typeof(uint)) { var x = element.GetUInt32(); return Unsafe.As<uint, T>(ref x); }
+        if(typeof(T) == typeof(long)) { var x = element.GetInt64(); return Unsafe.As<long, T>(ref x); }
+        if(typeof(T) == typeof(ulong)) { var x = element.GetUInt64(); return Unsafe.As<ulong, T>(ref x); }
+        if(typeof(T) == typeof(float)) { var x = element.GetSingle(); return Unsafe.As<float, T>(ref x); }
+        if(typeof(T) == typeof(double)) { var x = element.GetDouble(); return Unsafe.As<double, T>(ref x); }
+        if(typeof(T) == typeof(decimal)) { var x = element.GetDecimal(); return Unsafe.As<decimal, T>(ref x); }
+        if(typeof(T) == typeof(DateTime)) { var x = element.GetDateTime(); return Unsafe.As<DateTime, T>(ref x); }
+        if(typeof(T) == typeof(DateTimeOffset)) { var x = element.GetDateTimeOffset(); return Unsafe.As<DateTimeOffset, T>(ref x); }
+        if(typeof(T) == typeof(Guid)) { var x = element.GetGuid(); return Unsafe.As<Guid, T>(ref x); }
+
+        if(typeof(T) == typeof(string[])) {
+            var array = new string[element.GetArrayLength()];
+            var i = 0;
+            foreach(var item in element.EnumerateArray()) {
+                array[i++] = item.GetStringNotNull();
+            }
+            return Unsafe.As<string[], T>(ref array);
+        }
+        if(typeof(T) == typeof(int)) {
+            var array = new int[element.GetArrayLength()];
+            var i = 0;
+            foreach(var item in element.EnumerateArray()) {
+                array[i++] = item.GetInt32();
+            }
+            return Unsafe.As<int[], T>(ref array);
+        }
+        if(typeof(T) == typeof(float)) {
+            var array = new float[element.GetArrayLength()];
+            var i = 0;
+            foreach(var item in element.EnumerateArray()) {
+                array[i++] = item.GetSingle();
+            }
+            return Unsafe.As<float[], T>(ref array);
+        }
+
+        return element.ValueKind switch
         {
-            JsonArray array => ParseJsonArray(array, leftSideType),
-            JsonObject obj => ParseJsonObject(obj, leftSideType),
-            JsonValue value => ParseJsonValue(value, leftSideType),
-            null => null,
-            _ => throw new NotSupportedException(),
+            JsonValueKind.Array => (T)CreateArray(element, typeof(T)),
+            JsonValueKind.Object or
+            JsonValueKind.String or
+            JsonValueKind.Number or
+            JsonValueKind.Null or
+            JsonValueKind.True or
+            JsonValueKind.False => (T)CreateObject(element, typeof(T)),
+            JsonValueKind.Undefined or _ => throw new FormatException("undefined"),
         };
     }
 
-    private static object ParseJsonObject(JsonObject obj, Type leftSideType)
+    private static object DeserializeCore(JsonElement element, Type leftSideType)
     {
-        obj.GetPropOrThrow("@type", out string typename);
-        ConstructorFunc? ctor;
-        if(_shortNames.TryGetValue(typename, out var type)) {
-            if(FindCtorFromType(type, out ctor) == false) {
-                throw new FormatException($"type \"{typename}\" cannot be created from json");
+        if(leftSideType == typeof(string)) { return element.GetStringNotNull(); }
+        if(leftSideType == typeof(bool)) { return element.GetBoolean(); }
+        if(leftSideType == typeof(sbyte)) { return element.GetSByte(); }
+        if(leftSideType == typeof(byte)) { return element.GetByte(); }
+        if(leftSideType == typeof(short)) { return element.GetInt16(); }
+        if(leftSideType == typeof(ushort)) { return element.GetUInt16(); }
+        if(leftSideType == typeof(int)) { return element.GetInt32(); }
+        if(leftSideType == typeof(uint)) { return element.GetUInt32(); }
+        if(leftSideType == typeof(long)) { return element.GetInt64(); }
+        if(leftSideType == typeof(ulong)) { return element.GetUInt64(); }
+        if(leftSideType == typeof(float)) { return element.GetSingle(); }
+        if(leftSideType == typeof(double)) { return element.GetDouble(); }
+        if(leftSideType == typeof(decimal)) { return element.GetDecimal(); }
+        if(leftSideType == typeof(DateTime)) { return element.GetDateTime(); }
+        if(leftSideType == typeof(DateTimeOffset)) { return element.GetDateTimeOffset(); }
+        if(leftSideType == typeof(Guid)) { return element.GetGuid(); }
+
+        if(leftSideType == typeof(string[])) {
+            var array = new string[element.GetArrayLength()];
+            var i = 0;
+            foreach(var item in element.EnumerateArray()) {
+                array[i++] = item.GetStringNotNull();
             }
+            return array;
         }
-        else {
-            if(FindCtorFromName(typename, out ctor) == false) {
-                throw new FormatException($"type \"{typename}\" cannot be created from json");
+        if(leftSideType == typeof(int)) {
+            var array = new int[element.GetArrayLength()];
+            var i = 0;
+            foreach(var item in element.EnumerateArray()) {
+                array[i++] = item.GetInt32();
             }
+            return array;
         }
-        if(ctor.Type.IsAssignableTo(leftSideType) == false) {
-            throw new FormatException($"{ctor.Type.FullName} is not assignable to {leftSideType.FullName}");
+        if(leftSideType == typeof(float)) {
+            var array = new float[element.GetArrayLength()];
+            var i = 0;
+            foreach(var item in element.EnumerateArray()) {
+                array[i++] = item.GetSingle();
+            }
+            return array;
         }
-        return ctor.Func(obj);
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.Array => CreateArray(element, leftSideType),
+            JsonValueKind.Object or
+            JsonValueKind.String or
+            JsonValueKind.Number or
+            JsonValueKind.Null or
+            JsonValueKind.True or
+            JsonValueKind.False => CreateObject(element, leftSideType),
+            JsonValueKind.Undefined or _ => throw new FormatException("undefined"),
+        };
     }
 
-    private static object ParseJsonValue(JsonValue value, Type leftSideType)
+    private static object CreateObject(JsonElement element, Type leftSideType)
     {
-        if(FindCtorFromType(leftSideType, out var ctor) == false) {
-            throw new FormatException($"type \"{leftSideType.FullName}\" cannot be created from json");
+        Debug.Assert(element.ValueKind is
+            JsonValueKind.Object or
+            JsonValueKind.String or
+            JsonValueKind.Number or
+            JsonValueKind.Null or
+            JsonValueKind.True or
+            JsonValueKind.False);
+
+        switch(element.ValueKind) {
+            case JsonValueKind.Object: {
+                var typename = element.GetProperty("@type").GetStringNotNull();
+                ConstructorFunc? ctor;
+                if(_shortNames.TryGetValue(typename, out var type)) {
+                    if(FindCtorFromType(type, out ctor) == false) {
+                        throw new FormatException($"type \"{typename}\" cannot be created from json");
+                    }
+                }
+                else {
+                    if(FindCtorFromName(typename, out ctor) == false) {
+                        throw new FormatException($"type \"{typename}\" cannot be created from json");
+                    }
+                }
+                if(ctor.Type.IsAssignableTo(leftSideType) == false) {
+                    throw new FormatException($"{ctor.Type.FullName} is not assignable to {leftSideType.FullName}");
+                }
+                return ctor.Func(element);
+            }
+            default: {
+                var typename = leftSideType.FullName ?? throw new ArgumentException();
+                if(FindCtorFromName(typename, out var ctor) == false) {
+                    throw new FormatException($"type \"{typename}\" cannot be created from json");
+                }
+                if(ctor.Type.IsAssignableTo(leftSideType) == false) {
+                    throw new FormatException($"{ctor.Type.FullName} is not assignable to {leftSideType.FullName}");
+                }
+                return ctor.Func(element);
+            }
         }
-        return ctor.Func(value);
     }
 
-    private static object ParseJsonArray(JsonArray array, Type leftSideType)
+    private static object CreateArray(JsonElement element, Type leftSideType)
     {
-        if(FindCtorFromType(leftSideType, out var ctor)) {
-            return ctor.Func(array);
-        }
-
+        Debug.Assert(element.ValueKind == JsonValueKind.Array);
         if(leftSideType.IsSZArray) {
-            var elementType = leftSideType.GetElementType() ?? throw new UnreachableException();
-            var a = Array.CreateInstance(elementType, array.Count);
-            for(int i = 0; i < a.Length; i++) {
-                a.SetValue(ParseJsonNode(array[i], elementType), i);
+            var childType = leftSideType.GetElementType() ?? throw new UnreachableException();
+            var array = Array.CreateInstance(childType, element.GetArrayLength());
+            var i = 0;
+            foreach(var item in element.EnumerateArray()) {
+                array.SetValue(DeserializeCore(item, childType), i);
+                i++;
             }
-            return a;
+            return array;
+        }
+        if(FindCtorFromType(leftSideType, out var ctor)) {
+            return ctor.Func(element);
         }
         throw new FormatException($"type \"{leftSideType.FullName}\" cannot be created from json");
     }
@@ -197,7 +318,7 @@ public static class Serializer
 
 public interface IFromJson<TSelf>
 {
-    abstract static TSelf FromJson(JsonNode? node);
+    abstract static TSelf FromJson(JsonElement element);
 }
 
 public interface IToJson
@@ -213,93 +334,23 @@ public static class EnumJsonHelper
         return JsonValue.Create(str)!;
     }
 
-    public static T ToEnum<T>(this JsonNode self) where T : struct, Enum
+    public static T ToEnum<T>(this JsonElement self) where T : struct, Enum
     {
-        var str = self.AsValue().GetValue<string>();
-        return Enum.Parse<T>(str);
+        return Enum.Parse<T>(self.GetStringNotNull());
     }
 }
 
-internal static class JsonObjectExtensions
+internal static class JsonElementExtensions
 {
-    public static bool GetProp(this JsonObject obj, string propname, ref sbyte value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp(this JsonObject obj, string propname, ref byte value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp(this JsonObject obj, string propname, ref short value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp(this JsonObject obj, string propname, ref ushort value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp(this JsonObject obj, string propname, ref int value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp(this JsonObject obj, string propname, ref uint value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp(this JsonObject obj, string propname, ref long value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp(this JsonObject obj, string propname, ref ulong value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp(this JsonObject obj, string propname, ref float value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp(this JsonObject obj, string propname, ref double value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp(this JsonObject obj, string propname, ref bool value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp(this JsonObject obj, string propname, [MaybeNullWhen(false)] ref string value) => GetPropCore(obj, propname, ref value);
-    public static bool GetProp<T>(this JsonObject obj, string propname, ref T value) where T : IFromJson<T>
+    public static string GetStringNotNull(this JsonElement element)
     {
-        var prop = obj[propname];
-        if(prop == null) { return false; }
-        value = T.FromJson(prop);
-        return true;
-    }
-
-    public static bool GetEnumProp<T>(this JsonObject obj, string propname, ref T value) where T : struct, Enum
-    {
-        var prop = obj[propname];
-        if(prop == null) { return false; }
-        value = EnumJsonHelper.ToEnum<T>(prop);
-        return true;
-    }
-
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out sbyte value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out byte value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out short value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out ushort value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out int value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out uint value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out long value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out ulong value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out float value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out double value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out bool value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow(this JsonObject obj, string propname, out string value) => GetPropOrThrowCore(obj, propname, out value);
-    public static void GetPropOrThrow<T>(this JsonObject obj, string propname, out T value) where T : IFromJson<T>
-    {
-        var prop = obj[propname];
-        if(prop == null) {
-            ThrowPropertyNotFound(propname);
+        var str = element.GetString();
+        if(str == null) {
+            Throw();
         }
-        value = T.FromJson(prop);
-    }
-    public static bool GetEnumPropOrThrow<T>(this JsonObject obj, string propname, out T value) where T : struct, Enum
-    {
-        var prop = obj[propname];
-        if(prop == null) {
-            ThrowPropertyNotFound(propname);
-        }
-        value = EnumJsonHelper.ToEnum<T>(prop);
-        return true;
-    }
+        return str;
 
-    private static bool GetPropCore<T>(JsonObject obj, string propname, [MaybeNullWhen(false)] ref T value)
-    {
-        var prop = obj[propname];
-        if(prop == null) { return false; }
-        value = prop.AsValue().GetValue<T>();
-        return true;
-    }
-
-    private static void GetPropOrThrowCore<T>(this JsonObject obj, string propname, out T value)
-    {
-        var prop = obj[propname];
-        if(prop == null) {
-            ThrowPropertyNotFound(propname);
-        }
-        value = prop.AsValue().GetValue<T>();
-    }
-
-    [DoesNotReturn]
-    private static void ThrowPropertyNotFound(string propname)
-    {
-        throw new FormatException($"property \"{propname}\" is not found");
+        [DoesNotReturn]
+        static void Throw() => throw new FormatException("null");
     }
 }

@@ -69,37 +69,32 @@ public readonly struct LayoutThickness
 
     public override int GetHashCode() => HashCode.Combine(Left, Top, Right, Bottom);
 
-    public static LayoutThickness FromJson(JsonNode? node)
+    public static LayoutThickness FromJson(JsonElement element)
     {
-        switch(node) {
-            case JsonValue value: {
-                // [value pattern]
-                // 10.3
-                // "10.3"
-                // "10.3"
-                // "10.3 10.3 10.3"
-                // "10.3 10.3 10.3 10.3"
+        // 10.3
+        // "10.3"
+        // "10.3"
+        // "10.3 10.3 10.3"
+        // "10.3 10.3 10.3 10.3"
 
-                if(value.TryGetValue<float>(out var number)) {
-                    return new LayoutThickness(number);
-                }
-                else if(value.TryGetValue<string>(out var str)) {
-                    var splits = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    return splits switch
-                    {
-                        { Length: 1 } => new LayoutThickness(float.Parse(splits[0])),
-                        { Length: 2 } => new LayoutThickness(float.Parse(splits[0]), float.Parse(splits[1])),
-                        { Length: 3 } => new LayoutThickness(float.Parse(splits[0]), float.Parse(splits[1]), float.Parse(splits[2])),
-                        { Length: 4 } => new LayoutThickness(float.Parse(splits[0]), float.Parse(splits[1]), float.Parse(splits[2]), float.Parse(splits[3])),
-                        _ => throw new FormatException($"cannot kcreate {nameof(LayoutThickness)} from string \"{str}\""),
-                    };
-                }
-                else {
-                    throw new FormatException("value should be number or string");
-                }
+        switch(element.ValueKind) {
+            case JsonValueKind.Number: {
+                return new LayoutThickness(element.GetSingle());
+            }
+            case JsonValueKind.String: {
+                var str = element.GetStringNotNull();
+                var splits = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                return splits switch
+                {
+                    { Length: 1 } => new LayoutThickness(float.Parse(splits[0])),
+                    { Length: 2 } => new LayoutThickness(float.Parse(splits[0]), float.Parse(splits[1])),
+                    { Length: 3 } => new LayoutThickness(float.Parse(splits[0]), float.Parse(splits[1]), float.Parse(splits[2])),
+                    { Length: 4 } => new LayoutThickness(float.Parse(splits[0]), float.Parse(splits[1]), float.Parse(splits[2]), float.Parse(splits[3])),
+                    _ => throw new FormatException($"cannot create {nameof(LayoutThickness)} from string \"{str}\""),
+                };
             }
             default: {
-                throw new FormatException("invalid format");
+                throw new FormatException(element.ToString());
             }
         }
     }

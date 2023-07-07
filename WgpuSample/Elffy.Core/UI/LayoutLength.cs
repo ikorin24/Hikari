@@ -28,37 +28,33 @@ public readonly struct LayoutLength
         [DoesNotReturn] static void ThrowOutOfRange() => throw new ArgumentOutOfRangeException(nameof(value));
     }
 
-    public static LayoutLength FromJson(JsonNode? node)
+    public static LayoutLength FromJson(JsonElement element)
     {
-        switch(node) {
-            case JsonValue value: {
-                // [value pattern]
-                // 10
-                // "10"
-                // "0.8*"
+        // 10
+        // "10"
+        // "0.8*"
 
-                if(value.TryGetValue<float>(out var number)) {
-                    return new LayoutLength(number, LayoutLengthType.Length);
-                }
-                else if(value.TryGetValue<string>(out var str)) {
-                    return
-                        str.EndsWith("*") ? new()
-                        {
-                            Value = float.Parse(str.AsSpan(0, str.Length - 1)),
-                            Type = LayoutLengthType.Proportion,
-                        } :
-                        new()
-                        {
-                            Value = float.Parse(str),
-                            Type = LayoutLengthType.Length,
-                        };
-                }
-                else {
-                    throw new FormatException("value should be number or string");
-                }
+        switch(element.ValueKind) {
+            case JsonValueKind.Number: {
+                return new LayoutLength(element.GetSingle(), LayoutLengthType.Length);
+            }
+            case JsonValueKind.String: {
+                var str = element.GetStringNotNull();
+                return
+                    str.EndsWith('*') ?
+                    new()
+                    {
+                        Value = float.Parse(str.AsSpan(0, str.Length - 1)),
+                        Type = LayoutLengthType.Proportion,
+                    } :
+                    new()
+                    {
+                        Value = float.Parse(str),
+                        Type = LayoutLengthType.Length,
+                    };
             }
             default: {
-                throw new FormatException("invalid format");
+                throw new FormatException(element.ToString());
             }
         }
     }
