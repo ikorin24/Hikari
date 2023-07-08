@@ -53,7 +53,7 @@ internal class Program
             "padding": "40 80",
             "backgroundColor": "#ffee23",
             "borderWidth": 10,
-            "borderColor": "#ff0088",
+            "borderColor": "#9622FF",
             "borderRadius": 120,
             "children":
             [{
