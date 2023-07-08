@@ -749,10 +749,10 @@ public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader,
         {
             ReadOnlySpan<VertexSlim> vertices = stackalloc VertexSlim[4]
             {
-                new VertexSlim(0, 1, 0, 0, 1),
-                new VertexSlim(0, 0, 0, 0, 0),
-                new VertexSlim(1, 0, 0, 1, 0),
-                new VertexSlim(1, 1, 0, 1, 1),
+                new VertexSlim(0, 1, 0, 0, 0),
+                new VertexSlim(0, 0, 0, 0, 1),
+                new VertexSlim(1, 0, 0, 1, 1),
+                new VertexSlim(1, 1, 0, 1, 0),
             };
             ReadOnlySpan<ushort> indices = stackalloc ushort[6] { 0, 1, 2, 2, 3, 0 };
             var mesh = Elffy.Mesh.Create(screen, vertices, indices);
