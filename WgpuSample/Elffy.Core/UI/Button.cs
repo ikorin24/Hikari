@@ -67,7 +67,7 @@ public abstract class UIElement : IToJson
     private LayoutThickness _padding;
     private HorizontalAlignment _horizontalAlignment;
     private VerticalAlignment _verticalAlignment;
-    private Brush _background;
+    private Brush _backgroundColor;
     private LayoutThickness _borderWidth;
     private LayoutThickness _borderRadius;
     private Brush _borderColor;
@@ -118,13 +118,13 @@ public abstract class UIElement : IToJson
         set => _verticalAlignment = value;
     }
 
-    public Brush Background
+    public Brush BackgroundColor
     {
-        get => _background;
+        get => _backgroundColor;
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            _background = value;
+            _backgroundColor = value;
         }
     }
 
@@ -169,7 +169,7 @@ public abstract class UIElement : IToJson
         _padding = new LayoutThickness(0f);
         _horizontalAlignment = HorizontalAlignment.Center;
         _verticalAlignment = VerticalAlignment.Center;
-        _background = Brush.White;
+        _backgroundColor = Brush.White;
         _borderWidth = new LayoutThickness(0f);
         _borderRadius = new LayoutThickness(0f);
         _borderColor = Brush.Black;
@@ -196,8 +196,8 @@ public abstract class UIElement : IToJson
         if(element.TryGetProperty("verticalAlignment", out var verticalAlignment)) {
             _verticalAlignment = Enum.Parse<VerticalAlignment>(verticalAlignment.GetStringNotNull());
         }
-        if(element.TryGetProperty("background", out var background)) {
-            _background = Brush.FromJson(background);
+        if(element.TryGetProperty("backgroundColor", out var backgroundColor)) {
+            _backgroundColor = Brush.FromJson(backgroundColor);
         }
         if(element.TryGetProperty("borderWidth", out var borderWidth)) {
             _borderWidth = LayoutThickness.FromJson(borderWidth);
@@ -224,7 +224,7 @@ public abstract class UIElement : IToJson
             ["padding"] = _padding.ToJson(),
             ["horizontalAlignment"] = _horizontalAlignment.ToJson(),
             ["verticalAlignment"] = _verticalAlignment.ToJson(),
-            ["background"] = _background.ToJson(),
+            ["backgroundColor"] = _backgroundColor.ToJson(),
             ["borderWidth"] = _borderWidth.ToJson(),
             ["borderRadius"] = _borderRadius.ToJson(),
             ["borderColor"] = _borderColor.ToJson(),
@@ -253,7 +253,7 @@ public abstract class UIElement : IToJson
                     new Vector4(0, 0, 1, 0),
                     new Vector4(0, 0, 0, 1));
 
-            var background = _background;
+            var background = _backgroundColor;
             model.Material.WriteUniform(new UIMaterial.BufferData
             {
                 Mvp = uiProjection * modelMatrix,

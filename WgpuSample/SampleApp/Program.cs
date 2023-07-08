@@ -51,14 +51,14 @@ internal class Program
             "height": "0.8*",
             "horizontalAlignment": "Center",
             "padding": "40 80",
-            "background": "#ffee23",
+            "backgroundColor": "#ffee23",
             "borderWidth": 10,
             "borderColor": "#ff0088",
             "children":
             [{
                 "@type": "button",
                 "horizontalAlignment": "Left",
-                "background": "#22B7FF",
+                "backgroundColor": "#22B7FF",
                 "width": 250,
                 "height": 150,
                 "borderWidth": 1
@@ -68,7 +68,7 @@ internal class Program
                 "width": 80,
                 "height": 100,
                 "borderWidth": 1,
-                "background": "#9622FF"
+                "backgroundColor": "#9622FF"
             }]
         }
         """);
