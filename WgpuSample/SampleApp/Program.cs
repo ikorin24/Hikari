@@ -52,18 +52,22 @@ internal class Program
             "horizontalAlignment": "Center",
             "padding": "40 80",
             "background": "#ffee23",
+            "borderWidth": 10,
+            "borderColor": "#ff0088",
             "children":
             [{
                 "@type": "button",
                 "horizontalAlignment": "Left",
                 "background": "#22B7FF",
                 "width": 250,
-                "height": 150
+                "height": 150,
+                "borderWidth": 1
             },
             {
                 "@type": "button",
                 "width": 80,
                 "height": 100,
+                "borderWidth": 1,
                 "background": "#9622FF"
             }]
         }

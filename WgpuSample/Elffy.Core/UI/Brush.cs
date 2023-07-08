@@ -12,7 +12,8 @@ public sealed class Brush
     private readonly BrushType _type;
     private readonly Color4 _solidColor;
 
-    internal static Brush Default { get; } = new Brush(Color4.White);
+    public static Brush White { get; } = new Brush(Color4.White);
+    public static Brush Black { get; } = new Brush(Color4.Black);
 
     public BrushType Type => _type;
 

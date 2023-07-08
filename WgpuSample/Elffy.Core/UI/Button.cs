@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -25,7 +26,7 @@ public sealed class Button : UIElement, IFromJson<Button>
         return node;
     }
 
-    public Button()
+    public Button() : base()
     {
     }
 
@@ -69,6 +70,7 @@ public abstract class UIElement : IToJson
     private Brush _background;
     private LayoutThickness _borderWidth;
     private LayoutThickness _borderRadius;
+    private Brush _borderColor;
 
     // border (width,type,color)  : Border(float Width, BorderType Type, Color4 Color)
     // background (color)         : SolidBrush(Color4 Color)  LinearGradientBrush(float Angle, (Color4 Color, float P)[] Points)  Brush(Image Image, FillMode Mode)
@@ -80,33 +82,6 @@ public abstract class UIElement : IToJson
 
     public Vector2 ActualPosition => _actualRect.Position;
     public Vector2 ActualSize => _actualRect.Size;
-
-    internal void SetActualRect(in RectF rect, in Matrix4 uiProjection)
-    {
-        _actualRect = rect;
-        var model = _model;
-        if(model != null) {
-            var modelMatrix =
-                new Vector3(rect.Position, 0f).ToTranslationMatrix4() *
-                //Rotation.ToMatrix4() *
-                new Matrix4(
-                    new Vector4(rect.Size.X, 0, 0, 0),
-                    new Vector4(0, rect.Size.Y, 0, 0),
-                    new Vector4(0, 0, 1, 0),
-                    new Vector4(0, 0, 0, 1));
-
-            var background = _background;
-            model.Material.WriteUniform(new UIMaterial.BufferData
-            {
-                Mvp = uiProjection * modelMatrix,
-                SolidColor = background.Type switch
-                {
-                    BrushType.Solid => background.SolidColor,
-                    _ => default,
-                },
-            });
-        }
-    }
 
     public LayoutLength Width
     {
@@ -165,6 +140,16 @@ public abstract class UIElement : IToJson
         set => _borderRadius = value;
     }
 
+    public Brush BorderColor
+    {
+        get => _borderColor;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _borderColor = value;
+        }
+    }
+
     public UIElementCollection Children
     {
         init
@@ -184,7 +169,10 @@ public abstract class UIElement : IToJson
         _padding = new LayoutThickness(0f);
         _horizontalAlignment = HorizontalAlignment.Center;
         _verticalAlignment = VerticalAlignment.Center;
-        _background = Brush.Default;
+        _background = Brush.White;
+        _borderWidth = new LayoutThickness(0f);
+        _borderRadius = new LayoutThickness(0f);
+        _borderColor = Brush.Black;
         _children = new UIElementCollection();
     }
 
@@ -217,6 +205,9 @@ public abstract class UIElement : IToJson
         if(element.TryGetProperty("borderRadius", out var borderRadius)) {
             _borderRadius = LayoutThickness.FromJson(borderRadius);
         }
+        if(element.TryGetProperty("borderColor", out var borderColor)) {
+            _borderColor = Brush.FromJson(borderColor);
+        }
         if(element.TryGetProperty("children", out var children)) {
             _children = UIElementCollection.FromJson(children);
         }
@@ -236,6 +227,7 @@ public abstract class UIElement : IToJson
             ["background"] = _background.ToJson(),
             ["borderWidth"] = _borderWidth.ToJson(),
             ["borderRadius"] = _borderRadius.ToJson(),
+            ["borderColor"] = _borderColor.ToJson(),
             ["children"] = _children.ToJson(),
         };
         return obj;
@@ -245,6 +237,37 @@ public abstract class UIElement : IToJson
     {
         var node = ToJsonProtected();
         return node;
+    }
+
+    internal void SetActualRect(in RectF rect, in Matrix4 uiProjection)
+    {
+        _actualRect = rect;
+        var model = _model;
+        if(model != null) {
+            var modelMatrix =
+                new Vector3(rect.Position, 0f).ToTranslationMatrix4() *
+                //Rotation.ToMatrix4() *
+                new Matrix4(
+                    new Vector4(rect.Size.X, 0, 0, 0),
+                    new Vector4(0, rect.Size.Y, 0, 0),
+                    new Vector4(0, 0, 1, 0),
+                    new Vector4(0, 0, 0, 1));
+
+            var background = _background;
+            model.Material.WriteUniform(new UIMaterial.BufferData
+            {
+                Mvp = uiProjection * modelMatrix,
+                SolidColor = background.Type switch
+                {
+                    BrushType.Solid => background.SolidColor,
+                    _ => default,
+                },
+                Rect = rect,
+                BorderWidth = _borderWidth.ToVector4(),
+                BorderRadius = _borderRadius.ToVector4(),
+                BorderSolidColor = _borderColor.SolidColor,
+            });
+        }
     }
 
     internal void SetParent(UIElement parent)
@@ -544,6 +567,10 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         {
             mvp: mat4x4<f32>,
             solid_color: vec4<f32>,
+            rect: vec4<f32>,    // (x, y, width, height)
+            border_width: vec4<f32>,
+            border_radius: vec4<f32>,
+            border_solid_color: vec4<f32>,
         }
 
         @group(0) @binding(0) var<uniform> screen: ScreenInfo;
@@ -561,8 +588,17 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         @fragment fn fs_main(
             f: V2F,
         ) -> @location(0) vec4<f32> {
-            //return vec4<f32>(f.uv.x, f.uv.y, 0.0, 1.0);
-            return data.solid_color;
+            let b_top: f32 = data.border_width.x / f32(data.rect.w);
+            let b_right: f32 = data.border_width.y / f32(data.rect.z);
+            let b_bottom: f32 = data.border_width.z / f32(data.rect.w);
+            let b_left: f32 = data.border_width.w / f32(data.rect.z);
+            let border_color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
+            if(f.uv.x < b_left || f.uv.x >= 1.0 - b_right || f.uv.y < b_bottom || f.uv.y >= 1.0 - b_top) {
+                return data.border_solid_color;
+            }
+            else {
+                return data.solid_color;
+            }
         }
         """u8;
 
@@ -625,6 +661,10 @@ public sealed class UIMaterial : Material<UIMaterial, UIShader>
     {
         public required Matrix4 Mvp { get; init; }
         public required Color4 SolidColor { get; init; }
+        public required RectF Rect { get; init; }
+        public required Vector4 BorderWidth { get; init; }
+        public required Vector4 BorderRadius { get; init; }
+        public required Color4 BorderSolidColor { get; init; }
     }
 
     internal BindGroup BindGroup0 => _bindGroup0.AsValue();
@@ -653,11 +693,7 @@ public sealed class UIMaterial : Material<UIMaterial, UIShader>
     internal static Own<UIMaterial> Create(UIShader shader)
     {
         var screen = shader.Screen;
-        var buffer = Buffer.CreateInitData(screen, new BufferData
-        {
-            Mvp = Matrix4.Identity,
-            SolidColor = Color4.White,
-        }, BufferUsages.Uniform | BufferUsages.CopyDst);
+        var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
         var bindGroup0 = BindGroup.Create(screen, new()
         {
             Layout = shader.Layout0,

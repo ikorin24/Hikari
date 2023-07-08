@@ -107,4 +107,6 @@ public readonly struct LayoutThickness
     public static bool operator ==(LayoutThickness left, LayoutThickness right) => left.Equals(right);
 
     public static bool operator !=(LayoutThickness left, LayoutThickness right) => !(left == right);
+
+    public Vector4 ToVector4() => new Vector4(Top, Right, Bottom, Left);
 }
