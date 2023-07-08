@@ -69,7 +69,7 @@ public abstract class UIElement : IToJson
     private VerticalAlignment _verticalAlignment;
     private Brush _backgroundColor;
     private LayoutThickness _borderWidth;
-    private LayoutThickness _borderRadius;
+    private CornerRadius _borderRadius;
     private Brush _borderColor;
 
     // border (width,type,color)  : Border(float Width, BorderType Type, Color4 Color)
@@ -134,7 +134,7 @@ public abstract class UIElement : IToJson
         set => _borderWidth = value;
     }
 
-    public LayoutThickness BorderRadius
+    public CornerRadius BorderRadius
     {
         get => _borderRadius;
         set => _borderRadius = value;
@@ -171,7 +171,7 @@ public abstract class UIElement : IToJson
         _verticalAlignment = VerticalAlignment.Center;
         _backgroundColor = Brush.White;
         _borderWidth = new LayoutThickness(0f);
-        _borderRadius = new LayoutThickness(0f);
+        _borderRadius = CornerRadius.Zero;
         _borderColor = Brush.Black;
         _children = new UIElementCollection();
     }
@@ -203,7 +203,7 @@ public abstract class UIElement : IToJson
             _borderWidth = LayoutThickness.FromJson(borderWidth);
         }
         if(element.TryGetProperty("borderRadius", out var borderRadius)) {
-            _borderRadius = LayoutThickness.FromJson(borderRadius);
+            _borderRadius = CornerRadius.FromJson(borderRadius);
         }
         if(element.TryGetProperty("borderColor", out var borderColor)) {
             _borderColor = Brush.FromJson(borderColor);
@@ -569,7 +569,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             solid_color: vec4<f32>,
             rect: vec4<f32>,            // (x, y, width, height)
             border_width: vec4<f32>,    // (top, right, bottom, left)
-            border_radius: vec4<f32>,
+            border_radius: vec4<f32>,   // (top-left, top-right, bottom-right, bottom-left)
             border_solid_color: vec4<f32>,
         }
 
@@ -590,6 +590,39 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         ) -> @location(0) vec4<f32> {
             // pixel coordinates, not normalized
             let fragcoord: vec2<f32> = f.clip_pos.xy;
+
+            let center_tl = data.rect.xy + vec2<f32>(data.border_radius.x, data.border_radius.x);
+            if(fragcoord.x < center_tl.x && fragcoord.y < center_tl.y) {
+                // top-left corner
+                let d = center_tl - fragcoord;
+                if(d.x * d.x + d.y * d.y > data.border_radius.x * data.border_radius.x) {
+                    discard;
+                }
+            }
+            let center_tr = data.rect.xy + vec2<f32>(data.rect.z - data.border_radius.y, data.border_radius.y);
+            if(fragcoord.x >= center_tr.x && fragcoord.y < center_tr.y) {
+                // top-right corner
+                let d = fragcoord - center_tr;
+                if(d.x * d.x + d.y * d.y > data.border_radius.y * data.border_radius.y) {
+                    discard;
+                }
+            }
+            let center_br = data.rect.xy + vec2<f32>(data.rect.z - data.border_radius.z, data.rect.w - data.border_radius.z);
+            if(fragcoord.x >= center_br.x && fragcoord.y >= center_br.y) {
+                // bottom-right corner
+                let d = fragcoord - center_br;
+                if(d.x * d.x + d.y * d.y > data.border_radius.z * data.border_radius.z) {
+                    discard;
+                }
+            }
+            let center_bl = data.rect.xy + vec2<f32>(data.border_radius.w, data.rect.w - data.border_radius.w);
+            if(fragcoord.x < center_bl.x && fragcoord.y >= center_bl.y) {
+                // bottom-left corner
+                let d = center_bl - fragcoord;
+                if(d.x * d.x + d.y * d.y > data.border_radius.w * data.border_radius.w) {
+                    discard;
+                }
+            }
 
             // top border
             if(fragcoord.y < data.rect.y + data.border_width.x) {

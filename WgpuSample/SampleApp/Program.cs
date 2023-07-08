@@ -54,6 +54,7 @@ internal class Program
             "backgroundColor": "#ffee23",
             "borderWidth": 10,
             "borderColor": "#ff0088",
+            "borderRadius": 120,
             "children":
             [{
                 "@type": "button",
