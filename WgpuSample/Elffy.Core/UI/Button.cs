@@ -567,8 +567,8 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         {
             mvp: mat4x4<f32>,
             solid_color: vec4<f32>,
-            rect: vec4<f32>,    // (x, y, width, height)
-            border_width: vec4<f32>,
+            rect: vec4<f32>,            // (x, y, width, height)
+            border_width: vec4<f32>,    // (top, right, bottom, left)
             border_radius: vec4<f32>,
             border_solid_color: vec4<f32>,
         }
@@ -588,17 +588,26 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         @fragment fn fs_main(
             f: V2F,
         ) -> @location(0) vec4<f32> {
-            let b_top: f32 = data.border_width.x / f32(data.rect.w);
-            let b_right: f32 = data.border_width.y / f32(data.rect.z);
-            let b_bottom: f32 = data.border_width.z / f32(data.rect.w);
-            let b_left: f32 = data.border_width.w / f32(data.rect.z);
-            let border_color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
-            if(f.uv.x < b_left || f.uv.x >= 1.0 - b_right || f.uv.y < b_bottom || f.uv.y >= 1.0 - b_top) {
+            // pixel coordinates, not normalized
+            let fragcoord: vec2<f32> = f.clip_pos.xy;
+
+            // top border
+            if(fragcoord.y < data.rect.y + data.border_width.x) {
                 return data.border_solid_color;
             }
-            else {
-                return data.solid_color;
+            // right border
+            if(fragcoord.x >= data.rect.x + data.rect.z - data.border_width.y) {
+                return data.border_solid_color;
             }
+            // left border
+            if(fragcoord.x < data.rect.x + data.border_width.w) {
+                return data.border_solid_color;
+            }
+            // bottom border
+            if(fragcoord.y >= data.rect.y + data.rect.w - data.border_width.z) {
+                return data.border_solid_color;
+            }
+            return data.solid_color;
         }
         """u8;
 
