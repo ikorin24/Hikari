@@ -67,6 +67,8 @@ public abstract class UIElement : IToJson
     private HorizontalAlignment _horizontalAlignment;
     private VerticalAlignment _verticalAlignment;
     private Brush _background;
+    private LayoutThickness _borderWidth;
+    private LayoutThickness _borderRadius;
 
     // border (width,type,color)  : Border(float Width, BorderType Type, Color4 Color)
     // background (color)         : SolidBrush(Color4 Color)  LinearGradientBrush(float Angle, (Color4 Color, float P)[] Points)  Brush(Image Image, FillMode Mode)
@@ -151,6 +153,18 @@ public abstract class UIElement : IToJson
         }
     }
 
+    public LayoutThickness BorderWidth
+    {
+        get => _borderWidth;
+        set => _borderWidth = value;
+    }
+
+    public LayoutThickness BorderRadius
+    {
+        get => _borderRadius;
+        set => _borderRadius = value;
+    }
+
     public UIElementCollection Children
     {
         init
@@ -197,6 +211,12 @@ public abstract class UIElement : IToJson
         if(element.TryGetProperty("background", out var background)) {
             _background = Brush.FromJson(background);
         }
+        if(element.TryGetProperty("borderWidth", out var borderWidth)) {
+            _borderWidth = LayoutThickness.FromJson(borderWidth);
+        }
+        if(element.TryGetProperty("borderRadius", out var borderRadius)) {
+            _borderRadius = LayoutThickness.FromJson(borderRadius);
+        }
         if(element.TryGetProperty("children", out var children)) {
             _children = UIElementCollection.FromJson(children);
         }
@@ -213,16 +233,11 @@ public abstract class UIElement : IToJson
             ["padding"] = _padding.ToJson(),
             ["horizontalAlignment"] = _horizontalAlignment.ToJson(),
             ["verticalAlignment"] = _verticalAlignment.ToJson(),
+            ["background"] = _background.ToJson(),
+            ["borderWidth"] = _borderWidth.ToJson(),
+            ["borderRadius"] = _borderRadius.ToJson(),
+            ["children"] = _children.ToJson(),
         };
-        var children = _children;
-        if(children != null) {
-            var array = new JsonArray();
-            foreach(var child in children) {
-                var childJson = ((IToJson)child).ToJson();
-                array.Add(childJson);
-            }
-            obj["children"] = array;
-        }
         return obj;
     }
 
@@ -278,8 +293,8 @@ public abstract class UIElement : IToJson
 
 public sealed class UIElementCollection
     : IEnumerable<UIElement>,
-      IFromJson<UIElementCollection>
-
+      IFromJson<UIElementCollection>,
+      IToJson
 {
     private UIElement? _parent;
     private readonly List<UIElement> _children;
@@ -360,6 +375,16 @@ public sealed class UIElementCollection
             list.Add(child);
         }
         return new UIElementCollection(list);
+    }
+
+    public JsonNode? ToJson()
+    {
+        var children = _children;
+        var array = new JsonArray();
+        foreach(var child in children) {
+            array.Add(child.ToJson());
+        }
+        return array;
     }
 }
 
