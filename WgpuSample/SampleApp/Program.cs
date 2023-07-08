@@ -52,7 +52,7 @@ internal class Program
             "horizontalAlignment": "Center",
             "padding": "40 80",
             "backgroundColor": "#ffee23",
-            "borderWidth": 10,
+            "borderWidth": "10 20 30 60",
             "borderColor": "#9622FF",
             "borderRadius": 120,
             "children":

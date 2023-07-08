@@ -594,9 +594,9 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             // pixel coordinates, not normalized
             let fragcoord: vec2<f32> = f.clip_pos.xy;
 
+            // top-left corner
             let center_tl = data.rect.xy + vec2<f32>(data.border_radius.x, data.border_radius.x);
             if(fragcoord.x < center_tl.x && fragcoord.y < center_tl.y) {
-                // top-left corner
                 let d = fragcoord - center_tl;
                 let d2 = d.x * d.x + d.y * d.y;
                 if(d2 > data.border_radius.x * data.border_radius.x) {
@@ -611,31 +611,58 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
                     return data.border_solid_color;
                 }
             }
+
+            // top-right corner
             let center_tr = data.rect.xy + vec2<f32>(data.rect.z - data.border_radius.y, data.border_radius.y);
             if(fragcoord.x >= center_tr.x && fragcoord.y < center_tr.y) {
-                // top-right corner
                 let d = fragcoord - center_tr;
                 let d2 = d.x * d.x + d.y * d.y;
                 if(d2 > data.border_radius.y * data.border_radius.y) {
                     discard;
                 }
+                let len_d: f32 = sqrt(d2);
+                let d_norm: vec2<f32> = d / len_d;
+                let cos_theta = dot(d_norm, vec2<f32>(0.0, -1.0));
+                let theta = acos(cos_theta) * INV_PI * 2.0;
+                let b = mix(data.border_width.x, data.border_width.y, theta);
+                if(len_d > data.border_radius.y - b) {
+                    return data.border_solid_color;
+                }
             }
+
+            // bottom-right corner
             let center_br = data.rect.xy + vec2<f32>(data.rect.z - data.border_radius.z, data.rect.w - data.border_radius.z);
             if(fragcoord.x >= center_br.x && fragcoord.y >= center_br.y) {
-                // bottom-right corner
                 let d = fragcoord - center_br;
                 let d2 = d.x * d.x + d.y * d.y;
                 if(d2 > data.border_radius.z * data.border_radius.z) {
                     discard;
                 }
+                let len_d: f32 = sqrt(d2);
+                let d_norm: vec2<f32> = d / len_d;
+                let cos_theta = dot(d_norm, vec2<f32>(1.0, 0.0));
+                let theta = acos(cos_theta) * INV_PI * 2.0;
+                let b = mix(data.border_width.y, data.border_width.z, theta);
+                if(len_d > data.border_radius.z - b) {
+                    return data.border_solid_color;
+                }
             }
+
+            // bottom-left corner
             let center_bl = data.rect.xy + vec2<f32>(data.border_radius.w, data.rect.w - data.border_radius.w);
             if(fragcoord.x < center_bl.x && fragcoord.y >= center_bl.y) {
-                // bottom-left corner
                 let d = fragcoord - center_bl;
                 let d2 = d.x * d.x + d.y * d.y;
                 if(d2 > data.border_radius.w * data.border_radius.w) {
                     discard;
+                }
+                let len_d: f32 = sqrt(d2);
+                let d_norm: vec2<f32> = d / len_d;
+                let cos_theta = dot(d_norm, vec2<f32>(0.0, 1.0));
+                let theta = acos(cos_theta) * INV_PI * 2.0;
+                let b = mix(data.border_width.z, data.border_width.w, theta);
+                if(len_d > data.border_radius.w - b) {
+                    return data.border_solid_color;
                 }
             }
 
