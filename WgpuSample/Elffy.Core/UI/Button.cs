@@ -576,6 +576,9 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         @group(0) @binding(0) var<uniform> screen: ScreenInfo;
         @group(0) @binding(1) var<uniform> data: BufferData;
 
+        const PI: f32 = 3.141592653589793;
+        const INV_PI: f32 = 0.3183098861837907;
+
         @vertex fn vs_main(
             v: Vin,
         ) -> V2F {
@@ -598,6 +601,14 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
                 let d2 = d.x * d.x + d.y * d.y;
                 if(d2 > data.border_radius.x * data.border_radius.x) {
                     discard;
+                }
+                let len_d: f32 = sqrt(d2);
+                let d_norm: vec2<f32> = d / len_d;
+                let cos_theta = dot(d_norm, vec2<f32>(-1.0, 0.0));
+                let theta = acos(cos_theta) * INV_PI * 2.0;
+                let b = mix(data.border_width.w, data.border_width.x, theta);
+                if(len_d > data.border_radius.x - b) {
+                    return data.border_solid_color;
                 }
             }
             let center_tr = data.rect.xy + vec2<f32>(data.rect.z - data.border_radius.y, data.border_radius.y);
