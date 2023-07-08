@@ -594,8 +594,9 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             let center_tl = data.rect.xy + vec2<f32>(data.border_radius.x, data.border_radius.x);
             if(fragcoord.x < center_tl.x && fragcoord.y < center_tl.y) {
                 // top-left corner
-                let d = center_tl - fragcoord;
-                if(d.x * d.x + d.y * d.y > data.border_radius.x * data.border_radius.x) {
+                let d = fragcoord - center_tl;
+                let d2 = d.x * d.x + d.y * d.y;
+                if(d2 > data.border_radius.x * data.border_radius.x) {
                     discard;
                 }
             }
@@ -603,7 +604,8 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             if(fragcoord.x >= center_tr.x && fragcoord.y < center_tr.y) {
                 // top-right corner
                 let d = fragcoord - center_tr;
-                if(d.x * d.x + d.y * d.y > data.border_radius.y * data.border_radius.y) {
+                let d2 = d.x * d.x + d.y * d.y;
+                if(d2 > data.border_radius.y * data.border_radius.y) {
                     discard;
                 }
             }
@@ -611,15 +613,17 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             if(fragcoord.x >= center_br.x && fragcoord.y >= center_br.y) {
                 // bottom-right corner
                 let d = fragcoord - center_br;
-                if(d.x * d.x + d.y * d.y > data.border_radius.z * data.border_radius.z) {
+                let d2 = d.x * d.x + d.y * d.y;
+                if(d2 > data.border_radius.z * data.border_radius.z) {
                     discard;
                 }
             }
             let center_bl = data.rect.xy + vec2<f32>(data.border_radius.w, data.rect.w - data.border_radius.w);
             if(fragcoord.x < center_bl.x && fragcoord.y >= center_bl.y) {
                 // bottom-left corner
-                let d = center_bl - fragcoord;
-                if(d.x * d.x + d.y * d.y > data.border_radius.w * data.border_radius.w) {
+                let d = fragcoord - center_bl;
+                let d2 = d.x * d.x + d.y * d.y;
+                if(d2 > data.border_radius.w * data.border_radius.w) {
                     discard;
                 }
             }
