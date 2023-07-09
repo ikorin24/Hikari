@@ -242,6 +242,16 @@ public abstract class UIElement : IToJson
     internal void SetActualRect(in RectF rect, in Matrix4 uiProjection)
     {
         _actualRect = rect;
+        var borderRadius = _borderRadius;
+        ReadOnlySpan<float> r = stackalloc float[4]
+        {
+            rect.Size.X / (borderRadius.TopLeft + borderRadius.TopRight),
+            rect.Size.Y / (borderRadius.TopRight + borderRadius.BottomRight),
+            rect.Size.X / (borderRadius.BottomRight + borderRadius.BottomLeft),
+            rect.Size.Y / (borderRadius.BottomLeft + borderRadius.TopLeft),
+        };
+        var ratio = float.Min(1f, float.Min(float.Min(r[0], r[1]), float.Min(r[2], r[3])));
+        var actualBorderRadius = borderRadius.ToVector4() * ratio;
         var model = _model;
         if(model != null) {
             var modelMatrix =
@@ -264,7 +274,7 @@ public abstract class UIElement : IToJson
                 },
                 Rect = rect,
                 BorderWidth = _borderWidth.ToVector4(),
-                BorderRadius = _borderRadius.ToVector4(),
+                BorderRadius = actualBorderRadius,
                 BorderSolidColor = _borderColor.SolidColor,
             });
         }
@@ -559,7 +569,6 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         struct V2F {
             @builtin(position) clip_pos: vec4<f32>,
             @location(0) uv: vec2<f32>,
-            @location(1) border_radius: vec4<f32>,
         }
         struct ScreenInfo {
             size: vec2<u32>,
@@ -586,21 +595,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             var o: V2F;
             o.clip_pos = data.mvp * vec4<f32>(v.pos, 1.0);
             o.uv = v.uv;
-            o.border_radius = calc_border_radius();
             return o;
-        }
-
-        fn calc_border_radius() -> vec4<f32>
-        {
-            let size = data.rect.zw;
-            let border_radius_ratio = min(
-                1.0,
-                min(size.x / (data.border_radius.x + data.border_radius.y),
-                min(size.y / (data.border_radius.y + data.border_radius.z),
-                min(size.x / (data.border_radius.z + data.border_radius.w),
-                size.y / (data.border_radius.w + data.border_radius.x)
-            ))));
-            return data.border_radius * border_radius_ratio;
         }
 
         fn pow_x2(x: f32) -> f32 {
@@ -613,7 +608,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             // pixel coordinates, not normalized
             let fragcoord: vec2<f32> = f.clip_pos.xy;
 
-            let b_radius = f.border_radius;
+            let b_radius = data.border_radius;
 
             // top-left corner
             let center_tl = data.rect.xy + vec2<f32>(b_radius.x, b_radius.x);
