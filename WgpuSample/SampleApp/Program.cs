@@ -30,20 +30,6 @@ internal class Program
 
     private static void OnInitialized(Screen screen)
     {
-        //FC fc = (prop) =>
-        //{
-        //    var count = new State<int>(0);
-
-        //    return $$"""
-        //    {
-        //        "@type": "button",
-        //        "width": "{{prop.Width}}",
-        //        "text": "click {{count}}",
-        //        "click": "{{() => count.Set(count.Get() + 1)}}"
-        //    }
-        //    """;
-        //};
-
         var panel = Serializer.Deserialize<Panel>("""
         {
             "@type": "panel",
@@ -73,31 +59,6 @@ internal class Program
             }]
         }
         """);
-        //var panel2 = new Panel
-        //{
-        //    Width = 600,
-        //    Height = LayoutLength.Proportion(0.8f),
-        //    HorizontalAlignment = HorizontalAlignment.Center,
-        //    //Layouter = new StackLayouter
-        //    //{
-        //    //    Orientation = Orientation.Vertical,
-        //    //    Spacing = 10,
-        //    //},
-        //    Children = new()
-        //    {
-        //        new Button
-        //        {
-        //            Width = 250,
-        //            Height = 150,
-        //            HorizontalAlignment = HorizontalAlignment.Left,
-        //        },
-        //        new Button
-        //        {
-        //            Width = 80,
-        //            Height = 100,
-        //        },
-        //    },
-        //};
 
         var uiLayer = new UILayer(screen, 2);
         uiLayer.AddRootElement(panel);
