@@ -559,6 +559,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         struct V2F {
             @builtin(position) clip_pos: vec4<f32>,
             @location(0) uv: vec2<f32>,
+            @location(1) border_width: vec4<f32>,
         }
         struct ScreenInfo {
             size: vec2<u32>,
@@ -585,7 +586,21 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             var o: V2F;
             o.clip_pos = data.mvp * vec4<f32>(v.pos, 1.0);
             o.uv = v.uv;
+            o.border_width = calc_border_radius();
             return o;
+        }
+
+        fn calc_border_radius() -> vec4<f32>
+        {
+            let size = data.rect.zw;
+            let border_radius_ratio = min(
+                1.0,
+                min(size.x / (data.border_radius.x + data.border_radius.y),
+                min(size.y / (data.border_radius.y + data.border_radius.z),
+                min(size.x / (data.border_radius.z + data.border_radius.w),
+                size.y / (data.border_radius.w + data.border_radius.x)
+            ))));
+            return data.border_radius * border_radius_ratio;
         }
 
         @fragment fn fs_main(
@@ -594,12 +609,14 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             // pixel coordinates, not normalized
             let fragcoord: vec2<f32> = f.clip_pos.xy;
 
+            let b_radius = f.border_width;
+
             // top-left corner
-            let center_tl = data.rect.xy + vec2<f32>(data.border_radius.x, data.border_radius.x);
+            let center_tl = data.rect.xy + vec2<f32>(b_radius.x, b_radius.x);
             if(fragcoord.x < center_tl.x && fragcoord.y < center_tl.y) {
                 let d = fragcoord - center_tl;
                 let d2 = d.x * d.x + d.y * d.y;
-                if(d2 > data.border_radius.x * data.border_radius.x) {
+                if(d2 > b_radius.x * b_radius.x) {
                     discard;
                 }
                 let len_d: f32 = sqrt(d2);
@@ -607,17 +624,17 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
                 let cos_theta = dot(d_norm, vec2<f32>(-1.0, 0.0));
                 let theta = acos(cos_theta) * INV_PI * 2.0;
                 let b = mix(data.border_width.w, data.border_width.x, theta);
-                if(len_d > data.border_radius.x - b) {
+                if(len_d > b_radius.x - b) {
                     return data.border_solid_color;
                 }
             }
 
             // top-right corner
-            let center_tr = data.rect.xy + vec2<f32>(data.rect.z - data.border_radius.y, data.border_radius.y);
+            let center_tr = data.rect.xy + vec2<f32>(data.rect.z - b_radius.y, b_radius.y);
             if(fragcoord.x >= center_tr.x && fragcoord.y < center_tr.y) {
                 let d = fragcoord - center_tr;
                 let d2 = d.x * d.x + d.y * d.y;
-                if(d2 > data.border_radius.y * data.border_radius.y) {
+                if(d2 > b_radius.y * b_radius.y) {
                     discard;
                 }
                 let len_d: f32 = sqrt(d2);
@@ -625,17 +642,17 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
                 let cos_theta = dot(d_norm, vec2<f32>(0.0, -1.0));
                 let theta = acos(cos_theta) * INV_PI * 2.0;
                 let b = mix(data.border_width.x, data.border_width.y, theta);
-                if(len_d > data.border_radius.y - b) {
+                if(len_d > b_radius.y - b) {
                     return data.border_solid_color;
                 }
             }
 
             // bottom-right corner
-            let center_br = data.rect.xy + vec2<f32>(data.rect.z - data.border_radius.z, data.rect.w - data.border_radius.z);
+            let center_br = data.rect.xy + vec2<f32>(data.rect.z - b_radius.z, data.rect.w - b_radius.z);
             if(fragcoord.x >= center_br.x && fragcoord.y >= center_br.y) {
                 let d = fragcoord - center_br;
                 let d2 = d.x * d.x + d.y * d.y;
-                if(d2 > data.border_radius.z * data.border_radius.z) {
+                if(d2 > b_radius.z * b_radius.z) {
                     discard;
                 }
                 let len_d: f32 = sqrt(d2);
@@ -643,17 +660,17 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
                 let cos_theta = dot(d_norm, vec2<f32>(1.0, 0.0));
                 let theta = acos(cos_theta) * INV_PI * 2.0;
                 let b = mix(data.border_width.y, data.border_width.z, theta);
-                if(len_d > data.border_radius.z - b) {
+                if(len_d > b_radius.z - b) {
                     return data.border_solid_color;
                 }
             }
 
             // bottom-left corner
-            let center_bl = data.rect.xy + vec2<f32>(data.border_radius.w, data.rect.w - data.border_radius.w);
+            let center_bl = data.rect.xy + vec2<f32>(b_radius.w, data.rect.w - b_radius.w);
             if(fragcoord.x < center_bl.x && fragcoord.y >= center_bl.y) {
                 let d = fragcoord - center_bl;
                 let d2 = d.x * d.x + d.y * d.y;
-                if(d2 > data.border_radius.w * data.border_radius.w) {
+                if(d2 > b_radius.w * b_radius.w) {
                     discard;
                 }
                 let len_d: f32 = sqrt(d2);
@@ -661,7 +678,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
                 let cos_theta = dot(d_norm, vec2<f32>(0.0, 1.0));
                 let theta = acos(cos_theta) * INV_PI * 2.0;
                 let b = mix(data.border_width.z, data.border_width.w, theta);
-                if(len_d > data.border_radius.w - b) {
+                if(len_d > b_radius.w - b) {
                     return data.border_solid_color;
                 }
             }
