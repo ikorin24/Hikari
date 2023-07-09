@@ -559,7 +559,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         struct V2F {
             @builtin(position) clip_pos: vec4<f32>,
             @location(0) uv: vec2<f32>,
-            @location(1) border_width: vec4<f32>,
+            @location(1) border_radius: vec4<f32>,
         }
         struct ScreenInfo {
             size: vec2<u32>,
@@ -586,7 +586,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             var o: V2F;
             o.clip_pos = data.mvp * vec4<f32>(v.pos, 1.0);
             o.uv = v.uv;
-            o.border_width = calc_border_radius();
+            o.border_radius = calc_border_radius();
             return o;
         }
 
@@ -603,13 +603,17 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             return data.border_radius * border_radius_ratio;
         }
 
+        fn pow_x2(x: f32) -> f32 {
+            return x * x;
+        }
+
         @fragment fn fs_main(
             f: V2F,
         ) -> @location(0) vec4<f32> {
             // pixel coordinates, not normalized
             let fragcoord: vec2<f32> = f.clip_pos.xy;
 
-            let b_radius = f.border_width;
+            let b_radius = f.border_radius;
 
             // top-left corner
             let center_tl = data.rect.xy + vec2<f32>(b_radius.x, b_radius.x);
@@ -619,12 +623,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
                 if(d2 > b_radius.x * b_radius.x) {
                     discard;
                 }
-                let len_d: f32 = sqrt(d2);
-                let d_norm: vec2<f32> = d / len_d;
-                let cos_theta = dot(d_norm, vec2<f32>(-1.0, 0.0));
-                let theta = acos(cos_theta) * INV_PI * 2.0;
-                let b = mix(data.border_width.w, data.border_width.x, theta);
-                if(len_d > b_radius.x - b) {
+                if(pow_x2(d.x) / pow_x2(max(0.001, b_radius.x - data.border_width.w)) + pow_x2(d.y) / pow_x2(max(0.001, b_radius.x - data.border_width.x)) > 1.0) {
                     return data.border_solid_color;
                 }
             }
@@ -637,12 +636,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
                 if(d2 > b_radius.y * b_radius.y) {
                     discard;
                 }
-                let len_d: f32 = sqrt(d2);
-                let d_norm: vec2<f32> = d / len_d;
-                let cos_theta = dot(d_norm, vec2<f32>(0.0, -1.0));
-                let theta = acos(cos_theta) * INV_PI * 2.0;
-                let b = mix(data.border_width.x, data.border_width.y, theta);
-                if(len_d > b_radius.y - b) {
+                if(pow_x2(d.x) / pow_x2(max(0.001, b_radius.y - data.border_width.y)) + pow_x2(d.y) / pow_x2(max(0.001, b_radius.y - data.border_width.x)) > 1.0) {
                     return data.border_solid_color;
                 }
             }
@@ -655,12 +649,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
                 if(d2 > b_radius.z * b_radius.z) {
                     discard;
                 }
-                let len_d: f32 = sqrt(d2);
-                let d_norm: vec2<f32> = d / len_d;
-                let cos_theta = dot(d_norm, vec2<f32>(1.0, 0.0));
-                let theta = acos(cos_theta) * INV_PI * 2.0;
-                let b = mix(data.border_width.y, data.border_width.z, theta);
-                if(len_d > b_radius.z - b) {
+                if(pow_x2(d.x) / pow_x2(max(0.001, b_radius.z - data.border_width.y)) + pow_x2(d.y) / pow_x2(max(0.001, b_radius.z - data.border_width.z)) > 1.0) {
                     return data.border_solid_color;
                 }
             }
@@ -673,12 +662,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
                 if(d2 > b_radius.w * b_radius.w) {
                     discard;
                 }
-                let len_d: f32 = sqrt(d2);
-                let d_norm: vec2<f32> = d / len_d;
-                let cos_theta = dot(d_norm, vec2<f32>(0.0, 1.0));
-                let theta = acos(cos_theta) * INV_PI * 2.0;
-                let b = mix(data.border_width.z, data.border_width.w, theta);
-                if(len_d > b_radius.w - b) {
+                if(pow_x2(d.x) / pow_x2(max(0.001, b_radius.w - data.border_width.w)) + pow_x2(d.y) / pow_x2(max(0.001, b_radius.w - data.border_width.z)) > 1.0) {
                     return data.border_solid_color;
                 }
             }
