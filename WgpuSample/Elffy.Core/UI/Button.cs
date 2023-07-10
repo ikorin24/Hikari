@@ -15,23 +15,41 @@ namespace Elffy.UI;
 
 public sealed class Button : UIElement, IFromJson<Button>
 {
+    private string _text;
     private EventSource<Button> _clicked;
+
+    public string Text
+    {
+        get => _text;
+        set
+        {
+            if(value == _text) { return; }
+            _text = value;
+            RequestUpdateMaterial();
+        }
+    }
 
     static Button() => Serializer.RegisterConstructor(FromJson);
     public static Button FromJson(JsonElement element) => new Button(element);
 
-    protected override JsonNode? ToJsonProtected()
+    protected override JsonNode ToJsonProtected()
     {
         var node = base.ToJsonProtected();
+        node["text"] = _text;
         return node;
     }
 
     public Button() : base()
     {
+        _text = "";
     }
 
     private Button(JsonElement element) : base(element)
     {
+        _text = "";
+        if(element.TryGetProperty("text", out var text)) {
+            _text = Serializer.Instantiate<string>(text);
+        }
     }
 }
 
@@ -48,7 +66,7 @@ public sealed class Panel : UIElement, IFromJson<Panel>
     {
     }
 
-    protected override JsonNode? ToJsonProtected()
+    protected override JsonNode ToJsonProtected()
     {
         var node = base.ToJsonProtected();
         return node;
@@ -262,7 +280,7 @@ public abstract class UIElement : IToJson
         }
     }
 
-    protected virtual JsonNode? ToJsonProtected()
+    protected virtual JsonNode ToJsonProtected()
     {
         var obj = new JsonObject()
         {
@@ -286,6 +304,16 @@ public abstract class UIElement : IToJson
     {
         var node = ToJsonProtected();
         return node;
+    }
+
+    protected void RequestUpdateLayout()
+    {
+        _needToUpdate |= NeedToUpdateFlags.Layout;
+    }
+
+    protected void RequestUpdateMaterial()
+    {
+        _needToUpdate |= NeedToUpdateFlags.Material;
     }
 
     internal void SetParent(UIElement parent)
