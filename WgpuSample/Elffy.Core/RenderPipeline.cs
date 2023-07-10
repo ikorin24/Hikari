@@ -422,6 +422,16 @@ public readonly struct BlendState
     }
 
     public static BlendState Replace => new(BlendComponent.Replace);
+    public static BlendState AlphaBlending => new BlendState
+    {
+        Color = new BlendComponent
+        {
+            SrcFactor = BlendFactor.SrcAlpha,
+            DstFactor = BlendFactor.OneMinusSrcAlpha,
+            Operation = BlendOperation.Add,
+        },
+        Alpha = BlendComponent.Over,
+    };
 
     internal Wgpu.BlendState ToNative()
     {
@@ -443,6 +453,14 @@ public readonly struct BlendComponent
     {
         SrcFactor = BlendFactor.One,
         DstFactor = BlendFactor.Zero,
+        Operation = BlendOperation.Add,
+    };
+
+    // Blend state of (1 * src) + ((1 - src_alpha) * dst)
+    public static BlendComponent Over => new()
+    {
+        SrcFactor = BlendFactor.One,
+        DstFactor = BlendFactor.OneMinusSrcAlpha,
         Operation = BlendOperation.Add,
     };
 

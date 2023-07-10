@@ -584,7 +584,7 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
                     new ColorTargetState
                     {
                         Format = screen.SurfaceFormat,
-                        Blend = null,
+                        Blend = BlendState.AlphaBlending,
                         WriteMask = ColorWrites.All,
                     },
                 },
@@ -647,6 +647,14 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             return x * x;
         }
 
+        fn blend(src: vec4<f32>, dst: vec4<f32>, x: f32) -> vec4<f32> {
+            let a = src.a * x;
+            return vec4(
+                src.rgb * a + (1.0 - a) * dst.rgb,
+                a + (1.0 - a) * dst.a,
+            );
+        }
+
         @fragment fn fs_main(
             f: V2F,
         ) -> @location(0) vec4<f32> {
@@ -659,12 +667,26 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             let center_tl = data.rect.xy + vec2<f32>(b_radius.x, b_radius.x);
             if(fragcoord.x < center_tl.x && fragcoord.y < center_tl.y) {
                 let d = fragcoord - center_tl;
-                let d2 = d.x * d.x + d.y * d.y;
-                if(d2 > b_radius.x * b_radius.x) {
+                let len_d = length(d);
+                if(len_d > b_radius.x + 1.0) {
                     discard;
                 }
-                if(pow_x2(d.x) / pow_x2(max(0.001, b_radius.x - data.border_width.w)) + pow_x2(d.y) / pow_x2(max(0.001, b_radius.x - data.border_width.x)) > 1.0) {
+                let opacity: f32 = 1.0 - (len_d - b_radius.x);
+                if(len_d > b_radius.x) {
+                    return vec4<f32>(data.border_solid_color.rgb, data.border_solid_color.a * opacity);
+                }
+                var a = b_radius.x - data.border_width.w;   // x-axis radius of ellipse
+                var b = b_radius.x - data.border_width.x;   // y-axis radius of ellipse
+
+                // vector from center of ellipse to the crossed point of 'd' and the ellipse
+                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
+                let len_v = length(v);
+                if(len_d > len_v) {
                     return data.border_solid_color;
+                }
+                let diff = len_v - len_d;
+                if(diff <= 1.0) {
+                    return blend(data.border_solid_color, data.solid_color, 1.0 - diff);
                 }
             }
 

@@ -38,9 +38,9 @@ internal class Program
             "horizontalAlignment": "Center",
             "padding": "10px 80px",
             "backgroundColor": "#ffee23",
-            "borderWidth": "4px",
+            "borderWidth": "10px",
             "borderColor": "#22B7FF",
-            "borderRadius": 5,
+            "borderRadius": 120,
             "children":
             [{
                 "@type": "button",
