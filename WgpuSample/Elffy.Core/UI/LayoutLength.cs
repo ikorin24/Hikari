@@ -31,8 +31,8 @@ public readonly struct LayoutLength
     public static LayoutLength FromJson(JsonElement element)
     {
         // 10
-        // "10"
-        // "0.8*"
+        // "10px"
+        // "80%"
 
         switch(element.ValueKind) {
             case JsonValueKind.Number: {
@@ -40,18 +40,21 @@ public readonly struct LayoutLength
             }
             case JsonValueKind.String: {
                 var str = element.GetStringNotNull();
-                return
-                    str.EndsWith('*') ?
-                    new()
+                if(str.EndsWith('%')) {
+                    return new()
                     {
-                        Value = float.Parse(str.AsSpan(0, str.Length - 1)),
+                        Value = float.Parse(str.AsSpan()[..^1]) * 0.01f,
                         Type = LayoutLengthType.Proportion,
-                    } :
-                    new()
+                    };
+                }
+                if(str.EndsWith("px")) {
+                    return new()
                     {
-                        Value = float.Parse(str),
+                        Value = float.Parse(str.AsSpan()[..^2]),
                         Type = LayoutLengthType.Length,
                     };
+                }
+                throw new FormatException(str);
             }
             default: {
                 throw new FormatException(element.ToString());
@@ -64,7 +67,7 @@ public readonly struct LayoutLength
         return Type switch
         {
             LayoutLengthType.Length => Value,
-            LayoutLengthType.Proportion => $"{Value}*",
+            LayoutLengthType.Proportion => $"{Value * 100f}%",
             _ => 0,
         };
     }
@@ -84,7 +87,7 @@ public readonly struct LayoutLength
         return Type switch
         {
             LayoutLengthType.Length => Value.ToString(),
-            LayoutLengthType.Proportion => $"{Value}*",
+            LayoutLengthType.Proportion => $"{Value * 100f}%",
             _ => base.ToString() ?? "",
         };
     }

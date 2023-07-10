@@ -34,11 +34,11 @@ internal class Program
         {
             "@type": "panel",
             "width": 600,
-            "height": "0.8*",
+            "height": "80%",
             "horizontalAlignment": "Center",
-            "padding": "10 80",
+            "padding": "10px 80px",
             "backgroundColor": "#ffee23",
-            "borderWidth": "4",
+            "borderWidth": "4px",
             "borderColor": "#22B7FF",
             "borderRadius": 5,
             "children":
@@ -62,6 +62,19 @@ internal class Program
 
         var uiLayer = new UILayer(screen, 2);
         uiLayer.AddRootElement(panel);
+
+        screen.Update.Subscribe(screen =>
+        {
+            if(screen.FrameNum % 60 == 0) {
+                var button = panel.Children[1];
+                if(button.HorizontalAlignment == HorizontalAlignment.Left) {
+                    button.HorizontalAlignment = HorizontalAlignment.Right;
+                }
+                else {
+                    button.HorizontalAlignment = HorizontalAlignment.Left;
+                }
+            }
+        });
 
         screen.Title = "sample";
         var layer = new PbrLayer(screen, 0);

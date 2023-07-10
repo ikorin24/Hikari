@@ -21,7 +21,7 @@ public readonly struct LayoutThickness
     public static LayoutThickness Zero => default;
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private string DebugDisplay => $"{Top} {Right} {Bottom} {Left}";
+    private string DebugDisplay => $"{Top}px {Right}px {Bottom}px {Left}px";
 
     static LayoutThickness() => Serializer.RegisterConstructor(FromJson);
 
@@ -71,11 +71,11 @@ public readonly struct LayoutThickness
 
     public static LayoutThickness FromJson(JsonElement element)
     {
-        // 10.3
-        // "10.3"
-        // "10.3"
-        // "10.3 10.3 10.3"
-        // "10.3 10.3 10.3 10.3"
+        // 10
+        // "10px"
+        // "10px"
+        // "10px 10px 10px"
+        // "10px 10px 10px 10px"
 
         switch(element.ValueKind) {
             case JsonValueKind.Number: {
@@ -86,10 +86,10 @@ public readonly struct LayoutThickness
                 var splits = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 return splits switch
                 {
-                    { Length: 1 } => new LayoutThickness(float.Parse(splits[0])),
-                    { Length: 2 } => new LayoutThickness(float.Parse(splits[0]), float.Parse(splits[1])),
-                    { Length: 3 } => new LayoutThickness(float.Parse(splits[0]), float.Parse(splits[1]), float.Parse(splits[2])),
-                    { Length: 4 } => new LayoutThickness(float.Parse(splits[0]), float.Parse(splits[1]), float.Parse(splits[2]), float.Parse(splits[3])),
+                    { Length: 1 } => new LayoutThickness(Px(splits[0])),
+                    { Length: 2 } => new LayoutThickness(Px(splits[0]), Px(splits[1])),
+                    { Length: 3 } => new LayoutThickness(Px(splits[0]), Px(splits[1]), Px(splits[2])),
+                    { Length: 4 } => new LayoutThickness(Px(splits[0]), Px(splits[1]), Px(splits[2]), Px(splits[3])),
                     _ => throw new FormatException($"cannot create {nameof(LayoutThickness)} from string \"{str}\""),
                 };
             }
@@ -97,11 +97,19 @@ public readonly struct LayoutThickness
                 throw new FormatException(element.ToString());
             }
         }
+
+        static float Px(ReadOnlySpan<char> s)
+        {
+            if(s.EndsWith("px")) {
+                return float.Parse(s[..^2]);
+            }
+            throw new FormatException();
+        }
     }
 
     public JsonNode? ToJson()
     {
-        return $"{Top} {Right} {Bottom} {Left}";
+        return $"{Top}px {Right}px {Bottom}px {Left}px";
     }
 
     public static bool operator ==(LayoutThickness left, LayoutThickness right) => left.Equals(right);
