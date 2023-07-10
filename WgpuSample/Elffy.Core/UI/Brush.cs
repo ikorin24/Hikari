@@ -25,7 +25,7 @@ public sealed class Brush
         _solidColor = solidColor;
     }
 
-    public bool TryGetSolidColorr(out Color4 solidColor)
+    public bool TryGetSolidColor(out Color4 solidColor)
     {
         solidColor = _solidColor;
         return _type == BrushType.Solid;

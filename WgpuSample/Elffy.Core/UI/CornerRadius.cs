@@ -104,4 +104,8 @@ public readonly struct CornerRadius
     }
 
     public Vector4 ToVector4() => new Vector4(TopLeft, TopRight, BottomRight, BottomLeft);
+
+    public static bool operator ==(CornerRadius left, CornerRadius right) => left.Equals(right);
+
+    public static bool operator !=(CornerRadius left, CornerRadius right) => !(left == right);
 }

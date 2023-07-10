@@ -72,50 +72,85 @@ public abstract class UIElement : IToJson
     private CornerRadius _borderRadius;
     private Brush _borderColor;
 
-    // border (width,type,color)  : Border(float Width, BorderType Type, Color4 Color)
-    // background (color)         : SolidBrush(Color4 Color)  LinearGradientBrush(float Angle, (Color4 Color, float P)[] Points)  Brush(Image Image, FillMode Mode)
     private RectF _actualRect;
+    private NeedToUpdateFlags _needToUpdate;
+
+    [Flags]
+    private enum NeedToUpdateFlags : uint
+    {
+        None = 0,
+        Material = 1,
+        Layout = 2,
+    }
 
     public UIElement? Parent => _parent;
     internal UIModel? Model => _model;
     public Screen? Screen => _model?.Screen;
 
-    public Vector2 ActualPosition => _actualRect.Position;
-    public Vector2 ActualSize => _actualRect.Size;
 
     public LayoutLength Width
     {
         get => _width;
-        set => _width = value;
+        set
+        {
+            if(value == _width) { return; }
+            _width = value;
+            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+        }
     }
     public LayoutLength Height
     {
         get => _height;
-        set => _height = value;
+        set
+        {
+            if(value == _height) { return; }
+            _height = value;
+            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+        }
     }
 
     public LayoutThickness Margin
     {
         get => _margin;
-        set => _margin = value;
+        set
+        {
+            if(value == _margin) { return; }
+            _margin = value;
+            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+        }
     }
 
     public LayoutThickness Padding
     {
         get => _padding;
-        set => _padding = value;
+        set
+        {
+            if(value == _padding) { return; }
+            _padding = value;
+            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+        }
     }
 
     public HorizontalAlignment HorizontalAlignment
     {
         get => _horizontalAlignment;
-        set => _horizontalAlignment = value;
+        set
+        {
+            if(value == _horizontalAlignment) { return; }
+            _horizontalAlignment = value;
+            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+        }
     }
 
     public VerticalAlignment VerticalAlignment
     {
         get => _verticalAlignment;
-        set => _verticalAlignment = value;
+        set
+        {
+            if(value == _verticalAlignment) { return; }
+            _verticalAlignment = value;
+            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+        }
     }
 
     public Brush BackgroundColor
@@ -124,20 +159,32 @@ public abstract class UIElement : IToJson
         set
         {
             ArgumentNullException.ThrowIfNull(value);
+            if(value == _backgroundColor) { return; }
             _backgroundColor = value;
+            _needToUpdate |= NeedToUpdateFlags.Material;
         }
     }
 
     public LayoutThickness BorderWidth
     {
         get => _borderWidth;
-        set => _borderWidth = value;
+        set
+        {
+            if(value == _borderWidth) { return; }
+            _borderWidth = value;
+            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+        }
     }
 
     public CornerRadius BorderRadius
     {
         get => _borderRadius;
-        set => _borderRadius = value;
+        set
+        {
+            if(value == _borderRadius) { return; }
+            _borderRadius = value;
+            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+        }
     }
 
     public Brush BorderColor
@@ -147,17 +194,18 @@ public abstract class UIElement : IToJson
         {
             ArgumentNullException.ThrowIfNull(value);
             _borderColor = value;
+            _needToUpdate |= NeedToUpdateFlags.Material;
         }
     }
 
     public UIElementCollection Children
     {
+        get => _children;
         init
         {
             _children = value;
             value.Parent = this;
         }
-        get => _children;
     }
 
     protected UIElement()
@@ -174,6 +222,7 @@ public abstract class UIElement : IToJson
         _borderRadius = CornerRadius.Zero;
         _borderColor = Brush.Black;
         _children = new UIElementCollection();
+        _needToUpdate = NeedToUpdateFlags.Material | NeedToUpdateFlags.Layout;
     }
 
     protected UIElement(JsonElement element) : this()
@@ -239,47 +288,6 @@ public abstract class UIElement : IToJson
         return node;
     }
 
-    internal void SetActualRect(in RectF rect, in Matrix4 uiProjection)
-    {
-        _actualRect = rect;
-        var borderRadius = _borderRadius;
-        ReadOnlySpan<float> r = stackalloc float[4]
-        {
-            rect.Size.X / (borderRadius.TopLeft + borderRadius.TopRight),
-            rect.Size.Y / (borderRadius.TopRight + borderRadius.BottomRight),
-            rect.Size.X / (borderRadius.BottomRight + borderRadius.BottomLeft),
-            rect.Size.Y / (borderRadius.BottomLeft + borderRadius.TopLeft),
-        };
-        var ratio = float.Min(1f, float.Min(float.Min(r[0], r[1]), float.Min(r[2], r[3])));
-        var actualBorderRadius = borderRadius.ToVector4() * ratio;
-        var model = _model;
-        if(model != null) {
-            var modelMatrix =
-                new Vector3(rect.Position, 0f).ToTranslationMatrix4() *
-                //Rotation.ToMatrix4() *
-                new Matrix4(
-                    new Vector4(rect.Size.X, 0, 0, 0),
-                    new Vector4(0, rect.Size.Y, 0, 0),
-                    new Vector4(0, 0, 1, 0),
-                    new Vector4(0, 0, 0, 1));
-
-            var background = _backgroundColor;
-            model.Material.WriteUniform(new UIMaterial.BufferData
-            {
-                Mvp = uiProjection * modelMatrix,
-                SolidColor = background.Type switch
-                {
-                    BrushType.Solid => background.SolidColor,
-                    _ => default,
-                },
-                Rect = rect,
-                BorderWidth = _borderWidth.ToVector4(),
-                BorderRadius = actualBorderRadius,
-                BorderSolidColor = _borderColor.SolidColor,
-            });
-        }
-    }
-
     internal void SetParent(UIElement parent)
     {
         Debug.Assert(_parent == null);
@@ -297,30 +305,68 @@ public abstract class UIElement : IToJson
         return model;
     }
 
-    internal void LayoutChildren(in Matrix4 uiProjection)
+    internal void UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, in Matrix4 uiProjection)
     {
-        var actualPosition = _actualRect.Position;
+        bool layoutChanged;
+        RectF rect;
+        if(parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout)) {
+            rect = DecideRect(parentContentArea);
+            _needToUpdate &= ~NeedToUpdateFlags.Layout;
+            layoutChanged = true;
+        }
+        else {
+            rect = _actualRect;
+            layoutChanged = false;
+        }
+        var contentArea = new ContentAreaInfo
+        {
+            Rect = rect,
+            Padding = _padding,
+        };
+        if(parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Material)) {
+            UpdateMaterial(rect, uiProjection);
+            _needToUpdate &= ~NeedToUpdateFlags.Material;
+        }
         foreach(var child in _children) {
-            var contentArea = MesureContentArea(child);
-            var rectInParent = DecideRect(child, contentArea);
-            var rect = new RectF(rectInParent.Position + actualPosition, rectInParent.Size);
-            child.SetActualRect(rect, uiProjection);
-            child.LayoutChildren(uiProjection);
+            child.UpdateLayout(layoutChanged, contentArea, uiProjection);
         }
     }
 
-    protected virtual ContentAreaInfo MesureContentArea(UIElement child)
+    private void UpdateMaterial(in RectF rect, in Matrix4 uiProjection)
     {
-        return new ContentAreaInfo
+        _actualRect = rect;
+        var model = _model;
+        Debug.Assert(model != null);
+        if(model == null) { return; }
+        var actualBorderRadius = UIDefaultLayouter.DecideBorderRadius(_borderRadius, rect.Size);
+        var modelMatrix =
+            new Vector3(rect.Position, 0f).ToTranslationMatrix4() *
+            //Rotation.ToMatrix4() *
+            new Matrix4(
+                new Vector4(rect.Size.X, 0, 0, 0),
+                new Vector4(0, rect.Size.Y, 0, 0),
+                new Vector4(0, 0, 1, 0),
+                new Vector4(0, 0, 0, 1));
+
+        var background = _backgroundColor;
+        model.Material.WriteUniform(new UIMaterial.BufferData
         {
-            Rect = new RectF(Vector2.Zero, ActualSize),
-            Padding = _padding,
-        };
+            Mvp = uiProjection * modelMatrix,
+            SolidColor = background.Type switch
+            {
+                BrushType.Solid => background.SolidColor,
+                _ => default,
+            },
+            Rect = rect,
+            BorderWidth = _borderWidth.ToVector4(),
+            BorderRadius = actualBorderRadius,
+            BorderSolidColor = _borderColor.SolidColor,
+        });
     }
 
-    protected virtual RectF DecideRect(UIElement child, in ContentAreaInfo area)
+    protected virtual RectF DecideRect(in ContentAreaInfo parentContentArea)
     {
-        return UIDefaultLayouter.DecideRect(child, in area);
+        return UIDefaultLayouter.DecideRect(this, parentContentArea);
     }
 }
 
@@ -349,6 +395,11 @@ public sealed class UIElementCollection
                 }
             }
         }
+    }
+
+    public UIElement this[int index]
+    {
+        get => _children[index];
     }
 
     static UIElementCollection() => Serializer.RegisterConstructor(FromJson);
@@ -439,7 +490,7 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         }).AddTo(Subscriptions);
     }
 
-    private void Layout()
+    private void UpdateLayout()
     {
         var screenSize = Screen.ClientSize;
         Matrix4.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, -1f, 1f, out var proj);
@@ -449,16 +500,15 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
             new Vector4(0, 0, 0.5f, 0),
             new Vector4(0, 0, 0.5f, 1));
         var uiProjection = GLToWebGpu * proj;
-
         var contentArea = new ContentAreaInfo
         {
             Rect = new RectF(Vector2.Zero, screenSize.ToVector2()),
             Padding = LayoutThickness.Zero,
         };
-        foreach(var root in _rootElements) {
-            var rect = UIDefaultLayouter.DecideRect(root, contentArea);
-            root.SetActualRect(rect, uiProjection);
-            root.LayoutChildren(uiProjection);
+        var isLayoutDirty = _isLayoutDirty;
+        _isLayoutDirty = false;
+        foreach(var element in _rootElements) {
+            element.UpdateLayout(isLayoutDirty, contentArea, uiProjection);
         }
     }
 
@@ -471,10 +521,8 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         var model = element.CreateModel(this);
         model.Alive.Subscribe(model =>
         {
-            _rootElements.Add(model.Element);
-            _isLayoutDirty = true;
+            model.Layer._rootElements.Add(model.Element);
         }).AddTo(Subscriptions);
-        _isLayoutDirty = true;
     }
 
     protected override void RenderShadowMap(in RenderShadowMapContext context, ReadOnlySpan<UIModel> objects)
@@ -486,10 +534,7 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         // UI rendering disables depth buffer.
         // Render in the order of UIElement tree so that child elements are rendered in front.
 
-        if(_isLayoutDirty) {
-            _isLayoutDirty = false;
-            Layout();
-        }
+        UpdateLayout();
 
         foreach(var element in _rootElements) {
             RenderElementRecursively(pass, element, render);
@@ -901,6 +946,16 @@ internal static class UIDefaultLayouter
             },
         } + area.Rect.Position;
         return new RectF(pos, size);
+    }
+
+    public static Vector4 DecideBorderRadius(in CornerRadius desiredBorderRadius, in Vector2 actualSize)
+    {
+        var ratio0 = actualSize.X / (desiredBorderRadius.TopLeft + desiredBorderRadius.TopRight);
+        var ratio1 = actualSize.Y / (desiredBorderRadius.TopRight + desiredBorderRadius.BottomRight);
+        var ratio2 = actualSize.X / (desiredBorderRadius.BottomRight + desiredBorderRadius.BottomLeft);
+        var ratio3 = actualSize.Y / (desiredBorderRadius.BottomLeft + desiredBorderRadius.TopLeft);
+        var ratio = float.Min(1f, float.Min(float.Min(ratio0, ratio1), float.Min(ratio2, ratio3)));
+        return desiredBorderRadius.ToVector4() * ratio;
     }
 }
 
