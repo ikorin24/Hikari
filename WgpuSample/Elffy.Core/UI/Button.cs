@@ -671,9 +671,11 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
                 if(len_d > b_radius.x + 1.0) {
                     discard;
                 }
-                let opacity: f32 = 1.0 - (len_d - b_radius.x);
                 if(len_d > b_radius.x) {
-                    return vec4<f32>(data.border_solid_color.rgb, data.border_solid_color.a * opacity);
+                    return vec4<f32>(
+                        data.border_solid_color.rgb, 
+                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
+                    );
                 }
                 var a = b_radius.x - data.border_width.w;   // x-axis radius of ellipse
                 var b = b_radius.x - data.border_width.x;   // y-axis radius of ellipse
@@ -694,12 +696,28 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             let center_tr = data.rect.xy + vec2<f32>(data.rect.z - b_radius.y, b_radius.y);
             if(fragcoord.x >= center_tr.x && fragcoord.y < center_tr.y) {
                 let d = fragcoord - center_tr;
-                let d2 = d.x * d.x + d.y * d.y;
-                if(d2 > b_radius.y * b_radius.y) {
+                let len_d = length(d);
+                if(len_d > b_radius.x + 1.0) {
                     discard;
                 }
-                if(pow_x2(d.x) / pow_x2(max(0.001, b_radius.y - data.border_width.y)) + pow_x2(d.y) / pow_x2(max(0.001, b_radius.y - data.border_width.x)) > 1.0) {
+                if(len_d > b_radius.x) {
+                    return vec4<f32>(
+                        data.border_solid_color.rgb, 
+                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
+                    );
+                }
+                var a = b_radius.y - data.border_width.y;   // x-axis radius of ellipse
+                var b = b_radius.y - data.border_width.x;   // y-axis radius of ellipse
+
+                // vector from center of ellipse to the crossed point of 'd' and the ellipse
+                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
+                let len_v = length(v);
+                if(len_d > len_v) {
                     return data.border_solid_color;
+                }
+                let diff = len_v - len_d;
+                if(diff <= 1.0) {
+                    return blend(data.border_solid_color, data.solid_color, 1.0 - diff);
                 }
             }
 
@@ -707,12 +725,28 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             let center_br = data.rect.xy + vec2<f32>(data.rect.z - b_radius.z, data.rect.w - b_radius.z);
             if(fragcoord.x >= center_br.x && fragcoord.y >= center_br.y) {
                 let d = fragcoord - center_br;
-                let d2 = d.x * d.x + d.y * d.y;
-                if(d2 > b_radius.z * b_radius.z) {
+                let len_d = length(d);
+                if(len_d > b_radius.x + 1.0) {
                     discard;
                 }
-                if(pow_x2(d.x) / pow_x2(max(0.001, b_radius.z - data.border_width.y)) + pow_x2(d.y) / pow_x2(max(0.001, b_radius.z - data.border_width.z)) > 1.0) {
+                if(len_d > b_radius.x) {
+                    return vec4<f32>(
+                        data.border_solid_color.rgb, 
+                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
+                    );
+                }
+                var a = b_radius.z - data.border_width.y;   // x-axis radius of ellipse
+                var b = b_radius.z - data.border_width.z;   // y-axis radius of ellipse
+
+                // vector from center of ellipse to the crossed point of 'd' and the ellipse
+                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
+                let len_v = length(v);
+                if(len_d > len_v) {
                     return data.border_solid_color;
+                }
+                let diff = len_v - len_d;
+                if(diff <= 1.0) {
+                    return blend(data.border_solid_color, data.solid_color, 1.0 - diff);
                 }
             }
 
@@ -720,12 +754,28 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
             let center_bl = data.rect.xy + vec2<f32>(b_radius.w, data.rect.w - b_radius.w);
             if(fragcoord.x < center_bl.x && fragcoord.y >= center_bl.y) {
                 let d = fragcoord - center_bl;
-                let d2 = d.x * d.x + d.y * d.y;
-                if(d2 > b_radius.w * b_radius.w) {
+                let len_d = length(d);
+                if(len_d > b_radius.x + 1.0) {
                     discard;
                 }
-                if(pow_x2(d.x) / pow_x2(max(0.001, b_radius.w - data.border_width.w)) + pow_x2(d.y) / pow_x2(max(0.001, b_radius.w - data.border_width.z)) > 1.0) {
+                if(len_d > b_radius.x) {
+                    return vec4<f32>(
+                        data.border_solid_color.rgb, 
+                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
+                    );
+                }
+                var a = b_radius.z - data.border_width.w;   // x-axis radius of ellipse
+                var b = b_radius.z - data.border_width.z;   // y-axis radius of ellipse
+
+                // vector from center of ellipse to the crossed point of 'd' and the ellipse
+                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
+                let len_v = length(v);
+                if(len_d > len_v) {
                     return data.border_solid_color;
+                }
+                let diff = len_v - len_d;
+                if(diff <= 1.0) {
+                    return blend(data.border_solid_color, data.solid_color, 1.0 - diff);
                 }
             }
 
