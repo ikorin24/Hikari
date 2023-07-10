@@ -63,12 +63,12 @@ public abstract class UIElement : IToJson
 
     private LayoutLength _width;
     private LayoutLength _height;
-    private LayoutThickness _margin;
-    private LayoutThickness _padding;
+    private Thickness _margin;
+    private Thickness _padding;
     private HorizontalAlignment _horizontalAlignment;
     private VerticalAlignment _verticalAlignment;
     private Brush _backgroundColor;
-    private LayoutThickness _borderWidth;
+    private Thickness _borderWidth;
     private CornerRadius _borderRadius;
     private Brush _borderColor;
 
@@ -109,7 +109,7 @@ public abstract class UIElement : IToJson
         }
     }
 
-    public LayoutThickness Margin
+    public Thickness Margin
     {
         get => _margin;
         set
@@ -120,7 +120,7 @@ public abstract class UIElement : IToJson
         }
     }
 
-    public LayoutThickness Padding
+    public Thickness Padding
     {
         get => _padding;
         set
@@ -165,7 +165,7 @@ public abstract class UIElement : IToJson
         }
     }
 
-    public LayoutThickness BorderWidth
+    public Thickness BorderWidth
     {
         get => _borderWidth;
         set
@@ -213,12 +213,12 @@ public abstract class UIElement : IToJson
         // set default values
         _width = new LayoutLength(100f, LayoutLengthType.Length);
         _height = new LayoutLength(100f, LayoutLengthType.Length);
-        _margin = new LayoutThickness(0f);
-        _padding = new LayoutThickness(0f);
+        _margin = new Thickness(0f);
+        _padding = new Thickness(0f);
         _horizontalAlignment = HorizontalAlignment.Center;
         _verticalAlignment = VerticalAlignment.Center;
         _backgroundColor = Brush.White;
-        _borderWidth = new LayoutThickness(0f);
+        _borderWidth = new Thickness(0f);
         _borderRadius = CornerRadius.Zero;
         _borderColor = Brush.Black;
         _children = new UIElementCollection();
@@ -234,10 +234,10 @@ public abstract class UIElement : IToJson
             _height = LayoutLength.FromJson(height);
         }
         if(element.TryGetProperty("margin", out var margin)) {
-            _margin = LayoutThickness.FromJson(margin);
+            _margin = Thickness.FromJson(margin);
         }
         if(element.TryGetProperty("padding", out var padding)) {
-            _padding = LayoutThickness.FromJson(padding);
+            _padding = Thickness.FromJson(padding);
         }
         if(element.TryGetProperty("horizontalAlignment", out var horizontalAlignment)) {
             _horizontalAlignment = Enum.Parse<HorizontalAlignment>(horizontalAlignment.GetStringNotNull());
@@ -249,7 +249,7 @@ public abstract class UIElement : IToJson
             _backgroundColor = Brush.FromJson(backgroundColor);
         }
         if(element.TryGetProperty("borderWidth", out var borderWidth)) {
-            _borderWidth = LayoutThickness.FromJson(borderWidth);
+            _borderWidth = Thickness.FromJson(borderWidth);
         }
         if(element.TryGetProperty("borderRadius", out var borderRadius)) {
             _borderRadius = CornerRadius.FromJson(borderRadius);
@@ -503,7 +503,7 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         var contentArea = new ContentAreaInfo
         {
             Rect = new RectF(Vector2.Zero, screenSize.ToVector2()),
-            Padding = LayoutThickness.Zero,
+            Padding = Thickness.Zero,
         };
         var isLayoutDirty = _isLayoutDirty;
         _isLayoutDirty = false;
@@ -962,7 +962,7 @@ internal static class UIDefaultLayouter
 public readonly struct ContentAreaInfo : IEquatable<ContentAreaInfo>
 {
     public required RectF Rect { get; init; }
-    public required LayoutThickness Padding { get; init; }
+    public required Thickness Padding { get; init; }
 
     public override bool Equals(object? obj) => obj is ContentAreaInfo info && Equals(info);
 

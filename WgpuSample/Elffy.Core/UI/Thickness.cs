@@ -8,9 +8,9 @@ using System.Text.Json.Nodes;
 namespace Elffy.UI;
 
 [DebuggerDisplay("{DebugDisplay}")]
-public readonly struct LayoutThickness
-    : IEquatable<LayoutThickness>,
-      IFromJson<LayoutThickness>,
+public readonly struct Thickness
+    : IEquatable<Thickness>,
+      IFromJson<Thickness>,
       IToJson
 {
     public required float Top { get; init; }
@@ -18,15 +18,15 @@ public readonly struct LayoutThickness
     public required float Bottom { get; init; }
     public required float Left { get; init; }
 
-    public static LayoutThickness Zero => default;
+    public static Thickness Zero => default;
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebugDisplay => $"{Top}px {Right}px {Bottom}px {Left}px";
 
-    static LayoutThickness() => Serializer.RegisterConstructor(FromJson);
+    static Thickness() => Serializer.RegisterConstructor(FromJson);
 
     [SetsRequiredMembers]
-    public LayoutThickness(float value)
+    public Thickness(float value)
     {
         Top = value;
         Right = value;
@@ -35,7 +35,7 @@ public readonly struct LayoutThickness
     }
 
     [SetsRequiredMembers]
-    public LayoutThickness(float topBottom, float leftRight)
+    public Thickness(float topBottom, float leftRight)
     {
         Top = topBottom;
         Right = leftRight;
@@ -44,7 +44,7 @@ public readonly struct LayoutThickness
     }
 
     [SetsRequiredMembers]
-    public LayoutThickness(float top, float leftRight, float bottom)
+    public Thickness(float top, float leftRight, float bottom)
     {
         Top = top;
         Right = leftRight;
@@ -53,7 +53,7 @@ public readonly struct LayoutThickness
     }
 
     [SetsRequiredMembers]
-    public LayoutThickness(float top, float right, float bottom, float left)
+    public Thickness(float top, float right, float bottom, float left)
     {
         Top = top;
         Right = right;
@@ -63,13 +63,13 @@ public readonly struct LayoutThickness
 
     public override string ToString() => DebugDisplay;
 
-    public override bool Equals(object? obj) => obj is LayoutThickness thickness && Equals(thickness);
+    public override bool Equals(object? obj) => obj is Thickness thickness && Equals(thickness);
 
-    public bool Equals(LayoutThickness other) => Left == other.Left && Top == other.Top && Right == other.Right && Bottom == other.Bottom;
+    public bool Equals(Thickness other) => Left == other.Left && Top == other.Top && Right == other.Right && Bottom == other.Bottom;
 
     public override int GetHashCode() => HashCode.Combine(Left, Top, Right, Bottom);
 
-    public static LayoutThickness FromJson(JsonElement element)
+    public static Thickness FromJson(JsonElement element)
     {
         // 10
         // "10px"
@@ -79,18 +79,18 @@ public readonly struct LayoutThickness
 
         switch(element.ValueKind) {
             case JsonValueKind.Number: {
-                return new LayoutThickness(element.GetSingle());
+                return new Thickness(element.GetSingle());
             }
             case JsonValueKind.String: {
                 var str = element.GetStringNotNull();
                 var splits = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 return splits switch
                 {
-                    { Length: 1 } => new LayoutThickness(Px(splits[0])),
-                    { Length: 2 } => new LayoutThickness(Px(splits[0]), Px(splits[1])),
-                    { Length: 3 } => new LayoutThickness(Px(splits[0]), Px(splits[1]), Px(splits[2])),
-                    { Length: 4 } => new LayoutThickness(Px(splits[0]), Px(splits[1]), Px(splits[2]), Px(splits[3])),
-                    _ => throw new FormatException($"cannot create {nameof(LayoutThickness)} from string \"{str}\""),
+                    { Length: 1 } => new Thickness(Px(splits[0])),
+                    { Length: 2 } => new Thickness(Px(splits[0]), Px(splits[1])),
+                    { Length: 3 } => new Thickness(Px(splits[0]), Px(splits[1]), Px(splits[2])),
+                    { Length: 4 } => new Thickness(Px(splits[0]), Px(splits[1]), Px(splits[2]), Px(splits[3])),
+                    _ => throw new FormatException($"cannot create {nameof(Thickness)} from string \"{str}\""),
                 };
             }
             default: {
@@ -112,9 +112,9 @@ public readonly struct LayoutThickness
         return $"{Top}px {Right}px {Bottom}px {Left}px";
     }
 
-    public static bool operator ==(LayoutThickness left, LayoutThickness right) => left.Equals(right);
+    public static bool operator ==(Thickness left, Thickness right) => left.Equals(right);
 
-    public static bool operator !=(LayoutThickness left, LayoutThickness right) => !(left == right);
+    public static bool operator !=(Thickness left, Thickness right) => !(left == right);
 
     public Vector4 ToVector4() => new Vector4(Top, Right, Bottom, Left);
 }

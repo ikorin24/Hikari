@@ -89,7 +89,7 @@ public readonly struct CornerRadius
                     { Length: 2 } => new CornerRadius(float.Parse(splits[0]), float.Parse(splits[1])),
                     { Length: 3 } => new CornerRadius(float.Parse(splits[0]), float.Parse(splits[1]), float.Parse(splits[2])),
                     { Length: 4 } => new CornerRadius(float.Parse(splits[0]), float.Parse(splits[1]), float.Parse(splits[2]), float.Parse(splits[3])),
-                    _ => throw new FormatException($"cannot create {nameof(LayoutThickness)} from string \"{str}\""),
+                    _ => throw new FormatException($"cannot create {nameof(Thickness)} from string \"{str}\""),
                 };
             }
             default: {
