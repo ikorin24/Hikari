@@ -5,7 +5,7 @@ using V = Elffy.Vertex;
 namespace Elffy;
 
 public sealed class PbrModel
-    : Renderable<PbrModel, PbrLayer, V, PbrShader, PbrMaterial>,
+    : FrameObject<PbrModel, PbrLayer, V, PbrShader, PbrMaterial>,
       IModel<float>
 {
     private readonly BufferSlice _tangent;

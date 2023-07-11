@@ -40,6 +40,8 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader, TLayer>
 {
     private readonly TLayer _layer;
+    private readonly Own<TMaterial> _material;
+    private readonly MaybeOwn<Mesh<TVertex>> _mesh;
     private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
 
     private EventSource<TSelf> _update;
@@ -53,6 +55,10 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     private bool _isFrozen;
 
     public TLayer Layer => _layer;
+    public TShader Shader => _material.AsValue().Shader;
+    public TMaterial Material => _material.AsValue();
+    public Mesh<TVertex> Mesh => _mesh.AsValue();
+    public bool IsOwnMesh => _mesh.IsOwn(out _);
     public sealed override LifeState LifeState => _state;
     public sealed override SubscriptionRegister Subscriptions => _subscriptions.Register;
 
@@ -74,29 +80,32 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     /// <summary>Strong typed `this`</summary>
     protected TSelf Self => SafeCast.As<TSelf>(this);
 
-    protected FrameObject(TLayer layer) : base(layer.Screen)
+    protected FrameObject(
+        MaybeOwn<Mesh<TVertex>> mesh,
+        Own<TMaterial> material) : base(material.AsValue().Screen)
     {
-        _layer = layer;
+        material.ThrowArgumentExceptionIfNone();
+        mesh.ThrowArgumentExceptionIfNone();
+        _material = material;
+        _mesh = mesh;
+        _layer = material.AsValue().Operation;
         _isFrozen = false;
         _state = LifeState.New;
 
         // `this` must be of type `TSelf`.
         // This is true as long as a derived class is implemented correctly.
         if(this is TSelf self) {
-            layer.Add(self);
+            _layer.Add(self);
         }
         else {
             ThrowHelper.ThrowInvalidOperation("Invalid self type.");
         }
     }
 
-    internal void InvokeRender(in RenderPass pass)
+    internal void OnRender(in RenderPass pass)
     {
-        Render(pass);
-    }
-
-    private protected virtual void Render(in RenderPass pass)
-    {
+        pass.SetPipeline(Shader.Pipeline);
+        Render(pass, _material.AsValue(), _mesh.AsValue());
     }
 
     public virtual void InvokeEarlyUpdate() => _earlyUpdate.Invoke(Self);
@@ -121,9 +130,13 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
         _state = LifeState.Dead;
     }
 
-    internal virtual void OnDead()
+    internal void OnDead()
     {
         _dead.Invoke(Self);
+        _material.Dispose();
+        _mesh.Dispose();
         _subscriptions.Dispose();
     }
+
+    protected abstract void Render(in RenderPass pass, TMaterial material, Mesh<TVertex> mesh);
 }

@@ -127,7 +127,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         Render(
             pass,
             objects,
-            (in RenderPass pass, TObject obj) => obj.InvokeRender(in pass));
+            (in RenderPass pass, TObject obj) => obj.OnRender(in pass));
     }
 
     public delegate void RenderObjectAction(in RenderPass pass, TObject obj);

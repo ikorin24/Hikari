@@ -941,7 +941,7 @@ public sealed class UIMaterial : Material<UIMaterial, UIShader, UILayer>
     }
 }
 
-public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader, UIMaterial>
+public sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShader, UIMaterial>
 {
     private readonly UIElement _element;
 
