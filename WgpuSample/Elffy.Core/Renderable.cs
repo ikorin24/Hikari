@@ -1,7 +1,5 @@
 ﻿#nullable enable
 
-using System;
-
 namespace Elffy;
 
 public abstract class Renderable<TSelf, TLayer, TVertex, TShader, TMaterial>

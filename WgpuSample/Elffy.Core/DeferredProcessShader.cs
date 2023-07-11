@@ -365,39 +365,4 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             Multiview = 0,
         };
     }
-
-    //private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(
-    //    Screen screen,
-    //    out Own<BindGroupLayout> bindGroupLayout0,
-    //    out Own<BindGroupLayout> bindGroupLayout3)
-    //{
-    //    return new PipelineLayoutDescriptor
-    //    {
-    //        BindGroupLayouts = new[]
-    //        {
-    //            // [0]
-    //            BindGroupLayout.Create(screen, _bindGroupLayoutDesc0).AsValue(out bindGroupLayout0),
-    //            // [1]
-    //            screen.Camera.CameraDataBindGroupLayout,
-    //            // [2]
-    //            screen.Lights.DataBindGroupLayout,
-    //            // [3]
-    //            BindGroupLayout.Create(screen, new()
-    //            {
-    //                Entries = new[]
-    //                {
-    //                    BindGroupLayoutEntry.Texture(0, ShaderStages.Fragment, new()
-    //                    {
-    //                        ViewDimension = TextureViewDimension.D2,
-    //                        Multisampled = false,
-    //                        SampleType = TextureSampleType.Depth,
-    //                    }),
-    //                    BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Comparison),
-    //                    BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorateReadOnly }),
-    //                    BindGroupLayoutEntry.Buffer(3, ShaderStages.Fragment, new() { Type = BufferBindingType.StorateReadOnly }),
-    //                },
-    //            }).AsValue(out bindGroupLayout3),
-    //        },
-    //    };
-    //}
 }

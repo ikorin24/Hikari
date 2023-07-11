@@ -415,7 +415,6 @@ public sealed class UIElementCollection
             if(Interlocked.CompareExchange(ref _parent, value, null) != null) {
                 ThrowInvalidInstance();
             }
-            //var layer = value.Model?.Layer;
             var shader = value.Model?.Shader;
             foreach(var child in _children) {
                 child.SetParent(value);
@@ -423,14 +422,6 @@ public sealed class UIElementCollection
                     child.CreateModel(shader);
                 }
             }
-
-            //var layer = value.Model?.Layer;
-            //foreach(var child in _children) {
-            //    child.SetParent(value);
-            //    if(layer != null) {
-            //        child.CreateModel(layer);
-            //    }
-            //}
         }
     }
 
@@ -467,10 +458,6 @@ public sealed class UIElementCollection
         var parent = _parent;
         if(parent != null) {
             element.SetParent(parent);
-            //var layer = parent.Model?.Layer;
-            //if(layer != null) {
-            //    element.CreateModel(layer);
-            //}
             var shader = parent.Model?.Shader;
             if(shader != null) {
                 element.CreateModel(shader);
@@ -609,53 +596,6 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
     {
         return context.CreateSurfaceRenderPass(colorClear: null, depthStencil: null);
     }
-
-    //private static Own<RenderPipeline> CreatePipeline(UIShader shader)
-    //{
-    //    var screen = shader.Screen;
-    //    return RenderPipeline.Create(screen, new()
-    //    {
-    //        Layout = shader.PipelineLayout,
-    //        Vertex = new VertexState()
-    //        {
-    //            Module = shader.Module,
-    //            EntryPoint = "vs_main"u8.ToArray(),
-    //            Buffers = new VertexBufferLayout[]
-    //            {
-    //                VertexBufferLayout.FromVertex<VertexSlim>(stackalloc[]
-    //                {
-    //                    (0, VertexFieldSemantics.Position),
-    //                    (1, VertexFieldSemantics.UV),
-    //                }),
-    //            },
-    //        },
-    //        Fragment = new FragmentState()
-    //        {
-    //            Module = shader.Module,
-    //            EntryPoint = "fs_main"u8.ToArray(),
-    //            Targets = new ColorTargetState?[]
-    //            {
-    //                new ColorTargetState
-    //                {
-    //                    Format = screen.SurfaceFormat,
-    //                    Blend = BlendState.AlphaBlending,
-    //                    WriteMask = ColorWrites.All,
-    //                },
-    //            },
-    //        },
-    //        Primitive = new PrimitiveState()
-    //        {
-    //            Topology = PrimitiveTopology.TriangleList,
-    //            FrontFace = FrontFace.Ccw,
-    //            CullMode = Face.Back,
-    //            PolygonMode = PolygonMode.Fill,
-    //            StripIndexFormat = null,
-    //        },
-    //        DepthStencil = null,
-    //        Multisample = MultisampleState.Default,
-    //        Multiview = 0,
-    //    });
-    //}
 
     private static Own<PipelineLayout> CreatePipelineLayout(Screen screen, out Own<BindGroupLayout> layout0)
     {
@@ -889,24 +829,6 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         var self = new UIShader(operation);
         return CreateOwn(self);
     }
-
-    //private static PipelineLayoutDescriptor Desc(Screen screen, out Own<BindGroupLayout> layout0)
-    //{
-    //    return new()
-    //    {
-    //        BindGroupLayouts = new[]
-    //        {
-    //            BindGroupLayout.Create(screen, new()
-    //            {
-    //                Entries = new[]
-    //                {
-    //                    BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
-    //                    BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
-    //                }
-    //            }).AsValue(out layout0),
-    //        },
-    //    };
-    //}
 
     private static RenderPipelineDescriptor Desc(PipelineLayout layout, ShaderModule module)
     {

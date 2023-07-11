@@ -8,45 +8,16 @@ public sealed class PbrLayer
     : ObjectLayer<PbrLayer, V, PbrShader, PbrMaterial, PbrModel>,
     IGBufferProvider
 {
-    private const int MrtCount = 4;
-    private static readonly TextureFormat[] _formats = new TextureFormat[MrtCount]
+    private static readonly TextureFormat[] _formats = new TextureFormat[4]
     {
         TextureFormat.Rgba32Float,
         TextureFormat.Rgba32Float,
         TextureFormat.Rgba32Float,
         TextureFormat.Rgba32Float,
-    };
-    private static readonly ReadOnlyMemory<ColorTargetState?> _targets = new ColorTargetState?[MrtCount]
-    {
-        new ColorTargetState
-        {
-            Format = _formats[0],
-            Blend = null,
-            WriteMask = ColorWrites.All,
-        },
-        new ColorTargetState
-        {
-            Format = _formats[1],
-            Blend = null,
-            WriteMask = ColorWrites.All,
-        },
-        new ColorTargetState
-        {
-            Format = _formats[2],
-            Blend = null,
-            WriteMask = ColorWrites.All,
-        },
-        new ColorTargetState
-        {
-            Format = _formats[3],
-            Blend = null,
-            WriteMask = ColorWrites.All,
-        },
     };
 
     private Own<GBuffer> _gBuffer;
     private EventSource<GBuffer> _gBufferChanged = new();
-    //private readonly Own<RenderPipeline>[] _shadowPipeline;
     private readonly Own<PipelineLayout> _shadowPipelineLayout;
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly BindGroupLayout _bindGroupLayout1;
@@ -79,12 +50,6 @@ public sealed class PbrLayer
         _bindGroupLayout1 = bindGroupLayout1;
 
         RecreateGBuffer(screen, screen.ClientSize);
-
-        //var shadowPipeline = new Own<RenderPipeline>[screen.Lights.DirectionalLight.CascadeCount];
-        //for(var i = 0; i < shadowPipeline.Length; i++) {
-        //    shadowPipeline[i] = CreateShadowPipeline(Shader, (uint)i);
-        //}
-        //_shadowPipeline = shadowPipeline;
 
         screen.Resized.Subscribe(x =>
         {

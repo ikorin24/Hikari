@@ -12,9 +12,7 @@ public abstract class RenderOperation<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
     private readonly Own<PipelineLayout> _pipelineLayout;
-    //private readonly Own<TShader> _shader;
 
-    //public TShader Shader => _shader.AsValue();
     public PipelineLayout PipelineLayout => _pipelineLayout.AsValue();
 
     protected RenderOperation(Screen screen, Own<PipelineLayout> pipelineLayout, int sortOrder)
@@ -47,9 +45,6 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     private readonly List<TObject> _addedList;
     private readonly List<TObject> _removedList;
     private readonly object _sync = new object();
-
-    //protected ObjectLayer(Screen screen, Own<TShader> shader, Func<TShader, Own<RenderPipeline>> pipelineGen, int sortOrder)
-    //    : this(screen, shader, pipelineGen(shader.AsValue()), sortOrder) { }
 
     protected ObjectLayer(Screen screen, Own<PipelineLayout> pipelineLayout, int sortOrder)
         : base(screen, pipelineLayout, sortOrder)

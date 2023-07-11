@@ -23,7 +23,7 @@ public sealed class GBuffer : IScreenManaged
         var colors = new Own<Texture>[formats.Length];
         var colorsNative = new CE.Opt<CE.RenderPassColorAttachment>[formats.Length];
         Prepare(screen, size, formats, colors, colorsNative);
-
+        _size = size;
         _colorAttachmentCount = formats.Length;
         _screen = screen;
         _colors = colors;

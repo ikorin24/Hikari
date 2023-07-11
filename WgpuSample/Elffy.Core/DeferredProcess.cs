@@ -159,65 +159,6 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, Def
         });
     }
 
-    //private static Own<DeferredProcessShader> CreateShader(IGBufferProvider gBufferProvider, out GBuffer gBuffer, out Own<RenderPipeline> pipeline)
-    //{
-    //    ArgumentNullException.ThrowIfNull(gBufferProvider);
-    //    gBuffer = gBufferProvider.CurrentGBuffer;
-    //    var screen = gBuffer.Screen;
-    //    var shader = DeferredProcessShader.Create(screen);
-    //    var desc = new RenderPipelineDescriptor
-    //    {
-    //        Layout = shader.AsValue().PipelineLayout,
-    //        Vertex = new VertexState
-    //        {
-    //            Module = shader.AsValue().Module,
-    //            EntryPoint = "vs_main"u8.ToArray(),
-    //            Buffers = new VertexBufferLayout[]
-    //            {
-    //                VertexBufferLayout.FromVertex<V>(stackalloc[]
-    //                {
-    //                    (0, VertexFieldSemantics.Position),
-    //                    (1, VertexFieldSemantics.UV),
-    //                }),
-    //            },
-    //        },
-    //        Fragment = new FragmentState
-    //        {
-    //            Module = shader.AsValue().Module,
-    //            EntryPoint = "fs_main"u8.ToArray(),
-    //            Targets = new ColorTargetState?[]
-    //            {
-    //                new ColorTargetState
-    //                {
-    //                    Format = screen.SurfaceFormat,
-    //                    Blend = null,
-    //                    WriteMask = ColorWrites.All,
-    //                }
-    //            },
-    //        },
-    //        Primitive = new PrimitiveState
-    //        {
-    //            Topology = PrimitiveTopology.TriangleList,
-    //            StripIndexFormat = null,
-    //            FrontFace = FrontFace.Ccw,
-    //            CullMode = Face.Back,
-    //            PolygonMode = PolygonMode.Fill,
-    //        },
-    //        DepthStencil = new DepthStencilState
-    //        {
-    //            Format = screen.DepthTexture.Format,
-    //            DepthWriteEnabled = true,
-    //            DepthCompare = CompareFunction.Less,
-    //            Stencil = StencilState.Default,
-    //            Bias = DepthBiasState.Default,
-    //        },
-    //        Multisample = MultisampleState.Default,
-    //        Multiview = 0,
-    //    };
-    //    pipeline = RenderPipeline.Create(screen, desc);
-    //    return shader;
-    //}
-
     protected override void EarlyUpdate()
     {
     }
