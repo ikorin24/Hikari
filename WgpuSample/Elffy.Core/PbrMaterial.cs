@@ -95,7 +95,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         });
         var bindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = shader.BindGroupLayout0,
+            Layout = ((PbrLayer)shader.Operation).BindGroupLayout0, // TODO:
             Entries = new BindGroupEntry[]
             {
                 BindGroupEntry.Buffer(0, modelUniform.AsValue()),
@@ -108,7 +108,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 
         var shadowBindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = shader.ShadowBindGroupLayout0,
+            Layout = ((PbrLayer)shader.Operation).ShadowBindGroupLayout0,   // TODO:
             Entries = new[]
             {
                 BindGroupEntry.Buffer(0, modelUniform.AsValue()),

@@ -322,13 +322,13 @@ public abstract class UIElement : IToJson
         _parent = parent;
     }
 
-    internal UIModel CreateModel(UILayer layer)
+    internal UIModel CreateModel(UIShader shader)
     {
         Debug.Assert(_model == null);
-        var model = new UIModel(this, layer);
+        var model = new UIModel(this, shader);
         _model = model;
         foreach(var child in _children) {
-            child.CreateModel(layer);
+            child.CreateModel(shader);
         }
         return model;
     }
@@ -415,13 +415,22 @@ public sealed class UIElementCollection
             if(Interlocked.CompareExchange(ref _parent, value, null) != null) {
                 ThrowInvalidInstance();
             }
-            var layer = value.Model?.Layer;
+            //var layer = value.Model?.Layer;
+            var shader = value.Model?.Shader;
             foreach(var child in _children) {
                 child.SetParent(value);
-                if(layer != null) {
-                    child.CreateModel(layer);
+                if(shader != null) {
+                    child.CreateModel(shader);
                 }
             }
+
+            //var layer = value.Model?.Layer;
+            //foreach(var child in _children) {
+            //    child.SetParent(value);
+            //    if(layer != null) {
+            //        child.CreateModel(layer);
+            //    }
+            //}
         }
     }
 
@@ -458,9 +467,13 @@ public sealed class UIElementCollection
         var parent = _parent;
         if(parent != null) {
             element.SetParent(parent);
-            var layer = parent.Model?.Layer;
-            if(layer != null) {
-                element.CreateModel(layer);
+            //var layer = parent.Model?.Layer;
+            //if(layer != null) {
+            //    element.CreateModel(layer);
+            //}
+            var shader = parent.Model?.Shader;
+            if(shader != null) {
+                element.CreateModel(shader);
             }
         }
     }
@@ -502,20 +515,33 @@ public sealed class UIElementCollection
 
 public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMaterial, UIModel>
 {
+    private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly List<UIElement> _rootElements = new List<UIElement>();
     private bool _isLayoutDirty = false;
+
+    private readonly Own<UIShader> _defaultShader;
+
+    public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
 
     public UILayer(Screen screen, int sortOrder)
         : base(
             screen,
-            UIShader.Create(screen),
-            CreatePipeline,
+            CreatePipelineLayout(screen, out var bindGroupLayout0),
             sortOrder)
     {
+        _defaultShader = UIShader.Create(this);     // TODO:
+
+        _bindGroupLayout0 = bindGroupLayout0;
         screen.Resized.Subscribe(arg =>
         {
             _isLayoutDirty = true;
         }).AddTo(Subscriptions);
+    }
+
+    protected override void Release()
+    {
+        base.Release();
+        _bindGroupLayout0.Dispose();
     }
 
     private void UpdateLayout()
@@ -546,7 +572,7 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         if(element.Parent != null) {
             throw new ArgumentException("the element is already in UI tree");
         }
-        var model = element.CreateModel(this);
+        var model = element.CreateModel(_defaultShader.AsValue());
         model.Alive.Subscribe(model =>
         {
             model.Layer._rootElements.Add(model.Element);
@@ -584,50 +610,68 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         return context.CreateSurfaceRenderPass(colorClear: null, depthStencil: null);
     }
 
-    private static Own<RenderPipeline> CreatePipeline(UIShader shader)
+    //private static Own<RenderPipeline> CreatePipeline(UIShader shader)
+    //{
+    //    var screen = shader.Screen;
+    //    return RenderPipeline.Create(screen, new()
+    //    {
+    //        Layout = shader.PipelineLayout,
+    //        Vertex = new VertexState()
+    //        {
+    //            Module = shader.Module,
+    //            EntryPoint = "vs_main"u8.ToArray(),
+    //            Buffers = new VertexBufferLayout[]
+    //            {
+    //                VertexBufferLayout.FromVertex<VertexSlim>(stackalloc[]
+    //                {
+    //                    (0, VertexFieldSemantics.Position),
+    //                    (1, VertexFieldSemantics.UV),
+    //                }),
+    //            },
+    //        },
+    //        Fragment = new FragmentState()
+    //        {
+    //            Module = shader.Module,
+    //            EntryPoint = "fs_main"u8.ToArray(),
+    //            Targets = new ColorTargetState?[]
+    //            {
+    //                new ColorTargetState
+    //                {
+    //                    Format = screen.SurfaceFormat,
+    //                    Blend = BlendState.AlphaBlending,
+    //                    WriteMask = ColorWrites.All,
+    //                },
+    //            },
+    //        },
+    //        Primitive = new PrimitiveState()
+    //        {
+    //            Topology = PrimitiveTopology.TriangleList,
+    //            FrontFace = FrontFace.Ccw,
+    //            CullMode = Face.Back,
+    //            PolygonMode = PolygonMode.Fill,
+    //            StripIndexFormat = null,
+    //        },
+    //        DepthStencil = null,
+    //        Multisample = MultisampleState.Default,
+    //        Multiview = 0,
+    //    });
+    //}
+
+    private static Own<PipelineLayout> CreatePipelineLayout(Screen screen, out Own<BindGroupLayout> layout0)
     {
-        var screen = shader.Screen;
-        return RenderPipeline.Create(screen, new()
+        return PipelineLayout.Create(screen, new()
         {
-            Layout = shader.PipelineLayout,
-            Vertex = new VertexState()
+            BindGroupLayouts = new[]
             {
-                Module = shader.Module,
-                EntryPoint = "vs_main"u8.ToArray(),
-                Buffers = new VertexBufferLayout[]
+                BindGroupLayout.Create(screen, new()
                 {
-                    VertexBufferLayout.FromVertex<VertexSlim>(stackalloc[]
+                    Entries = new[]
                     {
-                        (0, VertexFieldSemantics.Position),
-                        (1, VertexFieldSemantics.UV),
-                    }),
-                },
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
+                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
+                    }
+                }).AsValue(out layout0),
             },
-            Fragment = new FragmentState()
-            {
-                Module = shader.Module,
-                EntryPoint = "fs_main"u8.ToArray(),
-                Targets = new ColorTargetState?[]
-                {
-                    new ColorTargetState
-                    {
-                        Format = screen.SurfaceFormat,
-                        Blend = BlendState.AlphaBlending,
-                        WriteMask = ColorWrites.All,
-                    },
-                },
-            },
-            Primitive = new PrimitiveState()
-            {
-                Topology = PrimitiveTopology.TriangleList,
-                FrontFace = FrontFace.Ccw,
-                CullMode = Face.Back,
-                PolygonMode = PolygonMode.Fill,
-                StripIndexFormat = null,
-            },
-            DepthStencil = null,
-            Multisample = MultisampleState.Default,
-            Multiview = 0,
         });
     }
 }
@@ -827,45 +871,87 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         }
         """u8;
 
-    private readonly Own<BindGroupLayout> _layout0;
-
-    internal BindGroupLayout Layout0 => _layout0.AsValue();
-
-    private UIShader(Screen screen) :
-        base(screen, ShaderSource, Desc(screen, out var layout0))
+    private UIShader(
+        RenderOperation<UIShader, UIMaterial> operation) :
+        base(ShaderSource, operation, Desc)
     {
-        _layout0 = layout0;
     }
 
     protected override void Release(bool manualRelease)
     {
         base.Release(manualRelease);
         if(manualRelease) {
-            _layout0.Dispose();
         }
     }
 
-    internal static Own<UIShader> Create(Screen screen)
+    internal static Own<UIShader> Create(RenderOperation<UIShader, UIMaterial> operation)
     {
-        var self = new UIShader(screen);
+        var self = new UIShader(operation);
         return CreateOwn(self);
     }
 
-    private static PipelineLayoutDescriptor Desc(Screen screen, out Own<BindGroupLayout> layout0)
+    //private static PipelineLayoutDescriptor Desc(Screen screen, out Own<BindGroupLayout> layout0)
+    //{
+    //    return new()
+    //    {
+    //        BindGroupLayouts = new[]
+    //        {
+    //            BindGroupLayout.Create(screen, new()
+    //            {
+    //                Entries = new[]
+    //                {
+    //                    BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
+    //                    BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
+    //                }
+    //            }).AsValue(out layout0),
+    //        },
+    //    };
+    //}
+
+    private static RenderPipelineDescriptor Desc(PipelineLayout layout, ShaderModule module)
     {
-        return new()
+        var screen = layout.Screen;
+        return new RenderPipelineDescriptor
         {
-            BindGroupLayouts = new[]
+            Layout = layout,
+            Vertex = new VertexState()
             {
-                BindGroupLayout.Create(screen, new()
+                Module = module,
+                EntryPoint = "vs_main"u8.ToArray(),
+                Buffers = new VertexBufferLayout[]
                 {
-                    Entries = new[]
+                    VertexBufferLayout.FromVertex<VertexSlim>(stackalloc[]
                     {
-                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
-                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
-                    }
-                }).AsValue(out layout0),
+                        (0, VertexFieldSemantics.Position),
+                        (1, VertexFieldSemantics.UV),
+                    }),
+                },
             },
+            Fragment = new FragmentState()
+            {
+                Module = module,
+                EntryPoint = "fs_main"u8.ToArray(),
+                Targets = new ColorTargetState?[]
+                {
+                    new ColorTargetState
+                    {
+                        Format = screen.SurfaceFormat,
+                        Blend = BlendState.AlphaBlending,
+                        WriteMask = ColorWrites.All,
+                    },
+                },
+            },
+            Primitive = new PrimitiveState()
+            {
+                Topology = PrimitiveTopology.TriangleList,
+                FrontFace = FrontFace.Ccw,
+                CullMode = Face.Back,
+                PolygonMode = PolygonMode.Fill,
+                StripIndexFormat = null,
+            },
+            DepthStencil = null,
+            Multisample = MultisampleState.Default,
+            Multiview = 0,
         };
     }
 }
@@ -921,7 +1007,7 @@ public sealed class UIMaterial : Material<UIMaterial, UIShader>
         var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
         var bindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = shader.Layout0,
+            Layout = ((UILayer)shader.Operation).BindGroupLayout0,  // TODO:
             Entries = new[]
             {
                 BindGroupEntry.Buffer(0, screen.InfoBuffer),
@@ -939,11 +1025,10 @@ public sealed class UIModel : Renderable<UIModel, UILayer, VertexSlim, UIShader,
 
     internal UIElement Element => _element;
 
-    internal UIModel(UIElement element, UILayer layer)
+    internal UIModel(UIElement element, UIShader shader)
         : base(
-            layer,
-            GetMesh(layer.Screen),
-            UIMaterial.Create(layer.Shader))
+            GetMesh(shader.Screen),
+            UIMaterial.Create(shader))
     {
         _element = element;
         IsFrozen = true;

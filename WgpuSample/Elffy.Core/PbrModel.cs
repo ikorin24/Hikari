@@ -30,12 +30,13 @@ public sealed class PbrModel
     }
 
     public PbrModel(
-        PbrLayer layer,
+        PbrShader shader,
         MaybeOwn<Mesh<V>> mesh,
         MaybeOwn<Texture> albedo,
         MaybeOwn<Texture> metallicRoughness,
         MaybeOwn<Texture> normal)
-        : base(layer, mesh, PbrMaterial.Create(layer.Shader, albedo, metallicRoughness, normal))
+        : base(
+            mesh, PbrMaterial.Create(shader, albedo, metallicRoughness, normal))
     {
         if(Mesh.TryGetOptionalTangent(out var tangent) == false) {
             throw new ArgumentException("The mesh does not have Tangent vertex buffer", nameof(mesh));
@@ -88,6 +89,8 @@ public sealed class PbrModel
             Height: size.Y,
             MinDepth: 0,
             MaxDepth: 1);
+
+        pass.SetPipeline(Shader.ShadowPipeline(cascade));
         pass.SetBindGroup(0, material.ShadowBindGroup0);
         pass.SetVertexBuffer(0, mesh.VertexBuffer);
         pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);

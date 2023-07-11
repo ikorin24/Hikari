@@ -1,5 +1,7 @@
 ﻿#nullable enable
 
+using System;
+
 namespace Elffy;
 
 public abstract class Renderable<TSelf, TLayer, TVertex, TShader, TMaterial>
@@ -13,12 +15,15 @@ public abstract class Renderable<TSelf, TLayer, TVertex, TShader, TMaterial>
     private readonly Own<TMaterial> _material;
     private readonly MaybeOwn<Mesh<TVertex>> _mesh;
 
+    public TShader Shader => _material.AsValue().Shader;
     public TMaterial Material => _material.AsValue();
     public Mesh<TVertex> Mesh => _mesh.AsValue();
 
     public bool IsOwnMesh => _mesh.IsOwn(out _);
 
-    protected Renderable(TLayer layer, MaybeOwn<Mesh<TVertex>> mesh, Own<TMaterial> material) : base(layer)
+    protected Renderable(
+        MaybeOwn<Mesh<TVertex>> mesh, Own<TMaterial> material)
+        : base((TLayer)material.AsValue().Shader.Operation)    // TODO:
     {
         material.ThrowArgumentExceptionIfNone();
         mesh.ThrowArgumentExceptionIfNone();
@@ -28,6 +33,7 @@ public abstract class Renderable<TSelf, TLayer, TVertex, TShader, TMaterial>
 
     private protected sealed override void Render(in RenderPass pass)
     {
+        pass.SetPipeline(Shader.Pipeline);
         Render(pass, _material.AsValue(), _mesh.AsValue());
     }
 

@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using V = Elffy.VertexSlim;
 
 namespace Elffy;
 
@@ -226,54 +227,17 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         }
         """u8;
 
-    private static readonly BindGroupLayoutDescriptor _bindGroupLayoutDesc0 = new()
-    {
-        Entries = new BindGroupLayoutEntry[]
-        {
-            BindGroupLayoutEntry.Sampler(0, ShaderStages.Fragment, SamplerBindingType.NonFiltering),
-            BindGroupLayoutEntry.Texture(1, ShaderStages.Fragment, new TextureBindingData
-            {
-                Multisampled = false,
-                ViewDimension = TextureViewDimension.D2,
-                SampleType = TextureSampleType.FloatNotFilterable,
-            }),
-            BindGroupLayoutEntry.Texture(2, ShaderStages.Fragment, new TextureBindingData
-            {
-                Multisampled = false,
-                ViewDimension = TextureViewDimension.D2,
-                SampleType = TextureSampleType.FloatNotFilterable,
-            }),
-            BindGroupLayoutEntry.Texture(3, ShaderStages.Fragment, new TextureBindingData
-            {
-                Multisampled = false,
-                ViewDimension = TextureViewDimension.D2,
-                SampleType = TextureSampleType.FloatNotFilterable,
-            }),
-            BindGroupLayoutEntry.Texture(4, ShaderStages.Fragment, new TextureBindingData
-            {
-                Multisampled = false,
-                ViewDimension = TextureViewDimension.D2,
-                SampleType = TextureSampleType.FloatNotFilterable,
-            }),
-        }
-    };
-
-    private readonly Own<BindGroupLayout> _bindGroupLayout0;
-    private readonly Own<BindGroupLayout> _bindGroupLayout3;
-
-    private DeferredProcessShader(Screen screen)
+    private DeferredProcessShader(RenderOperation<DeferredProcessShader, DeferredProcessMaterial> operation)
         : base(
-            screen,
             ShaderSource,
-            BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0, out var bindGroupLayout3))
+            operation,
+            Desc)
     {
-        _bindGroupLayout0 = bindGroupLayout0;
-        _bindGroupLayout3 = bindGroupLayout3;
     }
 
-    internal static Own<DeferredProcessShader> Create(Screen screen)
+    internal static Own<DeferredProcessShader> Create(RenderOperation<DeferredProcessShader, DeferredProcessMaterial> operation)
     {
-        var shader = new DeferredProcessShader(screen);
+        var shader = new DeferredProcessShader(operation);
         return CreateOwn(shader);
     }
 
@@ -281,8 +245,6 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
     {
         base.Release(manualRelease);
         if(manualRelease) {
-            _bindGroupLayout0.Dispose();
-            _bindGroupLayout3.Dispose();
         }
     }
 
@@ -296,7 +258,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             // [0]
             BindGroup.Create(screen, new()
             {
-                Layout = _bindGroupLayout0.AsValue(),
+                Layout = ((DeferredProcess)Operation).BindGroupLayout0, // TODO:
                 Entries = new BindGroupEntry[]
                 {
                     BindGroupEntry.Sampler(0, Sampler.Create(screen, new()
@@ -321,7 +283,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             // [3]
             BindGroup.Create(screen, new()
             {
-                Layout = _bindGroupLayout3.AsValue(),
+                Layout = ((DeferredProcess)Operation).BindGroupLayout3, // TODO:
                 Entries = new[]
                 {
                     BindGroupEntry.TextureView(0, directionalLight.ShadowMap.View),
@@ -350,38 +312,92 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         return bindGroups;
     }
 
-    private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(
-        Screen screen,
-        out Own<BindGroupLayout> bindGroupLayout0,
-        out Own<BindGroupLayout> bindGroupLayout3)
+    private static RenderPipelineDescriptor Desc(PipelineLayout pipelineLayout, ShaderModule module)
     {
-        return new PipelineLayoutDescriptor
+        var screen = pipelineLayout.Screen;
+        return new RenderPipelineDescriptor
         {
-            BindGroupLayouts = new[]
+            Layout = pipelineLayout,
+            Vertex = new VertexState
             {
-                // [0]
-                BindGroupLayout.Create(screen, _bindGroupLayoutDesc0).AsValue(out bindGroupLayout0),
-                // [1]
-                screen.Camera.CameraDataBindGroupLayout,
-                // [2]
-                screen.Lights.DataBindGroupLayout,
-                // [3]
-                BindGroupLayout.Create(screen, new()
+                Module = module,
+                EntryPoint = "vs_main"u8.ToArray(),
+                Buffers = new VertexBufferLayout[]
                 {
-                    Entries = new[]
+                    VertexBufferLayout.FromVertex<V>(stackalloc[]
                     {
-                        BindGroupLayoutEntry.Texture(0, ShaderStages.Fragment, new()
-                        {
-                            ViewDimension = TextureViewDimension.D2,
-                            Multisampled = false,
-                            SampleType = TextureSampleType.Depth,
-                        }),
-                        BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Comparison),
-                        BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorateReadOnly }),
-                        BindGroupLayoutEntry.Buffer(3, ShaderStages.Fragment, new() { Type = BufferBindingType.StorateReadOnly }),
-                    },
-                }).AsValue(out bindGroupLayout3),
+                        (0, VertexFieldSemantics.Position),
+                        (1, VertexFieldSemantics.UV),
+                    }),
+                },
             },
+            Fragment = new FragmentState
+            {
+                Module = module,
+                EntryPoint = "fs_main"u8.ToArray(),
+                Targets = new ColorTargetState?[]
+                {
+                    new ColorTargetState
+                    {
+                        Format = screen.SurfaceFormat,
+                        Blend = null,
+                        WriteMask = ColorWrites.All,
+                    }
+                },
+            },
+            Primitive = new PrimitiveState
+            {
+                Topology = PrimitiveTopology.TriangleList,
+                StripIndexFormat = null,
+                FrontFace = FrontFace.Ccw,
+                CullMode = Face.Back,
+                PolygonMode = PolygonMode.Fill,
+            },
+            DepthStencil = new DepthStencilState
+            {
+                Format = screen.DepthTexture.Format,
+                DepthWriteEnabled = true,
+                DepthCompare = CompareFunction.Less,
+                Stencil = StencilState.Default,
+                Bias = DepthBiasState.Default,
+            },
+            Multisample = MultisampleState.Default,
+            Multiview = 0,
         };
     }
+
+    //private static PipelineLayoutDescriptor BuildPipelineLayoutDescriptor(
+    //    Screen screen,
+    //    out Own<BindGroupLayout> bindGroupLayout0,
+    //    out Own<BindGroupLayout> bindGroupLayout3)
+    //{
+    //    return new PipelineLayoutDescriptor
+    //    {
+    //        BindGroupLayouts = new[]
+    //        {
+    //            // [0]
+    //            BindGroupLayout.Create(screen, _bindGroupLayoutDesc0).AsValue(out bindGroupLayout0),
+    //            // [1]
+    //            screen.Camera.CameraDataBindGroupLayout,
+    //            // [2]
+    //            screen.Lights.DataBindGroupLayout,
+    //            // [3]
+    //            BindGroupLayout.Create(screen, new()
+    //            {
+    //                Entries = new[]
+    //                {
+    //                    BindGroupLayoutEntry.Texture(0, ShaderStages.Fragment, new()
+    //                    {
+    //                        ViewDimension = TextureViewDimension.D2,
+    //                        Multisampled = false,
+    //                        SampleType = TextureSampleType.Depth,
+    //                    }),
+    //                    BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Comparison),
+    //                    BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorateReadOnly }),
+    //                    BindGroupLayoutEntry.Buffer(3, ShaderStages.Fragment, new() { Type = BufferBindingType.StorateReadOnly }),
+    //                },
+    //            }).AsValue(out bindGroupLayout3),
+    //        },
+    //    };
+    //}
 }

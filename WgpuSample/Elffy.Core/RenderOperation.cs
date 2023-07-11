@@ -11,29 +11,28 @@ public abstract class RenderOperation<TShader, TMaterial>
     where TShader : Shader<TShader, TMaterial>
     where TMaterial : Material<TMaterial, TShader>
 {
-    private readonly Own<RenderPipeline> _pipeline;
-    private readonly Own<TShader> _shader;
+    private readonly Own<PipelineLayout> _pipelineLayout;
+    //private readonly Own<TShader> _shader;
 
-    public TShader Shader => _shader.AsValue();
+    //public TShader Shader => _shader.AsValue();
+    public PipelineLayout PipelineLayout => _pipelineLayout.AsValue();
 
-    protected RenderOperation(Screen screen, Own<TShader> shader, Own<RenderPipeline> pipeline, int sortOrder)
+    protected RenderOperation(Screen screen, Own<PipelineLayout> pipelineLayout, int sortOrder)
         : base(screen, sortOrder)
     {
-        pipeline.ThrowArgumentExceptionIfNone();
-        shader.ThrowArgumentExceptionIfNone();
-        _pipeline = pipeline;
-        _shader = shader;
+        pipelineLayout.ThrowArgumentExceptionIfNone();
+        _pipelineLayout = pipelineLayout;
     }
 
     protected sealed override void Execute(in OperationContext context)
     {
         using var pass = CreateRenderPass(in context);
-        Render(pass.AsValue(), _pipeline.AsValue());
+        Render(pass.AsValue());
     }
 
     protected abstract OwnRenderPass CreateRenderPass(in OperationContext context);
 
-    protected abstract void Render(in RenderPass pass, RenderPipeline pipeline);
+    protected abstract void Render(in RenderPass pass);
 }
 
 public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
@@ -49,11 +48,11 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     private readonly List<TObject> _removedList;
     private readonly object _sync = new object();
 
-    protected ObjectLayer(Screen screen, Own<TShader> shader, Func<TShader, Own<RenderPipeline>> pipelineGen, int sortOrder)
-        : this(screen, shader, pipelineGen(shader.AsValue()), sortOrder) { }
+    //protected ObjectLayer(Screen screen, Own<TShader> shader, Func<TShader, Own<RenderPipeline>> pipelineGen, int sortOrder)
+    //    : this(screen, shader, pipelineGen(shader.AsValue()), sortOrder) { }
 
-    protected ObjectLayer(Screen screen, Own<TShader> shader, Own<RenderPipeline> pipeline, int sortOrder)
-        : base(screen, shader, pipeline, sortOrder)
+    protected ObjectLayer(Screen screen, Own<PipelineLayout> pipelineLayout, int sortOrder)
+        : base(screen, pipelineLayout, sortOrder)
     {
         _list = new();
         _addedList = new();
@@ -126,9 +125,8 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         }
     }
 
-    protected sealed override void Render(in RenderPass pass, RenderPipeline pipeline)
+    protected sealed override void Render(in RenderPass pass)
     {
-        pass.SetPipeline(pipeline);
         ReadOnlySpan<TObject> objects = _list.AsSpan();
         Render(
             pass,
