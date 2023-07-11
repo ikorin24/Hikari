@@ -144,108 +144,6 @@ public sealed class PbrLayer
         });
     }
 
-    //private static Own<RenderPipeline> CreateShadowPipeline(PbrShader shader, uint cascade)
-    //{
-    //    var screen = shader.Screen;
-    //    return RenderPipeline.Create(screen, new()
-    //    {
-    //        Layout = shader.ShadowPipelineLayout,
-    //        Vertex = new VertexState
-    //        {
-    //            Module = shader.ShadowModule(cascade),
-    //            EntryPoint = "vs_main"u8.ToArray(),
-    //            Buffers = new VertexBufferLayout[]
-    //            {
-    //                VertexBufferLayout.FromVertex<V>(stackalloc[]
-    //                {
-    //                    (0, VertexFieldSemantics.Position),
-    //                }),
-    //            },
-    //        },
-    //        Fragment = null,
-    //        Primitive = new PrimitiveState
-    //        {
-    //            Topology = PrimitiveTopology.TriangleList,
-    //            StripIndexFormat = null,
-    //            FrontFace = FrontFace.Ccw,
-    //            CullMode = Face.Back,
-    //            PolygonMode = PolygonMode.Fill,
-    //        },
-    //        DepthStencil = new DepthStencilState
-    //        {
-    //            Format = screen.DepthTexture.Format,
-    //            DepthWriteEnabled = true,
-    //            DepthCompare = CompareFunction.Less,
-    //            Stencil = StencilState.Default,
-    //            Bias = DepthBiasState.Default,
-    //        },
-    //        Multisample = MultisampleState.Default,
-    //        Multiview = 0,
-    //    });
-    //}
-
-    //private static Own<RenderPipeline> BuildPipeline(PbrShader shader)
-    //{
-    //    var screen = shader.Screen;
-    //    var desc = new RenderPipelineDescriptor
-    //    {
-    //        Layout = shader.PipelineLayout,
-    //        Vertex = new VertexState
-    //        {
-    //            Module = shader.Module,
-    //            EntryPoint = "vs_main"u8.ToArray(),
-    //            Buffers = new VertexBufferLayout[]
-    //            {
-    //                VertexBufferLayout.FromVertex<V>(stackalloc[]
-    //                {
-    //                    (0, VertexFieldSemantics.Position),
-    //                    (1, VertexFieldSemantics.Normal),
-    //                    (2, VertexFieldSemantics.UV),
-    //                }),
-    //                new VertexBufferLayout
-    //                {
-    //                    ArrayStride = (ulong)Vector3.SizeInBytes,
-    //                    Attributes = new VertexAttr[]
-    //                    {
-    //                        new VertexAttr
-    //                        {
-    //                            Format = VertexFormat.Float32x3,
-    //                            Offset = 0,
-    //                            ShaderLocation = 3,
-    //                        },
-    //                    },
-    //                    StepMode = VertexStepMode.Vertex,
-    //                },
-    //            },
-    //        },
-    //        Fragment = new FragmentState
-    //        {
-    //            Module = shader.Module,
-    //            EntryPoint = "fs_main"u8.ToArray(),
-    //            Targets = _targets,
-    //        },
-    //        Primitive = new PrimitiveState
-    //        {
-    //            Topology = PrimitiveTopology.TriangleList,
-    //            StripIndexFormat = null,
-    //            FrontFace = FrontFace.Ccw,
-    //            CullMode = Face.Back,
-    //            PolygonMode = PolygonMode.Fill,
-    //        },
-    //        DepthStencil = new DepthStencilState
-    //        {
-    //            Format = screen.DepthTexture.Format,
-    //            DepthWriteEnabled = true,
-    //            DepthCompare = CompareFunction.Less,
-    //            Stencil = StencilState.Default,
-    //            Bias = DepthBiasState.Default,
-    //        },
-    //        Multisample = MultisampleState.Default,
-    //        Multiview = 0,
-    //    };
-    //    return RenderPipeline.Create(screen, in desc);
-    //}
-
     protected override void RenderShadowMap(in RenderShadowMapContext context, ReadOnlySpan<PbrModel> objects)
     {
         using var pass = context.CreateRenderPass();
@@ -253,7 +151,6 @@ public sealed class PbrLayer
         var directionalLight = context.Lights.DirectionalLight;
 
         for(uint i = 0; i < directionalLight.CascadeCount; i++) {
-            //p.SetPipeline(_shadowPipeline[i].AsValue());
             foreach(var obj in objects) {
                 obj.RenderShadowMap(in p, i, context.Lights, obj.Material, obj.Mesh);
             }

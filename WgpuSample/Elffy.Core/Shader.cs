@@ -25,15 +25,27 @@ public abstract class Shader<TSelf, TMaterial, TOperation>
     protected Shader(
         ReadOnlySpan<byte> shaderSource,
         TOperation operation,
+        Own<RenderPipeline> pipeline)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        pipeline.ThrowArgumentExceptionIfNone();
+        _screen = operation.Screen;
+        _module = ShaderModule.Create(_screen, shaderSource);
+        _pipeline = pipeline;
+        _operation = operation;
+    }
+
+    protected Shader(
+        ReadOnlySpan<byte> shaderSource,
+        TOperation operation,
         Func<PipelineLayout, ShaderModule, RenderPipelineDescriptor> getPipelineDesc)
     {
         ArgumentNullException.ThrowIfNull(getPipelineDesc);
-        var screen = operation.Screen;
-        _screen = screen;
-        var module = ShaderModule.Create(screen, shaderSource);
-        _module = module;
-        var desc = getPipelineDesc.Invoke(operation.PipelineLayout, module.AsValue());
-        _pipeline = RenderPipeline.Create(screen, desc);
+        ArgumentNullException.ThrowIfNull(operation);
+        _screen = operation.Screen;
+        _module = ShaderModule.Create(_screen, shaderSource);
+        var desc = getPipelineDesc.Invoke(operation.PipelineLayout, _module.AsValue());
+        _pipeline = RenderPipeline.Create(_screen, desc);
         _operation = operation;
     }
 
