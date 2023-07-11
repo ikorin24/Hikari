@@ -36,8 +36,8 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     where TSelf : FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TSelf>
     where TVertex : unmanaged, IVertex
-    where TShader : Shader<TShader, TMaterial>
-    where TMaterial : Material<TMaterial, TShader>
+    where TShader : Shader<TShader, TMaterial, TLayer>
+    where TMaterial : Material<TMaterial, TShader, TLayer>
 {
     private readonly TLayer _layer;
     private readonly SubscriptionBag _subscriptions = new SubscriptionBag();

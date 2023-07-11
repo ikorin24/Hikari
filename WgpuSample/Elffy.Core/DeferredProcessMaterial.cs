@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace Elffy;
 
-public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, DeferredProcessShader>
+public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, DeferredProcessShader, DeferredProcess>
 {
     private readonly BindGroup _bindGroup0;
     private readonly BindGroup _bindGroup1;

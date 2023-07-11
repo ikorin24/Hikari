@@ -7,8 +7,8 @@ public abstract class Renderable<TSelf, TLayer, TVertex, TShader, TMaterial>
     where TSelf : Renderable<TSelf, TLayer, TVertex, TShader, TMaterial>
     where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TSelf>
     where TVertex : unmanaged, IVertex
-    where TShader : Shader<TShader, TMaterial>
-    where TMaterial : Material<TMaterial, TShader>
+    where TShader : Shader<TShader, TMaterial, TLayer>
+    where TMaterial : Material<TMaterial, TShader, TLayer>
 {
     private readonly Own<TMaterial> _material;
     private readonly MaybeOwn<Mesh<TVertex>> _mesh;
@@ -21,7 +21,7 @@ public abstract class Renderable<TSelf, TLayer, TVertex, TShader, TMaterial>
 
     protected Renderable(
         MaybeOwn<Mesh<TVertex>> mesh, Own<TMaterial> material)
-        : base((TLayer)material.AsValue().Shader.Operation)    // TODO:
+        : base(material.AsValue().Operation)
     {
         material.ThrowArgumentExceptionIfNone();
         mesh.ThrowArgumentExceptionIfNone();

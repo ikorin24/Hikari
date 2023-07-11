@@ -4,7 +4,7 @@ using V = Elffy.VertexSlim;
 
 namespace Elffy;
 
-public sealed class DeferredProcessShader : Shader<DeferredProcessShader, DeferredProcessMaterial>
+public sealed class DeferredProcessShader : Shader<DeferredProcessShader, DeferredProcessMaterial, DeferredProcess>
 {
     private static ReadOnlySpan<byte> ShaderSource => """
         struct Vin {
@@ -227,7 +227,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         }
         """u8;
 
-    private DeferredProcessShader(RenderOperation<DeferredProcessShader, DeferredProcessMaterial> operation)
+    private DeferredProcessShader(DeferredProcess operation)
         : base(
             ShaderSource,
             operation,
@@ -235,7 +235,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
     {
     }
 
-    internal static Own<DeferredProcessShader> Create(RenderOperation<DeferredProcessShader, DeferredProcessMaterial> operation)
+    internal static Own<DeferredProcessShader> Create(DeferredProcess operation)
     {
         var shader = new DeferredProcessShader(operation);
         return CreateOwn(shader);
@@ -258,7 +258,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             // [0]
             BindGroup.Create(screen, new()
             {
-                Layout = ((DeferredProcess)Operation).BindGroupLayout0, // TODO:
+                Layout = Operation.BindGroupLayout0,
                 Entries = new BindGroupEntry[]
                 {
                     BindGroupEntry.Sampler(0, Sampler.Create(screen, new()
@@ -283,7 +283,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             // [3]
             BindGroup.Create(screen, new()
             {
-                Layout = ((DeferredProcess)Operation).BindGroupLayout3, // TODO:
+                Layout = Operation.BindGroupLayout3,
                 Entries = new[]
                 {
                     BindGroupEntry.TextureView(0, directionalLight.ShadowMap.View),

@@ -616,7 +616,7 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
     }
 }
 
-public sealed class UIShader : Shader<UIShader, UIMaterial>
+public sealed class UIShader : Shader<UIShader, UIMaterial, UILayer>
 {
     private static ReadOnlySpan<byte> ShaderSource => """
         struct Vin {
@@ -812,7 +812,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         """u8;
 
     private UIShader(
-        RenderOperation<UIShader, UIMaterial> operation) :
+        UILayer operation) :
         base(ShaderSource, operation, Desc)
     {
     }
@@ -824,7 +824,7 @@ public sealed class UIShader : Shader<UIShader, UIMaterial>
         }
     }
 
-    internal static Own<UIShader> Create(RenderOperation<UIShader, UIMaterial> operation)
+    internal static Own<UIShader> Create(UILayer operation)
     {
         var self = new UIShader(operation);
         return CreateOwn(self);
@@ -884,7 +884,7 @@ internal static class WgslConst
     public const int AlignOf_mat4x4_f32 = 16;
 }
 
-public sealed class UIMaterial : Material<UIMaterial, UIShader>
+public sealed class UIMaterial : Material<UIMaterial, UIShader, UILayer>
 {
     private readonly Own<Buffer> _buffer;
     private readonly Own<BindGroup> _bindGroup0;
@@ -929,7 +929,7 @@ public sealed class UIMaterial : Material<UIMaterial, UIShader>
         var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
         var bindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = ((UILayer)shader.Operation).BindGroupLayout0,  // TODO:
+            Layout = shader.Operation.BindGroupLayout0,
             Entries = new[]
             {
                 BindGroupEntry.Buffer(0, screen.InfoBuffer),

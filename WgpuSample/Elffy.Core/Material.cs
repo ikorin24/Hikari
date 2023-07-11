@@ -3,14 +3,16 @@ using System;
 
 namespace Elffy;
 
-public abstract class Material<TSelf, TShader>
+public abstract class Material<TSelf, TShader, TOperation>
     : IScreenManaged
-    where TSelf : Material<TSelf, TShader>
-    where TShader : Shader<TShader, TSelf>
+    where TSelf : Material<TSelf, TShader, TOperation>
+    where TShader : Shader<TShader, TSelf, TOperation>
+    where TOperation : RenderOperation<TOperation, TShader, TSelf>
 {
     private readonly TShader _shader;
     private bool _released;
 
+    public TOperation Operation => _shader.Operation;
     public TShader Shader => _shader;
     public Screen Screen => _shader.Screen;
 

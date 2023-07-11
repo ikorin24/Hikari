@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
+public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
 {
     private readonly Own<Sampler> _sampler;
     private readonly MaybeOwn<Texture> _albedo;
@@ -95,7 +95,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
         });
         var bindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = ((PbrLayer)shader.Operation).BindGroupLayout0, // TODO:
+            Layout = shader.Operation.BindGroupLayout0,
             Entries = new BindGroupEntry[]
             {
                 BindGroupEntry.Buffer(0, modelUniform.AsValue()),
@@ -108,7 +108,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader>
 
         var shadowBindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = ((PbrLayer)shader.Operation).ShadowBindGroupLayout0,   // TODO:
+            Layout = shader.Operation.ShadowBindGroupLayout0,
             Entries = new[]
             {
                 BindGroupEntry.Buffer(0, modelUniform.AsValue()),

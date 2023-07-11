@@ -6,10 +6,11 @@ using System.Diagnostics;
 
 namespace Elffy;
 
-public abstract class RenderOperation<TShader, TMaterial>
+public abstract class RenderOperation<TSelf, TShader, TMaterial>
     : Operation
-    where TShader : Shader<TShader, TMaterial>
-    where TMaterial : Material<TMaterial, TShader>
+    where TSelf : RenderOperation<TSelf, TShader, TMaterial>
+    where TShader : Shader<TShader, TMaterial, TSelf>
+    where TMaterial : Material<TMaterial, TShader, TSelf>
 {
     private readonly Own<PipelineLayout> _pipelineLayout;
 
@@ -34,11 +35,11 @@ public abstract class RenderOperation<TShader, TMaterial>
 }
 
 public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
-    : RenderOperation<TShader, TMaterial>
+    : RenderOperation<TSelf, TShader, TMaterial>
     where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     where TVertex : unmanaged, IVertex
-    where TShader : Shader<TShader, TMaterial>
-    where TMaterial : Material<TMaterial, TShader>
+    where TShader : Shader<TShader, TMaterial, TSelf>
+    where TMaterial : Material<TMaterial, TShader, TSelf>
     where TObject : FrameObject<TObject, TSelf, TVertex, TShader, TMaterial>
 {
     private readonly List<TObject> _list;

@@ -5,7 +5,7 @@ using System;
 
 namespace Elffy;
 
-public sealed class DeferredProcess : RenderOperation<DeferredProcessShader, DeferredProcessMaterial>
+public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredProcessShader, DeferredProcessMaterial>
 {
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly Own<BindGroupLayout> _bindGroupLayout3;

@@ -8,7 +8,7 @@ using V = Elffy.Vertex;
 
 namespace Elffy;
 
-public sealed class PbrShader : Shader<PbrShader, PbrMaterial>
+public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
 {
     private static T ShadowShaderSource<TArg, T>(uint cascade, TArg arg, ReadOnlySpanFunc<byte, TArg, T> func)
     {

@@ -3,27 +3,28 @@ using System;
 
 namespace Elffy;
 
-public abstract class Shader<TSelf, TMaterial>
+public abstract class Shader<TSelf, TMaterial, TOperation>
     : IScreenManaged
-    where TSelf : Shader<TSelf, TMaterial>
-    where TMaterial : Material<TMaterial, TSelf>
+    where TSelf : Shader<TSelf, TMaterial, TOperation>
+    where TMaterial : Material<TMaterial, TSelf, TOperation>
+    where TOperation : RenderOperation<TOperation, TSelf, TMaterial>
 {
     private readonly Screen _screen;
     private readonly Own<ShaderModule> _module;
     private readonly Own<RenderPipeline> _pipeline;
-    private readonly RenderOperation<TSelf, TMaterial> _operation;      // TODO: validate
+    private readonly TOperation _operation;      // TODO: validate
     private bool _released;
 
     public Screen Screen => _screen;
     public ShaderModule Module => _module.AsValue();
-    public RenderOperation<TSelf, TMaterial> Operation => _operation;
+    public TOperation Operation => _operation;
     public RenderPipeline Pipeline => _pipeline.AsValue();
 
     public bool IsManaged => _released == false;
 
     protected Shader(
         ReadOnlySpan<byte> shaderSource,
-        RenderOperation<TSelf, TMaterial> operation,
+        TOperation operation,
         Func<PipelineLayout, ShaderModule, RenderPipelineDescriptor> getPipelineDesc)
     {
         ArgumentNullException.ThrowIfNull(getPipelineDesc);
