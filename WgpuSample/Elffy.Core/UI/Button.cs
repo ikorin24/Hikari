@@ -29,7 +29,15 @@ public sealed class Button : UIElement, IFromJson<Button>
         }
     }
 
-    static Button() => Serializer.RegisterConstructor(FromJson);
+    static Button()
+    {
+        Serializer.RegisterConstructor(FromJson);
+        UILayer.RegisterShader<Button>(static layer =>
+        {
+            return DefaultUIShader.Create(layer).Cast<UIShader>();
+        });
+    }
+
     public static Button FromJson(JsonElement element) => new Button(element);
 
     protected override JsonNode ToJsonProtected()
@@ -55,7 +63,15 @@ public sealed class Button : UIElement, IFromJson<Button>
 
 public sealed class Panel : UIElement, IFromJson<Panel>
 {
-    static Panel() => Serializer.RegisterConstructor(FromJson);
+    static Panel()
+    {
+        Serializer.RegisterConstructor(FromJson);
+        UILayer.RegisterShader<Panel>(static layer =>
+        {
+            return DefaultUIShader.Create(layer).Cast<UIShader>();
+        });
+    }
+
     public static Panel FromJson(JsonElement element) => new Panel(element);
 
     public Panel()
@@ -322,12 +338,10 @@ public abstract class UIElement : IToJson
         _parent = parent;
     }
 
-    protected virtual UIShader ProvideShader(UILayer layer) => DefaultUIShader.Get(layer);
-
     internal UIModel CreateModel(UILayer layer)
     {
         Debug.Assert(_model == null);
-        var shader = ProvideShader(layer);
+        var shader = layer.GetRegisteredShader(GetType());
         var model = new UIModel(this, shader);
         _model = model;
         foreach(var child in _children) {
@@ -515,6 +529,43 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
     private readonly List<UIElement> _rootElements = new List<UIElement>();
     private bool _isLayoutDirty = false;
 
+    private readonly Dictionary<Type, Own<UIShader>> _shaderCache = new();
+    private readonly object _shaderCacheLock = new();
+    private bool _isShaderCacheAvailable = true;
+
+    private static readonly ConcurrentDictionary<Type, Func<UILayer, Own<UIShader>>> _shaderFactory = new();
+
+    public static bool RegisterShader<T>(Func<UILayer, Own<UIShader>> valueFactory) where T : UIElement
+    {
+        ArgumentNullException.ThrowIfNull(valueFactory);
+        return _shaderFactory.TryAdd(typeof(T), valueFactory);
+    }
+
+    internal UIShader GetRegisteredShader(Type type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        Own<UIShader> value;
+        lock(_shaderCacheLock) {
+            if(_isShaderCacheAvailable == false) {
+                throw new InvalidOperationException("already dead");
+            }
+            if(_shaderCache.TryGetValue(type, out value) == false) {
+                if(_shaderFactory.TryGetValue(type, out var factory) == false) {
+                    Throw(type);
+                }
+                value = factory.Invoke(this);
+                if(value.IsNone) {
+                    Throw(type);
+                }
+                Dead.Subscribe(_ => value.Dispose()).AddTo(Subscriptions);
+                _shaderCache.Add(type, value);
+            }
+        }
+        return value.AsValue();
+
+        [DoesNotReturn] static void Throw(Type type) => throw new ArgumentException($"shader for {type} is not found");
+    }
+
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
 
     public UILayer(Screen screen, int sortOrder)
@@ -527,6 +578,13 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         screen.Resized.Subscribe(arg =>
         {
             _isLayoutDirty = true;
+        }).AddTo(Subscriptions);
+        Dead.Subscribe(_ =>
+        {
+            lock(_shaderCacheLock) {
+                _isShaderCacheAvailable = false;
+                _shaderCache.Clear();
+            }
         }).AddTo(Subscriptions);
     }
 
@@ -834,36 +892,6 @@ internal sealed class DefaultUIShader : UIShader
     {
     }
 
-    private static readonly ConcurrentDictionary<UILayer, Own<DefaultUIShader>> _dic = new();
-
-    internal static DefaultUIShader Get(UILayer operation)
-    {
-        //return operation.GetOrAssociate<DefaultUIShader>(operation =>
-        //{
-        //    var value = CreateOwn(new DefaultUIShader(operation));
-        //    operation.Dead.Subscribe(static op =>
-        //    {
-        //        _dic.Remove((UILayer)op, out var removed);
-        //        removed.Dispose();
-        //    });
-        //    return value;
-        //});
-
-        if(operation.LifeState == LifeState.Dead) {
-            throw new ArgumentException();
-        }
-        return _dic.GetOrAdd(operation, static operation =>
-        {
-            var value = CreateOwn(new DefaultUIShader(operation));
-            operation.Dead.Subscribe(static op =>
-            {
-                _dic.Remove((UILayer)op, out var removed);
-                removed.Dispose();
-            });
-            return value;
-        }).AsValue();
-    }
-
     private static RenderPipelineDescriptor Desc(PipelineLayout layout, ShaderModule module)
     {
         var screen = layout.Screen;
@@ -909,6 +937,11 @@ internal sealed class DefaultUIShader : UIShader
             Multisample = MultisampleState.Default,
             Multiview = 0,
         };
+    }
+
+    public static Own<DefaultUIShader> Create(UILayer layer)
+    {
+        return CreateOwn(new DefaultUIShader(layer));
     }
 
     public override Own<UIMaterial> CreateMaterial()
