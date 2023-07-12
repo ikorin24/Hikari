@@ -366,7 +366,7 @@ public abstract class UIElement : IToJson
         var model = _model;
         Debug.Assert(model != null);
         if(model == null) { return; }
-        var actualBorderRadius = UIDefaultLayouter.DecideBorderRadius(_borderRadius, rect.Size);
+        var actualBorderRadius = UILayouter.DecideBorderRadius(_borderRadius, rect.Size);
         var modelMatrix =
             new Vector3(rect.Position, 0f).ToTranslationMatrix4() *
             //Rotation.ToMatrix4() *
@@ -390,7 +390,7 @@ public abstract class UIElement : IToJson
 
     protected virtual RectF DecideRect(in ContentAreaInfo parentContentArea)
     {
-        return UIDefaultLayouter.DecideRect(this, parentContentArea);
+        return UILayouter.DecideRect(this, parentContentArea);
     }
 }
 
@@ -1039,7 +1039,7 @@ public sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShader
     }
 }
 
-internal static class UIDefaultLayouter
+internal static class UILayouter
 {
     public static RectF DecideRect(UIElement target, in ContentAreaInfo area)
     {
