@@ -672,6 +672,12 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
                     {
                         BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
                         BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
+                        BindGroupLayoutEntry.Texture(2, ShaderStages.Vertex | ShaderStages.Fragment, new TextureBindingData
+                        {
+                            ViewDimension = TextureViewDimension.D2,
+                            Multisampled = false,
+                            SampleType = TextureSampleType.FloatNotFilterable,
+                        }),
                     }
                 }).AsValue(out layout0),
             },
@@ -887,9 +893,26 @@ internal sealed class DefaultUIShader : UIShader
         }
         """u8;
 
+    private readonly Own<Texture> _emptyTexture;
+
     private DefaultUIShader(UILayer operation)
         : base(ShaderSource, operation, Desc)
     {
+        _emptyTexture = Texture.Create(operation.Screen, new TextureDescriptor
+        {
+            Dimension = TextureDimension.D2,
+            Format = TextureFormat.Rgba8Unorm,
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Size = new Vector3u(1, 1, 1),
+            Usage = TextureUsages.TextureBinding,
+        });
+    }
+
+    protected override void Release(bool manualRelease)
+    {
+        base.Release(manualRelease);
+        _emptyTexture.Dispose();
     }
 
     private static RenderPipelineDescriptor Desc(PipelineLayout layout, ShaderModule module)
@@ -946,7 +969,7 @@ internal sealed class DefaultUIShader : UIShader
 
     public override Own<UIMaterial> CreateMaterial()
     {
-        return DefaultUIShader.Material.Create(this).Cast<UIMaterial>();
+        return DefaultUIShader.Material.Create(this, _emptyTexture.AsValue().View).Cast<UIMaterial>();
     }
 
     private sealed class Material : UIMaterial
@@ -988,7 +1011,7 @@ internal sealed class DefaultUIShader : UIShader
             buffer.WriteData(0, data);
         }
 
-        internal static Own<Material> Create(UIShader shader)
+        internal static Own<Material> Create(UIShader shader, TextureView emptyTexture)
         {
             var screen = shader.Screen;
             var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
@@ -997,9 +1020,10 @@ internal sealed class DefaultUIShader : UIShader
                 Layout = shader.Operation.BindGroupLayout0,
                 Entries = new[]
                 {
-                BindGroupEntry.Buffer(0, screen.InfoBuffer),
-                BindGroupEntry.Buffer(1, buffer.AsValue()),
-            },
+                    BindGroupEntry.Buffer(0, screen.InfoBuffer),
+                    BindGroupEntry.Buffer(1, buffer.AsValue()),
+                    BindGroupEntry.TextureView(2, emptyTexture),
+                },
             });
             var self = new Material(shader, bindGroup0, buffer);
             return CreateOwn(self);
