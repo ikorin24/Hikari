@@ -949,7 +949,7 @@ internal sealed class DefaultUIShader : UIShader
         return DefaultUIShader.Material.Create(this).Cast<UIMaterial>();
     }
 
-    public sealed class Material : UIMaterial
+    private sealed class Material : UIMaterial
     {
         private readonly Own<Buffer> _buffer;
         private readonly Own<BindGroup> _bindGroup0;
