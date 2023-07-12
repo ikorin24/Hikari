@@ -34,7 +34,7 @@ public abstract class Material<TSelf, TShader, TOperation>
     {
     }
 
-    protected static Own<TSelf> CreateOwn(TSelf self)
+    protected static Own<T> CreateOwn<T>(T self) where T : TSelf
     {
         ArgumentNullException.ThrowIfNull(self);
         return Own.New(self, static x => SafeCast.As<TSelf>(x).Release());

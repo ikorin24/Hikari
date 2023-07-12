@@ -61,7 +61,7 @@ public abstract class Shader<TSelf, TMaterial, TOperation>
         _pipeline.Dispose();
     }
 
-    protected static Own<TSelf> CreateOwn(TSelf shader)
+    protected static Own<T> CreateOwn<T>(T shader) where T : TSelf
     {
         ArgumentNullException.ThrowIfNull(shader);
         return Own.New(shader, static x => SafeCast.As<TSelf>(x).Release());

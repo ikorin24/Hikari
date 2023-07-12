@@ -376,26 +376,32 @@ public abstract class UIElement : IToJson
                 new Vector4(0, 0, 1, 0),
                 new Vector4(0, 0, 0, 1));
 
-        var background = _backgroundColor;
-        model.Material.WriteUniform(new UIMaterial.BufferData
+        var result = new UIUpdateResult
         {
-            Mvp = uiProjection * modelMatrix,
-            SolidColor = background.Type switch
-            {
-                BrushType.Solid => background.SolidColor,
-                _ => default,
-            },
-            Rect = rect,
-            BorderWidth = _borderWidth.ToVector4(),
-            BorderRadius = actualBorderRadius,
-            BorderSolidColor = _borderColor.SolidColor,
-        });
+            ActualRect = rect,
+            ActualBorderWidth = _borderWidth.ToVector4(),
+            ActualBorderRadius = actualBorderRadius,
+            MvpMatrix = uiProjection * modelMatrix,
+            BackgroundColor = _backgroundColor,
+            BorderColor = _borderColor,
+        };
+        model.Material.UpdateMaterial(result);
     }
 
     protected virtual RectF DecideRect(in ContentAreaInfo parentContentArea)
     {
         return UIDefaultLayouter.DecideRect(this, parentContentArea);
     }
+}
+
+public readonly struct UIUpdateResult
+{
+    public required RectF ActualRect { get; init; }
+    public required Vector4 ActualBorderWidth { get; init; }
+    public required Vector4 ActualBorderRadius { get; init; }
+    public required Matrix4 MvpMatrix { get; init; }
+    public required Brush BackgroundColor { get; init; }
+    public required Brush BorderColor { get; init; }
 }
 
 public sealed class UIElementCollection
@@ -506,7 +512,7 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
     private readonly List<UIElement> _rootElements = new List<UIElement>();
     private bool _isLayoutDirty = false;
 
-    private readonly Own<UIShader> _defaultShader;
+    private readonly Own<DefaultUIShader> _defaultShader;
 
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
 
@@ -516,19 +522,20 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
             CreatePipelineLayout(screen, out var bindGroupLayout0),
             sortOrder)
     {
-        _defaultShader = UIShader.Create(this);     // TODO:
-
         _bindGroupLayout0 = bindGroupLayout0;
         screen.Resized.Subscribe(arg =>
         {
             _isLayoutDirty = true;
         }).AddTo(Subscriptions);
+
+        _defaultShader = DefaultUIShader.Create(this);
     }
 
     protected override void Release()
     {
         base.Release();
         _bindGroupLayout0.Dispose();
+        _defaultShader.Dispose();
     }
 
     private void UpdateLayout()
@@ -616,7 +623,20 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
     }
 }
 
-public sealed class UIShader : Shader<UIShader, UIMaterial, UILayer>
+public abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
+{
+    protected UIShader(
+        ReadOnlySpan<byte> shaderSource,
+        UILayer operation,
+        Func<PipelineLayout, ShaderModule, RenderPipelineDescriptor> getPipelineDesc)
+        : base(shaderSource, operation, getPipelineDesc)
+    {
+    }
+
+    public abstract Own<UIMaterial> CreateMaterial();
+}
+
+public sealed class DefaultUIShader : UIShader
 {
     private static ReadOnlySpan<byte> ShaderSource => """
         struct Vin {
@@ -811,22 +831,14 @@ public sealed class UIShader : Shader<UIShader, UIMaterial, UILayer>
         }
         """u8;
 
-    private UIShader(
-        UILayer operation) :
-        base(ShaderSource, operation, Desc)
+    private DefaultUIShader(UILayer operation)
+        : base(ShaderSource, operation, Desc)
     {
     }
 
-    protected override void Release(bool manualRelease)
+    internal static Own<DefaultUIShader> Create(UILayer operation)
     {
-        base.Release(manualRelease);
-        if(manualRelease) {
-        }
-    }
-
-    internal static Own<UIShader> Create(UILayer operation)
-    {
-        var self = new UIShader(operation);
+        var self = new DefaultUIShader(operation);
         return CreateOwn(self);
     }
 
@@ -876,69 +888,97 @@ public sealed class UIShader : Shader<UIShader, UIMaterial, UILayer>
             Multiview = 0,
         };
     }
-}
 
+    public override Own<UIMaterial> CreateMaterial()
+    {
+        return DefaultUIShader.Material.Create(this).Cast<UIMaterial>();
+    }
+
+    public sealed class Material : UIMaterial
+    {
+        private readonly Own<Buffer> _buffer;
+        private readonly Own<BindGroup> _bindGroup0;
+
+        [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_mat4x4_f32)]
+        private readonly struct BufferData
+        {
+            public required Matrix4 Mvp { get; init; }
+            public required Color4 SolidColor { get; init; }
+            public required RectF Rect { get; init; }
+            public required Vector4 BorderWidth { get; init; }
+            public required Vector4 BorderRadius { get; init; }
+            public required Color4 BorderSolidColor { get; init; }
+        }
+
+        public override BindGroup BindGroup0 => _bindGroup0.AsValue();
+
+        private Material(UIShader shader, Own<BindGroup> bindGroup0, Own<Buffer> buffer) : base(shader)
+        {
+            _bindGroup0 = bindGroup0;
+            _buffer = buffer;
+        }
+
+        protected override void Release(bool manualRelease)
+        {
+            base.Release(manualRelease);
+            if(manualRelease) {
+                _bindGroup0.Dispose();
+                _buffer.Dispose();
+            }
+        }
+
+        private void WriteUniform(in BufferData data)
+        {
+            var buffer = _buffer.AsValue();
+            buffer.WriteData(0, data);
+        }
+
+        internal static Own<Material> Create(UIShader shader)
+        {
+            var screen = shader.Screen;
+            var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
+            var bindGroup0 = BindGroup.Create(screen, new()
+            {
+                Layout = shader.Operation.BindGroupLayout0,
+                Entries = new[]
+                {
+                BindGroupEntry.Buffer(0, screen.InfoBuffer),
+                BindGroupEntry.Buffer(1, buffer.AsValue()),
+            },
+            });
+            var self = new Material(shader, bindGroup0, buffer);
+            return CreateOwn(self);
+        }
+
+        public override void UpdateMaterial(in UIUpdateResult result)
+        {
+            WriteUniform(new()
+            {
+                Mvp = result.MvpMatrix,
+                SolidColor = result.BackgroundColor.SolidColor,
+                Rect = result.ActualRect,
+                BorderWidth = result.ActualBorderWidth,
+                BorderRadius = result.ActualBorderRadius,
+                BorderSolidColor = result.BorderColor.SolidColor,
+            });
+        }
+    }
+}
 
 internal static class WgslConst
 {
     public const int AlignOf_mat4x4_f32 = 16;
 }
 
-public sealed class UIMaterial : Material<UIMaterial, UIShader, UILayer>
+public abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
 {
-    private readonly Own<Buffer> _buffer;
-    private readonly Own<BindGroup> _bindGroup0;
+    public abstract BindGroup BindGroup0 { get; }
 
-    [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_mat4x4_f32)]
-    internal readonly struct BufferData
+    protected UIMaterial(UIShader shader) : base(shader)
     {
-        public required Matrix4 Mvp { get; init; }
-        public required Color4 SolidColor { get; init; }
-        public required RectF Rect { get; init; }
-        public required Vector4 BorderWidth { get; init; }
-        public required Vector4 BorderRadius { get; init; }
-        public required Color4 BorderSolidColor { get; init; }
     }
 
-    internal BindGroup BindGroup0 => _bindGroup0.AsValue();
-
-    private UIMaterial(UIShader shader, Own<BindGroup> bindGroup0, Own<Buffer> buffer) : base(shader)
-    {
-        _bindGroup0 = bindGroup0;
-        _buffer = buffer;
-    }
-
-    protected override void Release(bool manualRelease)
-    {
-        base.Release(manualRelease);
-        if(manualRelease) {
-            _bindGroup0.Dispose();
-            _buffer.Dispose();
-        }
-    }
-
-    internal void WriteUniform(in BufferData data)
-    {
-        var buffer = _buffer.AsValue();
-        buffer.WriteData(0, data);
-    }
-
-    internal static Own<UIMaterial> Create(UIShader shader)
-    {
-        var screen = shader.Screen;
-        var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
-        var bindGroup0 = BindGroup.Create(screen, new()
-        {
-            Layout = shader.Operation.BindGroupLayout0,
-            Entries = new[]
-            {
-                BindGroupEntry.Buffer(0, screen.InfoBuffer),
-                BindGroupEntry.Buffer(1, buffer.AsValue()),
-            },
-        });
-        var self = new UIMaterial(shader, bindGroup0, buffer);
-        return CreateOwn(self);
-    }
+    public abstract void UpdateMaterial(in UIUpdateResult result);
 }
 
 public sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShader, UIMaterial>
@@ -950,7 +990,7 @@ public sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShader
     internal UIModel(UIElement element, UIShader shader)
         : base(
             GetMesh(shader.Screen),
-            UIMaterial.Create(shader))
+            shader.CreateMaterial())
     {
         _element = element;
         IsFrozen = true;
