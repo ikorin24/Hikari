@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 namespace Elffy;
 
 public readonly struct MaybeOwn<T> : IDisposable, IEquatable<MaybeOwn<T>>
+    where T : notnull
 {
     internal readonly Own<T> _inner;
 
@@ -63,9 +64,9 @@ public readonly struct MaybeOwn<T> : IDisposable, IEquatable<MaybeOwn<T>>
 
 public static class MaybeOwn
 {
-    public static MaybeOwn<T> New<T>(Own<T> own) => MaybeOwn<T>.FromOwn(own);
+    public static MaybeOwn<T> New<T>(Own<T> own) where T : notnull => MaybeOwn<T>.FromOwn(own);
 
-    public static MaybeOwn<T> New<T>(T value) => MaybeOwn<T>.FromShared(value);
+    public static MaybeOwn<T> New<T>(T value) where T : notnull => MaybeOwn<T>.FromShared(value);
 
     public static void Validate<T>(this MaybeOwn<T> self) where T : IScreenManaged
     {
@@ -73,6 +74,7 @@ public static class MaybeOwn
     }
 
     internal static void ThrowArgumentExceptionIfNone<T>(this MaybeOwn<T> self, [CallerArgumentExpression(nameof(self))] string? paramName = null)
+        where T : notnull
     {
         if(self.IsNone) {
             Throw(paramName);

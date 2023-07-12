@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy;
 
-public readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
+public readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T : notnull
 {
     internal readonly T _value;
 
@@ -102,7 +102,7 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Own<U> Cast<U>()
+    public Own<U> Cast<U>() where U : notnull
     {
         var x = CastOrNone<U>();
         if(x.IsNone) {
@@ -112,7 +112,7 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Own<U> CastOrNone<U>()
+    public Own<U> CastOrNone<U>() where U : notnull
     {
         if(typeof(T) == typeof(U)) {
             return Unsafe.As<Own<T>, Own<U>>(ref Unsafe.AsRef(in this));
@@ -198,6 +198,7 @@ public static class Own
     }
 
     internal static void ThrowArgumentExceptionIfNone<T>(this Own<T> self, [CallerArgumentExpression(nameof(self))] string? paramName = null)
+        where T : notnull
     {
         if(self.IsNone) {
             Throw(paramName);
