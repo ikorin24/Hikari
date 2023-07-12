@@ -322,13 +322,16 @@ public abstract class UIElement : IToJson
         _parent = parent;
     }
 
-    internal UIModel CreateModel(UIShader shader)
+    protected virtual UIShader ProvideShader(UILayer layer) => DefaultUIShader.Get(layer);
+
+    internal UIModel CreateModel(UILayer layer)
     {
         Debug.Assert(_model == null);
+        var shader = ProvideShader(layer);
         var model = new UIModel(this, shader);
         _model = model;
         foreach(var child in _children) {
-            child.CreateModel(shader);
+            child.CreateModel(layer);
         }
         return model;
     }
@@ -421,11 +424,11 @@ public sealed class UIElementCollection
             if(Interlocked.CompareExchange(ref _parent, value, null) != null) {
                 ThrowInvalidInstance();
             }
-            var shader = value.Model?.Shader;
+            var layer = value.Model?.Layer;
             foreach(var child in _children) {
                 child.SetParent(value);
-                if(shader != null) {
-                    child.CreateModel(shader);
+                if(layer != null) {
+                    child.CreateModel(layer);
                 }
             }
         }
@@ -464,9 +467,9 @@ public sealed class UIElementCollection
         var parent = _parent;
         if(parent != null) {
             element.SetParent(parent);
-            var shader = parent.Model?.Shader;
-            if(shader != null) {
-                element.CreateModel(shader);
+            var layer = parent.Model?.Layer;
+            if(layer != null) {
+                element.CreateModel(layer);
             }
         }
     }
@@ -512,8 +515,6 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
     private readonly List<UIElement> _rootElements = new List<UIElement>();
     private bool _isLayoutDirty = false;
 
-    private readonly Own<DefaultUIShader> _defaultShader;
-
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
 
     public UILayer(Screen screen, int sortOrder)
@@ -527,15 +528,12 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         {
             _isLayoutDirty = true;
         }).AddTo(Subscriptions);
-
-        _defaultShader = DefaultUIShader.Create(this);
     }
 
     protected override void Release()
     {
         base.Release();
         _bindGroupLayout0.Dispose();
-        _defaultShader.Dispose();
     }
 
     private void UpdateLayout()
@@ -566,7 +564,7 @@ public sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMater
         if(element.Parent != null) {
             throw new ArgumentException("the element is already in UI tree");
         }
-        var model = element.CreateModel(_defaultShader.AsValue());
+        var model = element.CreateModel(this);
         model.Alive.Subscribe(model =>
         {
             model.Layer._rootElements.Add(model.Element);
@@ -636,7 +634,7 @@ public abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
     public abstract Own<UIMaterial> CreateMaterial();
 }
 
-public sealed class DefaultUIShader : UIShader
+internal sealed class DefaultUIShader : UIShader
 {
     private static ReadOnlySpan<byte> ShaderSource => """
         struct Vin {
@@ -836,10 +834,34 @@ public sealed class DefaultUIShader : UIShader
     {
     }
 
-    internal static Own<DefaultUIShader> Create(UILayer operation)
+    private static readonly ConcurrentDictionary<UILayer, Own<DefaultUIShader>> _dic = new();
+
+    internal static DefaultUIShader Get(UILayer operation)
     {
-        var self = new DefaultUIShader(operation);
-        return CreateOwn(self);
+        //return operation.GetOrAssociate<DefaultUIShader>(operation =>
+        //{
+        //    var value = CreateOwn(new DefaultUIShader(operation));
+        //    operation.Dead.Subscribe(static op =>
+        //    {
+        //        _dic.Remove((UILayer)op, out var removed);
+        //        removed.Dispose();
+        //    });
+        //    return value;
+        //});
+
+        if(operation.LifeState == LifeState.Dead) {
+            throw new ArgumentException();
+        }
+        return _dic.GetOrAdd(operation, static operation =>
+        {
+            var value = CreateOwn(new DefaultUIShader(operation));
+            operation.Dead.Subscribe(static op =>
+            {
+                _dic.Remove((UILayer)op, out var removed);
+                removed.Dispose();
+            });
+            return value;
+        }).AsValue();
     }
 
     private static RenderPipelineDescriptor Desc(PipelineLayout layout, ShaderModule module)
