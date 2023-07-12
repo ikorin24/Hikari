@@ -9,6 +9,8 @@ namespace Elffy;
 
 public readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T : notnull
 {
+    // _value can be null if the instance made by default(Own<T>),
+    // but there are no matter because IsNone == true in that case.
     internal readonly T _value;
 
     // The following tricks are for upcasting.
@@ -27,6 +29,13 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T : notnul
         Debug.Assert(typeof(T).IsValueType == false);
         ArgumentNullException.ThrowIfNull(value);
         ArgumentNullException.ThrowIfNull(release);
+
+        if(typeof(T) == typeof(object) || typeof(T) == typeof(ValueType)) {
+            // This is a special case. It is for downcasting.
+            if(value.GetType().IsValueType) {
+                throw new NotSupportedException("cannot create Own<object> or Own<ValueType> from boxed instance of value type");
+            }
+        }
         _value = value;
         _release = release;
     }
@@ -47,6 +56,12 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T : notnul
         else {
             ArgumentNullException.ThrowIfNull(value);
             Debug.Assert(release is Action<object>);
+            if(typeof(T) == typeof(object) || typeof(T) == typeof(ValueType)) {
+                // This is a special case. It is for downcasting.
+                if(value.GetType().IsValueType) {
+                    throw new NotSupportedException("cannot create Own<object> or Own<ValueType> from boxed instance of value type");
+                }
+            }
         }
         _value = value;
         _release = release;
@@ -104,44 +119,82 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T : notnul
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Own<U> Cast<U>() where U : notnull
     {
-        var x = CastOrNone<U>();
-        if(x.IsNone) {
+        var casted = CastCore<U>(out var success);
+        if(success) {
+            return casted;
+        }
+        else {
             throw new InvalidCastException($"cannot cast Own<{typeof(T).Name}> to Own<{typeof(U).Name}>");
         }
-        return x;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Own<U> CastOrNone<U>() where U : notnull
     {
+        var casted = CastCore<U>(out var success);
+        if(success) {
+            return casted;
+        }
+        else {
+            return Own<U>.None;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private Own<U> CastCore<U>(out bool success) where U : notnull
+    {
         if(typeof(T) == typeof(U)) {
+            // It always succeeds regardless of whether the inner value is None.
+            success = true;
             return Unsafe.As<Own<T>, Own<U>>(ref Unsafe.AsRef(in this));
         }
         else if(typeof(T).IsAssignableTo(typeof(U))) {
-            // upcast
+            // upcast, T is subclass of U
             if(typeof(T).IsValueType) {
-                // cannot upcast value type into object
+                // There are two cases:
+                // 1. It cannot upcast value type into object or ValueType
+                //    (e.g. Own<SomeStruct> -> Own<object>)
+                // 2. None is always upcasted into None.
+                //    (e.g. Own<SomeStruct>.None -> Own<object>.None)
+                success = IsNone;
                 return Own<U>.None;
             }
             else {
+                // It always succeeds regardless of whether the inner value is None.
+                success = true;
                 return Unsafe.As<Own<T>, Own<U>>(ref Unsafe.AsRef(in this));
             }
         }
         else if(typeof(U).IsAssignableTo(typeof(T))) {
-            // downcast
+            // downcast, T is superclass of U
             if(TryAsValue(out var value)) {
                 if(value is U) {
+#if DEBUG
+                    // The inner value is not boxed struct when typeof(U) == object || typeof(U) == ValueType
+                    // because the constructor does not allow it.
+                    Debug.Assert(value.GetType().IsValueType == false);
+#endif
+                    success = true;
                     return Unsafe.As<Own<T>, Own<U>>(ref Unsafe.AsRef(in this));
                 }
                 else {
+                    // Failed to downcast.
+                    // The inner value cannot be downcasted into U.
+                    success = false;
                     return Own<U>.None;
                 }
             }
             else {
+                // Own<T>.None -> Own<U>.None always succeeds
+                // (e.g. Own<object>.None -> Own<SomeClass>.None)
+                // This is the same as casting (object)null to (SomeClass)null, so it succeeds.
+                success = true;
                 return Unsafe.As<Own<T>, Own<U>>(ref Unsafe.AsRef(in this));
             }
         }
         else {
+            // It never comes here. It is for safety.
+            success = false;
             return Own<U>.None;
         }
     }
