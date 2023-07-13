@@ -60,9 +60,7 @@ internal class Program
             }]
         }
         """);
-
-        var uiLayer = new UILayer(screen, 2);
-        uiLayer.AddRootElement(panel);
+        screen.UIDocument.AddRoot(panel);
 
         screen.Update.Subscribe(screen =>
         {

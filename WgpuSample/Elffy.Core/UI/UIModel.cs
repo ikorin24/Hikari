@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 
 namespace Elffy.UI;
 
-public sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShader, UIMaterial>
+internal sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShader, UIMaterial>
 {
     private readonly UIElement _element;
 

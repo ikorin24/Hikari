@@ -3,7 +3,7 @@ using System;
 
 namespace Elffy.UI;
 
-public abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
+internal abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
 {
     protected UIShader(
         ReadOnlySpan<byte> shaderSource,

@@ -2,7 +2,7 @@
 
 namespace Elffy.UI;
 
-public abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
+internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
 {
     public abstract BindGroup BindGroup0 { get; }
     public abstract BindGroup BindGroup1 { get; }
