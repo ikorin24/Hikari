@@ -766,12 +766,24 @@ internal sealed class DefaultUIShader : UIShader
             );
         }
 
+        fn get_texel_color(fragcoord: vec2<f32>) -> vec4<f32> {
+            let tex_size: vec2<i32> = textureDimensions(tex, 0).xy;
+            let offset_in_rect: vec2<f32> = data.rect.xy + ((data.rect.zw - vec2<f32>(tex_size).xy) * 0.5);
+            let texel_pos: vec2<f32> = fragcoord - offset_in_rect;
+            if(texel_pos.x < 0.0 || texel_pos.x >= f32(tex_size.x) || texel_pos.y < 0.0 || texel_pos.y >= f32(tex_size.y)) {
+                return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+            }
+            else {
+                return textureLoad(tex, vec2<i32>(texel_pos), 0);
+            }
+        }
+
         @fragment fn fs_main(
             f: V2F,
         ) -> @location(0) vec4<f32> {
-            // pixel coordinates, not normalized
+            // pixel coordinates, which is not normalized
             let fragcoord: vec2<f32> = f.clip_pos.xy;
-            let texel_color: vec4<f32> = textureSample(tex, tex_sampler, f.uv);
+            let texel_color = get_texel_color(fragcoord);
             var color: vec4<f32> = blend(texel_color, data.solid_color, 1.0);
 
             let b_radius = data.border_radius;
@@ -1119,7 +1131,7 @@ internal sealed class DefaultUIShader : UIShader
             var text = button.Text;
             if(string.IsNullOrEmpty(text) == false) {
                 using var font = new SkiaSharp.SKFont();
-                font.Size = 16;
+                font.Size = 12;
                 var options = new TextDrawOptions
                 {
                     Background = ColorByte.Transparent,
