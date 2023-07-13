@@ -46,6 +46,9 @@ internal static class TextDrawer
         paint.Color = new SKColor(foreground.R, foreground.G, foreground.B, foreground.A);
         paint.Style = SKPaintStyle.Fill;
         paint.TextAlign = SKTextAlign.Left;
+        //paint.IsAntialias = true;
+        //paint.SubpixelText = true;
+        //paint.IsEmbeddedBitmapText = true;
 
         var buffer = builder.AllocatePositionedRun(skFont, glyphCount);
         var glyphs = buffer.GetGlyphSpan();

@@ -1,6 +1,4 @@
 ﻿#nullable enable
-using Elffy;
-using Elffy.Effective;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -9,55 +7,35 @@ using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
 
-public sealed class Button : UIElement, IFromJson<Button>
+public sealed class Panel : UIElement, IFromJson<Panel>
 {
-    private string _text;
-    private EventSource<Button> _clicked;
-
-    public string Text
-    {
-        get => _text;
-        set
-        {
-            if(value == _text) { return; }
-            _text = value;
-            RequestUpdateMaterial();
-        }
-    }
-
-    static Button()
+    static Panel()
     {
         Serializer.RegisterConstructor(FromJson);
-        UILayer.RegisterShader<Button>(static layer =>
+        UILayer.RegisterShader<Panel>(static layer =>
         {
-            return ButtonShader.Create(layer).Cast<UIShader>();
+            return PanelShader.Create(layer).Cast<UIShader>();
         });
     }
 
-    public static Button FromJson(JsonElement element) => new Button(element);
+    public static Panel FromJson(JsonElement element) => new Panel(element);
+
+    public Panel()
+    {
+    }
+
+    private Panel(JsonElement element) : base(element)
+    {
+    }
 
     protected override JsonNode ToJsonProtected()
     {
         var node = base.ToJsonProtected();
-        node["text"] = _text;
         return node;
-    }
-
-    public Button() : base()
-    {
-        _text = "";
-    }
-
-    private Button(JsonElement element) : base(element)
-    {
-        _text = "";
-        if(element.TryGetProperty("text", out var text)) {
-            _text = Serializer.Instantiate<string>(text);
-        }
     }
 }
 
-file sealed class ButtonShader : UIShader
+file sealed class PanelShader : UIShader
 {
     private static ReadOnlySpan<byte> ShaderSource => """
         struct Vin {
@@ -83,8 +61,6 @@ file sealed class ButtonShader : UIShader
 
         @group(0) @binding(0) var<uniform> screen: ScreenInfo;
         @group(0) @binding(1) var<uniform> data: BufferData;
-        @group(1) @binding(0) var tex: texture_2d<f32>;
-        @group(1) @binding(1) var tex_sampler: sampler;
 
         const PI: f32 = 3.141592653589793;
         const INV_PI: f32 = 0.3183098861837907;
@@ -110,45 +86,12 @@ file sealed class ButtonShader : UIShader
             );
         }
 
-        const TEXT_HALIGN_LEFT: u32 = 0u;
-        const TEXT_HALIGN_CENTER: u32 = 1u;
-        const TEXT_HALIGN_RIGHT: u32 = 2u;
-        const TEXT_VALIGN_TOP: u32 = 0u;
-        const TEXT_VALIGN_CENTER: u32 = 1u;
-        const TEXT_VALIGN_BOTTOM: u32 = 2u;
-
-        fn get_texel_color(fragcoord: vec2<f32>, h_align: u32, v_align: u32) -> vec4<f32> {
-            let tex_size: vec2<i32> = textureDimensions(tex, 0).xy;
-            var o: vec2<f32>;
-            if(h_align == TEXT_HALIGN_CENTER) {
-                o.x = (data.rect.z - vec2<f32>(tex_size).x) * 0.5;
-            }
-            else if(h_align == TEXT_HALIGN_RIGHT) {
-                o.x = data.rect.z - vec2<f32>(tex_size).x;
-            }
-            if(v_align == TEXT_VALIGN_CENTER) {
-                o.y = (data.rect.w - vec2<f32>(tex_size).y) * 0.5;
-            }
-            else if(v_align == TEXT_VALIGN_BOTTOM) {
-                o.y = data.rect.w - vec2<f32>(tex_size).y;
-            }
-            let offset_in_rect: vec2<f32> = data.rect.xy + o;
-            let texel_pos: vec2<f32> = fragcoord - offset_in_rect;
-            if(texel_pos.x < 0.0 || texel_pos.x >= f32(tex_size.x) || texel_pos.y < 0.0 || texel_pos.y >= f32(tex_size.y)) {
-                return vec4<f32>(0.0, 0.0, 0.0, 0.0);
-            }
-            else {
-                return textureLoad(tex, vec2<i32>(texel_pos), 0);
-            }
-        }
-
         @fragment fn fs_main(
             f: V2F,
         ) -> @location(0) vec4<f32> {
             // pixel coordinates, which is not normalized
             let fragcoord: vec2<f32> = f.clip_pos.xy;
-            let texel_color = get_texel_color(fragcoord, TEXT_HALIGN_CENTER, TEXT_VALIGN_CENTER);
-            var color: vec4<f32> = blend(texel_color, data.solid_color, 1.0);
+            var color: vec4<f32> = data.solid_color;
 
             let b_radius = data.border_radius;
 
@@ -291,7 +234,7 @@ file sealed class ButtonShader : UIShader
     private readonly Own<Texture> _emptyTexture;
     private readonly Own<Sampler> _emptyTextureSampler;
 
-    private ButtonShader(UILayer operation)
+    private PanelShader(UILayer operation)
         : base(ShaderSource, operation, Desc)
     {
         _emptyTexture = Texture.Create(operation.Screen, new TextureDescriptor
@@ -368,23 +311,21 @@ file sealed class ButtonShader : UIShader
         };
     }
 
-    public static Own<ButtonShader> Create(UILayer layer)
+    public static Own<PanelShader> Create(UILayer layer)
     {
-        return CreateOwn(new ButtonShader(layer));
+        return CreateOwn(new PanelShader(layer));
     }
 
     public override Own<UIMaterial> CreateMaterial()
     {
-        return ButtonShader.Material.Create(this, _emptyTexture.AsValue(), _emptyTextureSampler.AsValue()).Cast<UIMaterial>();
+        return PanelShader.Material.Create(this, _emptyTexture.AsValue(), _emptyTextureSampler.AsValue()).Cast<UIMaterial>();
     }
 
     private sealed class Material : UIMaterial
     {
         private readonly Own<Buffer> _buffer;
         private readonly Own<BindGroup> _bindGroup0;
-        private Own<BindGroup> _bindGroup1;
-        private MaybeOwn<Texture> _texture;
-        private readonly MaybeOwn<Sampler> _sampler;
+        private readonly Own<BindGroup> _bindGroup1;
 
         [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_mat4x4_f32)]
         private readonly struct BufferData
@@ -404,23 +345,12 @@ file sealed class ButtonShader : UIShader
             UIShader shader,
             Own<BindGroup> bindGroup0,
             Own<BindGroup> bindGroup1,
-            Own<Buffer> buffer,
-            MaybeOwn<Texture> texture,
-            MaybeOwn<Sampler> sampler)
+            Own<Buffer> buffer)
             : base(shader)
         {
             _bindGroup0 = bindGroup0;
             _bindGroup1 = bindGroup1;
-            _texture = texture;
             _buffer = buffer;
-            _sampler = sampler;
-        }
-
-        public override void Validate()
-        {
-            base.Validate();
-            _texture.Validate();
-            _sampler.Validate();
         }
 
         protected override void Release(bool manualRelease)
@@ -430,8 +360,6 @@ file sealed class ButtonShader : UIShader
                 _bindGroup0.Dispose();
                 _bindGroup1.Dispose();
                 _buffer.Dispose();
-                _texture.Dispose();
-                _sampler.Dispose();
             }
         }
 
@@ -441,7 +369,7 @@ file sealed class ButtonShader : UIShader
             buffer.WriteData(0, data);
         }
 
-        internal static Own<Material> Create(UIShader shader, MaybeOwn<Texture> texture, MaybeOwn<Sampler> sampler)
+        internal static Own<Material> Create(UIShader shader, Texture texture, Sampler sampler)
         {
             var screen = shader.Screen;
             var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
@@ -454,28 +382,21 @@ file sealed class ButtonShader : UIShader
                     BindGroupEntry.Buffer(1, buffer.AsValue()),
                 },
             });
-            var bindGroup1 = CreateBindGroup1(screen, shader.Operation.BindGroupLayout1, texture.AsValue().View, sampler.AsValue());
-            var self = new Material(shader, bindGroup0, bindGroup1, buffer, texture, sampler);
-            return CreateOwn(self);
-        }
-
-        private static Own<BindGroup> CreateBindGroup1(Screen screen, BindGroupLayout layout, TextureView textureView, Sampler sampler)
-        {
-            return BindGroup.Create(screen, new()
+            var bindGroup1 = BindGroup.Create(screen, new()
             {
-                Layout = layout,
+                Layout = shader.Operation.BindGroupLayout1,
                 Entries = new[]
                 {
-                    BindGroupEntry.TextureView(0, textureView),
+                    BindGroupEntry.TextureView(0, texture.View),
                     BindGroupEntry.Sampler(1, sampler),
                 },
             });
+            var self = new Material(shader, bindGroup0, bindGroup1, buffer);
+            return CreateOwn(self);
         }
 
         public override void UpdateMaterial(UIElement element, in UIUpdateResult result)
         {
-            var button = (Button)element;
-            UpdateForButton(button);
             WriteUniform(new()
             {
                 Mvp = result.MvpMatrix,
@@ -485,40 +406,6 @@ file sealed class ButtonShader : UIShader
                 BorderRadius = result.ActualBorderRadius,
                 BorderSolidColor = result.BorderColor.SolidColor,
             });
-        }
-
-        private void UpdateForButton(Button button)
-        {
-            var text = button.Text;
-            if(string.IsNullOrEmpty(text) == false) {
-                using var font = new SkiaSharp.SKFont();
-                font.Size = 16;
-                var options = new TextDrawOptions
-                {
-                    Background = ColorByte.Transparent,
-                    Foreground = ColorByte.Black,
-                    Font = font,
-                };
-                TextDrawer.Draw(text, options, this, static (image, x) =>
-                {
-                    var (self, metrics) = x;
-                    var texture = Texture.CreateFromRawData(self.Shader.Screen, new TextureDescriptor
-                    {
-                        Dimension = TextureDimension.D2,
-                        Format = TextureFormat.Rgba8UnormSrgb,
-                        MipLevelCount = 1,
-                        SampleCount = 1,
-                        Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
-                        Usage = TextureUsages.TextureBinding,
-                    }, image.GetPixels().AsBytes());
-
-                    var bindGroup1 = CreateBindGroup1(self.Screen, self.Operation.BindGroupLayout1, texture.AsValue().View, self._sampler.AsValue());
-                    self._bindGroup1.Dispose();
-                    self._texture.Dispose();
-                    self._bindGroup1 = bindGroup1;
-                    self._texture = texture;
-                });
-            }
         }
     }
 }
