@@ -788,7 +788,6 @@ internal sealed class DefaultUIShader : UIShader
             else if(v_align == TEXT_VALIGN_BOTTOM) {
                 o.y = data.rect.w - vec2<f32>(tex_size).y;
             }
-            //let offset_in_rect: vec2<f32> = data.rect.xy + (  (data.rect.zw - vec2<f32>(tex_size).xy) * 0.5  );
             let offset_in_rect: vec2<f32> = data.rect.xy + o;
             let texel_pos: vec2<f32> = fragcoord - offset_in_rect;
             if(texel_pos.x < 0.0 || texel_pos.x >= f32(tex_size.x) || texel_pos.y < 0.0 || texel_pos.y >= f32(tex_size.y)) {
