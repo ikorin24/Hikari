@@ -49,6 +49,7 @@ internal class Program
                 "width": 250,
                 "height": 150,
                 "borderWidth": 1,
+                "fontSize": "40px",
                 "text": "click me!"
             },
             {

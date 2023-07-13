@@ -76,8 +76,8 @@ internal static class TextDrawer
         skFont.GetFontMetrics(out var metrics);
         var size = new Vector2i
         {
-            X = (int)MathF.Ceiling(textWidth),
-            Y = (int)MathF.Ceiling(metrics.Descent - metrics.Ascent + 2f * metrics.Leading),
+            X = int.Max(1, (int)MathF.Ceiling(textWidth)),
+            Y = int.Max(1, (int)MathF.Ceiling(metrics.Descent - metrics.Ascent + 2f * metrics.Leading)),
         };
 
         const SKColorType ColorType = SKColorType.Rgba8888;

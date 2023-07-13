@@ -12,6 +12,7 @@ namespace Elffy.UI;
 public sealed class Button : UIElement, IFromJson<Button>
 {
     private string _text;
+    private FontSize _fontSize;
     private EventSource<Button> _clicked;
 
     public string Text
@@ -21,6 +22,17 @@ public sealed class Button : UIElement, IFromJson<Button>
         {
             if(value == _text) { return; }
             _text = value;
+            RequestUpdateMaterial();
+        }
+    }
+
+    public FontSize FontSize
+    {
+        get => _fontSize;
+        set
+        {
+            if(value == _fontSize) { return; }
+            _fontSize = value;
             RequestUpdateMaterial();
         }
     }
@@ -40,19 +52,25 @@ public sealed class Button : UIElement, IFromJson<Button>
     {
         var node = base.ToJsonProtected();
         node["text"] = _text;
+        node["fontSize"] = _fontSize.ToJson();
         return node;
     }
 
     public Button() : base()
     {
         _text = "";
+        _fontSize = 16f;
     }
 
     private Button(JsonElement element) : base(element)
     {
         _text = "";
+        _fontSize = 16f;
         if(element.TryGetProperty("text", out var text)) {
             _text = Serializer.Instantiate<string>(text);
+        }
+        if(element.TryGetProperty("fontSize", out var fontSize)) {
+            _fontSize = Serializer.Instantiate<FontSize>(fontSize);
         }
     }
 }
@@ -492,7 +510,7 @@ file sealed class ButtonShader : UIShader
             var text = button.Text;
             if(string.IsNullOrEmpty(text) == false) {
                 using var font = new SkiaSharp.SKFont();
-                font.Size = 16;
+                font.Size = button.FontSize.Px;
                 var options = new TextDrawOptions
                 {
                     Background = ColorByte.Transparent,
