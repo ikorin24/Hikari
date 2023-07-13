@@ -1126,8 +1126,9 @@ internal sealed class DefaultUIShader : UIShader
                     Foreground = ColorByte.Black,
                     Font = font,
                 };
-                TextDrawer.Draw(text, options, this, static (image, self) =>
+                TextDrawer.Draw(text, options, this, static (image, x) =>
                 {
+                    var (self, metrics) = x;
                     var texture = Texture.CreateFromRawData(self.Shader.Screen, new TextureDescriptor
                     {
                         Dimension = TextureDimension.D2,

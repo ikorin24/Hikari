@@ -14,16 +14,18 @@ internal static class TextDrawer
     [ThreadStatic]
     private static SKPaint? _paintCache;
 
-    public static void Draw<T>(ReadOnlySpan<byte> utf8Text, in TextDrawOptions options, T arg, ReadOnlyImageAction<T> callback)
+    public static void Draw<T>(ReadOnlySpan<byte> utf8Text, in TextDrawOptions options, T arg, ReadOnlyImageAction<(T Arg, SKFontMetrics FontMetrics)> callback)
     {
         using var result = DrawPrivate(utf8Text, SKTextEncoding.Utf8, options);
-        callback.Invoke(result.Image, arg);
+        var a = (arg, result.FontMetrics);
+        callback.Invoke(result.Image, a);
     }
 
-    public static void Draw<T>(ReadOnlySpan<char> text, in TextDrawOptions options, T arg, ReadOnlyImageAction<T> callback)
+    public static void Draw<T>(ReadOnlySpan<char> text, in TextDrawOptions options, T arg, ReadOnlyImageAction<(T Arg, SKFontMetrics FontMetrics)> callback)
     {
         using var result = DrawPrivate(text.MarshalCast<char, byte>(), SKTextEncoding.Utf16, options);
-        callback.Invoke(result.Image, arg);
+        var a = (arg, result.FontMetrics);
+        callback.Invoke(result.Image, a);
     }
 
     private static unsafe DrawResult DrawPrivate(ReadOnlySpan<byte> text, SKTextEncoding enc, in TextDrawOptions options)
@@ -43,9 +45,6 @@ internal static class TextDrawer
         var foreground = options.Foreground;
         paint.Color = new SKColor(foreground.R, foreground.G, foreground.B, foreground.A);
         paint.Style = SKPaintStyle.Fill;
-        paint.IsAntialias = true;
-        paint.SubpixelText = true;
-        paint.LcdRenderText = true;
         paint.TextAlign = SKTextAlign.Left;
 
         var buffer = builder.AllocatePositionedRun(skFont, glyphCount);
@@ -75,7 +74,7 @@ internal static class TextDrawer
         var size = new Vector2i
         {
             X = (int)MathF.Ceiling(textWidth),
-            Y = (int)MathF.Ceiling(metrics.Bottom - metrics.Top),
+            Y = (int)MathF.Ceiling(metrics.Descent - metrics.Ascent + 2f * metrics.Leading),
         };
 
         const SKColorType ColorType = SKColorType.Rgba8888;
@@ -88,10 +87,10 @@ internal static class TextDrawer
 
             using(var textBlob = builder.Build()) {
                 var x = 0;
-                var y = -metrics.Top;
+                var y = -(metrics.Ascent + metrics.Leading);
                 canvas.DrawText(textBlob, x, y, paint);
             }
-            return new DrawResult(bitmap, canvas, result);
+            return new DrawResult(bitmap, canvas, result, metrics);
         }
         catch {
             bitmap.Dispose();
@@ -105,21 +104,24 @@ internal static class TextDrawer
         private readonly SKBitmap? _bitmap;
         private readonly SKCanvas? _canvas;
         private readonly ReadOnlyImageRef _result;
+        private readonly SKFontMetrics _fontMetrics;
 
         public static DrawResult None => default;
 
         public ReadOnlyImageRef Image => _result;
+        public SKFontMetrics FontMetrics => _fontMetrics;
 
         public bool IsNone => _result.IsEmpty;
 
         [Obsolete("Don't use default constructor.", true)]
         public DrawResult() => throw new NotSupportedException("Don't use default constructor.");
 
-        public DrawResult(SKBitmap bitmap, SKCanvas canvas, ReadOnlyImageRef result)
+        public DrawResult(SKBitmap bitmap, SKCanvas canvas, ReadOnlyImageRef result, SKFontMetrics fontMetrics)
         {
             _bitmap = bitmap;
             _canvas = canvas;
             _result = result;
+            _fontMetrics = fontMetrics;
         }
 
         public void Dispose()
