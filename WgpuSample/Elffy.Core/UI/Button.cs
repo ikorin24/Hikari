@@ -1131,7 +1131,7 @@ internal sealed class DefaultUIShader : UIShader
             var text = button.Text;
             if(string.IsNullOrEmpty(text) == false) {
                 using var font = new SkiaSharp.SKFont();
-                font.Size = 12;
+                font.Size = 16;
                 var options = new TextDrawOptions
                 {
                     Background = ColorByte.Transparent,
