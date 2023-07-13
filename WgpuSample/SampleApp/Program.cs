@@ -48,7 +48,8 @@ internal class Program
                 "backgroundColor": "#22B7FF",
                 "width": 250,
                 "height": 150,
-                "borderWidth": 1
+                "borderWidth": 1,
+                "text": "click me!"
             },
             {
                 "@type": "button",

@@ -14,28 +14,16 @@ internal static class TextDrawer
     [ThreadStatic]
     private static SKPaint? _paintCache;
 
-    public static bool Draw<T>(ReadOnlySpan<byte> utf8Text, in TextDrawOptions options, T arg, ReadOnlyImageAction<T> callback)
+    public static void Draw<T>(ReadOnlySpan<byte> utf8Text, in TextDrawOptions options, T arg, ReadOnlyImageAction<T> callback)
     {
         using var result = DrawPrivate(utf8Text, SKTextEncoding.Utf8, options);
-        if(result.IsNone) {
-            return false;
-        }
-        else {
-            callback.Invoke(result.Image, arg);
-            return true;
-        }
+        callback.Invoke(result.Image, arg);
     }
 
-    public static bool Draw<T>(ReadOnlySpan<char> text, in TextDrawOptions options, T arg, ReadOnlyImageAction<T> callback)
+    public static void Draw<T>(ReadOnlySpan<char> text, in TextDrawOptions options, T arg, ReadOnlyImageAction<T> callback)
     {
         using var result = DrawPrivate(text.MarshalCast<char, byte>(), SKTextEncoding.Utf16, options);
-        if(result.IsNone) {
-            return false;
-        }
-        else {
-            callback.Invoke(result.Image, arg);
-            return true;
-        }
+        callback.Invoke(result.Image, arg);
     }
 
     private static unsafe DrawResult DrawPrivate(ReadOnlySpan<byte> text, SKTextEncoding enc, in TextDrawOptions options)
@@ -144,30 +132,9 @@ internal static class TextDrawer
 
 internal readonly struct TextDrawOptions
 {
-    public SKFont Font { get; init; }
+    public required SKFont Font { get; init; }
     //public Vector2 TargetSize { get; init; }
     //public HorizontalTextAlignment Alignment { get; init; }
-    public ColorByte Foreground { get; init; }
-    public ColorByte Background { get; init; }
-}
-
-
-internal static class A
-{
-    public static void Hoge<T>(ReadOnlySpan<char> text, T arg, ReadOnlyImageAction<T> callback)
-    {
-        using var font = new SKFont();
-        font.Size = 13;
-        font.Subpixel = true;
-        var options = new TextDrawOptions
-        {
-            Font = font,
-            Background = ColorByte.Transparent,
-            Foreground = ColorByte.Red,
-        };
-        TextDrawer.Draw(text, options, "", (image, _) =>
-        {
-            // do something
-        });
-    }
+    public required ColorByte Foreground { get; init; }
+    public required ColorByte Background { get; init; }
 }
