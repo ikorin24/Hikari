@@ -11,7 +11,7 @@ public sealed class BindGroup : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.BindGroup> _native;
-    private readonly IScreenManaged[] _associated;
+    private readonly BindGroupDescriptor _desc;
 
     internal Rust.Ref<Wgpu.BindGroup> NativeRef => _native.Unwrap();
 
@@ -19,20 +19,24 @@ public sealed class BindGroup : IScreenManaged
 
     public bool IsManaged => _native.IsNone == false;
 
+    public BindGroupLayout Layout => _desc.Layout;
+    public ReadOnlyMemory<BindGroupEntry> Entries => _desc.Entries;
+
     public void Validate()
     {
         IScreenManaged.DefaultValidate(this);
-        foreach(var item in _associated) {
-            item.Validate();
+        _desc.Layout.Validate();
+        foreach(var entry in _desc.Entries.Span) {
+            entry.Resource.Validate();
         }
     }
 
-    private BindGroup(Screen screen, Rust.Box<Wgpu.BindGroup> native, IScreenManaged[] associated)
+    private BindGroup(Screen screen, Rust.Box<Wgpu.BindGroup> native, in BindGroupDescriptor desc)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _native = native;
         _screen = screen;
-        _associated = associated;
+        _desc = desc;
     }
 
     ~BindGroup() => Release(false);
@@ -56,15 +60,7 @@ public sealed class BindGroup : IScreenManaged
     {
         using var pins = new PinHandleHolder();
         var bindGroupNative = screen.AsRefChecked().CreateBindGroup(desc.ToNative(pins));
-
-        var entries = desc.Entries.Span;
-        var associated = new IScreenManaged[1 + entries.Length];
-        for(int i = 0; i < entries.Length; i++) {
-            associated[i] = entries[i].Resource;
-        }
-        associated[entries.Length] = desc.Layout;
-        var bindGroup = new BindGroup(screen, bindGroupNative, associated);
-
+        var bindGroup = new BindGroup(screen, bindGroupNative, desc);
         return Own.New(bindGroup, static x => _release(SafeCast.As<BindGroup>(x)));
     }
 }
