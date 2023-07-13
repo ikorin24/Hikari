@@ -766,9 +766,30 @@ internal sealed class DefaultUIShader : UIShader
             );
         }
 
-        fn get_texel_color(fragcoord: vec2<f32>) -> vec4<f32> {
+        const TEXT_HALIGN_LEFT: u32 = 0u;
+        const TEXT_HALIGN_CENTER: u32 = 1u;
+        const TEXT_HALIGN_RIGHT: u32 = 2u;
+        const TEXT_VALIGN_TOP: u32 = 0u;
+        const TEXT_VALIGN_CENTER: u32 = 1u;
+        const TEXT_VALIGN_BOTTOM: u32 = 2u;
+
+        fn get_texel_color(fragcoord: vec2<f32>, h_align: u32, v_align: u32) -> vec4<f32> {
             let tex_size: vec2<i32> = textureDimensions(tex, 0).xy;
-            let offset_in_rect: vec2<f32> = data.rect.xy + ((data.rect.zw - vec2<f32>(tex_size).xy) * 0.5);
+            var o: vec2<f32>;
+            if(h_align == TEXT_HALIGN_CENTER) {
+                o.x = (data.rect.z - vec2<f32>(tex_size).x) * 0.5;
+            }
+            else if(h_align == TEXT_HALIGN_RIGHT) {
+                o.x = data.rect.z - vec2<f32>(tex_size).x;
+            }
+            if(v_align == TEXT_VALIGN_CENTER) {
+                o.y = (data.rect.w - vec2<f32>(tex_size).y) * 0.5;
+            }
+            else if(v_align == TEXT_VALIGN_BOTTOM) {
+                o.y = data.rect.w - vec2<f32>(tex_size).y;
+            }
+            //let offset_in_rect: vec2<f32> = data.rect.xy + (  (data.rect.zw - vec2<f32>(tex_size).xy) * 0.5  );
+            let offset_in_rect: vec2<f32> = data.rect.xy + o;
             let texel_pos: vec2<f32> = fragcoord - offset_in_rect;
             if(texel_pos.x < 0.0 || texel_pos.x >= f32(tex_size.x) || texel_pos.y < 0.0 || texel_pos.y >= f32(tex_size.y)) {
                 return vec4<f32>(0.0, 0.0, 0.0, 0.0);
@@ -783,7 +804,7 @@ internal sealed class DefaultUIShader : UIShader
         ) -> @location(0) vec4<f32> {
             // pixel coordinates, which is not normalized
             let fragcoord: vec2<f32> = f.clip_pos.xy;
-            let texel_color = get_texel_color(fragcoord);
+            let texel_color = get_texel_color(fragcoord, TEXT_HALIGN_CENTER, TEXT_VALIGN_CENTER);
             var color: vec4<f32> = blend(texel_color, data.solid_color, 1.0);
 
             let b_radius = data.border_radius;
