@@ -523,7 +523,7 @@ file sealed class ButtonShader : UIShader
                     var texture = Texture.CreateFromRawData(self.Shader.Screen, new TextureDescriptor
                     {
                         Dimension = TextureDimension.D2,
-                        Format = TextureFormat.Rgba8UnormSrgb,
+                        Format = TextureFormat.Rgba8Unorm,
                         MipLevelCount = 1,
                         SampleCount = 1,
                         Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),

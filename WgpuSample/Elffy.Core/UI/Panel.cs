@@ -246,7 +246,7 @@ file sealed class PanelShader : UIShader
         _emptyTexture = Texture.Create(operation.Screen, new TextureDescriptor
         {
             Dimension = TextureDimension.D2,
-            Format = TextureFormat.Rgba8UnormSrgb,
+            Format = TextureFormat.Rgba8Unorm,
             MipLevelCount = 1,
             SampleCount = 1,
             Size = new Vector3u(1, 1, 1),
