@@ -94,6 +94,12 @@ file sealed class PanelShader : UIShader
             var color: vec4<f32> = data.solid_color;
 
             let b_radius = data.border_radius;
+            let b_color = array<vec4<f32>, 4>(
+                blend(data.border_solid_color, color, min(1.0, data.border_width.x)),
+                blend(data.border_solid_color, color, min(1.0, data.border_width.y)),
+                blend(data.border_solid_color, color, min(1.0, data.border_width.z)),
+                blend(data.border_solid_color, color, min(1.0, data.border_width.w)),
+            );
 
             // top-left corner
             let center_tl = data.rect.xy + vec2<f32>(b_radius.x, b_radius.x);
@@ -104,10 +110,7 @@ file sealed class PanelShader : UIShader
                     discard;
                 }
                 if(len_d > b_radius.x) {
-                    return vec4<f32>(
-                        data.border_solid_color.rgb, 
-                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
-                    );
+                    return blend(b_color[0], vec4<f32>(), 1.0 - (len_d - b_radius.x));
                 }
                 var a = b_radius.x - data.border_width.w;   // x-axis radius of ellipse
                 var b = b_radius.x - data.border_width.x;   // y-axis radius of ellipse
@@ -115,13 +118,16 @@ file sealed class PanelShader : UIShader
                 // vector from center of ellipse to the crossed point of 'd' and the ellipse
                 let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
                 let len_v = length(v);
-                if(len_d > len_v) {
-                    return data.border_solid_color;
+                var blend_coeff = max(0.0, min(1.0, len_d - len_v));
+                if(u32(fragcoord.y) <= u32(data.rect.y) + u32(data.border_width.x) - 1u) {
+                    // It's heuristic for error of float number
+                    blend_coeff = 1.0;
                 }
-                let diff = len_v - len_d;
-                if(diff <= 1.0) {
-                    return blend(data.border_solid_color, color, 1.0 - diff);
+                if(u32(fragcoord.x) <= u32(data.rect.x) + u32(data.border_width.x) - 1u) {
+                    // It's heuristic for error of float number
+                    blend_coeff = 1.0;
                 }
+                return blend(b_color[0], color, blend_coeff);
             }
 
             // top-right corner
@@ -213,7 +219,7 @@ file sealed class PanelShader : UIShader
 
             // top border
             if(fragcoord.y < data.rect.y + data.border_width.x) {
-                return data.border_solid_color;
+                return b_color[0];
             }
             // right border
             if(fragcoord.x >= data.rect.x + data.rect.z - data.border_width.y) {
