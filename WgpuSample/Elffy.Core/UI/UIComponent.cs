@@ -24,6 +24,7 @@ public ref struct UIComponent
 
     public void AppendFormatted(Action action)
     {
+        ArgumentNullException.ThrowIfNull(action);
         _delegates ??= new List<Delegate>();
         _delegates.Add(action);
         _handler.AppendFormatted(_delegateIndex++);
@@ -31,6 +32,7 @@ public ref struct UIComponent
 
     public void AppendFormatted<T>(Action<T> action)
     {
+        ArgumentNullException.ThrowIfNull(action);
         _delegates ??= new List<Delegate>();
         _delegates.Add(action);
         _handler.AppendFormatted(_delegateIndex++);
@@ -92,22 +94,17 @@ public readonly ref struct DeserializeRuntimeData
         _delegates = delegates;
     }
 
-    public void AddEventHandler<T>(Event<T> targetEvent, JsonElement handler)
+    public EventSubscription<T> AddEventHandler<T>(Event<T> targetEvent, JsonElement handler)
     {
         var key = handler.GetInt32();
         var d = GetDelegate(key);
-        switch(d) {
-            case Action<T> action: {
-                targetEvent.Subscribe(action);
-                break;
-            }
-            case Action action: {
-                targetEvent.Subscribe(_ => action());
-                break;
-            }
-            default:
-                throw new FormatException();
-        }
+        return d switch
+        {
+            Action<T> action => targetEvent.Subscribe(action),
+            Action action => targetEvent.Subscribe(_ => action()),
+            null => throw new FormatException("no event handler"),
+            _ => throw new FormatException($"event handler type should be {typeof(Action<T>).FullName} or {typeof(Action).FullName}"),
+        };
     }
 
     private Delegate? GetDelegate(int key)
