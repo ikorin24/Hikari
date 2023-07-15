@@ -133,7 +133,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         else {
             using var json = JsonDocument.Parse(c.ToStringAndClear());
             var jsonRoot = json.RootElement;
-            ((IReactive)rootElement).ApplyDiff(jsonRoot, c.GetRuntimeData());
+            rootElement.ApplyDiff(jsonRoot, c.GetRuntimeData());
         }
     }
 
