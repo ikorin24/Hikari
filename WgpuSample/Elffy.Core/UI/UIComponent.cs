@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
@@ -53,6 +54,13 @@ public ref struct UIComponent
     internal DeserializeRuntimeData GetRuntimeData()
     {
         return new DeserializeRuntimeData(_delegates);
+    }
+
+    public static implicit operator UIComponent([StringSyntax(StringSyntaxAttribute.Json)] string s)
+    {
+        var h = new UIComponent(s?.Length ?? 0, 0);
+        h.AppendLiteral(s ?? "");
+        return h;
     }
 }
 
