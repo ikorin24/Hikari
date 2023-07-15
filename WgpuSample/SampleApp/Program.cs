@@ -3,12 +3,14 @@ using Cysharp.Threading.Tasks;
 using Elffy.Effective;
 using Elffy.Imaging;
 using Elffy.Mathematics;
+using Elffy;
 using Elffy.UI;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 
-namespace Elffy;
+namespace SampleApp;
 
 internal class Program
 {
@@ -30,12 +32,19 @@ internal class Program
 
     private static void OnInitialized(Screen screen)
     {
-        var myButton = new MyButton(new()
+        //var countButton = new CountButton(new()
+        //{
+        //    Width = 200,
+        //    Height = 100,
+        //});
+        //screen.UIDocument.SetRoot(countButton);
+        //var type = Type.GetType("SampleApp.CountButton");
+        var counter = new Counter(new()
         {
-            Width = 200,
-            Height = 100,
+            Message = "welcome!",
         });
-        screen.UIDocument.SetRoot(myButton);
+        screen.UIDocument.SetRoot(counter);
+        return;
 
         var panel = Serializer.Deserialize<Panel>("""
         {
@@ -237,21 +246,56 @@ internal class Program
 }
 
 [UIComponent]
-public partial class MyButton
+public partial class Counter
 {
-    public record struct Props(int Width, int Height);
+    public partial record struct Props(string Message);
 
+    public partial UIComponentSource Render()
+    {
+        return $$"""
+        {
+            "@type": "panel",
+            "width": "100%",
+            "height": "100%",
+            "backgroundColor": "#1e1e1e",
+            "children": [
+            {
+                "@type": "button",
+                "verticalAlignment": "Center",
+                "width": 600,
+                "height": 200,
+                "fontSize": 24,
+                "text": "{{_props.Message}}"
+            },
+            {
+                "@type": "{{typeof(CountButton)}}",
+                "Width": 250,
+                "Height": 70
+            }]
+        }
+        """;
+    }
+}
+
+[UIComponent]
+public partial class CountButton
+{
+    public partial record struct Props(int Width, int Height);
     private int _count;
 
-    public partial UIComponent Render()
+    public partial UIComponentSource Render()
     {
         return $$"""
         {
             "@type": "button",
             "width": {{_props.Width}},
             "height": {{_props.Height}},
+            "borderRadius": {{_props.Height / 2f}},
+            "borderWidth": 6,
+            "borderColor": "#ff4310",
+            "backgroundColor": "#ffcccc",
             "text": "click count: {{_count}}",
-            "fontSize": 20,
+            "fontSize": 24,
             "clicked": {{() =>
             {
                 SetState(ref _count, _count + 1);
@@ -261,18 +305,110 @@ public partial class MyButton
     }
 }
 
-sealed partial class MyButton : IUIComponent
+sealed partial class Counter : IUIComponent, IFromJson<Counter>
 {
+    public partial record struct Props;
+
     private readonly Props _props;
-    public MyButton(MyButton.Props props)
+    private bool _needsToRerender;
+
+    static Counter()
+    {
+        Serializer.RegisterConstructor(FromJson);
+    }
+
+    public Counter(Props props)
     {
         _props = props;
     }
 
-    public partial UIComponent Render();
+    bool IUIComponent.NeedsToRerender => _needsToRerender;
+
+    public partial UIComponentSource Render();
 
     private void SetState<T>(ref T state, in T newValue)
     {
         state = newValue;
+        _needsToRerender = true;
+    }
+
+    public static Counter FromJson(JsonElement element, in DeserializeRuntimeData data)
+    {
+        var props = Props.FromJson(element, data);
+        return new Counter(props);
+    }
+
+    partial record struct Props : IFromJson<Props>
+    {
+        static Props()
+        {
+            Serializer.RegisterConstructor(FromJson);
+        }
+
+        public static Props FromJson(JsonElement element, in DeserializeRuntimeData data)
+        {
+            return new()
+            {
+                Message = element.TryGetProperty(nameof(Message), out var message) ? Serializer.Instantiate<string>(message) : "",
+            };
+        }
+    }
+}
+
+
+
+sealed partial class CountButton : IUIComponent, IFromJson<CountButton>
+{
+    public partial record struct Props;
+
+    private readonly Props _props;
+    private bool _needsToRerender;
+
+    static CountButton()
+    {
+        Serializer.RegisterConstructor(FromJson);
+    }
+
+    public CountButton(Props props)
+    {
+        _props = props;
+    }
+
+    bool IUIComponent.NeedsToRerender => _needsToRerender;
+
+    public partial UIComponentSource Render();
+
+    private void SetState<T>(ref T state, in T newValue)
+    {
+        state = newValue;
+        _needsToRerender = true;
+    }
+
+    public static CountButton FromJson(JsonElement element, in DeserializeRuntimeData data)
+    {
+        var props = Props.FromJson(element, data);
+        return new CountButton(props);
+    }
+
+    public static implicit operator UIElement(CountButton self)
+    {
+        throw new NotImplementedException();
+    }
+
+    partial record struct Props : IFromJson<Props>
+    {
+        static Props()
+        {
+            Serializer.RegisterConstructor(FromJson);
+        }
+
+        public static Props FromJson(JsonElement element, in DeserializeRuntimeData data)
+        {
+            return new()
+            {
+                Width = element.TryGetProperty("Width", out var width) ? width.GetInt32() : default,
+                Height = element.TryGetProperty("Height", out var height) ? height.GetInt32() : default,
+            };
+        }
     }
 }

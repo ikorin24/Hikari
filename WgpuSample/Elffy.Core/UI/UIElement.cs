@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -11,6 +12,8 @@ public abstract class UIElement : IToJson, IReactive
     private UIModel? _model;
     private UIElement? _parent;
     private readonly UIElementCollection _children;
+    private EventSource<UIModel> _modelUpdate;
+    private EventSource<UIModel> _modelAlive;
 
     private LayoutLength _width;
     private LayoutLength _height;
@@ -33,6 +36,9 @@ public abstract class UIElement : IToJson, IReactive
         Material = 1,
         Layout = 2,
     }
+
+    internal Event<UIModel> ModelAlive => _modelAlive.Event;
+    internal Event<UIModel> ModelUpdate => _modelUpdate.Event;
 
     public UIElement? Parent => _parent;
     internal UIModel? Model => _model;
@@ -152,6 +158,7 @@ public abstract class UIElement : IToJson, IReactive
     public UIElementCollection Children
     {
         get => _children;
+        [MemberNotNull(nameof(_children))]
         init
         {
             _children = value;
@@ -159,20 +166,31 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
+    private static LayoutLength DefaultWidth => new LayoutLength(100f, LayoutLengthType.Length);
+    private static LayoutLength DefaultHeight => new LayoutLength(100f, LayoutLengthType.Length);
+    private static Thickness DefaultMargin => new Thickness(0f);
+    private static Thickness DefaultPadding => new Thickness(0f);
+    private static HorizontalAlignment DefaultHorizontalAlignment => HorizontalAlignment.Center;
+    private static VerticalAlignment DefaultVerticalAlignment => VerticalAlignment.Center;
+    private static Brush DefaultBackgroundColor => Brush.White;
+    private static Thickness DefaultBorderWidth => new Thickness(0f);
+    private static CornerRadius DefaultBorderRadius => CornerRadius.Zero;
+    private static Brush DefaultBorderColor => Brush.Black;
+
     protected UIElement()
     {
         // set default values
-        _width = new LayoutLength(100f, LayoutLengthType.Length);
-        _height = new LayoutLength(100f, LayoutLengthType.Length);
-        _margin = new Thickness(0f);
-        _padding = new Thickness(0f);
-        _horizontalAlignment = HorizontalAlignment.Center;
-        _verticalAlignment = VerticalAlignment.Center;
-        _backgroundColor = Brush.White;
-        _borderWidth = new Thickness(0f);
-        _borderRadius = CornerRadius.Zero;
-        _borderColor = Brush.Black;
-        _children = new UIElementCollection();
+        _width = DefaultWidth;
+        _height = DefaultHeight;
+        _margin = DefaultMargin;
+        _padding = DefaultPadding;
+        _horizontalAlignment = DefaultHorizontalAlignment;
+        _verticalAlignment = DefaultVerticalAlignment;
+        _backgroundColor = DefaultBackgroundColor;
+        _borderWidth = DefaultBorderWidth;
+        _borderRadius = DefaultBorderRadius;
+        _borderColor = DefaultBorderColor;
+        Children = new UIElementCollection();
         _needToUpdate = NeedToUpdateFlags.Material | NeedToUpdateFlags.Layout;
     }
 
@@ -209,7 +227,7 @@ public abstract class UIElement : IToJson, IReactive
             _borderColor = Brush.FromJson(borderColor, data);
         }
         if(element.TryGetProperty("children", out var children)) {
-            _children = UIElementCollection.FromJson(children, data);
+            Children = UIElementCollection.FromJson(children, data);
         }
     }
 
@@ -240,6 +258,47 @@ public abstract class UIElement : IToJson, IReactive
 
     protected virtual void ApplyDiffProtected(JsonElement element, in DeserializeRuntimeData data)
     {
+        Width = element.TryGetProperty("width", out var width)
+            ? LayoutLength.FromJson(width, data)
+            : DefaultWidth;
+        Height = element.TryGetProperty("height", out var height)
+            ? LayoutLength.FromJson(height, data)
+            : DefaultHeight;
+        Margin = element.TryGetProperty("margin", out var margin)
+            ? Thickness.FromJson(margin, data)
+            : DefaultMargin;
+        Padding = element.TryGetProperty("padding", out var padding)
+            ? Thickness.FromJson(padding, data)
+            : DefaultPadding;
+        HorizontalAlignment = element.TryGetProperty("horizontalAlignment", out var horizontalAlignment)
+            ? Enum.Parse<HorizontalAlignment>(horizontalAlignment.GetStringNotNull())
+            : DefaultHorizontalAlignment;
+        VerticalAlignment = element.TryGetProperty("verticalAlignment", out var verticalAlignment)
+            ? Enum.Parse<VerticalAlignment>(verticalAlignment.GetStringNotNull())
+            : DefaultVerticalAlignment;
+        BackgroundColor = element.TryGetProperty("backgroundColor", out var backgroundColor)
+            ? Brush.FromJson(backgroundColor, data)
+            : DefaultBackgroundColor;
+        BorderWidth = element.TryGetProperty("borderWidth", out var borderWidth)
+            ? Thickness.FromJson(borderWidth, data)
+            : DefaultBorderWidth;
+        BorderRadius = element.TryGetProperty("borderRadius", out var borderRadius)
+            ? CornerRadius.FromJson(borderRadius, data)
+            : DefaultBorderRadius;
+        BorderColor = element.TryGetProperty("borderColor", out var borderColor)
+            ? Brush.FromJson(borderColor, data)
+            : DefaultBorderColor;
+
+        // TODO: children
+        throw new NotImplementedException();
+        if(element.TryGetProperty("children", out var children)) {
+            foreach(var child in children.EnumerateArray()) {
+                var key = child.GetProperty("@key"u8).GetStringNotNull();
+            }
+        }
+        else {
+
+        }
     }
 
     public JsonNode? ToJson()
@@ -269,6 +328,20 @@ public abstract class UIElement : IToJson, IReactive
         Debug.Assert(_model == null);
         var shader = layer.GetRegisteredShader(GetType());
         var model = new UIModel(this, shader);
+        model.Alive.Subscribe(static model =>
+        {
+            model.Element._modelAlive.Invoke(model);
+        }).AddTo(model.Subscriptions);
+        model.Update.Subscribe(static model =>
+        {
+            model.Element._modelUpdate.Invoke(model);
+        }).AddTo(model.Subscriptions);
+        model.Dead.Subscribe(static model =>
+        {
+            var self = model.Element;
+            self._modelAlive.Clear();
+            self._modelUpdate.Clear();
+        }).AddTo(model.Subscriptions);
         _model = model;
         foreach(var child in _children) {
             child.CreateModel(layer);

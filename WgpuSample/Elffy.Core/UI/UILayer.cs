@@ -114,7 +114,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         model.Alive.Subscribe(model =>
         {
             if(_rootElement != null) {
-                // remove _rootElement from ui tree
+                // TODO: remove _rootElement from ui tree
                 throw new NotImplementedException();
             }
             _rootElement = model.Element;
@@ -125,15 +125,27 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
     {
         ArgumentNullException.ThrowIfNull(component);
         var rootElement = _rootElement;
-        var c = component.Render();
         if(rootElement == null) {
-            var element = Serializer.Deserialize(c);
-            SetRoot(element);
+            var element = component.Build();
+            element.ModelUpdate.Subscribe(model =>
+            {
+                if(component.NeedsToRerender) {
+                    component.Apply(model.Element);
+                }
+            });
+            element.ModelAlive.Subscribe(model =>
+            {
+                if(_rootElement != null) {
+                    // TODO: remove _rootElement from ui tree
+                    throw new NotImplementedException();
+                }
+                _rootElement = model.Element;
+            });
+            var model = element.CreateModel(this);
         }
         else {
-            using var json = JsonDocument.Parse(c.ToStringAndClear());
-            var jsonRoot = json.RootElement;
-            rootElement.ApplyDiff(jsonRoot, c.GetRuntimeData());
+            // TODO: same instance?
+            component.Apply(rootElement);
         }
     }
 

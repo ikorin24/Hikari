@@ -516,6 +516,7 @@ file sealed class ButtonShader : UIShader
 
         private void UpdateForButton(Button button)
         {
+            var a = SkiaSharp.SKTypeface.FromFamilyName("Calibria");
             var text = button.Text;
             if(string.IsNullOrEmpty(text) == false) {
                 using var font = new SkiaSharp.SKFont();

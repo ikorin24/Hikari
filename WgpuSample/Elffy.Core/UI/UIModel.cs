@@ -16,7 +16,7 @@ internal sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShad
             shader.CreateMaterial())
     {
         _element = element;
-        IsFrozen = true;
+        //IsFrozen = true;
     }
 
     protected override void Render(in RenderPass pass, UIMaterial material, Mesh<VertexSlim> mesh)

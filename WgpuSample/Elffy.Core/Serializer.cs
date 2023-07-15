@@ -103,11 +103,9 @@ public static class Serializer
         return DeserializeCore<T>(doc.RootElement);
     }
 
-    internal static UIElement Deserialize(UIComponent component)
+    internal static UIElement Deserialize(string json, DeserializeRuntimeData data)
     {
-        var str = component.ToStringAndClear();
-        var data = component.GetRuntimeData();
-        using var doc = JsonDocument.Parse(str, ParseOptions);
+        using var doc = JsonDocument.Parse(json, ParseOptions);
         var rootElement = doc.RootElement;
         return rootElement.ValueKind switch
         {
@@ -119,6 +117,17 @@ public static class Serializer
     public static T Instantiate<T>(JsonElement element)
     {
         return DeserializeCore<T>(element);
+    }
+
+    public static object Instantiate(JsonElement element)
+    {
+        return DeserializeCore(element, null);
+    }
+
+    public static object Instantiate(JsonElement element, Type type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        return DeserializeCore(element, type);
     }
 
     private static T DeserializeCore<T>(JsonElement element)
@@ -178,7 +187,7 @@ public static class Serializer
         };
     }
 
-    private static object DeserializeCore(JsonElement element, Type leftSideType)
+    private static object DeserializeCore(JsonElement element, Type? leftSideType)
     {
         if(leftSideType == typeof(string)) { return element.GetStringNotNull(); }
         if(leftSideType == typeof(bool)) { return element.GetBoolean(); }
@@ -224,7 +233,7 @@ public static class Serializer
 
         return element.ValueKind switch
         {
-            JsonValueKind.Array => CreateArray(element, leftSideType),
+            JsonValueKind.Array => CreateArray(element, leftSideType ?? throw new ArgumentException($"cannot determine type: {element}")),
             JsonValueKind.Object or
             JsonValueKind.String or
             JsonValueKind.Number or

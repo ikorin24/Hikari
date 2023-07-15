@@ -94,8 +94,21 @@ public sealed class UIElementCollection
     {
         var list = new List<UIElement>(element.GetArrayLength());
         foreach(var item in element.EnumerateArray()) {
-            var child = Serializer.Instantiate<UIElement>(item);
-            list.Add(child);
+            var child = Serializer.Instantiate(item);
+            switch(child) {
+                case UIElement uiElement: {
+                    list.Add(uiElement);
+                    break;
+                }
+                case IUIComponent component: {
+                    var uiElement = component.Build();
+                    list.Add(uiElement);
+                    break;
+                }
+                default: {
+                    throw new ArgumentException($"invalid element type: {child.GetType().FullName}");
+                }
+            }
         }
         return new UIElementCollection(list);
     }
