@@ -21,7 +21,7 @@ public readonly struct FontSize
         _px = px;
     }
 
-    public static FontSize FromJson(JsonElement element)
+    public static FontSize FromJson(JsonElement element, in DeserializeRuntimeData data)
     {
         switch(element.ValueKind) {
             case JsonValueKind.String: {

@@ -14,9 +14,9 @@ namespace Elffy;
 
 public static class Serializer
 {
-    private record ConstructorFunc(Type Type, Func<JsonElement, object> Func);
+    private record ConstructorInfo(Type Type, ConstructorFunc Func);
 
-    private static readonly ConcurrentDictionary<string, ConstructorFunc> _constructorFuncs = new();
+    private static readonly ConcurrentDictionary<string, ConstructorInfo> _constructorFuncs = new();
     private static readonly ConcurrentDictionary<string, Type> _shortNames = new()
     {
         ["object"] = typeof(object),
@@ -59,11 +59,11 @@ public static class Serializer
         RegisterConstructor(ExternalConstructor.Color4FromJson);
     }
 
-    public static void RegisterConstructor<T>(Func<JsonElement, T> constructoFunc) where T : notnull
+    public static void RegisterConstructor<T>(ConstructorFunc<T> constructoFunc) where T : notnull
     {
         ArgumentNullException.ThrowIfNull(constructoFunc);
-        Func<JsonElement, object> f = arg => constructoFunc(arg);
-        var value = new ConstructorFunc(typeof(T), f);
+        var f = new ConstructorFunc((JsonElement e, in DeserializeRuntimeData d) => constructoFunc(e, d));
+        var value = new ConstructorInfo(typeof(T), f);
         _constructorFuncs.TryAdd(typeof(T).FullName!, value);
     }
 
@@ -101,6 +101,19 @@ public static class Serializer
     {
         using var doc = JsonDocument.Parse(json, ParseOptions);
         return DeserializeCore<T>(doc.RootElement);
+    }
+
+    internal static UIElement Deserialize(UIComponent component)
+    {
+        var str = component.ToStringAndClear();
+        var data = component.GetRuntimeData();
+        using var doc = JsonDocument.Parse(str, ParseOptions);
+        var rootElement = doc.RootElement;
+        return rootElement.ValueKind switch
+        {
+            JsonValueKind.Object => (UIElement)GetConstructor(rootElement, typeof(UIElement)).Func(rootElement, data),
+            _ => throw new FormatException("element should be kind of object"),
+        };
     }
 
     public static T Instantiate<T>(JsonElement element)
@@ -160,7 +173,7 @@ public static class Serializer
             JsonValueKind.Number or
             JsonValueKind.Null or
             JsonValueKind.True or
-            JsonValueKind.False => (T)CreateObject(element, typeof(T)),
+            JsonValueKind.False => (T)GetConstructor(element, typeof(T)).Func(element, DeserializeRuntimeData.None),
             JsonValueKind.Undefined or _ => throw new FormatException("undefined"),
         };
     }
@@ -217,12 +230,12 @@ public static class Serializer
             JsonValueKind.Number or
             JsonValueKind.Null or
             JsonValueKind.True or
-            JsonValueKind.False => CreateObject(element, leftSideType),
+            JsonValueKind.False => GetConstructor(element, leftSideType).Func(element, DeserializeRuntimeData.None),
             JsonValueKind.Undefined or _ => throw new FormatException("undefined"),
         };
     }
 
-    private static object CreateObject(JsonElement element, Type leftSideType)
+    private static ConstructorInfo GetConstructor(JsonElement element, Type? leftSideType)
     {
         Debug.Assert(element.ValueKind is
             JsonValueKind.Object or
@@ -234,8 +247,8 @@ public static class Serializer
 
         switch(element.ValueKind) {
             case JsonValueKind.Object: {
-                var typename = element.GetProperty("@type").GetStringNotNull();
-                ConstructorFunc? ctor;
+                var typename = element.GetProperty("@type"u8).GetStringNotNull();
+                ConstructorInfo? ctor;
                 if(_shortNames.TryGetValue(typename, out var type)) {
                     if(FindCtorFromType(type, out ctor) == false) {
                         throw new FormatException($"type \"{typename}\" cannot be created from json");
@@ -246,12 +259,17 @@ public static class Serializer
                         throw new FormatException($"type \"{typename}\" cannot be created from json");
                     }
                 }
-                if(ctor.Type.IsAssignableTo(leftSideType) == false) {
-                    throw new FormatException($"{ctor.Type.FullName} is not assignable to {leftSideType.FullName}");
+                if(leftSideType != null) {
+                    if(ctor.Type.IsAssignableTo(leftSideType) == false) {
+                        throw new FormatException($"{ctor.Type.FullName} is not assignable to {leftSideType.FullName}");
+                    }
                 }
-                return ctor.Func(element);
+                return ctor;
             }
             default: {
+                if(leftSideType == null) {
+                    throw new ArgumentException($"cannot determine type: {element}");
+                }
                 var typename = leftSideType.FullName ?? throw new ArgumentException();
                 if(FindCtorFromName(typename, out var ctor) == false) {
                     throw new FormatException($"type \"{typename}\" cannot be created from json");
@@ -259,7 +277,7 @@ public static class Serializer
                 if(ctor.Type.IsAssignableTo(leftSideType) == false) {
                     throw new FormatException($"{ctor.Type.FullName} is not assignable to {leftSideType.FullName}");
                 }
-                return ctor.Func(element);
+                return ctor;
             }
         }
     }
@@ -278,12 +296,12 @@ public static class Serializer
             return array;
         }
         if(FindCtorFromType(leftSideType, out var ctor)) {
-            return ctor.Func(element);
+            return ctor.Func(element, DeserializeRuntimeData.None);
         }
         throw new FormatException($"type \"{leftSideType.FullName}\" cannot be created from json");
     }
 
-    private static bool FindCtorFromType(Type type, [MaybeNullWhen(false)] out ConstructorFunc ctor)
+    private static bool FindCtorFromType(Type type, [MaybeNullWhen(false)] out ConstructorInfo ctor)
     {
         if(_constructorFuncs.TryGetValue(type.FullName!, out ctor)) {
             return true;
@@ -296,7 +314,7 @@ public static class Serializer
         return false;
     }
 
-    private static bool FindCtorFromName(string typeFullName, [MaybeNullWhen(false)] out ConstructorFunc ctor)
+    private static bool FindCtorFromName(string typeFullName, [MaybeNullWhen(false)] out ConstructorInfo ctor)
     {
         if(_constructorFuncs.TryGetValue(typeFullName, out ctor)) {
             return true;
@@ -314,7 +332,7 @@ public static class Serializer
 
 internal static class ExternalConstructor
 {
-    public static Color4 Color4FromJson(JsonElement element)
+    public static Color4 Color4FromJson(JsonElement element, in DeserializeRuntimeData data)
     {
         switch(element.ValueKind) {
             case JsonValueKind.String: {
@@ -325,7 +343,7 @@ internal static class ExternalConstructor
                 break;
             }
             case JsonValueKind.Object: {
-                if(element.GetProperty("@type").GetStringNotNull() == typeof(Color4).FullName) {
+                if(element.GetProperty("@type"u8).GetStringNotNull() == typeof(Color4).FullName) {
                     var color = new Color4();
                     if(element.TryGetProperty("r", out var r)) {
                         color.R = r.GetSingle();
@@ -363,8 +381,9 @@ internal static class ExternalConstructor
 }
 
 public interface IFromJson<TSelf>
+    where TSelf : IFromJson<TSelf>
 {
-    abstract static TSelf FromJson(JsonElement element);
+    abstract static TSelf FromJson(JsonElement element, in DeserializeRuntimeData data);
 }
 
 public interface IToJson
@@ -400,3 +419,6 @@ internal static class JsonElementExtensions
         static void Throw() => throw new FormatException("null");
     }
 }
+
+public delegate object ConstructorFunc(JsonElement element, in DeserializeRuntimeData data);
+public delegate T ConstructorFunc<out T>(JsonElement element, in DeserializeRuntimeData data);

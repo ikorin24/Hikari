@@ -18,13 +18,13 @@ public sealed class Panel : UIElement, IFromJson<Panel>
         });
     }
 
-    public static Panel FromJson(JsonElement element) => new Panel(element);
+    public static Panel FromJson(JsonElement element, in DeserializeRuntimeData data) => new Panel(element, data);
 
     public Panel()
     {
     }
 
-    private Panel(JsonElement element) : base(element)
+    private Panel(JsonElement element, in DeserializeRuntimeData data) : base(element, data)
     {
     }
 
@@ -32,6 +32,12 @@ public sealed class Panel : UIElement, IFromJson<Panel>
     {
         var node = base.ToJsonProtected();
         return node;
+    }
+
+    protected override void ApplyDiffProtected(JsonElement element, in DeserializeRuntimeData data)
+    {
+        base.ApplyDiffProtected(element, data);
+        // TODO:
     }
 }
 

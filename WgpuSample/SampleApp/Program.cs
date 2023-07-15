@@ -30,51 +30,62 @@ internal class Program
 
     private static void OnInitialized(Screen screen)
     {
+        var myButton = new MyButton(new()
+        {
+            Width = 200,
+            Height = 100,
+        });
+        screen.UIDocument.SetRoot(myButton);
+
         var panel = Serializer.Deserialize<Panel>("""
         {
             "@type": "panel",
-            "width": 600,
+            "width": "80%",
             "height": "80%",
             "horizontalAlignment": "Center",
             "padding": "10px 80px",
-            "backgroundColor": "#ffee23",
-            "borderWidth": "10px",
-            "borderColor": "#22B7FF",
+            "backgroundColor": "#003388",
+            "borderWidth": "1px",
+            "borderColor": "#fff",
             "borderRadius": 120,
             "children":
             [{
                 "@type": "button",
                 "horizontalAlignment": "Center",
-                "backgroundColor": "#22B7FF",
+                "backgroundColor": "#FF7044",
                 "width": 250,
-                "height": 150,
-                "borderWidth": 1,
-                "fontSize": "40px",
+                "height": 70,
+                "borderWidth": 0,
+                //"borderColor": "#0000",
+                "borderRadius": 35,
+                "fontSize": "35px",
                 "text": "click me!"
-            },
-            {
-                "@type": "button",
-                "width": 80,
-                "height": 100,
-                "borderWidth": 1,
-                "backgroundColor": "#9622FF"
-            }]
+            }
+            //,
+            //{
+            //    "@type": "button",
+            //    "width": 80,
+            //    "height": 100,
+            //    "borderWidth": 1,
+            //    "backgroundColor": "#9622FF"
+            //}
+            ]
         }
         """);
-        screen.UIDocument.AddRoot(panel);
+        //screen.UIDocument.SetRoot(panel);
 
-        screen.Update.Subscribe(screen =>
-        {
-            if(screen.FrameNum % 60 == 0) {
-                var button = panel.Children[1];
-                if(button.HorizontalAlignment == HorizontalAlignment.Left) {
-                    button.HorizontalAlignment = HorizontalAlignment.Right;
-                }
-                else {
-                    button.HorizontalAlignment = HorizontalAlignment.Left;
-                }
-            }
-        });
+        //screen.Update.Subscribe(screen =>
+        //{
+        //    if(screen.FrameNum % 60 == 0) {
+        //        var button = panel.Children[1];
+        //        if(button.HorizontalAlignment == HorizontalAlignment.Left) {
+        //            button.HorizontalAlignment = HorizontalAlignment.Right;
+        //        }
+        //        else {
+        //            button.HorizontalAlignment = HorizontalAlignment.Left;
+        //        }
+        //    }
+        //});
 
         screen.Title = "sample";
         var layer = new PbrLayer(screen, 0);
@@ -222,5 +233,46 @@ internal class Program
         (result.X, result.Z) = Matrix2.GetRotation(horizontalAngle) * vec.Xz * (radius * cosBeta / xzLength);
         result.Y = radius * sinBeta;
         return result + center;
+    }
+}
+
+[UIComponent]
+public partial class MyButton
+{
+    public record struct Props(int Width, int Height);
+
+    private int _count;
+
+    public partial UIComponent Render()
+    {
+        return $$"""
+        {
+            "@type": "button",
+            "width": {{_props.Width}},
+            "height": {{_props.Height}},
+            "text": "click count: {{_count}}",
+            "fontSize": 20,
+            "clicked": {{() =>
+            {
+                SetState(ref _count, _count + 1);
+            }}}
+        }
+        """;
+    }
+}
+
+sealed partial class MyButton : IUIComponent
+{
+    private readonly Props _props;
+    public MyButton(MyButton.Props props)
+    {
+        _props = props;
+    }
+
+    public partial UIComponent Render();
+
+    private void SetState<T>(ref T state, in T newValue)
+    {
+        state = newValue;
     }
 }

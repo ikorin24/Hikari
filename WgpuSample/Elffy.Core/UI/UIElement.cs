@@ -6,7 +6,7 @@ using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
 
-public abstract class UIElement : IToJson
+public abstract class UIElement : IToJson, IReactive
 {
     private UIModel? _model;
     private UIElement? _parent;
@@ -176,19 +176,19 @@ public abstract class UIElement : IToJson
         _needToUpdate = NeedToUpdateFlags.Material | NeedToUpdateFlags.Layout;
     }
 
-    protected UIElement(JsonElement element) : this()
+    protected UIElement(JsonElement element, in DeserializeRuntimeData data) : this()
     {
         if(element.TryGetProperty("width", out var width)) {
-            _width = LayoutLength.FromJson(width);
+            _width = LayoutLength.FromJson(width, data);
         }
         if(element.TryGetProperty("height", out var height)) {
-            _height = LayoutLength.FromJson(height);
+            _height = LayoutLength.FromJson(height, data);
         }
         if(element.TryGetProperty("margin", out var margin)) {
-            _margin = Thickness.FromJson(margin);
+            _margin = Thickness.FromJson(margin, data);
         }
         if(element.TryGetProperty("padding", out var padding)) {
-            _padding = Thickness.FromJson(padding);
+            _padding = Thickness.FromJson(padding, data);
         }
         if(element.TryGetProperty("horizontalAlignment", out var horizontalAlignment)) {
             _horizontalAlignment = Enum.Parse<HorizontalAlignment>(horizontalAlignment.GetStringNotNull());
@@ -197,19 +197,19 @@ public abstract class UIElement : IToJson
             _verticalAlignment = Enum.Parse<VerticalAlignment>(verticalAlignment.GetStringNotNull());
         }
         if(element.TryGetProperty("backgroundColor", out var backgroundColor)) {
-            _backgroundColor = Brush.FromJson(backgroundColor);
+            _backgroundColor = Brush.FromJson(backgroundColor, data);
         }
         if(element.TryGetProperty("borderWidth", out var borderWidth)) {
-            _borderWidth = Thickness.FromJson(borderWidth);
+            _borderWidth = Thickness.FromJson(borderWidth, data);
         }
         if(element.TryGetProperty("borderRadius", out var borderRadius)) {
-            _borderRadius = CornerRadius.FromJson(borderRadius);
+            _borderRadius = CornerRadius.FromJson(borderRadius, data);
         }
         if(element.TryGetProperty("borderColor", out var borderColor)) {
-            _borderColor = Brush.FromJson(borderColor);
+            _borderColor = Brush.FromJson(borderColor, data);
         }
         if(element.TryGetProperty("children", out var children)) {
-            _children = UIElementCollection.FromJson(children);
+            _children = UIElementCollection.FromJson(children, data);
         }
     }
 
@@ -231,6 +231,15 @@ public abstract class UIElement : IToJson
             ["children"] = _children.ToJson(),
         };
         return obj;
+    }
+
+    public void ApplyDiff(JsonElement element, in DeserializeRuntimeData data)
+    {
+        ApplyDiffProtected(element, data);
+    }
+
+    protected virtual void ApplyDiffProtected(JsonElement element, in DeserializeRuntimeData data)
+    {
     }
 
     public JsonNode? ToJson()

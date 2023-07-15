@@ -46,7 +46,7 @@ public sealed class Button : UIElement, IFromJson<Button>
         });
     }
 
-    public static Button FromJson(JsonElement element) => new Button(element);
+    public static Button FromJson(JsonElement element, in DeserializeRuntimeData data) => new Button(element, data);
 
     protected override JsonNode ToJsonProtected()
     {
@@ -56,13 +56,19 @@ public sealed class Button : UIElement, IFromJson<Button>
         return node;
     }
 
+    protected override void ApplyDiffProtected(JsonElement element, in DeserializeRuntimeData data)
+    {
+        base.ApplyDiffProtected(element, data);
+        // TODO:
+    }
+
     public Button() : base()
     {
         _text = "";
         _fontSize = 16f;
     }
 
-    private Button(JsonElement element) : base(element)
+    private Button(JsonElement element, in DeserializeRuntimeData data) : base(element, data)
     {
         _text = "";
         _fontSize = 16f;
@@ -71,6 +77,9 @@ public sealed class Button : UIElement, IFromJson<Button>
         }
         if(element.TryGetProperty("fontSize", out var fontSize)) {
             _fontSize = Serializer.Instantiate<FontSize>(fontSize);
+        }
+        if(element.TryGetProperty("clicked", out var clicked)) {
+            data.AddEventHandler(_clicked.Event, clicked);
         }
     }
 }

@@ -69,7 +69,7 @@ public readonly struct Thickness
 
     public override int GetHashCode() => HashCode.Combine(Left, Top, Right, Bottom);
 
-    public static Thickness FromJson(JsonElement element)
+    public static Thickness FromJson(JsonElement element, in DeserializeRuntimeData data)
     {
         // 10
         // "10px"

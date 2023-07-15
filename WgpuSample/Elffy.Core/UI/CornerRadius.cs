@@ -74,7 +74,7 @@ public readonly struct CornerRadius
         return HashCode.Combine(TopLeft, TopRight, BottomRight, BottomLeft);
     }
 
-    public static CornerRadius FromJson(JsonElement element)
+    public static CornerRadius FromJson(JsonElement element, in DeserializeRuntimeData data)
     {
         switch(element.ValueKind) {
             case JsonValueKind.Number: {

@@ -90,7 +90,7 @@ public sealed class UIElementCollection
         return _children.GetEnumerator();
     }
 
-    public static UIElementCollection FromJson(JsonElement element)
+    public static UIElementCollection FromJson(JsonElement element, in DeserializeRuntimeData data)
     {
         var list = new List<UIElement>(element.GetArrayLength());
         foreach(var item in element.EnumerateArray()) {

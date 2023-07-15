@@ -47,13 +47,13 @@ public sealed class Brush
         return new Brush(color);
     }
 
-    public static Brush FromJson(JsonElement element)
+    public static Brush FromJson(JsonElement element, in DeserializeRuntimeData data)
     {
         // "#ffee23"
         // "red"
         switch(element.ValueKind) {
             case JsonValueKind.String: {
-                var color = ExternalConstructor.Color4FromJson(element);
+                var color = ExternalConstructor.Color4FromJson(element, data);
                 return Solid(color);
             }
             default: {

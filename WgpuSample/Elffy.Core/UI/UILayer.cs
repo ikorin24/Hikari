@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 namespace Elffy.UI;
 
@@ -11,7 +12,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 {
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly Own<BindGroupLayout> _bindGroupLayout1;
-    private readonly List<UIElement> _rootElements = new List<UIElement>();
+    private UIElement? _rootElement;
     private bool _isLayoutDirty = false;
 
     private readonly Dictionary<Type, Own<UIShader>> _shaderCache = new();
@@ -83,6 +84,8 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 
     private void UpdateLayout()
     {
+        var rootElement = _rootElement;
+        if(rootElement == null) { return; }
         var screenSize = Screen.ClientSize;
         Matrix4.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, -1f, 1f, out var proj);
         var GLToWebGpu = new Matrix4(
@@ -98,22 +101,40 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         };
         var isLayoutDirty = _isLayoutDirty;
         _isLayoutDirty = false;
-        foreach(var element in _rootElements) {
-            element.UpdateLayout(isLayoutDirty, contentArea, uiProjection);
-        }
+        rootElement.UpdateLayout(isLayoutDirty, contentArea, uiProjection);
     }
 
-    public void AddRootElement(UIElement element)
+    public void SetRoot(UIElement element)
     {
         ArgumentNullException.ThrowIfNull(element);
         if(element.Parent != null) {
-            throw new ArgumentException("the element is already in UI tree");
+            throw new ArgumentException("the element is already in UI document");
         }
         var model = element.CreateModel(this);
         model.Alive.Subscribe(model =>
         {
-            model.Layer._rootElements.Add(model.Element);
+            if(_rootElement != null) {
+                // remove _rootElement from ui tree
+                throw new NotImplementedException();
+            }
+            _rootElement = model.Element;
         }).AddTo(Subscriptions);
+    }
+
+    public void SetRoot(IUIComponent component)
+    {
+        ArgumentNullException.ThrowIfNull(component);
+        var rootElement = _rootElement;
+        var c = component.Render();
+        if(rootElement == null) {
+            var element = Serializer.Deserialize(c);
+            SetRoot(element);
+        }
+        else {
+            using var json = JsonDocument.Parse(c.ToStringAndClear());
+            var jsonRoot = json.RootElement;
+            ((IReactive)rootElement).ApplyDiff(jsonRoot, c.GetRuntimeData());
+        }
     }
 
     protected override void RenderShadowMap(in RenderShadowMapContext context, ReadOnlySpan<UIModel> objects)
@@ -126,9 +147,9 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         // Render in the order of UIElement tree so that child elements are rendered in front.
 
         UpdateLayout();
-
-        foreach(var element in _rootElements) {
-            RenderElementRecursively(pass, element, render);
+        var rootElement = _rootElement;
+        if(rootElement != null) {
+            RenderElementRecursively(pass, rootElement, render);
         }
 
         static void RenderElementRecursively(in RenderPass pass, UIElement element, RenderObjectAction render)

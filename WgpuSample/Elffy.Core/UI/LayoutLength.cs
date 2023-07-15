@@ -28,7 +28,7 @@ public readonly struct LayoutLength
         [DoesNotReturn] static void ThrowOutOfRange() => throw new ArgumentOutOfRangeException(nameof(value));
     }
 
-    public static LayoutLength FromJson(JsonElement element)
+    public static LayoutLength FromJson(JsonElement element, in DeserializeRuntimeData data)
     {
         // 10
         // "10px"
