@@ -356,21 +356,22 @@ public abstract class UIElement : IToJson, IReactive
         if(parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout)) {
             rect = DecideRect(parentContentArea);
             _needToUpdate &= ~NeedToUpdateFlags.Layout;
+            _actualRect = rect;
             layoutChanged = true;
         }
         else {
             rect = _actualRect;
             layoutChanged = false;
         }
+        if(parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Material)) {
+            UpdateMaterial(rect, uiProjection);
+            _needToUpdate &= ~NeedToUpdateFlags.Material;
+        }
         var contentArea = new ContentAreaInfo
         {
             Rect = rect,
             Padding = _padding,
         };
-        if(parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Material)) {
-            UpdateMaterial(rect, uiProjection);
-            _needToUpdate &= ~NeedToUpdateFlags.Material;
-        }
         foreach(var child in _children) {
             child.UpdateLayout(layoutChanged, contentArea, uiProjection);
         }
@@ -378,7 +379,6 @@ public abstract class UIElement : IToJson, IReactive
 
     private void UpdateMaterial(in RectF rect, in Matrix4 uiProjection)
     {
-        _actualRect = rect;
         var model = _model;
         Debug.Assert(model != null);
         if(model == null) { return; }
