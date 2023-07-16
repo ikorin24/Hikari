@@ -87,7 +87,7 @@ internal static class UIComponentBuilder
         var source = component.Render();
         var element = source.BuildAndClear();
         if(element.Parent != null) {
-            throw new ArgumentException("the element is already in UI document");
+            throw new ArgumentException("the element is already in UI tree");
         }
         return element;
     }

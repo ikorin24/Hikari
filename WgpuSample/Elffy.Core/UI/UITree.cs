@@ -3,7 +3,7 @@ using System;
 
 namespace Elffy.UI;
 
-public sealed class UIDocument
+public sealed class UITree
 {
     private readonly Screen _screen;
 
@@ -11,7 +11,7 @@ public sealed class UIDocument
 
     public Screen Screen => _screen;
 
-    internal UIDocument(Screen screen)
+    internal UITree(Screen screen)
     {
         _screen = screen;
     }

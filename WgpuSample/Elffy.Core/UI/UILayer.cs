@@ -108,7 +108,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
     {
         ArgumentNullException.ThrowIfNull(element);
         if(element.Parent != null) {
-            throw new ArgumentException("the element is already in UI document");
+            throw new ArgumentException("the element is already in UI tree");
         }
         var model = element.CreateModel(this);
         model.Alive.Subscribe(model =>

@@ -43,7 +43,7 @@ internal class Program
         {
             Message = "welcome!",
         });
-        screen.UIDocument.SetRoot(counter);
+        screen.UITree.SetRoot(counter);
         return;
 
         var panel = Serializer.Deserialize<Panel>("""
@@ -250,7 +250,7 @@ public partial class Counter
 {
     public partial record struct Props(string Message);
 
-    public partial UIComponentSource Render()
+    public UIComponentSource Render()
     {
         return $$"""
         {
@@ -261,7 +261,8 @@ public partial class Counter
             "children": [
             {
                 "@type": "button",
-                "verticalAlignment": "Center",
+                "verticalAlignment": "Top",
+                "horizontalAlignment": "Left",
                 "width": 600,
                 "height": 200,
                 "fontSize": 24,
@@ -283,7 +284,7 @@ public partial class CountButton
     public partial record struct Props(int Width, int Height);
     private int _count;
 
-    public partial UIComponentSource Render()
+    public UIComponentSource Render()
     {
         return $$"""
         {
@@ -291,6 +292,7 @@ public partial class CountButton
             "width": {{_props.Width}},
             "height": {{_props.Height}},
             "borderRadius": {{_props.Height / 2f}},
+            "horizontalAlignment": "Left",
             "borderWidth": 6,
             "borderColor": "#ff4310",
             "backgroundColor": "#ffcccc",
@@ -323,8 +325,6 @@ sealed partial class Counter : IUIComponent, IFromJson<Counter>
     }
 
     bool IUIComponent.NeedsToRerender => _needsToRerender;
-
-    public partial UIComponentSource Render();
 
     private void SetState<T>(ref T state, in T newValue)
     {
@@ -375,8 +375,6 @@ sealed partial class CountButton : IUIComponent, IFromJson<CountButton>
     }
 
     bool IUIComponent.NeedsToRerender => _needsToRerender;
-
-    public partial UIComponentSource Render();
 
     private void SetState<T>(ref T state, in T newValue)
     {

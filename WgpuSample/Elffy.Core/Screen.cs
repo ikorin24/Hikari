@@ -29,7 +29,7 @@ public sealed class Screen
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
     private readonly Operations _operations;
-    private readonly UIDocument _uiDocument;
+    private readonly UITree _uiTree;
     private bool _isCloseRequested;
     private EventSource<(Screen Screen, Vector2u Size)> _resized;
 
@@ -44,7 +44,7 @@ public sealed class Screen
     public Keyboard Keyboard => _keyboard;
     public ulong FrameNum => _frameNum;
     public Operations Operations => _operations;
-    public UIDocument UIDocument => _uiDocument;
+    public UITree UITree => _uiTree;
 
     public Timing EarlyUpdate => _earlyUpdate;
     public Timing Update => _update;
@@ -130,7 +130,7 @@ public sealed class Screen
         _mainThread = mainThread;
         _subscriptions = new SubscriptionBag();
         _operations = new Operations(this);
-        _uiDocument = new UIDocument(this);
+        _uiTree = new UITree(this);
         _camera = new Camera(this);
         _lights = new Lights(this);
         _earlyUpdate = new Timing(this);
