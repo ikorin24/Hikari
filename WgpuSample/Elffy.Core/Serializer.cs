@@ -149,6 +149,10 @@ public static class Serializer
         if(typeof(T) == typeof(DateTimeOffset)) { var x = element.GetDateTimeOffset(); return Unsafe.As<DateTimeOffset, T>(ref x); }
         if(typeof(T) == typeof(Guid)) { var x = element.GetGuid(); return Unsafe.As<Guid, T>(ref x); }
 
+        if(typeof(T).IsEnum) {
+            return (T)element.ToEnum(typeof(T));
+        }
+
         if(typeof(T) == typeof(string[])) {
             var array = new string[element.GetArrayLength()];
             var i = 0;
@@ -157,7 +161,7 @@ public static class Serializer
             }
             return Unsafe.As<string[], T>(ref array);
         }
-        if(typeof(T) == typeof(int)) {
+        if(typeof(T) == typeof(int[])) {
             var array = new int[element.GetArrayLength()];
             var i = 0;
             foreach(var item in element.EnumerateArray()) {
@@ -165,7 +169,7 @@ public static class Serializer
             }
             return Unsafe.As<int[], T>(ref array);
         }
-        if(typeof(T) == typeof(float)) {
+        if(typeof(T) == typeof(float[])) {
             var array = new float[element.GetArrayLength()];
             var i = 0;
             foreach(var item in element.EnumerateArray()) {
@@ -206,6 +210,10 @@ public static class Serializer
         if(leftSideType == typeof(DateTimeOffset)) { return element.GetDateTimeOffset(); }
         if(leftSideType == typeof(Guid)) { return element.GetGuid(); }
 
+        if(leftSideType?.IsEnum == true) {
+            return element.ToEnum(leftSideType);
+        }
+
         if(leftSideType == typeof(string[])) {
             var array = new string[element.GetArrayLength()];
             var i = 0;
@@ -214,7 +222,7 @@ public static class Serializer
             }
             return array;
         }
-        if(leftSideType == typeof(int)) {
+        if(leftSideType == typeof(int[])) {
             var array = new int[element.GetArrayLength()];
             var i = 0;
             foreach(var item in element.EnumerateArray()) {
@@ -222,7 +230,7 @@ public static class Serializer
             }
             return array;
         }
-        if(leftSideType == typeof(float)) {
+        if(leftSideType == typeof(float[])) {
             var array = new float[element.GetArrayLength()];
             var i = 0;
             foreach(var item in element.EnumerateArray()) {
@@ -411,6 +419,11 @@ public static class EnumJsonHelper
     public static T ToEnum<T>(this JsonElement self) where T : struct, Enum
     {
         return Enum.Parse<T>(self.GetStringNotNull());
+    }
+
+    public static object ToEnum(this JsonElement self, Type type)
+    {
+        return Enum.Parse(type, self.GetStringNotNull());
     }
 }
 

@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -128,14 +129,6 @@ public ref struct ReactBuilder
         _handler.AppendFormatted(value);
     }
 
-    public void AppendFormatted<T>(T value) where T : IToJson
-    {
-        ThrowIfReadOnly();
-        var json = value.ToJson();
-        var jsonStr = json?.ToJsonString();
-        _handler.AppendFormatted(jsonStr);
-    }
-
     public void AppendFormatted(string? value)
     {
         ThrowIfReadOnly();
@@ -151,6 +144,25 @@ public ref struct ReactBuilder
         _handler.AppendFormatted(value);
         _handler.AppendLiteral("\"");
     }
+
+    public void AppendFormatted<T>(T value) where T : IToJson
+    {
+        ThrowIfReadOnly();
+        var json = value.ToJson();
+        var jsonStr = json?.ToJsonString();
+        _handler.AppendFormatted(jsonStr);
+    }
+
+    public void AppendFormatted<T>(T value, EnumMarker _ = default) where T : struct, Enum
+    {
+        ThrowIfReadOnly();
+        var json = value.ToJson();
+        var jsonStr = json?.ToJsonString();
+        _handler.AppendFormatted(jsonStr);
+    }
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public struct EnumMarker { }
 
     public ReactSource FixAndClear()
     {

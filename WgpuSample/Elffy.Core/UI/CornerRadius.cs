@@ -85,16 +85,24 @@ public readonly struct CornerRadius
                 var splits = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 return splits switch
                 {
-                    { Length: 1 } => new CornerRadius(float.Parse(splits[0])),
-                    { Length: 2 } => new CornerRadius(float.Parse(splits[0]), float.Parse(splits[1])),
-                    { Length: 3 } => new CornerRadius(float.Parse(splits[0]), float.Parse(splits[1]), float.Parse(splits[2])),
-                    { Length: 4 } => new CornerRadius(float.Parse(splits[0]), float.Parse(splits[1]), float.Parse(splits[2]), float.Parse(splits[3])),
+                    { Length: 1 } => new CornerRadius(ParseValue(splits[0])),
+                    { Length: 2 } => new CornerRadius(ParseValue(splits[0]), ParseValue(splits[1])),
+                    { Length: 3 } => new CornerRadius(ParseValue(splits[0]), ParseValue(splits[1]), ParseValue(splits[2])),
+                    { Length: 4 } => new CornerRadius(ParseValue(splits[0]), ParseValue(splits[1]), ParseValue(splits[2]), ParseValue(splits[3])),
                     _ => throw new FormatException($"cannot create {nameof(Thickness)} from string \"{str}\""),
                 };
             }
             default: {
                 throw new FormatException(element.ToString());
             }
+        }
+
+        static float ParseValue(ReadOnlySpan<char> x)
+        {
+            if(x.EndsWith("px")) {
+                return float.Parse(x[..^2]);
+            }
+            throw new FormatException();
         }
     }
 
