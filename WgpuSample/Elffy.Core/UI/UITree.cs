@@ -27,7 +27,7 @@ public sealed class UITree
     public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] UIComponentSource source)
     {
         _uiLayer ??= new UILayer(_screen, 100); // TODO: sort order
-        var component = new ImmutableUIComponent(source);
+        var component = new FixedUIComponent(source.FixAndClear());
         _uiLayer.RenderRoot(component);
     }
 }

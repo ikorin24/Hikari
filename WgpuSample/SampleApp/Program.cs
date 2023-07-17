@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Cysharp.Threading.Tasks;
 using Elffy.Effective;
 using Elffy.Imaging;
 using Elffy.Mathematics;
@@ -245,7 +244,7 @@ public partial class Counter
 {
     public partial record struct Props(string Message, LayoutLength Width, LayoutLength Height);
 
-    public UIComponentSource Render()
+    private partial UIComponentSource Render()
     {
         return $$"""
         {
@@ -279,7 +278,7 @@ public partial class CountButton
     public partial record struct Props(int Width, int Height);
     private int _count;
 
-    public UIComponentSource Render()
+    private partial UIComponentSource Render()
     {
         var text = $"click count {_count}";
         return $$"""
@@ -321,6 +320,8 @@ sealed partial class Counter : IUIComponent, IFromJson<Counter>
 
     bool IUIComponent.NeedsToRerender => _needsToRerender;
 
+    private partial UIComponentSource Render();
+
     private void SetState<T>(ref T state, in T newValue)
     {
         state = newValue;
@@ -332,6 +333,8 @@ sealed partial class Counter : IUIComponent, IFromJson<Counter>
         var props = Props.FromJson(element, data);
         return new Counter(props);
     }
+
+    FixedComponentSource IUIComponent.Fix() => Render().FixAndClear();
 
     partial record struct Props : IFromJson<Props>
     {
@@ -371,6 +374,8 @@ sealed partial class CountButton : IUIComponent, IFromJson<CountButton>
 
     bool IUIComponent.NeedsToRerender => _needsToRerender;
 
+    private partial UIComponentSource Render();
+
     private void SetState<T>(ref T state, in T newValue)
     {
         state = newValue;
@@ -382,6 +387,8 @@ sealed partial class CountButton : IUIComponent, IFromJson<CountButton>
         var props = Props.FromJson(element, data);
         return new CountButton(props);
     }
+
+    FixedComponentSource IUIComponent.Fix() => Render().FixAndClear();
 
     partial record struct Props : IFromJson<Props>
     {

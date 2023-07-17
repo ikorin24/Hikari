@@ -9,7 +9,8 @@ internal static class UIComponentBuilder
 {
     public static UIElement Build(this IUIComponent component)
     {
-        var obj = component.Render().DeserializeAndClear();
+        var fixedSource = component.Fix();
+        var obj = fixedSource.Deserialize();
         while(true) {
             switch(obj) {
                 case UIElement element: {
@@ -34,8 +35,8 @@ internal static class UIComponentBuilder
 
     public static void Apply(this IUIComponent component, IReactive target)
     {
-        var source = component.Render();
-        using var json = JsonDocument.Parse(source.ToStringAndClear(out var data));
-        target.ApplyDiff(json.RootElement, data);
+        var fixedSource = component.Fix();
+        using var json = JsonDocument.Parse(fixedSource.Str);
+        target.ApplyDiff(json.RootElement, fixedSource.RuntimeData);
     }
 }
