@@ -352,6 +352,10 @@ public abstract class UIElement : IToJson, IReactive
     internal void UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, in Matrix4 uiProjection)
     {
         bool layoutChanged;
+
+        // 'rect' is top-left based in Screen
+        // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
+        // 'rect' is { X = 10, Y = 40, Width = 200, Heigh = 100 }
         RectF rect;
         if(parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout)) {
             rect = DecideRect(parentContentArea);
@@ -383,9 +387,16 @@ public abstract class UIElement : IToJson, IReactive
         Debug.Assert(model != null);
         if(model == null) { return; }
         var actualBorderRadius = UILayouter.DecideBorderRadius(_borderRadius, rect.Size);
+
+        // origin is bottom-left of rect because clip space is bottom-left based
+        var modelOrigin = new Vector3
+        {
+            X = rect.Position.X,
+            Y = model.Screen.ClientSize.Y - rect.Position.Y - rect.Size.Y,
+            Z = 0,
+        };
         var modelMatrix =
-            new Vector3(rect.Position, 0f).ToTranslationMatrix4() *
-            //Rotation.ToMatrix4() *
+            modelOrigin.ToTranslationMatrix4() *
             new Matrix4(
                 new Vector4(rect.Size.X, 0, 0, 0),
                 new Vector4(0, rect.Size.Y, 0, 0),

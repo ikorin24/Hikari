@@ -146,21 +146,29 @@ file sealed class ButtonShader : UIShader
 
         fn get_texel_color(fragcoord: vec2<f32>, h_align: u32, v_align: u32) -> vec4<f32> {
             let tex_size: vec2<i32> = textureDimensions(tex, 0).xy;
-            var o: vec2<f32>;
+            var offset_in_rect: vec2<f32>;
             if(h_align == TEXT_HALIGN_CENTER) {
-                o.x = (data.rect.z - vec2<f32>(tex_size).x) * 0.5;
+                offset_in_rect.x = (data.rect.z - vec2<f32>(tex_size).x) * 0.5;
             }
             else if(h_align == TEXT_HALIGN_RIGHT) {
-                o.x = data.rect.z - vec2<f32>(tex_size).x;
+                offset_in_rect.x = data.rect.z - vec2<f32>(tex_size).x;
             }
+            else {
+                // h_align == TEXT_HALIGN_LEFT
+                offset_in_rect.x = 0.0;
+            }
+
             if(v_align == TEXT_VALIGN_CENTER) {
-                o.y = (data.rect.w - vec2<f32>(tex_size).y) * 0.5;
+                offset_in_rect.y = (data.rect.w - vec2<f32>(tex_size).y) * 0.5;
             }
-            else if(v_align == TEXT_VALIGN_BOTTOM) {
-                o.y = data.rect.w - vec2<f32>(tex_size).y;
+            else if(v_align == TEXT_VALIGN_TOP) {
+                offset_in_rect.y = 0.0;
             }
-            let offset_in_rect: vec2<f32> = data.rect.xy + o;
-            let texel_pos: vec2<f32> = fragcoord - offset_in_rect;
+            else {
+                // v_align == TEXT_VALIGN_BOTTOM
+                offset_in_rect.y = data.rect.w - vec2<f32>(tex_size).y;
+            }
+            let texel_pos: vec2<f32> = fragcoord - (data.rect.xy + offset_in_rect);
             if(texel_pos.x < 0.0 || texel_pos.x >= f32(tex_size.x) || texel_pos.y < 0.0 || texel_pos.y >= f32(tex_size.y)) {
                 return vec4<f32>(0.0, 0.0, 0.0, 0.0);
             }

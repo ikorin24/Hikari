@@ -32,13 +32,6 @@ internal class Program
 
     private static void OnInitialized(Screen screen)
     {
-        //var countButton = new CountButton(new()
-        //{
-        //    Width = 200,
-        //    Height = 100,
-        //});
-        //screen.UIDocument.SetRoot(countButton);
-        //var type = Type.GetType("SampleApp.CountButton");
         var counter = new Counter(new()
         {
             Message = "welcome!",
@@ -257,21 +250,21 @@ public partial class Counter
             "@type": "panel",
             "width": "100%",
             "height": "100%",
-            "backgroundColor": "#1e1e1e",
+            "backgroundColor": "#fff",
             "children": [
             {
                 "@type": "button",
                 "verticalAlignment": "Top",
-                "horizontalAlignment": "Left",
-                "width": 600,
-                "height": 200,
-                "fontSize": 24,
+                "width": "100%",
+                "height": 100,
+                "fontSize": 30,
+                "backgroundColor": "#4f4",
                 "text": "{{_props.Message}}"
             },
             {
                 "@type": "{{typeof(CountButton)}}",
-                "Width": 250,
-                "Height": 70
+                "Width": 550,
+                "Height": 200
             }]
         }
         """;
@@ -292,12 +285,11 @@ public partial class CountButton
             "width": {{_props.Width}},
             "height": {{_props.Height}},
             "borderRadius": {{_props.Height / 2f}},
-            "horizontalAlignment": "Left",
-            "borderWidth": 6,
+            "borderWidth": 0,
             "borderColor": "#ff4310",
-            "backgroundColor": "#ffcccc",
+            "backgroundColor": "#fa5",
             "text": "click count: {{_count}}",
-            "fontSize": 24,
+            "fontSize": 30,
             "clicked": {{() =>
             {
                 SetState(ref _count, _count + 1);
@@ -386,11 +378,6 @@ sealed partial class CountButton : IUIComponent, IFromJson<CountButton>
     {
         var props = Props.FromJson(element, data);
         return new CountButton(props);
-    }
-
-    public static implicit operator UIElement(CountButton self)
-    {
-        throw new NotImplementedException();
     }
 
     partial record struct Props : IFromJson<Props>
