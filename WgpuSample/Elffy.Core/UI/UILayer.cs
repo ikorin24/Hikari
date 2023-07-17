@@ -66,6 +66,10 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         {
             _isLayoutDirty = true;
         }).AddTo(Subscriptions);
+        EarlyUpdate.Subscribe(self =>
+        {
+            ((UILayer)self).UpdateLayout();
+        }).AddTo(Subscriptions);
         Dead.Subscribe(_ =>
         {
             lock(_shaderCacheLock) {
@@ -148,10 +152,10 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 
     protected override void Render(in RenderPass pass, ReadOnlySpan<UIModel> objects, RenderObjectAction render)
     {
+        // TODO: Use depth to performance optimization.
         // UI rendering disables depth buffer.
         // Render in the order of UIElement tree so that child elements are rendered in front.
 
-        UpdateLayout();
         var rootElement = _rootElement;
         if(rootElement != null) {
             RenderElementRecursively(pass, rootElement, render);
