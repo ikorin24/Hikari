@@ -13,12 +13,18 @@ public abstract class Operation
     private LifeState _lifeState;
     private readonly int _sortOrder;
     private readonly SubscriptionBag _subscriptions = new();
+    private EventSource<Operation> _earlyUpdate = new();
+    private EventSource<Operation> _update = new();
+    private EventSource<Operation> _lateUpdate = new();
     private EventSource<Operation> _onDead = new();
 
     public Screen Screen => _screen;
     public LifeState LifeState => _lifeState;
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
     public int SortOrder => _sortOrder;
+    public Event<Operation> EarlyUpdate => _earlyUpdate.Event;
+    public Event<Operation> Update => _update.Event;
+    public Event<Operation> LateUpdate => _lateUpdate.Event;
     public Event<Operation> Dead => _onDead.Event;
 
     protected Operation(Screen screen, int sortOrder)
@@ -34,10 +40,6 @@ public abstract class Operation
 
     protected abstract void Execute(in OperationContext context);
 
-    protected abstract void EarlyUpdate();
-    protected abstract void Update();
-    protected abstract void LateUpdate();
-
     protected virtual void FrameInit()
     {
         // nop
@@ -51,9 +53,9 @@ public abstract class Operation
     internal void InvokeFrameEnd() => FrameEnd();
     internal void InvokeRenderShadowMap(in RenderShadowMapContext context) => RenderShadowMap(in context);
     internal void InvokeExecute(in OperationContext context) => Execute(in context);
-    internal void InvokeEarlyUpdate() => EarlyUpdate();
-    internal void InvokeUpdate() => Update();
-    internal void InvokeLateUpdate() => LateUpdate();
+    internal void InvokeEarlyUpdate() => _earlyUpdate.Invoke(this);
+    internal void InvokeUpdate() => _update.Invoke(this);
+    internal void InvokeLateUpdate() => _lateUpdate.Invoke(this);
 
     public bool Terminate()
     {
@@ -85,6 +87,9 @@ public abstract class Operation
     {
         _onDead.Invoke(this);
         _subscriptions.Dispose();
+        _earlyUpdate.Clear();
+        _update.Clear();
+        _lateUpdate.Clear();
     }
 }
 

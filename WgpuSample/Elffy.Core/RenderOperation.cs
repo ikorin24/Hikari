@@ -53,6 +53,10 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         _list = new();
         _addedList = new();
         _removedList = new();
+
+        EarlyUpdate.Subscribe(static self => ((TSelf)self).OnEarlyUpdate());
+        Update.Subscribe(static self => ((TSelf)self).OnUpdate());
+        LateUpdate.Subscribe(static self => ((TSelf)self).OnLateUpdate());
     }
 
     protected sealed override void RenderShadowMap(in RenderShadowMapContext context)
@@ -139,7 +143,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         }
     }
 
-    protected sealed override void EarlyUpdate()
+    private void OnEarlyUpdate()
     {
         foreach(var obj in _list.AsSpan()) {
             if(obj.IsFrozen) { continue; }
@@ -147,7 +151,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         }
     }
 
-    protected sealed override void LateUpdate()
+    private void OnLateUpdate()
     {
         foreach(var obj in _list.AsSpan()) {
             if(obj.IsFrozen) { continue; }
@@ -155,7 +159,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         }
     }
 
-    protected sealed override void Update()
+    private void OnUpdate()
     {
         foreach(var obj in _list.AsSpan()) {
             if(obj.IsFrozen) { continue; }

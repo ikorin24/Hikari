@@ -159,18 +159,6 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
         });
     }
 
-    protected override void EarlyUpdate()
-    {
-    }
-
-    protected override void Update()
-    {
-    }
-
-    protected override void LateUpdate()
-    {
-    }
-
     protected override void RenderShadowMap(in RenderShadowMapContext context)
     {
         // nop
