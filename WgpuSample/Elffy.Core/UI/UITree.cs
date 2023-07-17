@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Elffy.UI;
 
@@ -23,10 +24,10 @@ public sealed class UITree
         _uiLayer.SetRoot(element);
     }
 
-    public void SetRoot(IUIComponent component)
+    public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] UIComponentSource source)
     {
-        ArgumentNullException.ThrowIfNull(component);
         _uiLayer ??= new UILayer(_screen, 100); // TODO: sort order
-        _uiLayer.SetRoot(component);
+        var component = new ImmutableUIComponent(source);
+        _uiLayer.RenderRoot(component);
     }
 }

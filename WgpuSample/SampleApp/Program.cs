@@ -32,12 +32,14 @@ internal class Program
 
     private static void OnInitialized(Screen screen)
     {
-        var counter = new Counter(new()
+        screen.UITree.RenderRoot($$"""
         {
-            Message = "welcome!",
-        });
-        screen.UITree.SetRoot(counter);
-        return;
+            "@type": {{typeof(Counter)}},
+            "Width": "100%",
+            "Height": "300px",
+            "Message": "welcome!"
+        }
+        """);
 
         var panel = Serializer.Deserialize<Panel>("""
         {
@@ -241,15 +243,15 @@ internal class Program
 [UIComponent]
 public partial class Counter
 {
-    public partial record struct Props(string Message);
+    public partial record struct Props(string Message, LayoutLength Width, LayoutLength Height);
 
     public UIComponentSource Render()
     {
         return $$"""
         {
             "@type": "panel",
-            "width": "100%",
-            "height": "100%",
+            "width": {{_props.Width}},
+            "height": {{_props.Height}},
             "backgroundColor": "#fff",
             "children": [
             {
@@ -259,10 +261,10 @@ public partial class Counter
                 "height": 100,
                 "fontSize": 30,
                 "backgroundColor": "#4f4",
-                "text": "{{_props.Message}}"
+                "text": {{_props.Message}}
             },
             {
-                "@type": "{{typeof(CountButton)}}",
+                "@type": {{typeof(CountButton)}},
                 "Width": 550,
                 "Height": 200
             }]
@@ -279,6 +281,7 @@ public partial class CountButton
 
     public UIComponentSource Render()
     {
+        var text = $"click count {_count}";
         return $$"""
         {
             "@type": "button",
@@ -288,7 +291,7 @@ public partial class CountButton
             "borderWidth": 0,
             "borderColor": "#ff4310",
             "backgroundColor": "#fa5",
-            "text": "click count: {{_count}}",
+            "text": {{text}},
             "fontSize": 30,
             "clicked": {{() =>
             {
@@ -311,7 +314,7 @@ sealed partial class Counter : IUIComponent, IFromJson<Counter>
         Serializer.RegisterConstructor(FromJson);
     }
 
-    public Counter(Props props)
+    private Counter(Props props)
     {
         _props = props;
     }
@@ -341,13 +344,13 @@ sealed partial class Counter : IUIComponent, IFromJson<Counter>
         {
             return new()
             {
-                Message = element.TryGetProperty(nameof(Message), out var message) ? Serializer.Instantiate<string>(message) : "",
+                Message = element.TryGetProperty("Message"u8, out var message) ? Serializer.Instantiate<string>(message) : "",
+                Width = element.TryGetProperty("Width"u8, out var width) ? Serializer.Instantiate<LayoutLength>(width) : default,
+                Height = element.TryGetProperty("Height"u8, out var height) ? Serializer.Instantiate<LayoutLength>(height) : default,
             };
         }
     }
 }
-
-
 
 sealed partial class CountButton : IUIComponent, IFromJson<CountButton>
 {
@@ -361,7 +364,7 @@ sealed partial class CountButton : IUIComponent, IFromJson<CountButton>
         Serializer.RegisterConstructor(FromJson);
     }
 
-    public CountButton(Props props)
+    private CountButton(Props props)
     {
         _props = props;
     }

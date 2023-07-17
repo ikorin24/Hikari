@@ -103,13 +103,13 @@ public static class Serializer
         return DeserializeCore<T>(doc.RootElement);
     }
 
-    internal static UIElement Deserialize(string json, DeserializeRuntimeData data)
+    internal static object Deserialize(string json, DeserializeRuntimeData data)
     {
         using var doc = JsonDocument.Parse(json, ParseOptions);
         var rootElement = doc.RootElement;
         return rootElement.ValueKind switch
         {
-            JsonValueKind.Object => (UIElement)GetConstructor(rootElement, typeof(UIElement)).Func(rootElement, data),
+            JsonValueKind.Object => GetConstructor(rootElement, null).Func(rootElement, data),
             _ => throw new FormatException("element should be kind of object"),
         };
     }

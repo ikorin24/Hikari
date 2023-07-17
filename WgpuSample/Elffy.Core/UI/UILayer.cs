@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 
 namespace Elffy.UI;
 
@@ -121,18 +120,13 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         }).AddTo(Subscriptions);
     }
 
-    public void SetRoot(IUIComponent component)
+    public void RenderRoot(IUIComponent component)
     {
         ArgumentNullException.ThrowIfNull(component);
         var rootElement = _rootElement;
+        var currentComponent = component;
         if(rootElement == null) {
             var element = component.Build();
-            element.ModelUpdate.Subscribe(model =>
-            {
-                if(component.NeedsToRerender) {
-                    component.Apply(model.Element);
-                }
-            });
             element.ModelAlive.Subscribe(model =>
             {
                 if(_rootElement != null) {
@@ -141,7 +135,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
                 }
                 _rootElement = model.Element;
             });
-            var model = element.CreateModel(this);
+            _ = element.CreateModel(this);
         }
         else {
             // TODO: same instance?

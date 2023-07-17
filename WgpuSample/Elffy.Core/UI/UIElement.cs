@@ -251,7 +251,7 @@ public abstract class UIElement : IToJson, IReactive
         return obj;
     }
 
-    public void ApplyDiff(JsonElement element, in DeserializeRuntimeData data)
+    void IReactive.ApplyDiff(JsonElement element, in DeserializeRuntimeData data)
     {
         ApplyDiffProtected(element, data);
     }

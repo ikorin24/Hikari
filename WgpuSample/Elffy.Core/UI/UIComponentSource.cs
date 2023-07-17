@@ -20,13 +20,21 @@ public ref struct UIComponentSource
         _delegates = null;
     }
 
+    internal UIComponentSource(string source, DeserializeRuntimeData data)
+    {
+        _handler = $"{source}";
+        (_delegates, _delegateIndex) = data;
+    }
+
     public void AppendLiteral(string s) => _handler.AppendLiteral(s);
 
     public void AppendFormatted(Type type)
     {
         ArgumentNullException.ThrowIfNull(type);
         RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+        _handler.AppendLiteral("\"");
         _handler.AppendFormatted(type.FullName);
+        _handler.AppendLiteral("\"");
     }
 
     public void AppendFormatted(Action action)
@@ -45,31 +53,49 @@ public ref struct UIComponentSource
         _handler.AppendFormatted(_delegateIndex++);
     }
 
-    public void AppendFormatted(string? value) => _handler.AppendFormatted(value);
-    public void AppendFormatted(string? value, int alignment = 0, string? format = null) => _handler.AppendFormatted(value, alignment, format);
-    public void AppendFormatted(scoped ReadOnlySpan<char> value) => _handler.AppendFormatted(value);
-    public void AppendFormatted(scoped ReadOnlySpan<char> value, int alignment = 0, string? format = null) => _handler.AppendFormatted(value, alignment, format);
-    public void AppendFormatted(object? value) => _handler.AppendFormatted(value);
-    public void AppendFormatted(object? value, int alignment = 0, string? format = null) => _handler.AppendFormatted(value, alignment, format);
-    public void AppendFormatted<T>(T value) => _handler.AppendFormatted(value);
-    public void AppendFormatted<T>(T value, int alignment = 0) => _handler.AppendFormatted(value, alignment);
-    public void AppendFormatted<T>(T value, string? format) => _handler.AppendFormatted(value, format);
+    public void AppendFormatted(sbyte value) => _handler.AppendFormatted(value);
+    public void AppendFormatted(byte value) => _handler.AppendFormatted(value);
+    public void AppendFormatted(short value) => _handler.AppendFormatted(value);
+    public void AppendFormatted(ushort value) => _handler.AppendFormatted(value);
+    public void AppendFormatted(int value) => _handler.AppendFormatted(value);
+    public void AppendFormatted(uint value) => _handler.AppendFormatted(value);
+    public void AppendFormatted(long value) => _handler.AppendFormatted(value);
+    public void AppendFormatted(ulong value) => _handler.AppendFormatted(value);
+    public void AppendFormatted(float value) => _handler.AppendFormatted(value);
+    public void AppendFormatted(double value) => _handler.AppendFormatted(value);
+    public void AppendFormatted(decimal value) => _handler.AppendFormatted(value);
 
-    internal UIElement BuildAndClear()
+    public void AppendFormatted<T>(T value) where T : IToJson
     {
-        var str = ToStringAndClear();
-        var data = GetRuntimeData();
-        return Serializer.Deserialize(str, data);
+        var json = value.ToJson();
+        var jsonStr = json?.ToJsonString();
+        _handler.AppendFormatted(jsonStr);
     }
 
-    internal string ToStringAndClear()
+    public void AppendFormatted(string? value)
     {
+        _handler.AppendLiteral("\"");
+        _handler.AppendFormatted(value);
+        _handler.AppendLiteral("\"");
+    }
+
+    public void AppendFormatted(scoped ReadOnlySpan<char> value)
+    {
+        _handler.AppendLiteral("\"");
+        _handler.AppendFormatted(value);
+        _handler.AppendLiteral("\"");
+    }
+
+    internal string ToStringAndClear(out DeserializeRuntimeData data)
+    {
+        data = new DeserializeRuntimeData(_delegates);
         return _handler.ToStringAndClear();
     }
 
-    internal DeserializeRuntimeData GetRuntimeData()
+    internal object DeserializeAndClear()
     {
-        return new DeserializeRuntimeData(_delegates);
+        var data = new DeserializeRuntimeData(_delegates);
+        return Serializer.Deserialize(_handler.ToStringAndClear(), data);
     }
 
     public static implicit operator UIComponentSource([StringSyntax(StringSyntaxAttribute.Json)] string s)
@@ -80,25 +106,19 @@ public ref struct UIComponentSource
     }
 }
 
-internal static class UIComponentBuilder
+internal sealed class ImmutableUIComponent : IUIComponent
 {
-    public static UIElement Build(this IUIComponent component)
+    private readonly string _source;
+    private readonly DeserializeRuntimeData _data;
+
+    public bool NeedsToRerender => false;
+
+    public ImmutableUIComponent(UIComponentSource source)
     {
-        var source = component.Render();
-        var element = source.BuildAndClear();
-        if(element.Parent != null) {
-            throw new ArgumentException("the element is already in UI tree");
-        }
-        return element;
+        _source = source.ToStringAndClear(out _data);
     }
 
-    public static void Apply(this IUIComponent component, UIElement targetElement)
-    {
-        var source = component.Render();
-        var data = source.GetRuntimeData();
-        using var json = JsonDocument.Parse(source.ToStringAndClear());
-        targetElement.ApplyDiff(json.RootElement, data);
-    }
+    public UIComponentSource Render() => new UIComponentSource(_source, _data);
 }
 
 [global::System.Diagnostics.Conditional("COMPILE_TIME_ONLY")]
@@ -106,10 +126,6 @@ internal static class UIComponentBuilder
 public sealed class UIComponentAttribute : global::System.Attribute
 {
     public UIComponentAttribute()
-    {
-    }
-
-    public UIComponentAttribute(string shortName)
     {
     }
 }
@@ -120,7 +136,7 @@ public interface IUIComponent
     UIComponentSource Render();
 }
 
-public readonly ref struct DeserializeRuntimeData
+public readonly struct DeserializeRuntimeData
 {
     private readonly List<Delegate>? _delegates;
 
@@ -130,6 +146,13 @@ public readonly ref struct DeserializeRuntimeData
     {
         _delegates = delegates;
     }
+
+    internal void Deconstruct(out List<Delegate>? delegates, out int delegateIndex)
+    {
+        delegates = _delegates;
+        delegateIndex = delegates?.Count ?? 0;
+    }
+
 
     public EventSubscription<T> AddEventHandler<T>(Event<T> targetEvent, JsonElement handler)
     {
