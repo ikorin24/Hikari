@@ -238,6 +238,9 @@ public sealed class Screen
 
         operations.ApplyAdd();
 
+        // frame init
+        operations.FrameInit();
+
         // early update
         _earlyUpdate.DoQueuedEvents();
         operations.EarlyUpdate();
@@ -253,6 +256,9 @@ public sealed class Screen
         // render
         _camera.UpdateUniformBuffer();
         operations.Execute(surfaceView);
+
+        // frame end
+        operations.FrameEnd();
 
         operations.ApplyRemove();
         _keyboard.PrepareNextFrame();

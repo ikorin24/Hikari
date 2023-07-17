@@ -39,6 +39,13 @@ public sealed class Operations
 
     }
 
+    internal void FrameInit()
+    {
+        foreach(var operation in _list.AsSpan()) {
+            operation.InvokeFrameInit();
+        }
+    }
+
     internal void EarlyUpdate()
     {
         foreach(var op in _list.AsSpan()) {
@@ -57,6 +64,13 @@ public sealed class Operations
     {
         foreach(var op in _list.AsSpan()) {
             op.InvokeLateUpdate();
+        }
+    }
+
+    internal void FrameEnd()
+    {
+        foreach(var operation in _list.AsSpan()) {
+            operation.InvokeFrameEnd();
         }
     }
 
@@ -102,11 +116,6 @@ public sealed class Operations
                 isAdded = true;
             }
         }
-
-        foreach(var operation in list.AsSpan()) {
-            operation.InvokeFrameInit();
-        }
-
         if(isAdded) {
             _added.Invoke(this);
         }
@@ -138,11 +147,6 @@ public sealed class Operations
                 isRemoved = true;
             }
         }
-
-        foreach(var operation in list.AsSpan()) {
-            operation.InvokeFrameEnd();
-        }
-
         if(isRemoved) {
             _removed.Invoke(this);
         }

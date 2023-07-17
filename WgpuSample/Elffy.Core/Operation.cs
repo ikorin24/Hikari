@@ -13,19 +13,23 @@ public abstract class Operation
     private LifeState _lifeState;
     private readonly int _sortOrder;
     private readonly SubscriptionBag _subscriptions = new();
+    private EventSource<Operation> _frameInit = new();
+    private EventSource<Operation> _frameEnd = new();
     private EventSource<Operation> _earlyUpdate = new();
     private EventSource<Operation> _update = new();
     private EventSource<Operation> _lateUpdate = new();
-    private EventSource<Operation> _onDead = new();
+    private EventSource<Operation> _dead = new();
 
     public Screen Screen => _screen;
     public LifeState LifeState => _lifeState;
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
     public int SortOrder => _sortOrder;
+    public Event<Operation> FrameInit => _frameInit.Event;
     public Event<Operation> EarlyUpdate => _earlyUpdate.Event;
     public Event<Operation> Update => _update.Event;
     public Event<Operation> LateUpdate => _lateUpdate.Event;
-    public Event<Operation> Dead => _onDead.Event;
+    public Event<Operation> FrameEnd => _frameEnd.Event;
+    public Event<Operation> Dead => _dead.Event;
 
     protected Operation(Screen screen, int sortOrder)
     {
@@ -40,17 +44,9 @@ public abstract class Operation
 
     protected abstract void Execute(in OperationContext context);
 
-    protected virtual void FrameInit()
-    {
-        // nop
-    }
-    protected virtual void FrameEnd()
-    {
-        // nop
-    }
 
-    internal void InvokeFrameInit() => FrameInit();
-    internal void InvokeFrameEnd() => FrameEnd();
+    internal void InvokeFrameInit() => _frameInit.Invoke(this);
+    internal void InvokeFrameEnd() => _frameEnd.Invoke(this);
     internal void InvokeRenderShadowMap(in RenderShadowMapContext context) => RenderShadowMap(in context);
     internal void InvokeExecute(in OperationContext context) => Execute(in context);
     internal void InvokeEarlyUpdate() => _earlyUpdate.Invoke(this);
@@ -85,11 +81,14 @@ public abstract class Operation
 
     protected virtual void Release()
     {
-        _onDead.Invoke(this);
+        _dead.Invoke(this);
         _subscriptions.Dispose();
+        _frameInit.Clear();
         _earlyUpdate.Clear();
         _update.Clear();
         _lateUpdate.Clear();
+        _frameEnd.Clear();
+        _dead.Clear();
     }
 }
 

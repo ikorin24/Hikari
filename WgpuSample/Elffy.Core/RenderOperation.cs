@@ -57,6 +57,8 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         EarlyUpdate.Subscribe(static self => ((TSelf)self).OnEarlyUpdate());
         Update.Subscribe(static self => ((TSelf)self).OnUpdate());
         LateUpdate.Subscribe(static self => ((TSelf)self).OnLateUpdate());
+        FrameInit.Subscribe(static self => ((TSelf)self).ApplyAdd());
+        FrameEnd.Subscribe(static self => ((TSelf)self).ApplyRemove());
     }
 
     protected sealed override void RenderShadowMap(in RenderShadowMapContext context)
@@ -71,11 +73,6 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         lock(_sync) {
             _addedList.Add(frameObject);
         }
-    }
-
-    protected sealed override void FrameInit()
-    {
-        ApplyAdd();
     }
 
     private void ApplyAdd()
@@ -100,11 +97,6 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
             Debug.Assert(frameObject.LifeState == LifeState.Terminating);
             _removedList.Add(frameObject);
         }
-    }
-
-    protected sealed override void FrameEnd()
-    {
-        ApplyRemove();
     }
 
     private void ApplyRemove()
