@@ -332,30 +332,28 @@ public abstract class UIElement : IToJson, IReactive
         Debug.Assert(_model == null);
         var shader = layer.GetRegisteredShader(GetType());
         var model = new UIModel(this, shader);
-        model.Alive.Subscribe(static model =>
-        {
-            model.Element._modelAlive.Invoke(model);
-        }).AddTo(model.Subscriptions);
-        model.EarlyUpdate.Subscribe(static model =>
-        {
-            model.Element._modelEarlyUpdate.Invoke(model);
-        }).AddTo(model.Subscriptions);
-        model.Update.Subscribe(static model =>
-        {
-            model.Element._modelUpdate.Invoke(model);
-        }).AddTo(model.Subscriptions);
-        model.LateUpdate.Subscribe(static model =>
-        {
-            model.Element._modelLateUpdate.Invoke(model);
-        }).AddTo(model.Subscriptions);
-        model.Dead.Subscribe(static model =>
-        {
-            var self = model.Element;
-            self._modelAlive.Clear();
-            self._modelEarlyUpdate.Clear();
-            self._modelUpdate.Clear();
-            self._modelLateUpdate.Clear();
-        }).AddTo(model.Subscriptions);
+        model.Alive
+            .Subscribe(static model => model.Element._modelAlive.Invoke(model))
+            .AddTo(model.Subscriptions);
+        model.EarlyUpdate
+            .Subscribe(static model => model.Element._modelEarlyUpdate.Invoke(model))
+            .AddTo(model.Subscriptions);
+        model.Update
+            .Subscribe(static model => model.Element._modelUpdate.Invoke(model))
+            .AddTo(model.Subscriptions);
+        model.LateUpdate
+            .Subscribe(static model => model.Element._modelLateUpdate.Invoke(model))
+            .AddTo(model.Subscriptions);
+        model.Dead
+            .Subscribe(static model =>
+            {
+                var self = model.Element;
+                self._modelAlive.Clear();
+                self._modelEarlyUpdate.Clear();
+                self._modelUpdate.Clear();
+                self._modelLateUpdate.Clear();
+            })
+            .AddTo(model.Subscriptions);
         _model = model;
         foreach(var child in _children) {
             child.CreateModel(layer);

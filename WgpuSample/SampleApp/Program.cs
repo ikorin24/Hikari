@@ -41,7 +41,10 @@ internal class Program
             "Message": "welcome!"
         }
         """);
+    }
 
+    private static void OnInitialized_(Screen screen)
+    {
         var panel = Serializer.Deserialize<Panel>("""
         {
             "@type": "panel",
