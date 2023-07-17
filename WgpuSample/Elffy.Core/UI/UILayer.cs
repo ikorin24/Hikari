@@ -90,13 +90,6 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         var rootElement = _rootElement;
         if(rootElement == null) { return; }
         var screenSize = Screen.ClientSize;
-        Matrix4.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, -1f, 1f, out var proj);
-        var GLToWebGpu = new Matrix4(
-            new Vector4(1, 0, 0, 0),
-            new Vector4(0, 1, 0, 0),
-            new Vector4(0, 0, 0.5f, 0),
-            new Vector4(0, 0, 0.5f, 1));
-        var uiProjection = GLToWebGpu * proj;
         var contentArea = new ContentAreaInfo
         {
             Rect = new RectF(Vector2.Zero, screenSize.ToVector2()),
@@ -104,7 +97,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         };
         var isLayoutDirty = _isLayoutDirty;
         _isLayoutDirty = false;
-        rootElement.UpdateLayout(isLayoutDirty, contentArea, uiProjection);
+        rootElement.UpdateLayout(isLayoutDirty, contentArea);
     }
 
     public void SetRoot(UIElement element)
@@ -157,17 +150,27 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         // Render in the order of UIElement tree so that child elements are rendered in front.
 
         var rootElement = _rootElement;
+        var screenSize = Screen.ClientSize;
+        Matrix4.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, -1f, 1f, out var proj);
+        var GLToWebGpu = new Matrix4(
+            new Vector4(1, 0, 0, 0),
+            new Vector4(0, 1, 0, 0),
+            new Vector4(0, 0, 0.5f, 0),
+            new Vector4(0, 0, 0.5f, 1));
+        var uiProjection = GLToWebGpu * proj;
+
         if(rootElement != null) {
-            RenderElementRecursively(pass, rootElement, render);
+            RenderElementRecursively(pass, rootElement, render, screenSize, uiProjection);
         }
 
-        static void RenderElementRecursively(in RenderPass pass, UIElement element, RenderObjectAction render)
+        static void RenderElementRecursively(in RenderPass pass, UIElement element, RenderObjectAction render, in Vector2u screenSize, in Matrix4 uiProjection)
         {
             var model = element.Model;
             Debug.Assert(model != null);
+            element.UpdateMaterial(screenSize, uiProjection);
             render(in pass, model);
             foreach(var child in element.Children) {
-                RenderElementRecursively(pass, child, render);
+                RenderElementRecursively(pass, child, render, screenSize, uiProjection);
             }
         }
     }

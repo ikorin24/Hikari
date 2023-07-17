@@ -28,7 +28,7 @@ public abstract class UIElement : IToJson, IReactive
     private CornerRadius _borderRadius;
     private Brush _borderColor;
 
-    private RectF _actualRect;
+    private LayoutResult _layoutResult;
     private NeedToUpdateFlags _needToUpdate;
 
     [Flags]
@@ -37,6 +37,12 @@ public abstract class UIElement : IToJson, IReactive
         None = 0,
         Material = 1,
         Layout = 2,
+    }
+
+    private readonly struct LayoutResult
+    {
+        public required RectF Rect { get; init; }
+        public required Vector4 BorderRadius { get; init; }
     }
 
     internal Event<UIModel> ModelAlive => _modelAlive.Event;
@@ -361,7 +367,7 @@ public abstract class UIElement : IToJson, IReactive
         return model;
     }
 
-    internal void UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, in Matrix4 uiProjection)
+    internal void UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea)
     {
         bool layoutChanged;
 
@@ -371,17 +377,18 @@ public abstract class UIElement : IToJson, IReactive
         RectF rect;
         if(parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout)) {
             rect = DecideRect(parentContentArea);
+            _layoutResult = new LayoutResult
+            {
+                Rect = rect,
+                BorderRadius = UILayouter.DecideBorderRadius(_borderRadius, rect.Size),
+            };
             _needToUpdate &= ~NeedToUpdateFlags.Layout;
-            _actualRect = rect;
+            _needToUpdate |= NeedToUpdateFlags.Material;
             layoutChanged = true;
         }
         else {
-            rect = _actualRect;
+            rect = _layoutResult.Rect;
             layoutChanged = false;
-        }
-        if(parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Material)) {
-            UpdateMaterial(rect, uiProjection);
-            _needToUpdate &= ~NeedToUpdateFlags.Material;
         }
         var contentArea = new ContentAreaInfo
         {
@@ -389,42 +396,44 @@ public abstract class UIElement : IToJson, IReactive
             Padding = _padding,
         };
         foreach(var child in _children) {
-            child.UpdateLayout(layoutChanged, contentArea, uiProjection);
+            child.UpdateLayout(layoutChanged, contentArea);
         }
     }
 
-    private void UpdateMaterial(in RectF rect, in Matrix4 uiProjection)
+    internal void UpdateMaterial(in Vector2u screenSize, in Matrix4 uiProjection)
     {
         var model = _model;
         Debug.Assert(model != null);
-        if(model == null) { return; }
-        var actualBorderRadius = UILayouter.DecideBorderRadius(_borderRadius, rect.Size);
 
-        // origin is bottom-left of rect because clip space is bottom-left based
-        var modelOrigin = new Vector3
-        {
-            X = rect.Position.X,
-            Y = model.Screen.ClientSize.Y - rect.Position.Y - rect.Size.Y,
-            Z = 0,
-        };
-        var modelMatrix =
-            modelOrigin.ToTranslationMatrix4() *
-            new Matrix4(
-                new Vector4(rect.Size.X, 0, 0, 0),
-                new Vector4(0, rect.Size.Y, 0, 0),
-                new Vector4(0, 0, 1, 0),
-                new Vector4(0, 0, 0, 1));
+        if(model != null && _needToUpdate.HasFlag(NeedToUpdateFlags.Material)) {
+            var result = _layoutResult;
 
-        var result = new UIUpdateResult
-        {
-            ActualRect = rect,
-            ActualBorderWidth = _borderWidth.ToVector4(),
-            ActualBorderRadius = actualBorderRadius,
-            MvpMatrix = uiProjection * modelMatrix,
-            BackgroundColor = _backgroundColor,
-            BorderColor = _borderColor,
-        };
-        model.Material.UpdateMaterial(this, result);
+            // origin is bottom-left of rect because clip space is bottom-left based
+            var modelOrigin = new Vector3
+            {
+                X = result.Rect.Position.X,
+                Y = screenSize.Y - result.Rect.Position.Y - result.Rect.Size.Y,
+                Z = 0,
+            };
+            var modelMatrix =
+                modelOrigin.ToTranslationMatrix4() *
+                new Matrix4(
+                    new Vector4(result.Rect.Size.X, 0, 0, 0),
+                    new Vector4(0, result.Rect.Size.Y, 0, 0),
+                    new Vector4(0, 0, 1, 0),
+                    new Vector4(0, 0, 0, 1));
+            var a = new UIUpdateResult
+            {
+                ActualRect = result.Rect,
+                ActualBorderWidth = _borderWidth.ToVector4(),
+                ActualBorderRadius = result.BorderRadius,
+                MvpMatrix = uiProjection * modelMatrix,
+                BackgroundColor = _backgroundColor,
+                BorderColor = _borderColor,
+            };
+            model.Material.UpdateMaterial(this, a);
+            _needToUpdate &= ~NeedToUpdateFlags.Material;
+        }
     }
 
     protected virtual RectF DecideRect(in ContentAreaInfo parentContentArea)
