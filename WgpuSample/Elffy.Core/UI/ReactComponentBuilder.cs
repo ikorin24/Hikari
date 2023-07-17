@@ -15,7 +15,7 @@ internal static class ReactComponentBuilder
             switch(obj) {
                 case UIElement element: {
                     Debug.Assert(element.Parent == null);
-                    element.ModelUpdate.Subscribe(model =>
+                    element.ModelEarlyUpdate.Subscribe(model =>
                     {
                         if(component.NeedsToRerender) {
                             component.Apply(model.Element);

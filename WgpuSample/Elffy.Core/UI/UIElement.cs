@@ -12,7 +12,9 @@ public abstract class UIElement : IToJson, IReactive
     private UIModel? _model;
     private UIElement? _parent;
     private readonly UIElementCollection _children;
+    private EventSource<UIModel> _modelEarlyUpdate;
     private EventSource<UIModel> _modelUpdate;
+    private EventSource<UIModel> _modelLateUpdate;
     private EventSource<UIModel> _modelAlive;
 
     private LayoutLength _width;
@@ -38,7 +40,9 @@ public abstract class UIElement : IToJson, IReactive
     }
 
     internal Event<UIModel> ModelAlive => _modelAlive.Event;
+    internal Event<UIModel> ModelEarlyUpdate => _modelEarlyUpdate.Event;
     internal Event<UIModel> ModelUpdate => _modelUpdate.Event;
+    internal Event<UIModel> ModelLateUpdate => _modelLateUpdate.Event;
 
     public UIElement? Parent => _parent;
     internal UIModel? Model => _model;
@@ -332,15 +336,25 @@ public abstract class UIElement : IToJson, IReactive
         {
             model.Element._modelAlive.Invoke(model);
         }).AddTo(model.Subscriptions);
+        model.EarlyUpdate.Subscribe(static model =>
+        {
+            model.Element._modelEarlyUpdate.Invoke(model);
+        }).AddTo(model.Subscriptions);
         model.Update.Subscribe(static model =>
         {
             model.Element._modelUpdate.Invoke(model);
+        }).AddTo(model.Subscriptions);
+        model.LateUpdate.Subscribe(static model =>
+        {
+            model.Element._modelLateUpdate.Invoke(model);
         }).AddTo(model.Subscriptions);
         model.Dead.Subscribe(static model =>
         {
             var self = model.Element;
             self._modelAlive.Clear();
+            self._modelEarlyUpdate.Clear();
             self._modelUpdate.Clear();
+            self._modelLateUpdate.Clear();
         }).AddTo(model.Subscriptions);
         _model = model;
         foreach(var child in _children) {
