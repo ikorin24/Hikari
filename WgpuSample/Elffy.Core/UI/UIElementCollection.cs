@@ -100,7 +100,7 @@ public sealed class UIElementCollection
                     list.Add(uiElement);
                     break;
                 }
-                case IUIComponent component: {
+                case IReactComponent component: {
                     var uiElement = component.Build();
                     list.Add(uiElement);
                     break;

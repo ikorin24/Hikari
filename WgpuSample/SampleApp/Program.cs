@@ -239,12 +239,12 @@ internal class Program
     }
 }
 
-[UIComponent]
+[ReactComponent]
 public partial class Counter
 {
-    public partial record struct Props(string Message, LayoutLength Width, LayoutLength Height);
+    private partial record struct Props(string Message, LayoutLength Width, LayoutLength Height);
 
-    private partial UIComponentSource Render()
+    private partial ReactBuilder Render()
     {
         return $$"""
         {
@@ -272,13 +272,13 @@ public partial class Counter
     }
 }
 
-[UIComponent]
+[ReactComponent]
 public partial class CountButton
 {
-    public partial record struct Props(int Width, int Height);
+    private partial record struct Props(int Width, int Height);
     private int _count;
 
-    private partial UIComponentSource Render()
+    private partial ReactBuilder Render()
     {
         var text = $"click count {_count}";
         return $$"""
@@ -301,9 +301,9 @@ public partial class CountButton
     }
 }
 
-sealed partial class Counter : IUIComponent, IFromJson<Counter>
+sealed partial class Counter : IReactComponent, IFromJson<Counter>
 {
-    public partial record struct Props;
+    partial record struct Props;
 
     private readonly Props _props;
     private bool _needsToRerender;
@@ -318,9 +318,9 @@ sealed partial class Counter : IUIComponent, IFromJson<Counter>
         _props = props;
     }
 
-    bool IUIComponent.NeedsToRerender => _needsToRerender;
+    bool IReactComponent.NeedsToRerender => _needsToRerender;
 
-    private partial UIComponentSource Render();
+    private partial ReactBuilder Render();
 
     private void SetState<T>(ref T state, in T newValue)
     {
@@ -334,7 +334,7 @@ sealed partial class Counter : IUIComponent, IFromJson<Counter>
         return new Counter(props);
     }
 
-    FixedComponentSource IUIComponent.Fix() => Render().FixAndClear();
+    ReactSource IReactComponent.GetReactSource() => Render().FixAndClear();
 
     partial record struct Props : IFromJson<Props>
     {
@@ -355,9 +355,9 @@ sealed partial class Counter : IUIComponent, IFromJson<Counter>
     }
 }
 
-sealed partial class CountButton : IUIComponent, IFromJson<CountButton>
+sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
 {
-    public partial record struct Props;
+    partial record struct Props;
 
     private readonly Props _props;
     private bool _needsToRerender;
@@ -372,9 +372,9 @@ sealed partial class CountButton : IUIComponent, IFromJson<CountButton>
         _props = props;
     }
 
-    bool IUIComponent.NeedsToRerender => _needsToRerender;
+    bool IReactComponent.NeedsToRerender => _needsToRerender;
 
-    private partial UIComponentSource Render();
+    private partial ReactBuilder Render();
 
     private void SetState<T>(ref T state, in T newValue)
     {
@@ -388,7 +388,7 @@ sealed partial class CountButton : IUIComponent, IFromJson<CountButton>
         return new CountButton(props);
     }
 
-    FixedComponentSource IUIComponent.Fix() => Render().FixAndClear();
+    ReactSource IReactComponent.GetReactSource() => Render().FixAndClear();
 
     partial record struct Props : IFromJson<Props>
     {

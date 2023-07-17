@@ -120,11 +120,10 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         }).AddTo(Subscriptions);
     }
 
-    public void RenderRoot(IUIComponent component)
+    public void RenderRoot(IReactComponent component)
     {
         ArgumentNullException.ThrowIfNull(component);
         var rootElement = _rootElement;
-        var currentComponent = component;
         if(rootElement == null) {
             var element = component.Build();
             element.ModelAlive.Subscribe(model =>

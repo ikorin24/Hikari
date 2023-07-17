@@ -8,14 +8,14 @@ using System.Text.Json;
 namespace Elffy.UI;
 
 [InterpolatedStringHandler]
-public ref struct UIComponentSource
+public ref struct ReactBuilder
 {
     private DefaultInterpolatedStringHandler _handler;
     private List<Delegate>? _delegates;
     private int _delegateIndex;
     private readonly bool _isReadOnly;
 
-    public UIComponentSource(int literalLength, int formattedCount)
+    public ReactBuilder(int literalLength, int formattedCount)
     {
         _handler = new DefaultInterpolatedStringHandler(literalLength, formattedCount);
         _delegates = null;
@@ -23,7 +23,7 @@ public ref struct UIComponentSource
         _isReadOnly = false;
     }
 
-    internal UIComponentSource(string source, DeserializeRuntimeData data)
+    internal ReactBuilder(string source, DeserializeRuntimeData data)
     {
         _handler = $"{source}";
         (_delegates, _delegateIndex) = data;
@@ -152,72 +152,72 @@ public ref struct UIComponentSource
         _handler.AppendLiteral("\"");
     }
 
-    public FixedComponentSource FixAndClear()
+    public ReactSource FixAndClear()
     {
-        return new FixedComponentSource(_handler.ToStringAndClear(), new DeserializeRuntimeData(_delegates));
+        return new ReactSource(_handler.ToStringAndClear(), new DeserializeRuntimeData(_delegates));
     }
 
-    public static implicit operator UIComponentSource([StringSyntax(StringSyntaxAttribute.Json)] string s)
+    public static implicit operator ReactBuilder([StringSyntax(StringSyntaxAttribute.Json)] string s)
     {
-        var h = new UIComponentSource(s?.Length ?? 0, 0);
+        var h = new ReactBuilder(s?.Length ?? 0, 0);
         h.AppendLiteral(s ?? "");
         return h;
     }
 }
 
-public readonly struct FixedComponentSource : IEquatable<FixedComponentSource>
+public readonly struct ReactSource : IEquatable<ReactSource>
 {
     private readonly string? _str;
     private readonly DeserializeRuntimeData _data;
 
-    public string Str => _str ?? "";
-    public DeserializeRuntimeData RuntimeData => _data;
+    internal string Str => _str ?? "";
+    internal DeserializeRuntimeData RuntimeData => _data;
 
-    internal FixedComponentSource(string str, DeserializeRuntimeData data)
+    internal ReactSource(string str, DeserializeRuntimeData data)
     {
         _str = str;
         _data = data;
     }
 
-    public object Deserialize()
+    internal object Deserialize()
     {
         return Serializer.Deserialize(_str ?? "", _data);
     }
 
-    public override bool Equals(object? obj) => obj is FixedComponentSource source && Equals(source);
+    public override bool Equals(object? obj) => obj is ReactSource source && Equals(source);
 
-    public bool Equals(FixedComponentSource other) => _str == other._str && _data.Equals(other._data);
+    public bool Equals(ReactSource other) => _str == other._str && _data.Equals(other._data);
 
     public override int GetHashCode() => HashCode.Combine(_str, _data);
 }
 
-internal sealed class FixedUIComponent : IUIComponent
+internal sealed class FixedReactComponent : IReactComponent
 {
-    private readonly FixedComponentSource _fixedSource;
+    private readonly ReactSource _source;
 
     public bool NeedsToRerender => false;
 
-    internal FixedUIComponent(FixedComponentSource fixedSource)
+    internal FixedReactComponent(ReactSource source)
     {
-        _fixedSource = fixedSource;
+        _source = source;
     }
 
-    public FixedComponentSource Fix() => _fixedSource;
+    public ReactSource GetReactSource() => _source;
 }
 
 [global::System.Diagnostics.Conditional("COMPILE_TIME_ONLY")]
 [global::System.AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-public sealed class UIComponentAttribute : global::System.Attribute
+public sealed class ReactComponentAttribute : global::System.Attribute
 {
-    public UIComponentAttribute()
+    public ReactComponentAttribute()
     {
     }
 }
 
-public interface IUIComponent
+public interface IReactComponent
 {
     bool NeedsToRerender { get; }
-    FixedComponentSource Fix();
+    ReactSource GetReactSource();
 }
 
 public readonly struct DeserializeRuntimeData : IEquatable<DeserializeRuntimeData>

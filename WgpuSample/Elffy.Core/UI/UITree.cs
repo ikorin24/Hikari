@@ -24,10 +24,10 @@ public sealed class UITree
         _uiLayer.SetRoot(element);
     }
 
-    public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] UIComponentSource source)
+    public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] ReactBuilder builder)
     {
         _uiLayer ??= new UILayer(_screen, 100); // TODO: sort order
-        var component = new FixedUIComponent(source.FixAndClear());
+        var component = new FixedReactComponent(builder.FixAndClear());
         _uiLayer.RenderRoot(component);
     }
 }
