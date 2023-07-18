@@ -20,6 +20,8 @@ internal readonly struct ThreadId : IEquatable<ThreadId>
 
     public bool IsCurrentThread => Environment.CurrentManagedThreadId == _threadId;
 
+    public bool IsNone => _threadId == 0;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ThrowIfNotMatched()
     {

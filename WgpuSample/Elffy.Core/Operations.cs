@@ -16,14 +16,10 @@ public sealed class Operations
     private readonly List<Operation> _list;
     private readonly List<Operation> _addedList;
     private readonly List<Operation> _removedList;
-    private EventSource<Operations> _added;
-    private EventSource<Operations> _removed;
+    private readonly ThreadId _threadId;
     private readonly object _sync = new object();
 
     public Screen Screen => _screen;
-
-    public Event<Operations> Added => _added.Event;
-    public Event<Operations> Removed => _removed.Event;
 
     internal Operations(Screen screen)
     {
@@ -31,6 +27,7 @@ public sealed class Operations
         _list = new();
         _addedList = new();
         _removedList = new();
+        _threadId = ThreadId.CurrentThread();
     }
 
     internal void DisposeInternal()
@@ -41,6 +38,7 @@ public sealed class Operations
 
     internal void FrameInit()
     {
+        Debug.Assert(_threadId.IsCurrentThread);
         foreach(var operation in _list.AsSpan()) {
             operation.InvokeFrameInit();
         }
@@ -48,6 +46,7 @@ public sealed class Operations
 
     internal void EarlyUpdate()
     {
+        Debug.Assert(_threadId.IsCurrentThread);
         foreach(var op in _list.AsSpan()) {
             op.InvokeEarlyUpdate();
         }
@@ -55,6 +54,7 @@ public sealed class Operations
 
     internal void Update()
     {
+        Debug.Assert(_threadId.IsCurrentThread);
         foreach(var op in _list.AsSpan()) {
             op.InvokeUpdate();
         }
@@ -62,6 +62,7 @@ public sealed class Operations
 
     internal void LateUpdate()
     {
+        Debug.Assert(_threadId.IsCurrentThread);
         foreach(var op in _list.AsSpan()) {
             op.InvokeLateUpdate();
         }
@@ -69,6 +70,7 @@ public sealed class Operations
 
     internal void FrameEnd()
     {
+        Debug.Assert(_threadId.IsCurrentThread);
         foreach(var operation in _list.AsSpan()) {
             operation.InvokeFrameEnd();
         }
@@ -76,6 +78,7 @@ public sealed class Operations
 
     internal void Execute(Rust.Ref<Wgpu.TextureView> surfaceView)
     {
+        Debug.Assert(_threadId.IsCurrentThread);
         var screen = _screen;
         var lights = screen.Lights;
         {
@@ -95,6 +98,7 @@ public sealed class Operations
 
     internal void Add(Operation operation)
     {
+        Debug.Assert(operation.LifeState == LifeState.New);
         lock(_sync) {
             _addedList.Add(operation);
         }
@@ -102,53 +106,60 @@ public sealed class Operations
 
     internal void ApplyAdd()
     {
-        var list = _list;
-        var addedList = _addedList;
-        var isAdded = false;
+        Debug.Assert(_threadId.IsCurrentThread);
+
+        // To avoid deadlock, copy the added list to a local variable and add it to the '_list'.
+        // This is because the user can call the 'Add' method during the Alive event of the added object.
+        RefTypeRentMemory<Operation> tmp;
         lock(_sync) {
-            if(addedList.Count > 0) {
-                list.AddRange(addedList);
-                list.Sort((x, y) => x.SortOrder - y.SortOrder);
-                foreach(var addedItem in addedList.AsSpan()) {
-                    addedItem.SetLifeStateAlive();
-                }
-                addedList.Clear();
-                isAdded = true;
+            if(_addedList.Count == 0) { return; }
+            tmp = RefTypeRentMemory<Operation>.From(_addedList.AsReadOnlySpan());
+            _addedList.Clear();
+        }
+        try {
+            var addedList = tmp.AsReadOnlySpan();
+            _list.AddRange(addedList);
+            _list.Sort((x, y) => x.SortOrder - y.SortOrder);
+            foreach(var added in addedList) {
+                added.SetLifeStateAlive();
+                added.InvokeAlive();
             }
         }
-        if(isAdded) {
-            _added.Invoke(this);
+        finally {
+            tmp.Dispose();
         }
     }
 
     internal void Remove(Operation operation)
     {
+        Debug.Assert(operation.LifeState == LifeState.Terminating);
         lock(_sync) {
-            Debug.Assert(operation.LifeState == LifeState.Terminating);
             _removedList.Add(operation);
         }
     }
 
     internal void ApplyRemove()
     {
-        var list = _list;
-        var removedList = _removedList;
-        var isRemoved = false;
+        Debug.Assert(_threadId.IsCurrentThread);
+        // To avoid deadlock, copy the removed list to a local variable and remove it from the '_list'.
+        // This is because the user can call the 'Remove' method during the Dead event of the removed object.
+        RefTypeRentMemory<Operation> tmp;
         lock(_sync) {
-            if(removedList.Count > 0) {
-                foreach(var removedItem in removedList.AsSpan()) {
-                    if(list.RemoveFastUnordered(removedItem)) {
-                        removedItem.SetLifeStateDead();
-                        removedItem.InvokeRelease();
-                    }
+            if(_removedList.Count == 0) { return; }
+            tmp = RefTypeRentMemory<Operation>.From(_removedList.AsReadOnlySpan());
+            _removedList.Clear();
+        }
+        try {
+            var removedList = tmp.AsReadOnlySpan();
+            foreach(var removed in removedList) {
+                if(_list.RemoveFastUnordered(removed)) {
+                    removed.SetLifeStateDead();
+                    removed.InvokeRelease();
                 }
-                list.Sort((x, y) => x.SortOrder - y.SortOrder);
-                removedList.Clear();
-                isRemoved = true;
             }
         }
-        if(isRemoved) {
-            _removed.Invoke(this);
+        finally {
+            tmp.Dispose();
         }
     }
 }

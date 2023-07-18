@@ -43,12 +43,13 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     private readonly Own<TMaterial> _material;
     private readonly MaybeOwn<Mesh<TVertex>> _mesh;
     private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
+    private ThreadId _threadId;
 
     private EventSource<TSelf> _update;
     private EventSource<TSelf> _lateUpdate;
     private EventSource<TSelf> _earlyUpdate;
-
     private EventSource<TSelf> _alive;
+    private EventSource<TSelf> _terminated;
     private EventSource<TSelf> _dead;
 
     private LifeState _state;
@@ -63,12 +64,10 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     public sealed override SubscriptionRegister Subscriptions => _subscriptions.Register;
 
     public Event<TSelf> Alive => _alive.Event;
+    public Event<TSelf> Terminated => _terminated.Event;
     public Event<TSelf> Dead => _dead.Event;
-
     public Event<TSelf> EarlyUpdate => _earlyUpdate.Event;
-
     public Event<TSelf> LateUpdate => _lateUpdate.Event;
-
     public Event<TSelf> Update => _update.Event;
 
     public bool IsFrozen
@@ -102,6 +101,33 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
         }
     }
 
+    public bool Terminate()
+    {
+        var currentState = InterlockedEx.CompareExchange(ref _state, LifeState.Terminating, LifeState.Alive);
+        if(currentState != LifeState.Alive) {
+            return false;
+        }
+
+        if(_threadId.IsCurrentThread) {
+            Terminate(Self);
+        }
+        else {
+            Screen.Update.Post(static x =>
+            {
+                var self = SafeCast.NotNullAs<TSelf>(x);
+                Terminate(self);
+            }, Self);
+        }
+        return true;
+
+        static void Terminate(TSelf self)
+        {
+            Debug.Assert(self._threadId.IsCurrentThread);
+            self._layer.Remove(self);
+            self._terminated.Invoke(self);
+        }
+    }
+
     internal void OnRender(in RenderPass pass)
     {
         pass.SetPipeline(Shader.Pipeline);
@@ -116,6 +142,8 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     {
         Debug.Assert(_state == LifeState.New);
         _state = LifeState.Alive;
+        Debug.Assert(_threadId.IsNone);
+        _threadId = ThreadId.CurrentThread();
     }
 
     internal void OnAlive()
@@ -136,6 +164,13 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
         _material.Dispose();
         _mesh.Dispose();
         _subscriptions.Dispose();
+
+        _update.Clear();
+        _lateUpdate.Clear();
+        _earlyUpdate.Clear();
+        _alive.Clear();
+        _terminated.Clear();
+        _dead.Clear();
     }
 
     protected abstract void Render(in RenderPass pass, TMaterial material, Mesh<TVertex> mesh);

@@ -1,0 +1,177 @@
+﻿#nullable enable
+using Elffy.Effective;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+
+namespace Elffy;
+
+public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
+    : RenderOperation<TSelf, TShader, TMaterial>
+    where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
+    where TVertex : unmanaged, IVertex
+    where TShader : Shader<TShader, TMaterial, TSelf>
+    where TMaterial : Material<TMaterial, TShader, TSelf>
+    where TObject : FrameObject<TObject, TSelf, TVertex, TShader, TMaterial>
+{
+    private readonly List<TObject> _list;
+    private readonly List<TObject> _addedList;
+    private readonly List<TObject> _removedList;
+    private readonly object _sync = new object();
+    private ThreadId _threadId;
+
+    protected ObjectLayer(Screen screen, Own<PipelineLayout> pipelineLayout, int sortOrder)
+        : base(screen, pipelineLayout, sortOrder)
+    {
+        _list = new();
+        _addedList = new();
+        _removedList = new();
+
+        Alive.Subscribe(static self => ((TSelf)self).OnAlive());
+        EarlyUpdate.Subscribe(static self => ((TSelf)self).OnEarlyUpdate());
+        Update.Subscribe(static self => ((TSelf)self).OnUpdate());
+        LateUpdate.Subscribe(static self => ((TSelf)self).OnLateUpdate());
+        FrameInit.Subscribe(static self => ((TSelf)self).ApplyAdd());
+        FrameEnd.Subscribe(static self => ((TSelf)self).ApplyRemove());
+
+        Terminated.Subscribe(static self =>
+        {
+            ((TSelf)self).OnTerminated();
+        });
+    }
+
+    private void OnAlive()
+    {
+        Debug.Assert(_threadId.IsNone);
+        _threadId = ThreadId.CurrentThread();
+    }
+
+    private void OnTerminated()
+    {
+        Debug.Assert(_threadId.IsCurrentThread);
+        lock(_sync) {
+            _removedList.AddRange(_list.AsSpan());
+        }
+    }
+
+    protected sealed override void RenderShadowMap(in RenderShadowMapContext context)
+    {
+        Debug.Assert(_threadId.IsCurrentThread);
+        RenderShadowMap(context, _list.AsSpan());
+    }
+
+    protected abstract void RenderShadowMap(in RenderShadowMapContext context, ReadOnlySpan<TObject> objects);
+
+    internal void Add(TObject frameObject)
+    {
+        Debug.Assert(frameObject.LifeState == LifeState.New);
+        lock(_sync) {
+            _addedList.Add(frameObject);
+        }
+    }
+
+    private void ApplyAdd()
+    {
+        Debug.Assert(_threadId.IsCurrentThread);
+
+        // To avoid deadlock, copy the added list to a local variable and add it to the '_list'.
+        // This is because the user can call the 'Add' method during the Alive event of the added object.
+        RefTypeRentMemory<TObject> tmp;
+        lock(_sync) {
+            if(_addedList.Count == 0) { return; }
+            tmp = RefTypeRentMemory<TObject>.From(_addedList.AsReadOnlySpan());
+            _addedList.Clear();
+        }
+        try {
+            var addedList = tmp.AsReadOnlySpan();
+            _list.AddRange(addedList);
+            foreach(var addedObject in addedList) {
+                addedObject.SetLifeStateAlive();
+                addedObject.OnAlive();
+            }
+        }
+        finally {
+            tmp.Dispose();
+        }
+    }
+
+    internal void Remove(TObject frameObject)
+    {
+        Debug.Assert(frameObject.LifeState == LifeState.Terminating);
+        lock(_sync) {
+            _removedList.Add(frameObject);
+        }
+    }
+
+    private void ApplyRemove()
+    {
+        Debug.Assert(_threadId.IsCurrentThread);
+
+        // To avoid deadlock, copy the removed list to a local variable and remove it from the '_list'.
+        // This is because the user can call the 'Remove' method during the Dead event of the removed object.
+        RefTypeRentMemory<TObject> tmp;
+        lock(_sync) {
+            if(_removedList.Count == 0) { return; }
+            tmp = RefTypeRentMemory<TObject>.From(_removedList.AsReadOnlySpan());
+            _removedList.Clear();
+        }
+        try {
+            var removedList = tmp.AsReadOnlySpan();
+            foreach(var removedItem in removedList) {
+                if(_list.RemoveFastUnordered(removedItem)) {
+                    removedItem.SetLifeStateDead();
+                    removedItem.OnDead();
+                }
+            }
+        }
+        finally {
+            tmp.Dispose();
+        }
+    }
+
+    protected sealed override void Render(in RenderPass pass)
+    {
+        Debug.Assert(_threadId.IsCurrentThread);
+        ReadOnlySpan<TObject> objects = _list.AsSpan();
+        Render(
+            pass,
+            objects,
+            (in RenderPass pass, TObject obj) => obj.OnRender(in pass));
+    }
+
+    public delegate void RenderObjectAction(in RenderPass pass, TObject obj);
+
+    protected virtual void Render(in RenderPass pass, ReadOnlySpan<TObject> objects, RenderObjectAction render)
+    {
+        foreach(var obj in objects) {
+            render(in pass, obj);
+        }
+    }
+
+    private void OnEarlyUpdate()
+    {
+        Debug.Assert(_threadId.IsCurrentThread);
+        foreach(var obj in _list.AsSpan()) {
+            if(obj.IsFrozen) { continue; }
+            obj.InvokeEarlyUpdate();
+        }
+    }
+
+    private void OnLateUpdate()
+    {
+        Debug.Assert(_threadId.IsCurrentThread);
+        foreach(var obj in _list.AsSpan()) {
+            if(obj.IsFrozen) { continue; }
+            obj.InvokeLateUpdate();
+        }
+    }
+
+    private void OnUpdate()
+    {
+        Debug.Assert(_threadId.IsCurrentThread);
+        foreach(var obj in _list.AsSpan()) {
+            if(obj.IsFrozen) { continue; }
+            obj.InvokeUpdate();
+        }
+    }
+}

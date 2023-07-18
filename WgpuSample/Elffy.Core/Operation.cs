@@ -12,12 +12,15 @@ public abstract class Operation
     private readonly Screen _screen;
     private LifeState _lifeState;
     private readonly int _sortOrder;
+    private ThreadId _threadId;
     private readonly SubscriptionBag _subscriptions = new();
     private EventSource<Operation> _frameInit = new();
     private EventSource<Operation> _frameEnd = new();
     private EventSource<Operation> _earlyUpdate = new();
     private EventSource<Operation> _update = new();
     private EventSource<Operation> _lateUpdate = new();
+    private EventSource<Operation> _terminated = new();
+    private EventSource<Operation> _alive = new();
     private EventSource<Operation> _dead = new();
 
     public Screen Screen => _screen;
@@ -29,6 +32,8 @@ public abstract class Operation
     public Event<Operation> Update => _update.Event;
     public Event<Operation> LateUpdate => _lateUpdate.Event;
     public Event<Operation> FrameEnd => _frameEnd.Event;
+    public Event<Operation> Terminated => _terminated.Event;
+    public Event<Operation> Alive => _alive.Event;
     public Event<Operation> Dead => _dead.Event;
 
     protected Operation(Screen screen, int sortOrder)
@@ -44,7 +49,7 @@ public abstract class Operation
 
     protected abstract void Execute(in OperationContext context);
 
-
+    internal void InvokeAlive() => _alive.Invoke(this);
     internal void InvokeFrameInit() => _frameInit.Invoke(this);
     internal void InvokeFrameEnd() => _frameEnd.Invoke(this);
     internal void InvokeRenderShadowMap(in RenderShadowMapContext context) => RenderShadowMap(in context);
@@ -59,8 +64,24 @@ public abstract class Operation
         if(currentState != LifeState.Alive) {
             return false;
         }
-        Screen.Operations.Remove(this);
+        if(_threadId.IsCurrentThread) {
+            Terminate(this);
+        }
+        else {
+            _screen.Update.Post(static x =>
+            {
+                var self = SafeCast.NotNullAs<Operation>(x);
+                Terminate(self);
+            }, this);
+        }
         return true;
+
+        static void Terminate(Operation self)
+        {
+            Debug.Assert(self._threadId.IsCurrentThread);
+            self.Screen.Operations.Remove(self);
+            self._terminated.Invoke(self);
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -68,6 +89,7 @@ public abstract class Operation
     {
         Debug.Assert(_lifeState == LifeState.New);
         _lifeState = LifeState.Alive;
+        _threadId = ThreadId.CurrentThread();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -88,6 +110,8 @@ public abstract class Operation
         _update.Clear();
         _lateUpdate.Clear();
         _frameEnd.Clear();
+        _terminated.Clear();
+        _alive.Clear();
         _dead.Clear();
     }
 }
