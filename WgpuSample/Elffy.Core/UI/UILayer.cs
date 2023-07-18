@@ -66,7 +66,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         {
             _isLayoutDirty = true;
         }).AddTo(Subscriptions);
-        EarlyUpdate.Subscribe(self =>
+        FrameInit.Subscribe(self =>
         {
             ((UILayer)self).UpdateLayout();
         }).AddTo(Subscriptions);
@@ -89,7 +89,8 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
     {
         var rootElement = _rootElement;
         if(rootElement == null) { return; }
-        var screenSize = Screen.ClientSize;
+        var screen = Screen;
+        var screenSize = screen.ClientSize;
         var contentArea = new ContentAreaInfo
         {
             Rect = new RectF(Vector2.Zero, screenSize.ToVector2()),
@@ -97,7 +98,8 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         };
         var isLayoutDirty = _isLayoutDirty;
         _isLayoutDirty = false;
-        rootElement.UpdateLayout(isLayoutDirty, contentArea);
+        var mouse = screen.Mouse;
+        rootElement.UpdateLayout(isLayoutDirty, contentArea, mouse);
     }
 
     public void SetRoot(UIElement element)

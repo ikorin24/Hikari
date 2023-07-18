@@ -15,6 +15,11 @@ public sealed class Button : UIElement, IFromJson<Button>
     private FontSize _fontSize;
     private EventSource<Button> _clicked;
 
+    private static string DefaultText => "";
+    private static FontSize DefaultFontSize => 16;
+
+    public Event<Button> Clicked => _clicked.Event;
+
     public string Text
     {
         get => _text;
@@ -59,19 +64,20 @@ public sealed class Button : UIElement, IFromJson<Button>
     protected override void ApplyDiffProtected(JsonElement element, in DeserializeRuntimeData data)
     {
         base.ApplyDiffProtected(element, data);
-        // TODO:
+        Text = element.TryGetProperty("text", out var text) ? Serializer.Instantiate<string>(text) : DefaultText;
+        FontSize = element.TryGetProperty("fontSize", out var fontSize) ? Serializer.Instantiate<FontSize>(fontSize) : DefaultFontSize;
     }
 
     public Button() : base()
     {
-        _text = "";
-        _fontSize = 16f;
+        _text = DefaultText;
+        _fontSize = DefaultFontSize;
     }
 
     private Button(JsonElement element, in DeserializeRuntimeData data) : base(element, data)
     {
-        _text = "";
-        _fontSize = 16f;
+        _text = DefaultText;
+        _fontSize = DefaultFontSize;
         if(element.TryGetProperty("text", out var text)) {
             _text = Serializer.Instantiate<string>(text);
         }
@@ -80,6 +86,15 @@ public sealed class Button : UIElement, IFromJson<Button>
         }
         if(element.TryGetProperty("clicked", out var clicked)) {
             data.AddEventHandler(_clicked.Event, clicked);
+        }
+        ModelUpdate.Subscribe(model => OnModelUpdate(model));
+    }
+
+    private void OnModelUpdate(UIModel model)
+    {
+        var mouse = model.Screen.Mouse;
+        if(IsMouseOver && mouse.IsUp(MouseButton.Left)) {
+            _clicked.Invoke(this);
         }
     }
 }
@@ -524,7 +539,6 @@ file sealed class ButtonShader : UIShader
 
         private void UpdateForButton(Button button)
         {
-            var a = SkiaSharp.SKTypeface.FromFamilyName("Calibria");
             var text = button.Text;
             if(string.IsNullOrEmpty(text) == false) {
                 using var font = new SkiaSharp.SKFont();

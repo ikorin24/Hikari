@@ -29,20 +29,6 @@ internal class Program
         Engine.Run(screenConfig, OnInitialized);
     }
 
-    private static void OnInitialized(Screen screen)
-    {
-        screen.UITree.RenderRoot($$"""
-        {
-            "@type": {{typeof(Counter)}},
-            "Width": "800px",
-            "Height": "500px",
-            "HorizontalAlignment": "Center",
-            "VerticalAlignment": "Center",
-            "Message": "welcome!"
-        }
-        """);
-    }
-
     private static void OnInitialized_(Screen screen)
     {
         var panel = Serializer.Deserialize<Panel>("""
@@ -242,18 +228,24 @@ internal class Program
         result.Y = radius * sinBeta;
         return result + center;
     }
+
+    private static void OnInitialized(Screen screen)
+    {
+        screen.UITree.RenderRoot($$"""
+        {
+            "@type": {{typeof(Counter)}},
+            "Width": "800px",
+            "Height": "500px",
+            "Message": "welcome!"
+        }
+        """);
+    }
 }
 
 [ReactComponent]
 public partial class Counter
 {
-    private partial record struct Props(
-        string Message,
-        LayoutLength Width,
-        LayoutLength Height,
-        HorizontalAlignment HorizontalAlignment,
-        VerticalAlignment VerticalAlignment);
-
+    private partial record struct Props(string Message, LayoutLength Width, LayoutLength Height);
     private partial ReactBuilder Render()
     {
         return $$"""
@@ -263,13 +255,10 @@ public partial class Counter
             "height": {{_props.Height}},
             "backgroundColor": "#fff",
             "borderRadius": "10px",
-            "horizontalAlignment": {{_props.HorizontalAlignment}},
-            "verticalAlignment": {{_props.VerticalAlignment}},
             "children": [
             {
                 "@type": "button",
                 "verticalAlignment": "Top",
-                "width": "100%",
                 "height": 80,
                 "fontSize": 30,
                 "backgroundColor": "#4f4",
@@ -291,7 +280,6 @@ public partial class CountButton
 {
     private partial record struct Props(int Width, int Height);
     private int _count;
-
     private partial ReactBuilder Render()
     {
         var text = $"click count {_count}";
@@ -301,7 +289,6 @@ public partial class CountButton
             "width": {{_props.Width}},
             "height": {{_props.Height}},
             "borderRadius": {{_props.Height / 2f}},
-            "borderWidth": 0,
             "borderColor": "#ff4310",
             "backgroundColor": "#fa5",
             "text": {{text}},
@@ -364,8 +351,6 @@ sealed partial class Counter : IReactComponent, IFromJson<Counter>
                 Message = element.TryGetProperty("Message"u8, out var message) ? Serializer.Instantiate<string>(message) : "",
                 Width = element.TryGetProperty("Width"u8, out var width) ? Serializer.Instantiate<LayoutLength>(width) : default,
                 Height = element.TryGetProperty("Height"u8, out var height) ? Serializer.Instantiate<LayoutLength>(height) : default,
-                HorizontalAlignment = element.TryGetProperty("HorizontalAlignment"u8, out var horizontalAlignment) ? Serializer.Instantiate<HorizontalAlignment>(horizontalAlignment) : default,
-                VerticalAlignment = element.TryGetProperty("VerticalAlignment"u8, out var verticalAlignment) ? Serializer.Instantiate<VerticalAlignment>(verticalAlignment) : default,
             };
         }
     }

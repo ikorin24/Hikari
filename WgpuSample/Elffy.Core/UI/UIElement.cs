@@ -12,10 +12,11 @@ public abstract class UIElement : IToJson, IReactive
     private UIModel? _model;
     private UIElement? _parent;
     private readonly UIElementCollection _children;
+    private EventSource<UIModel> _modelAlive;
     private EventSource<UIModel> _modelEarlyUpdate;
     private EventSource<UIModel> _modelUpdate;
     private EventSource<UIModel> _modelLateUpdate;
-    private EventSource<UIModel> _modelAlive;
+    private EventSource<UIModel> _modelDead;
 
     private LayoutLength _width;
     private LayoutLength _height;
@@ -29,6 +30,8 @@ public abstract class UIElement : IToJson, IReactive
     private Brush _borderColor;
 
     private LayoutResult _layoutResult;
+    private bool _isMouseOver;
+    private bool _isMouseOverPrev;
     private NeedToUpdateFlags _needToUpdate;
 
     [Flags]
@@ -43,12 +46,15 @@ public abstract class UIElement : IToJson, IReactive
     {
         public required RectF Rect { get; init; }
         public required Vector4 BorderRadius { get; init; }
+        public required Brush BackgroundColor { get; init; }
+        public required Brush BorderColor { get; init; }
     }
 
     internal Event<UIModel> ModelAlive => _modelAlive.Event;
     internal Event<UIModel> ModelEarlyUpdate => _modelEarlyUpdate.Event;
     internal Event<UIModel> ModelUpdate => _modelUpdate.Event;
     internal Event<UIModel> ModelLateUpdate => _modelLateUpdate.Event;
+    internal Event<UIModel> ModelDead => _modelDead.Event;
 
     public UIElement? Parent => _parent;
     internal UIModel? Model => _model;
@@ -176,8 +182,11 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    private static LayoutLength DefaultWidth => new LayoutLength(100f, LayoutLengthType.Length);
-    private static LayoutLength DefaultHeight => new LayoutLength(100f, LayoutLengthType.Length);
+    protected bool IsMouseOver => _isMouseOver;
+    protected bool IsMouseOverPrev => _isMouseOverPrev;
+
+    private static LayoutLength DefaultWidth => new LayoutLength(1f, LayoutLengthType.Proportion);
+    private static LayoutLength DefaultHeight => new LayoutLength(1f, LayoutLengthType.Proportion);
     private static Thickness DefaultMargin => new Thickness(0f);
     private static Thickness DefaultPadding => new Thickness(0f);
     private static HorizontalAlignment DefaultHorizontalAlignment => HorizontalAlignment.Center;
@@ -300,7 +309,7 @@ public abstract class UIElement : IToJson, IReactive
             : DefaultBorderColor;
 
         // TODO: children
-        throw new NotImplementedException();
+        //throw new NotImplementedException();
         if(element.TryGetProperty("children", out var children)) {
             foreach(var child in children.EnumerateArray()) {
                 var key = child.GetProperty("@key"u8).GetStringNotNull();
@@ -351,14 +360,7 @@ public abstract class UIElement : IToJson, IReactive
             .Subscribe(static model => model.Element._modelLateUpdate.Invoke(model))
             .AddTo(model.Subscriptions);
         model.Dead
-            .Subscribe(static model =>
-            {
-                var self = model.Element;
-                self._modelAlive.Clear();
-                self._modelEarlyUpdate.Clear();
-                self._modelUpdate.Clear();
-                self._modelLateUpdate.Clear();
-            })
+            .Subscribe(static model => model.Element._modelDead.Invoke(model))
             .AddTo(model.Subscriptions);
         _model = model;
         foreach(var child in _children) {
@@ -367,36 +369,50 @@ public abstract class UIElement : IToJson, IReactive
         return model;
     }
 
-    internal void UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea)
+    internal void UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, Mouse mouse)
     {
         bool layoutChanged;
+        //mouse.Position
 
         // 'rect' is top-left based in Screen
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
         // 'rect' is { X = 10, Y = 40, Width = 200, Heigh = 100 }
         RectF rect;
+        Vector4 borderRadius;
         if(parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout)) {
             rect = DecideRect(parentContentArea);
-            _layoutResult = new LayoutResult
-            {
-                Rect = rect,
-                BorderRadius = UILayouter.DecideBorderRadius(_borderRadius, rect.Size),
-            };
+            borderRadius = UILayouter.DecideBorderRadius(_borderRadius, rect.Size);
             _needToUpdate &= ~NeedToUpdateFlags.Layout;
             _needToUpdate |= NeedToUpdateFlags.Material;
             layoutChanged = true;
         }
         else {
             rect = _layoutResult.Rect;
+            borderRadius = _layoutResult.BorderRadius;
             layoutChanged = false;
         }
+
+        // TODO: consider border radius
+        var isMouseOver = rect.Contains(mouse.Position);
+        if(isMouseOver != _isMouseOver) {
+            _needToUpdate |= NeedToUpdateFlags.Material;
+        }
+        _isMouseOverPrev = _isMouseOver;
+        _isMouseOver = isMouseOver;
+        _layoutResult = new LayoutResult
+        {
+            Rect = rect,
+            BorderRadius = borderRadius,
+            BackgroundColor = _backgroundColor,
+            BorderColor = _borderColor,
+        };
         var contentArea = new ContentAreaInfo
         {
             Rect = rect,
             Padding = _padding,
         };
         foreach(var child in _children) {
-            child.UpdateLayout(layoutChanged, contentArea);
+            child.UpdateLayout(layoutChanged, contentArea, mouse);
         }
     }
 
@@ -428,8 +444,10 @@ public abstract class UIElement : IToJson, IReactive
                 ActualBorderWidth = _borderWidth.ToVector4(),
                 ActualBorderRadius = result.BorderRadius,
                 MvpMatrix = uiProjection * modelMatrix,
-                BackgroundColor = _backgroundColor,
-                BorderColor = _borderColor,
+                BackgroundColor = result.BackgroundColor,
+                BorderColor = result.BorderColor,
+                IsMouseOver = _isMouseOver,
+                IsMouseOverPrev = _isMouseOverPrev,
             };
             model.Material.UpdateMaterial(this, a);
             _needToUpdate &= ~NeedToUpdateFlags.Material;
@@ -468,4 +486,6 @@ public readonly ref struct UIUpdateResult
     public required Matrix4 MvpMatrix { get; init; }
     public required Brush BackgroundColor { get; init; }
     public required Brush BorderColor { get; init; }
+    public required bool IsMouseOver { get; init; }
+    public required bool IsMouseOverPrev { get; init; }
 }
