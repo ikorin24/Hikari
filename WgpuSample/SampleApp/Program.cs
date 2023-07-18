@@ -234,9 +234,8 @@ internal class Program
         screen.UITree.RenderRoot($$"""
         {
             "@type": {{typeof(Counter)}},
-            "Width": "800px",
-            "Height": "500px",
-            "Message": "welcome!"
+            "Width": "80%",
+            "Height": "80%"
         }
         """);
     }
@@ -245,9 +244,11 @@ internal class Program
 [ReactComponent]
 public partial class Counter
 {
-    private partial record struct Props(string Message, LayoutLength Width, LayoutLength Height);
+    private partial record struct Props(LayoutLength Width, LayoutLength Height);
+    private int _count;
     private partial ReactBuilder Render()
     {
+        var text = $"click count: {_count}";
         return $$"""
         {
             "@type": "panel",
@@ -258,17 +259,23 @@ public partial class Counter
             "children": [
             {
                 "@type": "button",
+                "@key": "0",
                 "verticalAlignment": "Top",
                 "height": 80,
                 "fontSize": 30,
                 "backgroundColor": "#4f4",
                 "borderRadius": "10px 10px 0px 0px",
-                "text": {{_props.Message}}
+                "text": {{text}}
             },
             {
                 "@type": {{typeof(CountButton)}},
+                "@key": "1",
                 "Width": 550,
-                "Height": 150
+                "Height": 150,
+                "Clicked": {{() =>
+                {
+                    SetState(ref _count, _count + 1);
+                }}}
             }]
         }
         """;
@@ -278,11 +285,9 @@ public partial class Counter
 [ReactComponent]
 public partial class CountButton
 {
-    private partial record struct Props(int Width, int Height);
-    private int _count;
+    private partial record struct Props(int Width, int Height, Action? Clicked);
     private partial ReactBuilder Render()
     {
-        var text = $"click count {_count}";
         return $$"""
         {
             "@type": "button",
@@ -291,12 +296,9 @@ public partial class CountButton
             "borderRadius": {{_props.Height / 2f}},
             "borderColor": "#ff4310",
             "backgroundColor": "#fa5",
-            "text": {{text}},
+            "text": "click me!",
             "fontSize": 30,
-            "clicked": {{() =>
-            {
-                SetState(ref _count, _count + 1);
-            }}}
+            "clicked": {{_props.Clicked}}
         }
         """;
     }
@@ -337,6 +339,11 @@ sealed partial class Counter : IReactComponent, IFromJson<Counter>
 
     ReactSource IReactComponent.GetReactSource() => Render().FixAndClear();
 
+    void IReactComponent.RenderCompleted()
+    {
+        _needsToRerender = false;
+    }
+
     partial record struct Props : IFromJson<Props>
     {
         static Props()
@@ -348,7 +355,7 @@ sealed partial class Counter : IReactComponent, IFromJson<Counter>
         {
             return new()
             {
-                Message = element.TryGetProperty("Message"u8, out var message) ? Serializer.Instantiate<string>(message) : "",
+                //Message = element.TryGetProperty("Message"u8, out var message) ? Serializer.Instantiate<string>(message) : "",
                 Width = element.TryGetProperty("Width"u8, out var width) ? Serializer.Instantiate<LayoutLength>(width) : default,
                 Height = element.TryGetProperty("Height"u8, out var height) ? Serializer.Instantiate<LayoutLength>(height) : default,
             };
@@ -391,6 +398,11 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
 
     ReactSource IReactComponent.GetReactSource() => Render().FixAndClear();
 
+    void IReactComponent.RenderCompleted()
+    {
+        _needsToRerender = false;
+    }
+
     partial record struct Props : IFromJson<Props>
     {
         static Props()
@@ -404,6 +416,9 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
             {
                 Width = element.TryGetProperty("Width", out var width) ? width.GetInt32() : default,
                 Height = element.TryGetProperty("Height", out var height) ? height.GetInt32() : default,
+                Clicked = element.TryGetProperty("Clicked", out var clicked) ?
+                    data.GetDelegate<Action>(clicked) ?? throw new ArgumentNullException("Clicked")
+                    : throw new ArgumentNullException("Clicked"),
             };
         }
     }

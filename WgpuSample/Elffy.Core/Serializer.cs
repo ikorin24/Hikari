@@ -85,25 +85,25 @@ public static class Serializer
         }
     }
 
-    public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlyMemory<byte> utf8Json)
+    public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlyMemory<byte> utf8Json, DeserializeRuntimeData data = default)
     {
         using var doc = JsonDocument.Parse(utf8Json, ParseOptions);
-        return DeserializeCore<T>(doc.RootElement);
+        return DeserializeCore<T>(doc.RootElement, data);
     }
 
-    public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] string json)
+    public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] string json, DeserializeRuntimeData data = default)
     {
         using var doc = JsonDocument.Parse(json, ParseOptions);
-        return DeserializeCore<T>(doc.RootElement);
+        return DeserializeCore<T>(doc.RootElement, data);
     }
 
-    public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlyMemory<char> json)
+    public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlyMemory<char> json, DeserializeRuntimeData data = default)
     {
         using var doc = JsonDocument.Parse(json, ParseOptions);
-        return DeserializeCore<T>(doc.RootElement);
+        return DeserializeCore<T>(doc.RootElement, data);
     }
 
-    internal static object Deserialize(string json, DeserializeRuntimeData data)
+    internal static object Deserialize(string json, DeserializeRuntimeData data = default)
     {
         using var doc = JsonDocument.Parse(json, ParseOptions);
         var rootElement = doc.RootElement;
@@ -114,23 +114,23 @@ public static class Serializer
         };
     }
 
-    public static T Instantiate<T>(JsonElement element)
+    public static T Instantiate<T>(JsonElement element, DeserializeRuntimeData data = default)
     {
-        return DeserializeCore<T>(element);
+        return DeserializeCore<T>(element, data);
     }
 
-    public static object Instantiate(JsonElement element)
+    public static object Instantiate(JsonElement element, DeserializeRuntimeData data = default)
     {
-        return DeserializeCore(element, null);
+        return DeserializeCore(element, null, data);
     }
 
-    public static object Instantiate(JsonElement element, Type type)
+    public static object Instantiate(JsonElement element, Type type, DeserializeRuntimeData data = default)
     {
         ArgumentNullException.ThrowIfNull(type);
-        return DeserializeCore(element, type);
+        return DeserializeCore(element, type, data);
     }
 
-    private static T DeserializeCore<T>(JsonElement element)
+    private static T DeserializeCore<T>(JsonElement element, DeserializeRuntimeData data)
     {
         if(typeof(T) == typeof(string)) { var x = element.GetStringNotNull(); return Unsafe.As<string, T>(ref x); }
         if(typeof(T) == typeof(bool)) { var x = element.GetBoolean(); return Unsafe.As<bool, T>(ref x); }
@@ -180,18 +180,18 @@ public static class Serializer
 
         return element.ValueKind switch
         {
-            JsonValueKind.Array => (T)CreateArray(element, typeof(T)),
+            JsonValueKind.Array => (T)CreateArray(element, typeof(T), data),
             JsonValueKind.Object or
             JsonValueKind.String or
             JsonValueKind.Number or
             JsonValueKind.Null or
             JsonValueKind.True or
-            JsonValueKind.False => (T)GetConstructor(element, typeof(T)).Func(element, DeserializeRuntimeData.None),
+            JsonValueKind.False => (T)GetConstructor(element, typeof(T)).Func(element, data),
             JsonValueKind.Undefined or _ => throw new FormatException("undefined"),
         };
     }
 
-    private static object DeserializeCore(JsonElement element, Type? leftSideType)
+    private static object DeserializeCore(JsonElement element, Type? leftSideType, DeserializeRuntimeData data)
     {
         if(leftSideType == typeof(string)) { return element.GetStringNotNull(); }
         if(leftSideType == typeof(bool)) { return element.GetBoolean(); }
@@ -241,13 +241,16 @@ public static class Serializer
 
         return element.ValueKind switch
         {
-            JsonValueKind.Array => CreateArray(element, leftSideType ?? throw new ArgumentException($"cannot determine type: {element}")),
+            JsonValueKind.Array => CreateArray(
+                element,
+                leftSideType ?? throw new ArgumentException($"cannot determine type: {element}"),
+                data),
             JsonValueKind.Object or
             JsonValueKind.String or
             JsonValueKind.Number or
             JsonValueKind.Null or
             JsonValueKind.True or
-            JsonValueKind.False => GetConstructor(element, leftSideType).Func(element, DeserializeRuntimeData.None),
+            JsonValueKind.False => GetConstructor(element, leftSideType).Func(element, data),
             JsonValueKind.Undefined or _ => throw new FormatException("undefined"),
         };
     }
@@ -299,7 +302,7 @@ public static class Serializer
         }
     }
 
-    private static object CreateArray(JsonElement element, Type leftSideType)
+    private static object CreateArray(JsonElement element, Type leftSideType, DeserializeRuntimeData data)
     {
         Debug.Assert(element.ValueKind == JsonValueKind.Array);
         if(leftSideType.IsSZArray) {
@@ -307,7 +310,7 @@ public static class Serializer
             var array = Array.CreateInstance(childType, element.GetArrayLength());
             var i = 0;
             foreach(var item in element.EnumerateArray()) {
-                array.SetValue(DeserializeCore(item, childType), i);
+                array.SetValue(DeserializeCore(item, childType, data), i);
                 i++;
             }
             return array;

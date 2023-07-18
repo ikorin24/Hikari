@@ -21,10 +21,13 @@ internal static class ReactComponentBuilder
                             component.Apply(model.Element);
                         }
                     });
+                    component.RenderCompleted();
                     return element;
                 }
                 case IReactComponent c: {
-                    return c.Build();
+                    var element = c.Build();
+                    component.RenderCompleted();
+                    return element;
                 }
                 default: {
                     throw new ArgumentException($"invalid object type: {obj.GetType()}");
@@ -38,5 +41,6 @@ internal static class ReactComponentBuilder
         var source = component.GetReactSource();
         using var json = JsonDocument.Parse(source.Str);
         target.ApplyDiff(json.RootElement, source.RuntimeData);
+        component.RenderCompleted();
     }
 }

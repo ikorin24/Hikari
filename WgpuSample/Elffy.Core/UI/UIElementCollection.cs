@@ -12,10 +12,12 @@ namespace Elffy.UI;
 public sealed class UIElementCollection
     : IEnumerable<UIElement>,
       IFromJson<UIElementCollection>,
-      IToJson
+      IToJson,
+      IReactive
 {
     private UIElement? _parent;
     private readonly List<UIElement> _children;
+    private readonly Dictionary<string, DicValue> _dic;
 
     internal UIElement? Parent
     {
@@ -46,20 +48,13 @@ public sealed class UIElementCollection
     public UIElementCollection()
     {
         _children = new List<UIElement>();
+        _dic = new Dictionary<string, DicValue>();
     }
 
-    private UIElementCollection(List<UIElement> inner)
+    private UIElementCollection(List<UIElement> inner, Dictionary<string, DicValue> dic)
     {
         _children = inner;
-    }
-
-    internal UIElementCollection(ReadOnlySpan<UIElement> elements)
-    {
-        _children = new List<UIElement>(elements.Length);
-        foreach(var element in elements) {
-            ArgumentNullException.ThrowIfNull(element);
-            _children.Add(element);
-        }
+        _dic = dic;
     }
 
     public void Add(UIElement element)
@@ -93,16 +88,20 @@ public sealed class UIElementCollection
     public static UIElementCollection FromJson(JsonElement element, in DeserializeRuntimeData data)
     {
         var list = new List<UIElement>(element.GetArrayLength());
+        var dic = new Dictionary<string, DicValue>();
         foreach(var item in element.EnumerateArray()) {
-            var child = Serializer.Instantiate(item);
+            var child = Serializer.Instantiate(item, data);
+            //dic.Add(item.GetProperty("@key").GetStringNotNull(), child);
             switch(child) {
                 case UIElement uiElement: {
                     list.Add(uiElement);
+                    dic.Add(item.GetProperty("@key").GetStringNotNull(), new DicValue(uiElement));
                     break;
                 }
                 case IReactComponent component: {
                     var uiElement = component.Build();
                     list.Add(uiElement);
+                    dic.Add(item.GetProperty("@key").GetStringNotNull(), new DicValue(component));
                     break;
                 }
                 default: {
@@ -110,7 +109,7 @@ public sealed class UIElementCollection
                 }
             }
         }
-        return new UIElementCollection(list);
+        return new UIElementCollection(list, dic);
     }
 
     public JsonNode? ToJson()
@@ -121,5 +120,37 @@ public sealed class UIElementCollection
             array.Add(child.ToJson());
         }
         return array;
+    }
+
+    void IReactive.ApplyDiff(JsonElement element, in DeserializeRuntimeData data)
+    {
+        throw new NotImplementedException();
+    }
+
+    private readonly struct DicValue : IEquatable<DicValue>
+    {
+        private readonly bool _isUIElement;
+        private readonly object _object;
+
+        public DicValue(UIElement uIElement)
+        {
+            _isUIElement = true;
+            _object = uIElement;
+        }
+
+        public DicValue(IReactComponent component)
+        {
+            _isUIElement = false;
+            _object = component;
+        }
+
+        public override bool Equals(object? obj) => obj is DicValue value && Equals(value);
+
+        public bool Equals(DicValue other)
+        {
+            return _isUIElement == other._isUIElement && ReferenceEquals(_object, other._object);
+        }
+
+        public override int GetHashCode() => HashCode.Combine(_isUIElement, _object);
     }
 }

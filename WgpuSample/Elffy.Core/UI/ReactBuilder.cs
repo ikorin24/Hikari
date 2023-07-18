@@ -12,7 +12,7 @@ namespace Elffy.UI;
 public ref struct ReactBuilder
 {
     private DefaultInterpolatedStringHandler _handler;
-    private List<Delegate>? _delegates;
+    private List<Delegate?>? _delegates;
     private int _delegateIndex;
     private readonly bool _isReadOnly;
 
@@ -55,20 +55,18 @@ public ref struct ReactBuilder
         _handler.AppendLiteral("\"");
     }
 
-    public void AppendFormatted(Action action)
+    public void AppendFormatted(Action? action)
     {
         ThrowIfReadOnly();
-        ArgumentNullException.ThrowIfNull(action);
-        _delegates ??= new List<Delegate>();
+        _delegates ??= new List<Delegate?>();
         _delegates.Add(action);
         _handler.AppendFormatted(_delegateIndex++);
     }
 
-    public void AppendFormatted<T>(Action<T> action)
+    public void AppendFormatted<T>(Action<T>? action)
     {
         ThrowIfReadOnly();
-        ArgumentNullException.ThrowIfNull(action);
-        _delegates ??= new List<Delegate>();
+        _delegates ??= new List<Delegate?>();
         _delegates.Add(action);
         _handler.AppendFormatted(_delegateIndex++);
     }
@@ -145,7 +143,7 @@ public ref struct ReactBuilder
         _handler.AppendLiteral("\"");
     }
 
-    public void AppendFormatted<T>(T value) where T : IToJson
+    public void AppendFormatted<T>(T value, JsonMarker _ = default) where T : IToJson
     {
         ThrowIfReadOnly();
         var json = value.ToJson();
@@ -162,7 +160,9 @@ public ref struct ReactBuilder
     }
 
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public struct EnumMarker { }
+    public record struct EnumMarker;
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public record struct JsonMarker;
 
     public ReactSource FixAndClear()
     {
@@ -215,6 +215,11 @@ internal sealed class FixedReactComponent : IReactComponent
     }
 
     public ReactSource GetReactSource() => _source;
+
+    public void RenderCompleted()
+    {
+        // nop
+    }
 }
 
 [global::System.Diagnostics.Conditional("COMPILE_TIME_ONLY")]
@@ -230,25 +235,25 @@ public interface IReactComponent
 {
     bool NeedsToRerender { get; }
     ReactSource GetReactSource();
+    void RenderCompleted();
 }
 
 public readonly struct DeserializeRuntimeData : IEquatable<DeserializeRuntimeData>
 {
-    private readonly List<Delegate>? _delegates;
+    private readonly List<Delegate?>? _delegates;
 
     public static DeserializeRuntimeData None => default;
 
-    internal DeserializeRuntimeData(List<Delegate>? delegates)
+    internal DeserializeRuntimeData(List<Delegate?>? delegates)
     {
         _delegates = delegates;
     }
 
-    internal void Deconstruct(out List<Delegate>? delegates, out int delegateIndex)
+    internal void Deconstruct(out List<Delegate?>? delegates, out int delegateIndex)
     {
         delegates = _delegates;
         delegateIndex = delegates?.Count ?? 0;
     }
-
 
     public EventSubscription<T> AddEventHandler<T>(Event<T> targetEvent, JsonElement handler)
     {
@@ -258,9 +263,15 @@ public readonly struct DeserializeRuntimeData : IEquatable<DeserializeRuntimeDat
         {
             Action<T> action => targetEvent.Subscribe(action),
             Action action => targetEvent.Subscribe(_ => action()),
-            null => throw new FormatException("no event handler"),
+            null => EventSubscription<T>.None,
             _ => throw new FormatException($"event handler type should be {typeof(Action<T>).FullName} or {typeof(Action).FullName}"),
         };
+    }
+
+    public T? GetDelegate<T>(JsonElement handler) where T : Delegate
+    {
+        var key = handler.GetInt32();
+        return (T?)GetDelegate(key);
     }
 
     private Delegate? GetDelegate(int key)

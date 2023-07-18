@@ -309,14 +309,13 @@ public abstract class UIElement : IToJson, IReactive
             : DefaultBorderColor;
 
         // TODO: children
-        //throw new NotImplementedException();
+        throw new NotImplementedException();
         if(element.TryGetProperty("children", out var children)) {
             foreach(var child in children.EnumerateArray()) {
                 var key = child.GetProperty("@key"u8).GetStringNotNull();
             }
         }
         else {
-
         }
     }
 
