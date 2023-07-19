@@ -30,10 +30,13 @@ public sealed class Operations
         _threadId = ThreadId.CurrentThread();
     }
 
-    internal void DisposeInternal()
+    internal void OnClosed()
     {
-        // TODO:
-
+        Debug.Assert(_threadId.IsCurrentThread);
+        foreach(var op in _list.AsSpan()) {
+            op.Terminate();
+        }
+        ApplyRemove();
     }
 
     internal void FrameInit()
@@ -128,6 +131,12 @@ public sealed class Operations
         finally {
             tmp.Dispose();
         }
+
+        foreach(var op in _list.AsSpan()) {
+            if(op is ILazyApplyList laop) {
+                laop.ApplyAdd();
+            }
+        }
     }
 
     internal void Remove(Operation operation)
@@ -141,6 +150,13 @@ public sealed class Operations
     internal void ApplyRemove()
     {
         Debug.Assert(_threadId.IsCurrentThread);
+
+        foreach(var op in _list.AsSpan()) {
+            if(op is ILazyApplyList laop) {
+                laop.ApplyRemove();
+            }
+        }
+
         // To avoid deadlock, copy the removed list to a local variable and remove it from the '_list'.
         // This is because the user can call the 'Remove' method during the Dead event of the removed object.
         RefTypeRentMemory<Operation> tmp;

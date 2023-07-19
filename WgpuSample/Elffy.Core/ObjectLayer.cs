@@ -7,7 +7,8 @@ using System.Diagnostics;
 namespace Elffy;
 
 public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
-    : RenderOperation<TSelf, TShader, TMaterial>
+    : RenderOperation<TSelf, TShader, TMaterial>,
+      ILazyApplyList
     where TSelf : ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     where TVertex : unmanaged, IVertex
     where TShader : Shader<TShader, TMaterial, TSelf>
@@ -31,8 +32,8 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         EarlyUpdate.Subscribe(static self => ((TSelf)self).OnEarlyUpdate());
         Update.Subscribe(static self => ((TSelf)self).OnUpdate());
         LateUpdate.Subscribe(static self => ((TSelf)self).OnLateUpdate());
-        FrameInit.Subscribe(static self => ((TSelf)self).ApplyAdd());
-        FrameEnd.Subscribe(static self => ((TSelf)self).ApplyRemove());
+        FrameInit.Subscribe(static self => ((TSelf)self).OnFrameInit());
+        FrameEnd.Subscribe(static self => ((TSelf)self).OnFrameEnd());
 
         Terminated.Subscribe(static self =>
         {
@@ -49,8 +50,8 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     private void OnTerminated()
     {
         Debug.Assert(_threadId.IsCurrentThread);
-        lock(_sync) {
-            _removedList.AddRange(_list.AsSpan());
+        foreach(var obj in _list.AsSpan()) {
+            obj.Terminate();
         }
     }
 
@@ -70,7 +71,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         }
     }
 
-    private void ApplyAdd()
+    internal void ApplyAdd()
     {
         Debug.Assert(_threadId.IsCurrentThread);
 
@@ -103,7 +104,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         }
     }
 
-    private void ApplyRemove()
+    internal void ApplyRemove()
     {
         Debug.Assert(_threadId.IsCurrentThread);
 
@@ -148,6 +149,12 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         }
     }
 
+    private void OnFrameInit()
+    {
+        Debug.Assert(_threadId.IsCurrentThread);
+        ApplyAdd();
+    }
+
     private void OnEarlyUpdate()
     {
         Debug.Assert(_threadId.IsCurrentThread);
@@ -174,4 +181,20 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
             obj.InvokeUpdate();
         }
     }
+
+    private void OnFrameEnd()
+    {
+        Debug.Assert(_threadId.IsCurrentThread);
+        ApplyRemove();
+    }
+
+    void ILazyApplyList.ApplyAdd() => ApplyAdd();
+
+    void ILazyApplyList.ApplyRemove() => ApplyRemove();
+}
+
+internal interface ILazyApplyList
+{
+    void ApplyAdd();
+    void ApplyRemove();
 }

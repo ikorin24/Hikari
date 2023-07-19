@@ -4,6 +4,7 @@ using Elffy.UI;
 using System;
 using System.Buffers;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -30,8 +31,30 @@ public sealed class Screen
     private ulong _frameNum;
     private readonly Operations _operations;
     private readonly UITree _uiTree;
-    private bool _isCloseRequested;
+    private RunningState _state;
+    private EventSource<ScreenClosingState> _closing;
     private EventSource<(Screen Screen, Vector2u Size)> _resized;
+
+    internal enum RunningState
+    {
+        Running = 0,
+        CloseRequested = 1,
+        Closed = 2,
+    }
+
+    internal RunningState State
+    {
+        get
+        {
+            if(_mainThread.IsCurrentThread == false) {
+                Throw();
+                [DoesNotReturn] static void Throw() => throw new InvalidOperationException("this property should be only main thread.");
+            }
+            return _state;
+        }
+    }
+
+    public Event<ScreenClosingState> Closing => _closing.Event;
 
     public Event<(Screen Screen, Vector2u Size)> Resized => _resized.Event;
 
@@ -128,6 +151,7 @@ public sealed class Screen
     {
         _native = screen;
         _mainThread = mainThread;
+        _state = RunningState.Running;
         _subscriptions = new SubscriptionBag();
         _operations = new Operations(this);
         _uiTree = new UITree(this);
@@ -144,9 +168,26 @@ public sealed class Screen
         }, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
     }
 
-    public void Close()
+    public void RequestClose()
     {
-        _isCloseRequested = true;
+        if(_mainThread.IsCurrentThread) {
+            Close(this);
+        }
+        else {
+            _update.Post(static x =>
+            {
+                var self = SafeCast.NotNullAs<Screen>(x);
+                Close(self);
+            }, this);
+        }
+
+        static void Close(Screen self)
+        {
+            Debug.Assert(self._mainThread.IsCurrentThread);
+            if(self._state == RunningState.Running) {
+                self._state = RunningState.CloseRequested;
+            }
+        }
     }
 
     public Vector2i GetLocation(MonitorId? monitorId = null)
@@ -211,15 +252,21 @@ public sealed class Screen
         _native.Unwrap().AsRef().ScreenRequestRedraw();
     }
 
-    internal unsafe bool OnRedrawRequested()
+    internal bool OnRedrawRequested()
     {
+        Debug.Assert(_mainThread.IsCurrentThread);
         var surfaceData = AsRefChecked().GetSurfaceTexture();
         if(surfaceData.IsSome(out var surface, out var surfaceView)) {
             try {
                 Render(surfaceView);
-                var isCloseRequested = _isCloseRequested;
-                _isCloseRequested = false;
-                return !isCloseRequested;
+                var state = _state;
+                Debug.Assert(state is RunningState.Running or RunningState.CloseRequested);
+                return state switch
+                {
+                    RunningState.Running => true,
+                    RunningState.CloseRequested => false,
+                    _ => throw new UnreachableException($"current state: {state}"),
+                };
             }
             finally {
                 surface.PresentSurfaceTexture();
@@ -233,6 +280,7 @@ public sealed class Screen
 
     private void Render(Rust.Ref<Wgpu.TextureView> surfaceView)
     {
+        Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
         var operations = _operations;
         _mouse.InitFrame();
 
@@ -262,6 +310,8 @@ public sealed class Screen
 
         operations.ApplyRemove();
         _keyboard.PrepareNextFrame();
+
+        Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
     }
 
     internal void OnResized(uint width, uint height)
@@ -281,12 +331,32 @@ public sealed class Screen
 
     internal void OnClosing(ref bool cancel)
     {
+        Debug.Assert(_mainThread.IsCurrentThread);
+        Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
+
+        if(_state == RunningState.Running) {
+            // This is the case that users pressed the close button of a window.
+            _state = RunningState.CloseRequested;
+        }
+
+        Debug.Assert(_state == RunningState.CloseRequested);
+        var arg = new ScreenClosingState(this);
+        _closing.Invoke(arg);
+        if(arg.IsCanceled) {
+            cancel = true;
+            _state = RunningState.Running;
+        }
+        else {
+            cancel = false;
+            _state = RunningState.Closed;
+        }
     }
 
     internal Rust.OptionBox<CE.HostScreen> OnClosed()
     {
+        _operations.OnClosed();
+
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
-        _operations.DisposeInternal();
         _camera.DisposeInternal();
         _depthTexture.Dispose();
         _depthTexture = Own<Texture>.None;
@@ -315,6 +385,26 @@ public sealed class Screen
     private struct ScreenInfo
     {
         public Vector2u Size;
+    }
+}
+
+public sealed class ScreenClosingState
+{
+    private readonly Screen _screen;
+    private bool _isCanceled;
+
+    public Screen Screen => _screen;
+    public bool IsCanceled => _isCanceled;
+
+    internal ScreenClosingState(Screen screen)
+    {
+        _screen = screen;
+        _isCanceled = false;
+    }
+
+    public void Cancel()
+    {
+        _isCanceled = true;
     }
 }
 
