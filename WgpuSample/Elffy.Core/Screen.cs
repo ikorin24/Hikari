@@ -33,6 +33,7 @@ public sealed class Screen
     private readonly UITree _uiTree;
     private RunningState _state;
     private EventSource<ScreenClosingState> _closing;
+    private EventSource<Screen> _closed;
     private EventSource<(Screen Screen, Vector2u Size)> _resized;
 
     internal enum RunningState
@@ -55,7 +56,7 @@ public sealed class Screen
     }
 
     public Event<ScreenClosingState> Closing => _closing.Event;
-
+    public Event<Screen> Closed => _closed.Event;
     public Event<(Screen Screen, Vector2u Size)> Resized => _resized.Event;
 
     internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
@@ -355,8 +356,10 @@ public sealed class Screen
     internal Rust.OptionBox<CE.HostScreen> OnClosed()
     {
         _operations.OnClosed();
+        _closed.Invoke(this);
 
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
+        _closed.Clear();
         _camera.DisposeInternal();
         _depthTexture.Dispose();
         _depthTexture = Own<Texture>.None;
