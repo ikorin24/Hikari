@@ -8,6 +8,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
+using Cysharp.Threading.Tasks;
+using System.Threading.Tasks;
 
 namespace SampleApp;
 
@@ -31,41 +33,41 @@ internal class Program
 
     private static void OnInitialized_(Screen screen)
     {
-        var panel = Serializer.Deserialize<Panel>("""
-        {
-            "@type": "panel",
-            "width": "80%",
-            "height": "80%",
-            "horizontalAlignment": "Center",
-            "padding": "10px 80px",
-            "backgroundColor": "#003388",
-            "borderWidth": "1px",
-            "borderColor": "#fff",
-            "borderRadius": 120,
-            "children":
-            [{
-                "@type": "button",
-                "horizontalAlignment": "Center",
-                "backgroundColor": "#FF7044",
-                "width": 250,
-                "height": 70,
-                "borderWidth": 0,
-                //"borderColor": "#0000",
-                "borderRadius": 35,
-                "fontSize": "35px",
-                "text": "click me!"
-            }
-            //,
-            //{
-            //    "@type": "button",
-            //    "width": 80,
-            //    "height": 100,
-            //    "borderWidth": 1,
-            //    "backgroundColor": "#9622FF"
-            //}
-            ]
-        }
-        """);
+        //var panel = Serializer.Deserialize<Panel>("""
+        //{
+        //    "@type": "panel",
+        //    "width": "80%",
+        //    "height": "80%",
+        //    "horizontalAlignment": "Center",
+        //    "padding": "10px 80px",
+        //    "backgroundColor": "#003388",
+        //    "borderWidth": "1px",
+        //    "borderColor": "#fff",
+        //    "borderRadius": 120,
+        //    "children":
+        //    [{
+        //        "@type": "button",
+        //        "horizontalAlignment": "Center",
+        //        "backgroundColor": "#FF7044",
+        //        "width": 250,
+        //        "height": 70,
+        //        "borderWidth": 0,
+        //        //"borderColor": "#0000",
+        //        "borderRadius": 35,
+        //        "fontSize": "35px",
+        //        "text": "click me!"
+        //    }
+        //    //,
+        //    //{
+        //    //    "@type": "button",
+        //    //    "width": 80,
+        //    //    "height": 100,
+        //    //    "borderWidth": 1,
+        //    //    "backgroundColor": "#9622FF"
+        //    //}
+        //    ]
+        //}
+        //""");
         //screen.UIDocument.SetRoot(panel);
 
         //screen.Update.Subscribe(screen =>
@@ -196,7 +198,6 @@ internal class Program
         var posChanged = false;
         if(mouse.IsPressed(MouseButton.Left)) {
             var vec = mouse.PositionDelta * (MathTool.PiOver180 * 0.5f);
-            //vec.Y = 0;
             cameraPos = CalcCameraPosition(cameraPos, target, vec.X, vec.Y);
             posChanged = true;
         }
