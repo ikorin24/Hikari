@@ -193,7 +193,12 @@ public readonly struct ReactSource : IEquatable<ReactSource>
 
     internal object Deserialize()
     {
-        return Serializer.Deserialize(_str ?? "", _data);
+        return Serializer.Deserialize(Str, _data);
+    }
+
+    internal JsonDocument Parse()
+    {
+        return JsonDocument.Parse(Str, Serializer.ParseOptions);
     }
 
     public override bool Equals(object? obj) => obj is ReactSource source && Equals(source);

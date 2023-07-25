@@ -24,7 +24,7 @@ public static class Serializer
         ["panel"] = typeof(Panel),
     };
 
-    private static JsonDocumentOptions ParseOptions => new JsonDocumentOptions
+    internal static JsonDocumentOptions ParseOptions => new JsonDocumentOptions
     {
         AllowTrailingCommas = true,
         CommentHandling = JsonCommentHandling.Skip,
@@ -128,6 +128,26 @@ public static class Serializer
     {
         ArgumentNullException.ThrowIfNull(type);
         return DeserializeCore(element, type, data);
+    }
+
+    internal static Type GetTypeFromTypeName(string typename)
+    {
+        if(TryGetTypeFromTypeName(typename, out var type) == false) {
+            throw new ArgumentException($"invalid type: {typename}");
+        }
+        return type;
+    }
+
+    internal static bool TryGetTypeFromTypeName(string typename, [MaybeNullWhen(false)] out Type type)
+    {
+        if(_shortNames.TryGetValue(typename, out type)) {
+            return true;
+        }
+        else if(FindCtorFromName(typename, out var ctor)) {
+            type = ctor.Type;
+            return true;
+        }
+        return false;
     }
 
     private static T DeserializeCore<T>(JsonElement element, DeserializeRuntimeData data)
