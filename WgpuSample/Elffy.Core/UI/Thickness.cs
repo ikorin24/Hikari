@@ -69,7 +69,7 @@ public readonly struct Thickness
 
     public override int GetHashCode() => HashCode.Combine(Left, Top, Right, Bottom);
 
-    public static Thickness FromJson(JsonElement element, in DeserializeRuntimeData data)
+    public static Thickness FromJson(in ReactSource source)
     {
         // 10
         // "10px"
@@ -77,12 +77,12 @@ public readonly struct Thickness
         // "10px 10px 10px"
         // "10px 10px 10px 10px"
 
-        switch(element.ValueKind) {
+        switch(source.ValueKind) {
             case JsonValueKind.Number: {
-                return new Thickness(element.GetSingle());
+                return new Thickness(source.GetNumber<float>());
             }
             case JsonValueKind.String: {
-                var str = element.GetStringNotNull();
+                var str = source.GetStringNotNull();
                 var splits = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 return splits switch
                 {
@@ -94,7 +94,8 @@ public readonly struct Thickness
                 };
             }
             default: {
-                throw new FormatException(element.ToString());
+                source.ThrowInvalidFormat();
+                return default;
             }
         }
 

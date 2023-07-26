@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using System;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -47,17 +46,18 @@ public sealed class Brush
         return new Brush(color);
     }
 
-    public static Brush FromJson(JsonElement element, in DeserializeRuntimeData data)
+    public static Brush FromJson(in ReactSource source)
     {
         // "#ffee23"
         // "red"
-        switch(element.ValueKind) {
+        switch(source.ValueKind) {
             case JsonValueKind.String: {
-                var color = ExternalConstructor.Color4FromJson(element, data);
+                var color = ExternalConstructor.Color4FromJson(source);
                 return Solid(color);
             }
             default: {
-                throw new FormatException($"invalid format: {element}");
+                source.ThrowInvalidFormat();
+                return default;
             }
         }
     }

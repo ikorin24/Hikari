@@ -245,21 +245,24 @@ internal class Program
 [ReactComponent]
 public partial class Counter
 {
-    private partial record struct Props(LayoutLength Width, LayoutLength Height);
+    private partial record struct Props(
+        LayoutLength Width,
+        LayoutLength Height
+    );
     private int _count;
-    private partial ReactBuilder Render()
+    private partial ReactBuilder Render(in Props props)
     {
         var text = $"click count: {_count}";
         return $$"""
         {
-            "@type": "panel",
-            "width": {{_props.Width}},
-            "height": {{_props.Height}},
+            "@type": {{typeof(Panel)}},
+            "width": {{props.Width}},
+            "height": {{props.Height}},
             "backgroundColor": "#fff",
             "borderRadius": "10px",
             "children": [
             {
-                "@type": "button",
+                "@type": {{typeof(Button)}},
                 "@key": "0",
                 "verticalAlignment": "Top",
                 "height": 80,
@@ -273,7 +276,7 @@ public partial class Counter
                 "@key": "1",
                 "Width": 550,
                 "Height": 150,
-                "Clicked": {{() =>
+                "Clicked": {{(Button _) =>
                 {
                     SetState(ref _count, _count + 1);
                 }}}
@@ -286,30 +289,32 @@ public partial class Counter
 [ReactComponent]
 public partial class CountButton
 {
-    private partial record struct Props(int Width, int Height, Action? Clicked);
-    private partial ReactBuilder Render()
+    private partial record struct Props(int Width, int Height, Action<Button> Clicked);
+    private partial ReactBuilder Render(in Props props)
     {
         return $$"""
         {
-            "@type": "button",
-            "width": {{_props.Width}},
-            "height": {{_props.Height}},
-            "borderRadius": {{_props.Height / 2f}},
+            "@type": {{typeof(Button)}},
+            "width": {{props.Width}},
+            "height": {{props.Height}},
+            "borderRadius": {{props.Height / 2f}},
             "borderColor": "#ff4310",
             "backgroundColor": "#fa5",
             "text": "click me!",
             "fontSize": 30,
-            "clicked": {{_props.Clicked}}
+            "clicked": {{props.Clicked}}
         }
         """;
     }
 }
 
-sealed partial class Counter : IReactComponent, IFromJson<Counter>
+sealed partial class Counter
+    : IReactComponent,
+      IFromJson<Counter>
 {
-    partial record struct Props;
+    readonly partial record struct Props;
 
-    private readonly Props _props;
+    private Props __p;
     private bool _needsToRerender;
 
     static Counter()
@@ -319,12 +324,12 @@ sealed partial class Counter : IReactComponent, IFromJson<Counter>
 
     private Counter(Props props)
     {
-        _props = props;
+        __p = props;
     }
 
     bool IReactComponent.NeedsToRerender => _needsToRerender;
 
-    private partial ReactBuilder Render();
+    private partial ReactBuilder Render(in Props props);
 
     private void SetState<T>(ref T state, in T newValue)
     {
@@ -332,17 +337,23 @@ sealed partial class Counter : IReactComponent, IFromJson<Counter>
         _needsToRerender = true;
     }
 
-    public static Counter FromJson(JsonElement element, in DeserializeRuntimeData data)
+    public static Counter FromJson(in ReactSource source)
     {
-        var props = Props.FromJson(element, data);
+        var props = Props.FromJson(source);
         return new Counter(props);
     }
 
-    ReactSource IReactComponent.GetReactSource() => Render().FixAndClear();
+    ReactSource IReactComponent.GetReactSource() => Render(__p).FixAndClear();
 
     void IReactComponent.RenderCompleted()
     {
         _needsToRerender = false;
+    }
+
+    void IReactive.ApplyDiff(ReactSource source)
+    {
+        __p = Props.FromJson(source);
+        _needsToRerender = true;
     }
 
     partial record struct Props : IFromJson<Props>
@@ -352,13 +363,13 @@ sealed partial class Counter : IReactComponent, IFromJson<Counter>
             Serializer.RegisterConstructor(FromJson);
         }
 
-        public static Props FromJson(JsonElement element, in DeserializeRuntimeData data)
+        public static Props FromJson(in ReactSource source)
         {
             return new()
             {
                 //Message = element.TryGetProperty("Message"u8, out var message) ? Serializer.Instantiate<string>(message) : "",
-                Width = element.TryGetProperty("Width"u8, out var width) ? Serializer.Instantiate<LayoutLength>(width) : default,
-                Height = element.TryGetProperty("Height"u8, out var height) ? Serializer.Instantiate<LayoutLength>(height) : default,
+                Width = source.TryGetProperty("Width", out var width) ? width.Instantiate<LayoutLength>() : default,
+                Height = source.TryGetProperty("Height", out var height) ? height.Instantiate<LayoutLength>() : default,
             };
         }
     }
@@ -366,9 +377,9 @@ sealed partial class Counter : IReactComponent, IFromJson<Counter>
 
 sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
 {
-    partial record struct Props;
+    readonly partial record struct Props;
 
-    private readonly Props _props;
+    private Props __p;
     private bool _needsToRerender;
 
     static CountButton()
@@ -378,12 +389,12 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
 
     private CountButton(Props props)
     {
-        _props = props;
+        __p = props;
     }
 
     bool IReactComponent.NeedsToRerender => _needsToRerender;
 
-    private partial ReactBuilder Render();
+    private partial ReactBuilder Render(in Props props);
 
     private void SetState<T>(ref T state, in T newValue)
     {
@@ -391,17 +402,23 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
         _needsToRerender = true;
     }
 
-    public static CountButton FromJson(JsonElement element, in DeserializeRuntimeData data)
+    public static CountButton FromJson(in ReactSource source)
     {
-        var props = Props.FromJson(element, data);
+        var props = Props.FromJson(source);
         return new CountButton(props);
     }
 
-    ReactSource IReactComponent.GetReactSource() => Render().FixAndClear();
+    ReactSource IReactComponent.GetReactSource() => Render(__p).FixAndClear();
 
     void IReactComponent.RenderCompleted()
     {
         _needsToRerender = false;
+    }
+
+    void IReactive.ApplyDiff(ReactSource source)
+    {
+        __p = Props.FromJson(source);
+        _needsToRerender = true;
     }
 
     partial record struct Props : IFromJson<Props>
@@ -411,15 +428,13 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
             Serializer.RegisterConstructor(FromJson);
         }
 
-        public static Props FromJson(JsonElement element, in DeserializeRuntimeData data)
+        public static Props FromJson(in ReactSource source)
         {
             return new()
             {
-                Width = element.TryGetProperty("Width", out var width) ? width.GetInt32() : default,
-                Height = element.TryGetProperty("Height", out var height) ? height.GetInt32() : default,
-                Clicked = element.TryGetProperty("Clicked", out var clicked) ?
-                    data.GetDelegate<Action>(clicked) ?? throw new ArgumentNullException("Clicked")
-                    : throw new ArgumentNullException("Clicked"),
+                Width = source.TryGetProperty("Width", out var width) ? width.Instantiate<int>() : default,
+                Height = source.TryGetProperty("Height", out var height) ? height.Instantiate<int>() : default,
+                Clicked = source.TryGetProperty("Clicked", out var clicked) ? clicked.Instantiate<Action<Button>>() : throw new ArgumentNullException("Clicked"),
             };
         }
     }

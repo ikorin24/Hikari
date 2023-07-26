@@ -74,14 +74,14 @@ public readonly struct CornerRadius
         return HashCode.Combine(TopLeft, TopRight, BottomRight, BottomLeft);
     }
 
-    public static CornerRadius FromJson(JsonElement element, in DeserializeRuntimeData data)
+    public static CornerRadius FromJson(in ReactSource source)
     {
-        switch(element.ValueKind) {
+        switch(source.ValueKind) {
             case JsonValueKind.Number: {
-                return new CornerRadius(element.GetSingle());
+                return new CornerRadius(source.GetNumber<float>());
             }
             case JsonValueKind.String: {
-                var str = element.GetStringNotNull();
+                var str = source.GetStringNotNull();
                 var splits = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 return splits switch
                 {
@@ -93,7 +93,8 @@ public readonly struct CornerRadius
                 };
             }
             default: {
-                throw new FormatException(element.ToString());
+                source.ThrowInvalidFormat();
+                return default;
             }
         }
 

@@ -2,7 +2,6 @@
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
@@ -213,40 +212,40 @@ public abstract class UIElement : IToJson, IReactive
         _needToUpdate = NeedToUpdateFlags.Material | NeedToUpdateFlags.Layout;
     }
 
-    protected UIElement(JsonElement element, in DeserializeRuntimeData data) : this()
+    protected UIElement(in ReactSource source) : this()
     {
-        if(element.TryGetProperty("width", out var width)) {
-            _width = LayoutLength.FromJson(width, data);
+        if(source.TryGetProperty("width", out var width)) {
+            _width = LayoutLength.FromJson(width);
         }
-        if(element.TryGetProperty("height", out var height)) {
-            _height = LayoutLength.FromJson(height, data);
+        if(source.TryGetProperty("height", out var height)) {
+            _height = LayoutLength.FromJson(height);
         }
-        if(element.TryGetProperty("margin", out var margin)) {
-            _margin = Thickness.FromJson(margin, data);
+        if(source.TryGetProperty("margin", out var margin)) {
+            _margin = Thickness.FromJson(margin);
         }
-        if(element.TryGetProperty("padding", out var padding)) {
-            _padding = Thickness.FromJson(padding, data);
+        if(source.TryGetProperty("padding", out var padding)) {
+            _padding = Thickness.FromJson(padding);
         }
-        if(element.TryGetProperty("horizontalAlignment", out var horizontalAlignment)) {
-            _horizontalAlignment = Enum.Parse<HorizontalAlignment>(horizontalAlignment.GetStringNotNull());
+        if(source.TryGetProperty("horizontalAlignment", out var horizontalAlignment)) {
+            _horizontalAlignment = horizontalAlignment.ToEnum<HorizontalAlignment>();
         }
-        if(element.TryGetProperty("verticalAlignment", out var verticalAlignment)) {
-            _verticalAlignment = Enum.Parse<VerticalAlignment>(verticalAlignment.GetStringNotNull());
+        if(source.TryGetProperty("verticalAlignment", out var verticalAlignment)) {
+            _verticalAlignment = verticalAlignment.ToEnum<VerticalAlignment>();
         }
-        if(element.TryGetProperty("backgroundColor", out var backgroundColor)) {
-            _backgroundColor = Brush.FromJson(backgroundColor, data);
+        if(source.TryGetProperty("backgroundColor", out var backgroundColor)) {
+            _backgroundColor = Brush.FromJson(backgroundColor);
         }
-        if(element.TryGetProperty("borderWidth", out var borderWidth)) {
-            _borderWidth = Thickness.FromJson(borderWidth, data);
+        if(source.TryGetProperty("borderWidth", out var borderWidth)) {
+            _borderWidth = Thickness.FromJson(borderWidth);
         }
-        if(element.TryGetProperty("borderRadius", out var borderRadius)) {
-            _borderRadius = CornerRadius.FromJson(borderRadius, data);
+        if(source.TryGetProperty("borderRadius", out var borderRadius)) {
+            _borderRadius = CornerRadius.FromJson(borderRadius);
         }
-        if(element.TryGetProperty("borderColor", out var borderColor)) {
-            _borderColor = Brush.FromJson(borderColor, data);
+        if(source.TryGetProperty("borderColor", out var borderColor)) {
+            _borderColor = Brush.FromJson(borderColor);
         }
-        if(element.TryGetProperty("children", out var children)) {
-            Children = UIElementCollection.FromJson(children, data);
+        if(source.TryGetProperty("children", out var children)) {
+            Children = UIElementCollection.FromJson(children);
         }
     }
 
@@ -270,53 +269,46 @@ public abstract class UIElement : IToJson, IReactive
         return obj;
     }
 
-    void IReactive.ApplyDiff(JsonElement element, in DeserializeRuntimeData data)
+    void IReactive.ApplyDiff(ReactSource source)
     {
-        ApplyDiffProtected(element, data);
+        ApplyDiffProtected(source);
     }
 
-    protected virtual void ApplyDiffProtected(JsonElement element, in DeserializeRuntimeData data)
+    protected virtual void ApplyDiffProtected(ReactSource source)
     {
-        Width = element.TryGetProperty("width", out var width)
-            ? LayoutLength.FromJson(width, data)
-            : DefaultWidth;
-        Height = element.TryGetProperty("height", out var height)
-            ? LayoutLength.FromJson(height, data)
-            : DefaultHeight;
-        Margin = element.TryGetProperty("margin", out var margin)
-            ? Thickness.FromJson(margin, data)
-            : DefaultMargin;
-        Padding = element.TryGetProperty("padding", out var padding)
-            ? Thickness.FromJson(padding, data)
-            : DefaultPadding;
-        HorizontalAlignment = element.TryGetProperty("horizontalAlignment", out var horizontalAlignment)
-            ? Enum.Parse<HorizontalAlignment>(horizontalAlignment.GetStringNotNull())
-            : DefaultHorizontalAlignment;
-        VerticalAlignment = element.TryGetProperty("verticalAlignment", out var verticalAlignment)
-            ? Enum.Parse<VerticalAlignment>(verticalAlignment.GetStringNotNull())
-            : DefaultVerticalAlignment;
-        BackgroundColor = element.TryGetProperty("backgroundColor", out var backgroundColor)
-            ? Brush.FromJson(backgroundColor, data)
-            : DefaultBackgroundColor;
-        BorderWidth = element.TryGetProperty("borderWidth", out var borderWidth)
-            ? Thickness.FromJson(borderWidth, data)
-            : DefaultBorderWidth;
-        BorderRadius = element.TryGetProperty("borderRadius", out var borderRadius)
-            ? CornerRadius.FromJson(borderRadius, data)
-            : DefaultBorderRadius;
-        BorderColor = element.TryGetProperty("borderColor", out var borderColor)
-            ? Brush.FromJson(borderColor, data)
-            : DefaultBorderColor;
+        Width = source.ApplyProperty("width", Width, DefaultWidth);
+        Height = source.ApplyProperty("height", Height, DefaultHeight);
+        Margin = source.ApplyProperty("margin", Margin, DefaultMargin);
+        Padding = source.ApplyProperty("padding", Padding, DefaultPadding);
+        HorizontalAlignment = source.ApplyProperty("horizontalAlignment", HorizontalAlignment, DefaultHorizontalAlignment);
+        VerticalAlignment = source.ApplyProperty("verticalAlignment", VerticalAlignment, DefaultVerticalAlignment);
+        BackgroundColor = source.ApplyProperty("backgroundColor", BackgroundColor, DefaultBackgroundColor);
+        BorderWidth = source.ApplyProperty("borderWidth", BorderWidth, DefaultBorderWidth);
+        BorderRadius = source.ApplyProperty("borderRadius", BorderRadius, DefaultBorderRadius);
+        BorderColor = source.ApplyProperty("borderColor", BorderColor, DefaultBorderColor);
 
-        // TODO: children
-        throw new NotImplementedException();
-        if(element.TryGetProperty("children", out var children)) {
-            foreach(var child in children.EnumerateArray()) {
-                var key = child.GetProperty("@key"u8).GetStringNotNull();
-            }
+        if(source.TryGetProperty("children", out var children)) {
+            ((IReactive)Children).ApplyDiff(children);
+
+            //ReactHelper.ApplyDiffOrNew(Children, children, out var isNew);
+            //if(isNew) {
+            //    throw new ArgumentException();
+            //}
         }
-        else {
-        }
+
+        //Children = source.TryGetProperty("children", out var children)
+        //    ? ReactHelper.ApplyDiffOrNew(Children, children)
+        //    : new UIElementCollection();
+
+        //// TODO: children
+        //throw new NotImplementedException();
+        //if(element.TryGetProperty("children", out var children)) {
+        //    foreach(var child in children.EnumerateArray()) {
+        //        var key = child.GetProperty("@key"u8).GetStringNotNull();
+        //    }
+        //}
+        //else {
+        //}
     }
 
     public JsonNode? ToJson()

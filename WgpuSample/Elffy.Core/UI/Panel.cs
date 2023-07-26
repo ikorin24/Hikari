@@ -18,13 +18,13 @@ public sealed class Panel : UIElement, IFromJson<Panel>
         });
     }
 
-    public static Panel FromJson(JsonElement element, in DeserializeRuntimeData data) => new Panel(element, data);
+    public static Panel FromJson(in ReactSource source) => new Panel(source);
 
     public Panel()
     {
     }
 
-    private Panel(JsonElement element, in DeserializeRuntimeData data) : base(element, data)
+    private Panel(in ReactSource source) : base(source)
     {
     }
 
@@ -34,9 +34,9 @@ public sealed class Panel : UIElement, IFromJson<Panel>
         return node;
     }
 
-    protected override void ApplyDiffProtected(JsonElement element, in DeserializeRuntimeData data)
+    protected override void ApplyDiffProtected(ReactSource source)
     {
-        base.ApplyDiffProtected(element, data);
+        base.ApplyDiffProtected(source);
         // TODO:
     }
 }

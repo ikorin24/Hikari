@@ -24,10 +24,32 @@ public sealed class UITree
         _uiLayer.SetRoot(element);
     }
 
+    private IReactive? _root;
+
     public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] ReactBuilder builder)
     {
         _uiLayer ??= new UILayer(_screen, 100); // TODO: sort order
-        var component = new FixedReactComponent(builder.FixAndClear());
-        _uiLayer.RenderRoot(component);
+
+        var source = builder.FixAndClear();
+        _root = ReactHelper.ApplyDiffOrNew(_root, source, out var isNew);
+        if(isNew) {
+            switch(_root) {
+                case UIElement uiElement: {
+                    SetRoot(uiElement);
+                    break;
+                }
+                case IReactComponent component: {
+                    var uiElement = component.Build();
+                    SetRoot(uiElement);
+                    break;
+                }
+                default: {
+                    throw new ArgumentException($"invalid object type: {_root.GetType()}");
+                }
+            }
+        }
+        else {
+            throw new NotImplementedException();
+        }
     }
 }

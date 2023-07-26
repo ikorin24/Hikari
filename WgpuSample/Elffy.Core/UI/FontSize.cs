@@ -21,21 +21,22 @@ public readonly struct FontSize
         _px = px;
     }
 
-    public static FontSize FromJson(JsonElement element, in DeserializeRuntimeData data)
+    public static FontSize FromJson(in ReactSource source)
     {
-        switch(element.ValueKind) {
+        switch(source.ValueKind) {
             case JsonValueKind.String: {
-                var str = element.GetStringNotNull();
+                var str = source.GetStringNotNull();
                 if(str.EndsWith("px")) {
                     return new FontSize(float.Parse(str.AsSpan()[..^2]));
                 }
                 throw new FormatException(str);
             }
             case JsonValueKind.Number: {
-                return new FontSize(element.GetSingle());
+                return new FontSize(source.GetNumber<float>());
             }
             default: {
-                throw new FormatException(element.ToString());
+                source.ThrowInvalidFormat();
+                return default;
             }
         }
     }

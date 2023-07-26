@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Elffy.Effective;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -17,7 +18,8 @@ public sealed class UIElementCollection
 {
     private UIElement? _parent;
     private readonly List<UIElement> _children;
-    private readonly Dictionary<string, DicValue> _dic;
+    private readonly List<IReactive> _reactives;
+    //private readonly Dictionary<string, DicValue> _dic;
 
     internal UIElement? Parent
     {
@@ -48,13 +50,15 @@ public sealed class UIElementCollection
     public UIElementCollection()
     {
         _children = new List<UIElement>();
-        _dic = new Dictionary<string, DicValue>();
+        _reactives = new List<IReactive>();
+        //_dic = new Dictionary<string, DicValue>();
     }
 
-    private UIElementCollection(List<UIElement> inner, Dictionary<string, DicValue> dic)
+    private UIElementCollection(List<UIElement> inner, List<IReactive> reactives)
     {
         _children = inner;
-        _dic = dic;
+        _reactives = reactives;
+        //_dic = dic;
     }
 
     public void Add(UIElement element)
@@ -85,23 +89,26 @@ public sealed class UIElementCollection
         return _children.GetEnumerator();
     }
 
-    public static UIElementCollection FromJson(JsonElement element, in DeserializeRuntimeData data)
+    public static UIElementCollection FromJson(in ReactSource source)
     {
-        var list = new List<UIElement>(element.GetArrayLength());
-        var dic = new Dictionary<string, DicValue>();
-        foreach(var item in element.EnumerateArray()) {
-            var child = Serializer.Instantiate(item, data);
+        var list = new List<UIElement>(source.GetArrayLength());
+        var reactives = new List<IReactive>();
+        //var dic = new Dictionary<string, DicValue>();
+        foreach(var item in source.EnumerateArray()) {
+            var child = Serializer.Instantiate(item, null);
             //dic.Add(item.GetProperty("@key").GetStringNotNull(), child);
             switch(child) {
                 case UIElement uiElement: {
                     list.Add(uiElement);
-                    dic.Add(item.GetProperty("@key").GetStringNotNull(), new DicValue(uiElement));
+                    reactives.Add(uiElement);
+                    //dic.Add(item.GetProperty("@key").GetStringNotNull(), new DicValue(uiElement));
                     break;
                 }
                 case IReactComponent component: {
                     var uiElement = component.Build();
                     list.Add(uiElement);
-                    dic.Add(item.GetProperty("@key").GetStringNotNull(), new DicValue(component));
+                    reactives.Add(uiElement);
+                    //dic.Add(item.GetProperty("@key").GetStringNotNull(), new DicValue(component));
                     break;
                 }
                 default: {
@@ -109,7 +116,7 @@ public sealed class UIElementCollection
                 }
             }
         }
-        return new UIElementCollection(list, dic);
+        return new UIElementCollection(list, reactives);
     }
 
     public JsonNode? ToJson()
@@ -122,9 +129,21 @@ public sealed class UIElementCollection
         return array;
     }
 
-    void IReactive.ApplyDiff(JsonElement element, in DeserializeRuntimeData data)
+    void IReactive.ApplyDiff(ReactSource source)
     {
-        throw new NotImplementedException();
+        // TODO: use key
+        var reactives = _reactives;
+        var i = 0;
+        var childCount = source.GetArrayLength();
+        using(var _ = new RefTypeRentMemory<IReactive>(childCount, out var tmp)) {
+            foreach(var itemSource in source.EnumerateArray()) {
+                var current = (i < reactives.Count) ? reactives[i] : null;
+                tmp[i] = ReactHelper.ApplyDiffOrNew(current, itemSource);
+                i++;
+            }
+            reactives.Clear();
+            reactives.AddRange(tmp);
+        }
     }
 
     private readonly struct DicValue : IEquatable<DicValue>

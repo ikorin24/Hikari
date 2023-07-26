@@ -28,18 +28,18 @@ public readonly struct LayoutLength
         [DoesNotReturn] static void ThrowOutOfRange() => throw new ArgumentOutOfRangeException(nameof(value));
     }
 
-    public static LayoutLength FromJson(JsonElement element, in DeserializeRuntimeData data)
+    public static LayoutLength FromJson(in ReactSource source)
     {
         // 10
         // "10px"
         // "80%"
 
-        switch(element.ValueKind) {
+        switch(source.ValueKind) {
             case JsonValueKind.Number: {
-                return new LayoutLength(element.GetSingle(), LayoutLengthType.Length);
+                return new LayoutLength(source.GetNumber<float>(), LayoutLengthType.Length);
             }
             case JsonValueKind.String: {
-                var str = element.GetStringNotNull();
+                var str = source.GetStringNotNull();
                 if(str.EndsWith('%')) {
                     return new()
                     {
@@ -57,7 +57,8 @@ public readonly struct LayoutLength
                 throw new FormatException(str);
             }
             default: {
-                throw new FormatException(element.ToString());
+                source.ThrowInvalidFormat();
+                return default;
             }
         }
     }

@@ -4,7 +4,6 @@ using Elffy.Effective;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
@@ -51,7 +50,7 @@ public sealed class Button : UIElement, IFromJson<Button>
         });
     }
 
-    public static Button FromJson(JsonElement element, in DeserializeRuntimeData data) => new Button(element, data);
+    public static Button FromJson(in ReactSource source) => new Button(source);
 
     protected override JsonNode ToJsonProtected()
     {
@@ -61,11 +60,14 @@ public sealed class Button : UIElement, IFromJson<Button>
         return node;
     }
 
-    protected override void ApplyDiffProtected(JsonElement element, in DeserializeRuntimeData data)
+    protected override void ApplyDiffProtected(ReactSource source)
     {
-        base.ApplyDiffProtected(element, data);
-        Text = element.TryGetProperty("text", out var text) ? Serializer.Instantiate<string>(text) : DefaultText;
-        FontSize = element.TryGetProperty("fontSize", out var fontSize) ? Serializer.Instantiate<FontSize>(fontSize) : DefaultFontSize;
+        base.ApplyDiffProtected(source);
+        Text = source.TryGetProperty("text", out var text) ? ReactHelper.ApplyDiffOrNew(Text, text) : DefaultText;
+        FontSize = source.TryGetProperty("fontSize", out var fontSize) ? ReactHelper.ApplyDiffOrNew(FontSize, fontSize) : DefaultFontSize;
+
+        //Text = element.TryGetProperty("text", out var text) ? Serializer.Instantiate<string>(text) : DefaultText;
+        //FontSize = element.TryGetProperty("fontSize", out var fontSize) ? Serializer.Instantiate<FontSize>(fontSize) : DefaultFontSize;
     }
 
     public Button() : base()
@@ -74,18 +76,19 @@ public sealed class Button : UIElement, IFromJson<Button>
         _fontSize = DefaultFontSize;
     }
 
-    private Button(JsonElement element, in DeserializeRuntimeData data) : base(element, data)
+    private Button(in ReactSource source) : base(source)
     {
         _text = DefaultText;
         _fontSize = DefaultFontSize;
-        if(element.TryGetProperty("text", out var text)) {
+        if(source.TryGetProperty("text", out var text)) {
             _text = Serializer.Instantiate<string>(text);
         }
-        if(element.TryGetProperty("fontSize", out var fontSize)) {
+        if(source.TryGetProperty("fontSize", out var fontSize)) {
             _fontSize = Serializer.Instantiate<FontSize>(fontSize);
         }
-        if(element.TryGetProperty("clicked", out var clicked)) {
-            data.AddEventHandler(_clicked.Event, clicked);
+        if(source.TryGetProperty("clicked", out var clicked)) {
+            var action = clicked.Instantiate<Action<Button>>();
+            _clicked.Event.Subscribe(action);
         }
         ModelUpdate.Subscribe(model => OnModelUpdate(model));
     }

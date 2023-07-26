@@ -10,7 +10,7 @@ internal static class ReactComponentBuilder
     public static UIElement Build(this IReactComponent component)
     {
         var source = component.GetReactSource();
-        var obj = source.Deserialize();
+        var obj = source.Instantiate<object>();
         while(true) {
             switch(obj) {
                 case UIElement element: {
@@ -36,11 +36,10 @@ internal static class ReactComponentBuilder
         }
     }
 
-    public static void Apply(this IReactComponent component, IReactive target)
+    private static void Apply(this IReactComponent component, IReactive target)
     {
         var source = component.GetReactSource();
-        using var json = JsonDocument.Parse(source.Str);
-        target.ApplyDiff(json.RootElement, source.RuntimeData);
+        target.ApplyDiff(source);
         component.RenderCompleted();
     }
 }
