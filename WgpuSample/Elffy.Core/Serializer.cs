@@ -397,7 +397,7 @@ internal static class ExternalConstructor
                 break;
             }
             case JsonValueKind.Object: {
-                if(source.ObjectType == typeof(Color4)) {
+                if(source.HasObjectType(out var type) && type == typeof(Color4)) {
                     var color = new Color4();
                     if(source.TryGetProperty(nameof(Color4.R), out var r)) {
                         color.R = r.GetNumber<float>();

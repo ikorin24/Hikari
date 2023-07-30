@@ -200,40 +200,9 @@ public readonly struct ReactSource : IEquatable<ReactSource>
     public bool IsArray => _element.ValueKind == JsonValueKind.Array;
     public bool IsObject => _element.ValueKind == JsonValueKind.Object;
 
-    public Type? ObjectType
-    {
-        get
-        {
-            if(_element.ValueKind == JsonValueKind.Object && _element.TryGetProperty("@type"u8, out var type)) {
-                return type.ValueKind switch
-                {
-                    JsonValueKind.Number => _data.GetType(type),
-                    _ => null,
-                };
-            }
-            return null;
-        }
-    }
+    public Type? ObjectType => HasObjectType(out var type) ? type : null;
 
-    public string? ObjectKey
-    {
-        get
-        {
-            return _element.ValueKind switch
-            {
-                JsonValueKind.Object => _element.TryGetProperty("@key"u8, out var key) switch
-                {
-                    true => key.ValueKind switch
-                    {
-                        JsonValueKind.String => key.GetString(),
-                        _ => null,
-                    },
-                    false => null,
-                },
-                _ => null,
-            };
-        }
-    }
+    public string? ObjectKey => HasObjectKey(out var key) ? key : null;
 
     internal ReactSource(string str, DeserializeRuntimeData data)
     {
@@ -250,9 +219,39 @@ public readonly struct ReactSource : IEquatable<ReactSource>
         _data = data;
     }
 
+    public bool HasObjectType([MaybeNullWhen(false)] out Type type)
+    {
+        type = _element.ValueKind switch
+        {
+            JsonValueKind.Object => _element.TryGetProperty("@type"u8, out var typeProp) switch
+            {
+                true => typeProp.ValueKind switch
+                {
+                    JsonValueKind.Number => _data.GetType(typeProp),
+                    _ => null,
+                },
+                false => null,
+            },
+            _ => null,
+        };
+        return type != null;
+    }
+
     public bool HasObjectKey([MaybeNullWhen(false)] out string key)
     {
-        key = ObjectKey;
+        key = _element.ValueKind switch
+        {
+            JsonValueKind.Object => _element.TryGetProperty("@key"u8, out var keyProp) switch
+            {
+                true => keyProp.ValueKind switch
+                {
+                    JsonValueKind.String => keyProp.GetString(),
+                    _ => null,
+                },
+                false => null,
+            },
+            _ => null,
+        };
         return key != null;
     }
 
