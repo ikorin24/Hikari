@@ -4,7 +4,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 
@@ -19,7 +18,7 @@ public sealed class UIElementCollection
     private UIElement? _parent;
     private readonly List<UIElement> _children;
     private readonly List<IReactive> _reactives;
-    //private readonly Dictionary<string, DicValue> _dic;
+    private readonly Dictionary<string, IReactive> _dic;
 
     internal UIElement? Parent
     {
@@ -45,20 +44,22 @@ public sealed class UIElementCollection
         get => _children[index];
     }
 
+    public int Count => _children.Count;
+
     static UIElementCollection() => Serializer.RegisterConstructor(FromJson);
 
     public UIElementCollection()
     {
         _children = new List<UIElement>();
         _reactives = new List<IReactive>();
-        //_dic = new Dictionary<string, DicValue>();
+        _dic = new Dictionary<string, IReactive>();
     }
 
-    private UIElementCollection(List<UIElement> inner, List<IReactive> reactives)
+    private UIElementCollection(List<UIElement> inner, List<IReactive> reactives, Dictionary<string, IReactive> dic)
     {
         _children = inner;
         _reactives = reactives;
-        //_dic = dic;
+        _dic = dic;
     }
 
     public void Add(UIElement element)
@@ -93,22 +94,25 @@ public sealed class UIElementCollection
     {
         var list = new List<UIElement>(source.GetArrayLength());
         var reactives = new List<IReactive>();
-        //var dic = new Dictionary<string, DicValue>();
+        var dic = new Dictionary<string, IReactive>();
         foreach(var item in source.EnumerateArray()) {
             var child = Serializer.Instantiate(item, null);
-            //dic.Add(item.GetProperty("@key").GetStringNotNull(), child);
             switch(child) {
                 case UIElement uiElement: {
-                    list.Add(uiElement);
                     reactives.Add(uiElement);
-                    //dic.Add(item.GetProperty("@key").GetStringNotNull(), new DicValue(uiElement));
+                    if(item.HasObjectKey(out var key)) {
+                        dic.Add(key, uiElement);
+                    }
+                    list.Add(uiElement);
                     break;
                 }
                 case IReactComponent component: {
+                    reactives.Add(component);
+                    if(item.HasObjectKey(out var key)) {
+                        dic.Add(key, component);
+                    }
                     var uiElement = component.Build();
                     list.Add(uiElement);
-                    reactives.Add(component);
-                    //dic.Add(item.GetProperty("@key").GetStringNotNull(), new DicValue(component));
                     break;
                 }
                 default: {
@@ -116,7 +120,7 @@ public sealed class UIElementCollection
                 }
             }
         }
-        return new UIElementCollection(list, reactives);
+        return new UIElementCollection(list, reactives, dic);
     }
 
     public JsonNode? ToJson()
@@ -131,45 +135,31 @@ public sealed class UIElementCollection
 
     void IReactive.ApplyDiff(in ReactSource source)
     {
-        // TODO: use key
         var reactives = _reactives;
         var i = 0;
         var childCount = source.GetArrayLength();
-        using(var _ = new RefTypeRentMemory<IReactive>(childCount, out var tmp)) {
-            foreach(var itemSource in source.EnumerateArray()) {
-                var current = (i < reactives.Count) ? reactives[i] : null;
-                tmp[i] = ReactHelper.ApplyDiffOrNew(current, itemSource);
+        using(var tmpMemory = new RefTypeRentMemory<IReactive>(childCount, out var tmp)) {
+            foreach(var item in source.EnumerateArray()) {
+                IReactive? current;
+                if(item.HasObjectKey(out var key)) {
+                    if(_dic.TryGetValue(key, out current) == false) {
+                        current = null;
+                    }
+                }
+                else {
+                    current = null;
+                }
+                tmp[i] = ReactHelper.ApplyDiffOrNew(current, item);
                 i++;
             }
+            //foreach(var item in reactives) {
+            //    item.OnUnmount();
+            //}
             reactives.Clear();
+            //foreach(var item in tmp) {
+            //    item.OnMount();
+            //}
             reactives.AddRange(tmp);
         }
-    }
-
-    private readonly struct DicValue : IEquatable<DicValue>
-    {
-        private readonly bool _isUIElement;
-        private readonly object _object;
-
-        public DicValue(UIElement uIElement)
-        {
-            _isUIElement = true;
-            _object = uIElement;
-        }
-
-        public DicValue(IReactComponent component)
-        {
-            _isUIElement = false;
-            _object = component;
-        }
-
-        public override bool Equals(object? obj) => obj is DicValue value && Equals(value);
-
-        public bool Equals(DicValue other)
-        {
-            return _isUIElement == other._isUIElement && ReferenceEquals(_object, other._object);
-        }
-
-        public override int GetHashCode() => HashCode.Combine(_isUIElement, _object);
     }
 }

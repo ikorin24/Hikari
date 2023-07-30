@@ -215,6 +215,26 @@ public readonly struct ReactSource : IEquatable<ReactSource>
         }
     }
 
+    public string? ObjectKey
+    {
+        get
+        {
+            return _element.ValueKind switch
+            {
+                JsonValueKind.Object => _element.TryGetProperty("@key"u8, out var key) switch
+                {
+                    true => key.ValueKind switch
+                    {
+                        JsonValueKind.String => key.GetString(),
+                        _ => null,
+                    },
+                    false => null,
+                },
+                _ => null,
+            };
+        }
+    }
+
     internal ReactSource(string str, DeserializeRuntimeData data)
     {
         _data = data;
@@ -228,6 +248,12 @@ public readonly struct ReactSource : IEquatable<ReactSource>
     {
         _element = element;
         _data = data;
+    }
+
+    public bool HasObjectKey([MaybeNullWhen(false)] out string key)
+    {
+        key = ObjectKey;
+        return key != null;
     }
 
     public bool TryGetProperty(string propertyName, out ReactSource value)
