@@ -14,9 +14,74 @@ namespace Elffy;
 
 public static class Serializer
 {
-    private record ConstructorInfo(Type Type, ConstructorFunc Func);
+    private sealed class ConstructorInfo
+    {
+        private readonly Type _type;
 
-    private static readonly ConcurrentDictionary<string, ConstructorInfo> _constructorFuncs = new();
+        // CtorFunc<T> (when T is struct)
+        // CtorFuncCovariant<T> (when T is class)
+        private readonly Delegate _func;
+
+        // CtorFunc<object> (when T is struct)
+        // null (when T is class)
+        private readonly CtorFunc<ValueType>? _funcUntyped;
+
+        public Type Type => _type;
+
+        private ConstructorInfo(Type type, Delegate func, CtorFunc<ValueType>? funcUntyped)
+        {
+            _type = type;
+            _func = func;
+            _funcUntyped = funcUntyped;
+        }
+
+        public static ConstructorInfo New<T>(CtorFunc<T> func) where T : notnull
+        {
+            if(typeof(T).IsValueType) {
+                var funcUntyped = new CtorFunc<ValueType>((in ReactSource x) =>
+                {
+                    return (ValueType)(object)func(x);
+                });
+                return new ConstructorInfo(typeof(T), func, funcUntyped);
+            }
+            else {
+                var f = new CtorFuncCovariant<T>((in ReactSource s) => func(s));
+                return new ConstructorInfo(typeof(T), f, null);
+            }
+        }
+
+        public T Invoke<T>(in ReactSource source)
+        {
+            if(typeof(T).IsValueType) {
+
+                if(typeof(T) == typeof(object) || typeof(T) == typeof(ValueType)) {
+                    Debug.Assert(_funcUntyped is not null);
+                    return (T)(object)_funcUntyped.Invoke(source);
+                }
+                else {
+                    return ((CtorFunc<T>)_func).Invoke(source);
+                }
+            }
+            else {
+                return ((CtorFuncCovariant<T>)_func).Invoke(source);
+            }
+        }
+
+        public object InvokeUntyped(in ReactSource source)
+        {
+            if(_type.IsValueType) {
+                Debug.Assert(_funcUntyped is not null);
+                return _funcUntyped.Invoke(source);
+            }
+            else {
+                return ((CtorFuncCovariant<object>)_func).Invoke(source);
+            }
+        }
+
+        private delegate T CtorFuncCovariant<out T>(in ReactSource source);
+    }
+
+    private static readonly ConcurrentDictionary<Type, ConstructorInfo> _constructorFuncs = new();
 
     internal static JsonDocumentOptions ParseOptions => new JsonDocumentOptions
     {
@@ -53,12 +118,11 @@ public static class Serializer
         RegisterConstructor(ExternalConstructor.Color4FromJson);
     }
 
-    public static void RegisterConstructor<T>(ConstructorFunc<T> constructoFunc) where T : notnull
+    public static void RegisterConstructor<T>(CtorFunc<T> constructoFunc) where T : notnull
     {
         ArgumentNullException.ThrowIfNull(constructoFunc);
-        var f = new ConstructorFunc((in ReactSource s) => constructoFunc(s));
-        var value = new ConstructorInfo(typeof(T), f);
-        _constructorFuncs.TryAdd(typeof(T).FullName!, value);
+        var ctor = ConstructorInfo.New(constructoFunc);
+        _constructorFuncs.TryAdd(ctor.Type, ctor);
     }
 
     public static string Serialize<T>(T value) where T : notnull, IToJson
@@ -125,8 +189,6 @@ public static class Serializer
 
     private static T DeserializeCore<T>(in ReactSource source)
     {
-        var objectType = source.ObjectType;
-
         if(typeof(T) == typeof(string)) { var x = source.GetStringNotNull(); return Unsafe.As<string, T>(ref x); }
         if(typeof(T) == typeof(bool)) { var x = source.GetBoolean(); return Unsafe.As<bool, T>(ref x); }
         if(typeof(T) == typeof(sbyte)) { var x = source.GetNumber<sbyte>(); return Unsafe.As<sbyte, T>(ref x); }
@@ -185,7 +247,7 @@ public static class Serializer
             case JsonValueKind.Object: {
                 var type = source.ObjectType ?? throw new ArgumentException($"cannot determine type.\n{source.ToDebugString()}");
                 var ctor = FindCtor(type);
-                return (T)ctor.Func(source);
+                return ctor.Invoke<T>(source);
             }
             case JsonValueKind.String:
             case JsonValueKind.Number:
@@ -194,7 +256,7 @@ public static class Serializer
             case JsonValueKind.Null: {
                 var type = typeof(T);
                 var ctor = FindCtor(type);
-                return (T)ctor.Func(source);
+                return ctor.Invoke<T>(source);
             }
             case JsonValueKind.Undefined:
             default: {
@@ -263,7 +325,7 @@ public static class Serializer
             case JsonValueKind.Object: {
                 var type = source.ObjectType ?? throw new ArgumentException($"cannot determine type.\n{source.ToDebugString()}");
                 var ctor = FindCtor(type);
-                return ctor.Func(source);
+                return ctor.InvokeUntyped(source);
             }
             case JsonValueKind.String:
             case JsonValueKind.Number:
@@ -272,7 +334,7 @@ public static class Serializer
             case JsonValueKind.Null: {
                 var type = leftSideType ?? throw new ArgumentException($"cannot determine type.\n{source.ToDebugString()}");
                 var ctor = FindCtor(type);
-                return ctor.Func(source);
+                return ctor.InvokeUntyped(source);
             }
             case JsonValueKind.Undefined:
             default: {
@@ -280,53 +342,6 @@ public static class Serializer
             }
         }
     }
-
-    //private static ConstructorInfo GetConstructor(JsonElement element, Type? leftSideType)
-    //{
-    //    Debug.Assert(element.ValueKind is
-    //        JsonValueKind.Object or
-    //        JsonValueKind.String or
-    //        JsonValueKind.Number or
-    //        JsonValueKind.Null or
-    //        JsonValueKind.True or
-    //        JsonValueKind.False);
-
-    //    switch(element.ValueKind) {
-    //        case JsonValueKind.Object: {
-    //            var typename = element.GetProperty("@type"u8).GetStringNotNull();
-    //            ConstructorInfo? ctor;
-    //            if(_shortNames.TryGetValue(typename, out var type)) {
-    //                if(FindCtorFromType(type, out ctor) == false) {
-    //                    throw new FormatException($"type \"{typename}\" cannot be created from json");
-    //                }
-    //            }
-    //            else {
-    //                if(FindCtorFromName(typename, out ctor) == false) {
-    //                    throw new FormatException($"type \"{typename}\" cannot be created from json");
-    //                }
-    //            }
-    //            if(leftSideType != null) {
-    //                if(ctor.Type.IsAssignableTo(leftSideType) == false) {
-    //                    throw new FormatException($"{ctor.Type.FullName} is not assignable to {leftSideType.FullName}");
-    //                }
-    //            }
-    //            return ctor;
-    //        }
-    //        default: {
-    //            if(leftSideType == null) {
-    //                throw new ArgumentException($"cannot determine type: {element}");
-    //            }
-    //            var typename = leftSideType.FullName ?? throw new ArgumentException();
-    //            if(FindCtorFromName(typename, out var ctor) == false) {
-    //                throw new FormatException($"type \"{typename}\" cannot be created from json");
-    //            }
-    //            if(ctor.Type.IsAssignableTo(leftSideType) == false) {
-    //                throw new FormatException($"{ctor.Type.FullName} is not assignable to {leftSideType.FullName}");
-    //            }
-    //            return ctor;
-    //        }
-    //    }
-    //}
 
     private static object CreateArray(in ReactSource source, Type leftSideType)
     {
@@ -342,7 +357,7 @@ public static class Serializer
             return array;
         }
         if(TryGetCtorFromType(leftSideType, out var ctor)) {
-            return ctor.Func(source);
+            return ctor.InvokeUntyped(source);
         }
         throw new FormatException($"type \"{leftSideType.FullName}\" cannot be created from json");
     }
@@ -357,11 +372,11 @@ public static class Serializer
 
     private static bool TryGetCtorFromType(Type type, [MaybeNullWhen(false)] out ConstructorInfo ctor)
     {
-        if(_constructorFuncs.TryGetValue(type.FullName!, out ctor)) {
+        if(_constructorFuncs.TryGetValue(type, out ctor)) {
             return true;
         }
         RuntimeHelpers.RunClassConstructor(type.TypeHandle);
-        if(_constructorFuncs.TryGetValue(type.FullName!, out ctor)) {
+        if(_constructorFuncs.TryGetValue(type, out ctor)) {
             return true;
         }
         ctor = null;
@@ -448,11 +463,8 @@ public static class EnumJsonHelper
     {
         return Enum.Parse(type, self.GetStringNotNull());
     }
-}
 
-internal static class JsonElementExtensions
-{
-    public static string GetStringNotNull(this JsonElement element)
+    private static string GetStringNotNull(this JsonElement element)
     {
         var str = element.GetString();
         if(str == null) {
@@ -465,5 +477,5 @@ internal static class JsonElementExtensions
     }
 }
 
-public delegate object ConstructorFunc(in ReactSource source);
-public delegate T ConstructorFunc<out T>(in ReactSource source);
+// [NOTE] no covariant
+public delegate T CtorFunc<T>(in ReactSource source);
