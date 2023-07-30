@@ -79,16 +79,11 @@ public sealed class UIElementCollection
     [DoesNotReturn]
     private static void ThrowInvalidInstance() => throw new InvalidOperationException("invalid instance");
 
-    public IEnumerator<UIElement> GetEnumerator()
-    {
-        // TODO: 
-        return _children.GetEnumerator();
-    }
+    public Enumerator GetEnumerator() => new Enumerator(_children.GetEnumerator());
 
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return _children.GetEnumerator();
-    }
+    IEnumerator<UIElement> IEnumerable<UIElement>.GetEnumerator() => _children.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => _children.GetEnumerator();
 
     public static UIElementCollection FromJson(in ReactSource source)
     {
@@ -161,5 +156,25 @@ public sealed class UIElementCollection
             //}
             reactives.AddRange(tmp);
         }
+    }
+
+    public struct Enumerator : IEnumerator<UIElement>
+    {
+        private List<UIElement>.Enumerator _enumerator;
+
+        public UIElement Current => _enumerator.Current;
+
+        object IEnumerator.Current => ((IEnumerator)_enumerator).Current;
+
+        internal Enumerator(List<UIElement>.Enumerator enumerator)
+        {
+            _enumerator = enumerator;
+        }
+
+        public void Dispose() => _enumerator.Dispose();
+
+        public bool MoveNext() => _enumerator.MoveNext();
+
+        void IEnumerator.Reset() => ((IEnumerator)_enumerator).Reset();
     }
 }
