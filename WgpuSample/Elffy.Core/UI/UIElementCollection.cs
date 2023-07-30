@@ -107,7 +107,7 @@ public sealed class UIElementCollection
                 case IReactComponent component: {
                     var uiElement = component.Build();
                     list.Add(uiElement);
-                    reactives.Add(uiElement);
+                    reactives.Add(component);
                     //dic.Add(item.GetProperty("@key").GetStringNotNull(), new DicValue(component));
                     break;
                 }
