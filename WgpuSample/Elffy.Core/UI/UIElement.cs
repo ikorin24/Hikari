@@ -449,6 +449,16 @@ public abstract class UIElement : IToJson, IReactive
     {
         return UILayouter.DecideRect(this, parentContentArea);
     }
+
+    void IReactive.OnMount()
+    {
+        ((IReactive)Children).OnMount();
+    }
+
+    void IReactive.OnUnmount()
+    {
+        ((IReactive)Children).OnUnmount();
+    }
 }
 
 public readonly struct ContentAreaInfo : IEquatable<ContentAreaInfo>

@@ -158,6 +158,20 @@ public sealed class UIElementCollection
         }
     }
 
+    void IReactive.OnMount()
+    {
+        foreach(var item in _reactives) {
+            item.OnMount();
+        }
+    }
+
+    void IReactive.OnUnmount()
+    {
+        foreach(var item in _reactives) {
+            item.OnUnmount();
+        }
+    }
+
     public struct Enumerator : IEnumerator<UIElement>
     {
         private List<UIElement>.Enumerator _enumerator;

@@ -284,12 +284,21 @@ public partial class Counter
         }
         """;
     }
+
+    partial void OnMount()
+    {
+    }
+
+    partial void OnUnmount()
+    {
+    }
 }
 
 [ReactComponent]
 public partial class CountButton
 {
     private partial record struct Props(int Width, int Height, Action<Button> Clicked);
+
     private partial ReactBuilder Render(in Props props)
     {
         return $$"""
@@ -356,6 +365,12 @@ sealed partial class Counter
         _needsToRerender = true;
     }
 
+    partial void OnMount();
+    partial void OnUnmount();
+
+    void IReactive.OnMount() => OnMount();
+    void IReactive.OnUnmount() => OnUnmount();
+
     partial record struct Props : IFromJson<Props>
     {
         static Props()
@@ -420,6 +435,12 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
         __p = Props.FromJson(source);
         _needsToRerender = true;
     }
+
+    partial void OnMount();
+    partial void OnUnmount();
+
+    void IReactive.OnMount() => OnMount();
+    void IReactive.OnUnmount() => OnUnmount();
 
     partial record struct Props : IFromJson<Props>
     {

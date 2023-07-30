@@ -550,4 +550,6 @@ internal readonly struct DeserializeRuntimeData : IEquatable<DeserializeRuntimeD
 public interface IReactive
 {
     void ApplyDiff(in ReactSource source);
+    void OnMount();
+    void OnUnmount();
 }
