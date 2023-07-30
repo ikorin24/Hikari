@@ -384,16 +384,16 @@ internal static class ExternalConstructor
             case JsonValueKind.Object: {
                 if(source.ObjectType == typeof(Color4)) {
                     var color = new Color4();
-                    if(source.TryGetProperty("r", out var r)) {
+                    if(source.TryGetProperty(nameof(Color4.R), out var r)) {
                         color.R = r.GetNumber<float>();
                     }
-                    if(source.TryGetProperty("g", out var g)) {
+                    if(source.TryGetProperty(nameof(Color4.G), out var g)) {
                         color.G = g.GetNumber<float>();
                     }
-                    if(source.TryGetProperty("b", out var b)) {
+                    if(source.TryGetProperty(nameof(Color4.B), out var b)) {
                         color.B = b.GetNumber<float>();
                     }
-                    if(source.TryGetProperty("a", out var a)) {
+                    if(source.TryGetProperty(nameof(Color4.A), out var a)) {
                         color.A = a.GetNumber<float>();
                     }
                     return color;
@@ -412,10 +412,10 @@ internal static class ExternalConstructor
         return new JsonObject
         {
             ["@type"] = typeof(Color4).FullName,
-            ["r"] = self.R,
-            ["g"] = self.G,
-            ["b"] = self.B,
-            ["a"] = self.A
+            [nameof(Color4.R)] = self.R,
+            [nameof(Color4.G)] = self.G,
+            [nameof(Color4.B)] = self.B,
+            [nameof(Color4.A)] = self.A
         };
     }
 }

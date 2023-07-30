@@ -55,16 +55,16 @@ public sealed class Button : UIElement, IFromJson<Button>
     protected override JsonNode ToJsonProtected()
     {
         var node = base.ToJsonProtected();
-        node["text"] = _text;
-        node["fontSize"] = _fontSize.ToJson();
+        node[nameof(Text)] = _text;
+        node[nameof(FontSize)] = _fontSize.ToJson();
         return node;
     }
 
     protected override void ApplyDiffProtected(in ReactSource source)
     {
         base.ApplyDiffProtected(source);
-        Text = source.TryGetProperty("text", out var text) ? ReactHelper.ApplyDiffOrNew(Text, text) : DefaultText;
-        FontSize = source.TryGetProperty("fontSize", out var fontSize) ? ReactHelper.ApplyDiffOrNew(FontSize, fontSize) : DefaultFontSize;
+        Text = source.TryGetProperty(nameof(Text), out var text) ? ReactHelper.ApplyDiffOrNew(Text, text) : DefaultText;
+        FontSize = source.TryGetProperty(nameof(FontSize), out var fontSize) ? ReactHelper.ApplyDiffOrNew(FontSize, fontSize) : DefaultFontSize;
 
         //Text = element.TryGetProperty("text", out var text) ? Serializer.Instantiate<string>(text) : DefaultText;
         //FontSize = element.TryGetProperty("fontSize", out var fontSize) ? Serializer.Instantiate<FontSize>(fontSize) : DefaultFontSize;
@@ -80,13 +80,13 @@ public sealed class Button : UIElement, IFromJson<Button>
     {
         _text = DefaultText;
         _fontSize = DefaultFontSize;
-        if(source.TryGetProperty("text", out var text)) {
+        if(source.TryGetProperty(nameof(Text), out var text)) {
             _text = Serializer.Instantiate<string>(text);
         }
-        if(source.TryGetProperty("fontSize", out var fontSize)) {
+        if(source.TryGetProperty(nameof(FontSize), out var fontSize)) {
             _fontSize = Serializer.Instantiate<FontSize>(fontSize);
         }
-        if(source.TryGetProperty("clicked", out var clicked)) {
+        if(source.TryGetProperty(nameof(Clicked), out var clicked)) {
             var action = clicked.Instantiate<Action<Button>>();
             _clicked.Event.Subscribe(action);
         }

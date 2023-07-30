@@ -256,20 +256,20 @@ public partial class Counter
         return $$"""
         {
             "@type": {{typeof(Panel)}},
-            "width": {{props.Width}},
-            "height": {{props.Height}},
-            "backgroundColor": "#fff",
-            "borderRadius": "10px",
-            "children": [
+            "Width": {{props.Width}},
+            "Height": {{props.Height}},
+            "BackgroundColor": "#fff",
+            "BorderRadius": "10px",
+            "Children": [
             {
                 "@type": {{typeof(Button)}},
                 "@key": "0",
-                "verticalAlignment": "Top",
-                "height": 80,
-                "fontSize": 30,
-                "backgroundColor": "#4f4",
-                "borderRadius": "10px 10px 0px 0px",
-                "text": {{text}}
+                "VerticalAlignment": "Top",
+                "Height": 80,
+                "FontSize": 30,
+                "BackgroundColor": "#4f4",
+                "BorderRadius": "10px 10px 0px 0px",
+                "Text": {{text}}
             },
             {
                 "@type": {{typeof(CountButton)}},
@@ -295,14 +295,14 @@ public partial class CountButton
         return $$"""
         {
             "@type": {{typeof(Button)}},
-            "width": {{props.Width}},
-            "height": {{props.Height}},
-            "borderRadius": {{props.Height / 2f}},
-            "borderColor": "#ff4310",
-            "backgroundColor": "#fa5",
-            "text": "click me!",
-            "fontSize": 30,
-            "clicked": {{props.Clicked}}
+            "Width": {{props.Width}},
+            "Height": {{props.Height}},
+            "BorderRadius": {{props.Height / 2f}},
+            "BorderColor": "#ff4310",
+            "BackgroundColor": "#fa5",
+            "Text": "click me!",
+            "FontSize": 30,
+            "Clicked": {{props.Clicked}}
         }
         """;
     }
@@ -368,8 +368,8 @@ sealed partial class Counter
             return new()
             {
                 //Message = element.TryGetProperty("Message"u8, out var message) ? Serializer.Instantiate<string>(message) : "",
-                Width = source.TryGetProperty("Width", out var width) ? width.Instantiate<LayoutLength>() : default,
-                Height = source.TryGetProperty("Height", out var height) ? height.Instantiate<LayoutLength>() : default,
+                Width = source.TryGetProperty(nameof(Width), out var width) ? width.Instantiate<LayoutLength>() : default,
+                Height = source.TryGetProperty(nameof(Height), out var height) ? height.Instantiate<LayoutLength>() : default,
             };
         }
     }
@@ -432,9 +432,9 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
         {
             return new()
             {
-                Width = source.TryGetProperty("Width", out var width) ? width.Instantiate<int>() : default,
-                Height = source.TryGetProperty("Height", out var height) ? height.Instantiate<int>() : default,
-                Clicked = source.TryGetProperty("Clicked", out var clicked) ? clicked.Instantiate<Action<Button>>() : throw new ArgumentNullException("Clicked"),
+                Width = source.TryGetProperty(nameof(Width), out var width) ? width.Instantiate<int>() : default,
+                Height = source.TryGetProperty(nameof(Height), out var height) ? height.Instantiate<int>() : default,
+                Clicked = source.TryGetProperty(nameof(Clicked), out var clicked) ? clicked.Instantiate<Action<Button>>() : throw new ArgumentNullException("Clicked"),
             };
         }
     }

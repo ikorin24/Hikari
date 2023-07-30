@@ -214,37 +214,37 @@ public abstract class UIElement : IToJson, IReactive
 
     protected UIElement(in ReactSource source) : this()
     {
-        if(source.TryGetProperty("width", out var width)) {
+        if(source.TryGetProperty(nameof(Width), out var width)) {
             _width = LayoutLength.FromJson(width);
         }
-        if(source.TryGetProperty("height", out var height)) {
+        if(source.TryGetProperty(nameof(Height), out var height)) {
             _height = LayoutLength.FromJson(height);
         }
-        if(source.TryGetProperty("margin", out var margin)) {
+        if(source.TryGetProperty(nameof(Margin), out var margin)) {
             _margin = Thickness.FromJson(margin);
         }
-        if(source.TryGetProperty("padding", out var padding)) {
+        if(source.TryGetProperty(nameof(Padding), out var padding)) {
             _padding = Thickness.FromJson(padding);
         }
-        if(source.TryGetProperty("horizontalAlignment", out var horizontalAlignment)) {
+        if(source.TryGetProperty(nameof(HorizontalAlignment), out var horizontalAlignment)) {
             _horizontalAlignment = horizontalAlignment.ToEnum<HorizontalAlignment>();
         }
-        if(source.TryGetProperty("verticalAlignment", out var verticalAlignment)) {
+        if(source.TryGetProperty(nameof(VerticalAlignment), out var verticalAlignment)) {
             _verticalAlignment = verticalAlignment.ToEnum<VerticalAlignment>();
         }
-        if(source.TryGetProperty("backgroundColor", out var backgroundColor)) {
+        if(source.TryGetProperty(nameof(BackgroundColor), out var backgroundColor)) {
             _backgroundColor = Brush.FromJson(backgroundColor);
         }
-        if(source.TryGetProperty("borderWidth", out var borderWidth)) {
+        if(source.TryGetProperty(nameof(BorderWidth), out var borderWidth)) {
             _borderWidth = Thickness.FromJson(borderWidth);
         }
-        if(source.TryGetProperty("borderRadius", out var borderRadius)) {
+        if(source.TryGetProperty(nameof(BorderRadius), out var borderRadius)) {
             _borderRadius = CornerRadius.FromJson(borderRadius);
         }
-        if(source.TryGetProperty("borderColor", out var borderColor)) {
+        if(source.TryGetProperty(nameof(BorderColor), out var borderColor)) {
             _borderColor = Brush.FromJson(borderColor);
         }
-        if(source.TryGetProperty("children", out var children)) {
+        if(source.TryGetProperty(nameof(Children), out var children)) {
             Children = UIElementCollection.FromJson(children);
         }
     }
@@ -254,17 +254,17 @@ public abstract class UIElement : IToJson, IReactive
         var obj = new JsonObject()
         {
             ["@type"] = GetType().FullName,
-            ["width"] = _width.ToJson(),
-            ["height"] = _height.ToJson(),
-            ["margin"] = _margin.ToJson(),
-            ["padding"] = _padding.ToJson(),
-            ["horizontalAlignment"] = _horizontalAlignment.ToJson(),
-            ["verticalAlignment"] = _verticalAlignment.ToJson(),
-            ["backgroundColor"] = _backgroundColor.ToJson(),
-            ["borderWidth"] = _borderWidth.ToJson(),
-            ["borderRadius"] = _borderRadius.ToJson(),
-            ["borderColor"] = _borderColor.ToJson(),
-            ["children"] = _children.ToJson(),
+            [nameof(Width)] = _width.ToJson(),
+            [nameof(Height)] = _height.ToJson(),
+            [nameof(Margin)] = _margin.ToJson(),
+            [nameof(Padding)] = _padding.ToJson(),
+            [nameof(HorizontalAlignment)] = _horizontalAlignment.ToJson(),
+            [nameof(VerticalAlignment)] = _verticalAlignment.ToJson(),
+            [nameof(BackgroundColor)] = _backgroundColor.ToJson(),
+            [nameof(BorderWidth)] = _borderWidth.ToJson(),
+            [nameof(BorderRadius)] = _borderRadius.ToJson(),
+            [nameof(BorderColor)] = _borderColor.ToJson(),
+            [nameof(Children)] = _children.ToJson(),
         };
         return obj;
     }
@@ -276,18 +276,18 @@ public abstract class UIElement : IToJson, IReactive
 
     protected virtual void ApplyDiffProtected(in ReactSource source)
     {
-        Width = source.ApplyProperty("width", Width, DefaultWidth);
-        Height = source.ApplyProperty("height", Height, DefaultHeight);
-        Margin = source.ApplyProperty("margin", Margin, DefaultMargin);
-        Padding = source.ApplyProperty("padding", Padding, DefaultPadding);
-        HorizontalAlignment = source.ApplyProperty("horizontalAlignment", HorizontalAlignment, DefaultHorizontalAlignment);
-        VerticalAlignment = source.ApplyProperty("verticalAlignment", VerticalAlignment, DefaultVerticalAlignment);
-        BackgroundColor = source.ApplyProperty("backgroundColor", BackgroundColor, DefaultBackgroundColor);
-        BorderWidth = source.ApplyProperty("borderWidth", BorderWidth, DefaultBorderWidth);
-        BorderRadius = source.ApplyProperty("borderRadius", BorderRadius, DefaultBorderRadius);
-        BorderColor = source.ApplyProperty("borderColor", BorderColor, DefaultBorderColor);
+        Width = source.ApplyProperty(nameof(Width), Width, DefaultWidth);
+        Height = source.ApplyProperty(nameof(Height), Height, DefaultHeight);
+        Margin = source.ApplyProperty(nameof(Margin), Margin, DefaultMargin);
+        Padding = source.ApplyProperty(nameof(Padding), Padding, DefaultPadding);
+        HorizontalAlignment = source.ApplyProperty(nameof(HorizontalAlignment), HorizontalAlignment, DefaultHorizontalAlignment);
+        VerticalAlignment = source.ApplyProperty(nameof(VerticalAlignment), VerticalAlignment, DefaultVerticalAlignment);
+        BackgroundColor = source.ApplyProperty(nameof(BackgroundColor), BackgroundColor, DefaultBackgroundColor);
+        BorderWidth = source.ApplyProperty(nameof(BorderWidth), BorderWidth, DefaultBorderWidth);
+        BorderRadius = source.ApplyProperty(nameof(BorderRadius), BorderRadius, DefaultBorderRadius);
+        BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, DefaultBorderColor);
 
-        if(source.TryGetProperty("children", out var children)) {
+        if(source.TryGetProperty(nameof(Children), out var children)) {
             ((IReactive)Children).ApplyDiff(children);
 
             //ReactHelper.ApplyDiffOrNew(Children, children, out var isNew);
