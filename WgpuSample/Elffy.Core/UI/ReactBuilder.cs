@@ -331,22 +331,22 @@ public readonly struct ReactSource : IEquatable<ReactSource>
         return defaultValue;
     }
 
-    public ApplySourceResult ApplyTo<T>([NotNull] ref T? reactive, out T? old) where T : notnull
+    public ApplySourceResult ApplyTo<T>([NotNull] ref T? target, out T? old) where T : notnull
     {
-        if(typeof(T).IsAssignableTo(typeof(IReactive)) && reactive != null) {
-            if(HasObjectType(out var type) && type == reactive.GetType()) {
-                ((IReactive)reactive).ApplyDiff(this);
-                old = reactive;
+        if(target is IReactive reactive) {
+            if(HasObjectType(out var type) && type == target.GetType()) {
+                reactive.ApplyDiff(this);
+                old = target;
                 return ApplySourceResult.PropertyDiffApplied;
             }
             else if(IsArray) {
-                ((IReactive)reactive).ApplyDiff(this);
-                old = reactive;
+                reactive.ApplyDiff(this);
+                old = target;
                 return ApplySourceResult.ArrayDiffApplied;
             }
         }
-        old = reactive;
-        reactive = Instantiate<T>();
+        old = target;
+        target = Instantiate<T>();
         return ApplySourceResult.InstanceReplaced;
     }
 
@@ -505,7 +505,7 @@ public interface IReactComponent : IReactive
 {
     bool NeedsToRerender { get; }
     ReactSource GetReactSource();
-    void RenderCompleted();
+    void RenderCompleted<T>(T rendered);
 }
 
 internal readonly struct DeserializeRuntimeData : IEquatable<DeserializeRuntimeData>

@@ -325,6 +325,7 @@ sealed partial class Counter
 
     private Props __p;
     private bool _needsToRerender;
+    private object? _rendered;
 
     static Counter()
     {
@@ -354,15 +355,18 @@ sealed partial class Counter
 
     ReactSource IReactComponent.GetReactSource() => Render(__p).FixAndClear();
 
-    void IReactComponent.RenderCompleted()
+    void IReactComponent.RenderCompleted<T>(T rendered)
     {
+        _rendered = rendered;
         _needsToRerender = false;
     }
 
     void IReactive.ApplyDiff(in ReactSource source)
     {
         __p = Props.FromJson(source);
-        _needsToRerender = true;
+        var innerSource = Render(__p).FixAndClear();
+        innerSource.ApplyTo(ref _rendered, out _);
+        //_needsToRerender = true;
     }
 
     partial void OnMount();
@@ -396,6 +400,7 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
 
     private Props __p;
     private bool _needsToRerender;
+    private object? _rendered;
 
     static CountButton()
     {
@@ -425,15 +430,18 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
 
     ReactSource IReactComponent.GetReactSource() => Render(__p).FixAndClear();
 
-    void IReactComponent.RenderCompleted()
+    void IReactComponent.RenderCompleted<T>(T rendered)
     {
+        _rendered = rendered;
         _needsToRerender = false;
     }
 
     void IReactive.ApplyDiff(in ReactSource source)
     {
         __p = Props.FromJson(source);
-        _needsToRerender = true;
+        var innerSource = Render(__p).FixAndClear();
+        innerSource.ApplyTo(ref _rendered, out _);
+        //_needsToRerender = true;
     }
 
     partial void OnMount();

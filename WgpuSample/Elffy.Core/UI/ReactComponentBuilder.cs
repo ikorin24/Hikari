@@ -18,16 +18,17 @@ internal static class ReactComponentBuilder
                     {
                         if(component.NeedsToRerender) {
                             var source = component.GetReactSource();
-                            ((IReactive)model.Element).ApplyDiff(source);
-                            component.RenderCompleted();
+                            var target = (IReactive)model.Element;
+                            target.ApplyDiff(source);
+                            component.RenderCompleted(target);
                         }
                     });
-                    component.RenderCompleted();
+                    component.RenderCompleted(element);
                     return element;
                 }
                 case IReactComponent c: {
                     var element = c.BuildUIElement();
-                    component.RenderCompleted();
+                    component.RenderCompleted(c);
                     return element;
                 }
                 default: {
