@@ -60,7 +60,7 @@ public sealed class Button : UIElement, IFromJson<Button>
         return node;
     }
 
-    protected override void ApplyDiffProtected(ReactSource source)
+    protected override void ApplyDiffProtected(in ReactSource source)
     {
         base.ApplyDiffProtected(source);
         Text = source.TryGetProperty("text", out var text) ? ReactHelper.ApplyDiffOrNew(Text, text) : DefaultText;

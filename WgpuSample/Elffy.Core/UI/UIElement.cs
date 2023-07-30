@@ -269,12 +269,12 @@ public abstract class UIElement : IToJson, IReactive
         return obj;
     }
 
-    void IReactive.ApplyDiff(ReactSource source)
+    void IReactive.ApplyDiff(in ReactSource source)
     {
         ApplyDiffProtected(source);
     }
 
-    protected virtual void ApplyDiffProtected(ReactSource source)
+    protected virtual void ApplyDiffProtected(in ReactSource source)
     {
         Width = source.ApplyProperty("width", Width, DefaultWidth);
         Height = source.ApplyProperty("height", Height, DefaultHeight);

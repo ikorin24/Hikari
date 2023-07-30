@@ -510,5 +510,5 @@ internal readonly struct DeserializeRuntimeData : IEquatable<DeserializeRuntimeD
 
 public interface IReactive
 {
-    void ApplyDiff(ReactSource source);
+    void ApplyDiff(in ReactSource source);
 }

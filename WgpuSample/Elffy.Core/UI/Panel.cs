@@ -34,7 +34,7 @@ public sealed class Panel : UIElement, IFromJson<Panel>
         return node;
     }
 
-    protected override void ApplyDiffProtected(ReactSource source)
+    protected override void ApplyDiffProtected(in ReactSource source)
     {
         base.ApplyDiffProtected(source);
         // TODO:

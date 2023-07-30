@@ -129,7 +129,7 @@ public sealed class UIElementCollection
         return array;
     }
 
-    void IReactive.ApplyDiff(ReactSource source)
+    void IReactive.ApplyDiff(in ReactSource source)
     {
         // TODO: use key
         var reactives = _reactives;

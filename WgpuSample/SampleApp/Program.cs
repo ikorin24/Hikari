@@ -350,7 +350,7 @@ sealed partial class Counter
         _needsToRerender = false;
     }
 
-    void IReactive.ApplyDiff(ReactSource source)
+    void IReactive.ApplyDiff(in ReactSource source)
     {
         __p = Props.FromJson(source);
         _needsToRerender = true;
@@ -415,7 +415,7 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
         _needsToRerender = false;
     }
 
-    void IReactive.ApplyDiff(ReactSource source)
+    void IReactive.ApplyDiff(in ReactSource source)
     {
         __p = Props.FromJson(source);
         _needsToRerender = true;
