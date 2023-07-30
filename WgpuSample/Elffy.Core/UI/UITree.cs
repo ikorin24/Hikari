@@ -31,25 +31,27 @@ public sealed class UITree
         _uiLayer ??= new UILayer(_screen, 100); // TODO: sort order
 
         var source = builder.FixAndClear();
-        _root = ReactHelper.ApplyDiffOrNew(_root, source, out var isNew);
-        if(isNew) {
-            switch(_root) {
-                case UIElement uiElement: {
-                    SetRoot(uiElement);
-                    break;
-                }
-                case IReactComponent component: {
-                    var uiElement = component.Build();
-                    SetRoot(uiElement);
-                    break;
-                }
-                default: {
-                    throw new ArgumentException($"invalid object type: {_root.GetType()}");
-                }
+        var result = source.ApplyTo(ref _root, out var old);
+        switch(result) {
+            case ApplySourceResult.InstanceReplaced: {
+                var uiElement = _root switch
+                {
+                    UIElement e => e,
+                    IReactComponent c => c.BuildUIElement(),
+                    _ => throw new ArgumentException($"invalid object type: {_root.GetType()}")
+                };
+                _uiLayer.SetRoot(uiElement);
+                old?.OnUnmount();
+                _root.OnMount();
+                break;
             }
-        }
-        else {
-            throw new NotImplementedException();
+            case ApplySourceResult.PropertyDiffApplied: {
+                throw new NotImplementedException();
+            }
+            case ApplySourceResult.ArrayDiffApplied:
+            default: {
+                throw new NotImplementedException();
+            }
         }
     }
 }

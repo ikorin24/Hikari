@@ -276,39 +276,20 @@ public abstract class UIElement : IToJson, IReactive
 
     protected virtual void ApplyDiffProtected(in ReactSource source)
     {
-        Width = source.ApplyProperty(nameof(Width), Width, DefaultWidth);
-        Height = source.ApplyProperty(nameof(Height), Height, DefaultHeight);
-        Margin = source.ApplyProperty(nameof(Margin), Margin, DefaultMargin);
-        Padding = source.ApplyProperty(nameof(Padding), Padding, DefaultPadding);
-        HorizontalAlignment = source.ApplyProperty(nameof(HorizontalAlignment), HorizontalAlignment, DefaultHorizontalAlignment);
-        VerticalAlignment = source.ApplyProperty(nameof(VerticalAlignment), VerticalAlignment, DefaultVerticalAlignment);
-        BackgroundColor = source.ApplyProperty(nameof(BackgroundColor), BackgroundColor, DefaultBackgroundColor);
-        BorderWidth = source.ApplyProperty(nameof(BorderWidth), BorderWidth, DefaultBorderWidth);
-        BorderRadius = source.ApplyProperty(nameof(BorderRadius), BorderRadius, DefaultBorderRadius);
-        BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, DefaultBorderColor);
+        Width = source.ApplyProperty(nameof(Width), Width, DefaultWidth, out _);
+        Height = source.ApplyProperty(nameof(Height), Height, DefaultHeight, out _);
+        Margin = source.ApplyProperty(nameof(Margin), Margin, DefaultMargin, out _);
+        Padding = source.ApplyProperty(nameof(Padding), Padding, DefaultPadding, out _);
+        HorizontalAlignment = source.ApplyProperty(nameof(HorizontalAlignment), HorizontalAlignment, DefaultHorizontalAlignment, out _);
+        VerticalAlignment = source.ApplyProperty(nameof(VerticalAlignment), VerticalAlignment, DefaultVerticalAlignment, out _);
+        BackgroundColor = source.ApplyProperty(nameof(BackgroundColor), BackgroundColor, DefaultBackgroundColor, out _);
+        BorderWidth = source.ApplyProperty(nameof(BorderWidth), BorderWidth, DefaultBorderWidth, out _);
+        BorderRadius = source.ApplyProperty(nameof(BorderRadius), BorderRadius, DefaultBorderRadius, out _);
+        BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, DefaultBorderColor, out _);
 
-        if(source.TryGetProperty(nameof(Children), out var children)) {
-            ((IReactive)Children).ApplyDiff(children);
-
-            //ReactHelper.ApplyDiffOrNew(Children, children, out var isNew);
-            //if(isNew) {
-            //    throw new ArgumentException();
-            //}
+        if(source.TryGetProperty(nameof(Children), out var childrenProp)) {
+            childrenProp.ApplyDiffTo(Children);
         }
-
-        //Children = source.TryGetProperty("children", out var children)
-        //    ? ReactHelper.ApplyDiffOrNew(Children, children)
-        //    : new UIElementCollection();
-
-        //// TODO: children
-        //throw new NotImplementedException();
-        //if(element.TryGetProperty("children", out var children)) {
-        //    foreach(var child in children.EnumerateArray()) {
-        //        var key = child.GetProperty("@key"u8).GetStringNotNull();
-        //    }
-        //}
-        //else {
-        //}
     }
 
     public JsonNode? ToJson()

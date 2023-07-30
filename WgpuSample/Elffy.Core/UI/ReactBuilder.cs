@@ -320,22 +320,49 @@ public readonly struct ReactSource : IEquatable<ReactSource>
     }
 
 
-    public T ApplyProperty<T>(string propertyName, in T current, in T defaultValue)
+    public T ApplyProperty<T>(string propertyName, in T current, in T defaultValue, out ApplySourceResult result) where T : notnull
     {
         if(TryGetProperty(propertyName, out var propertyValue)) {
-            return ReactHelper.ApplyDiffOrNew<T>(current, propertyValue);
+            var c = current;
+            result = propertyValue.ApplyTo(ref c, out var old);
+            return c;
         }
+        result = ApplySourceResult.InstanceReplaced;
         return defaultValue;
     }
 
-    //public T ApplyProperty<T>(string propertyName, in T current, Func<T> defaultFactory)
-    //{
-    //    ArgumentNullException.ThrowIfNull(defaultFactory);
-    //    if(TryGetProperty(propertyName, out var propertyValue)) {
-    //        return ReactHelper.ApplyDiffOrNew<T>(current, propertyValue);
-    //    }
-    //    return defaultFactory.Invoke();
-    //}
+    public ApplySourceResult ApplyTo<T>([NotNull] ref T? reactive, out T? old) where T : notnull
+    {
+        if(typeof(T).IsAssignableTo(typeof(IReactive)) && reactive != null) {
+            if(HasObjectType(out var type) && type == reactive.GetType()) {
+                ((IReactive)reactive).ApplyDiff(this);
+                old = reactive;
+                return ApplySourceResult.PropertyDiffApplied;
+            }
+            else if(IsArray) {
+                ((IReactive)reactive).ApplyDiff(this);
+                old = reactive;
+                return ApplySourceResult.ArrayDiffApplied;
+            }
+        }
+        old = reactive;
+        reactive = Instantiate<T>();
+        return ApplySourceResult.InstanceReplaced;
+    }
+
+    public void ApplyDiffTo<T>(T reactive) where T : class, IReactive
+    {
+        ArgumentNullException.ThrowIfNull(reactive);
+        if(HasObjectType(out var type) && type == reactive.GetType()) {
+            reactive.ApplyDiff(this);
+        }
+        else if(IsArray) {
+            reactive.ApplyDiff(this);
+        }
+        else {
+            throw new InvalidOperationException();
+        }
+    }
 
     public int GetArrayLength() => _element.GetArrayLength();
 
@@ -437,6 +464,13 @@ public readonly struct ReactSource : IEquatable<ReactSource>
 
         public void Reset() => _enumerator.Reset();
     }
+}
+
+public enum ApplySourceResult
+{
+    InstanceReplaced = 0,
+    PropertyDiffApplied = 1,
+    ArrayDiffApplied = 2,
 }
 
 //internal sealed class FixedReactComponent : IReactComponent

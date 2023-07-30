@@ -106,7 +106,7 @@ public sealed class UIElementCollection
                     if(item.HasObjectKey(out var key)) {
                         dic.Add(key, component);
                     }
-                    var uiElement = component.Build();
+                    var uiElement = component.BuildUIElement();
                     list.Add(uiElement);
                     break;
                 }
@@ -144,7 +144,9 @@ public sealed class UIElementCollection
                 else {
                     current = null;
                 }
-                tmp[i] = ReactHelper.ApplyDiffOrNew(current, item);
+                item.ApplyTo(ref current, out var old);
+                tmp[i] = current;
+                //tmp[i] = ReactHelper.ApplyDiffOrNew(current, item);
                 i++;
             }
             //foreach(var item in reactives) {

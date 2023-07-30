@@ -1,13 +1,12 @@
 ﻿#nullable enable
 using System;
 using System.Diagnostics;
-using System.Text.Json;
 
 namespace Elffy.UI;
 
 internal static class ReactComponentBuilder
 {
-    public static UIElement Build(this IReactComponent component)
+    public static UIElement BuildUIElement(this IReactComponent component)
     {
         var source = component.GetReactSource();
         var obj = source.Instantiate<object>();
@@ -18,14 +17,16 @@ internal static class ReactComponentBuilder
                     element.ModelEarlyUpdate.Subscribe(model =>
                     {
                         if(component.NeedsToRerender) {
-                            component.Apply(model.Element);
+                            var source = component.GetReactSource();
+                            ((IReactive)model.Element).ApplyDiff(source);
+                            component.RenderCompleted();
                         }
                     });
                     component.RenderCompleted();
                     return element;
                 }
                 case IReactComponent c: {
-                    var element = c.Build();
+                    var element = c.BuildUIElement();
                     component.RenderCompleted();
                     return element;
                 }
@@ -34,12 +35,5 @@ internal static class ReactComponentBuilder
                 }
             }
         }
-    }
-
-    private static void Apply(this IReactComponent component, IReactive target)
-    {
-        var source = component.GetReactSource();
-        target.ApplyDiff(source);
-        component.RenderCompleted();
     }
 }
