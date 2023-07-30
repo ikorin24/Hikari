@@ -446,22 +446,12 @@ public interface IToJson
     JsonNode? ToJson();
 }
 
-public static class EnumJsonHelper
+internal static class EnumJsonHelper
 {
     public static JsonValue ToJson<T>(this T self) where T : struct, Enum
     {
         var str = self.ToString();
         return JsonValue.Create(str)!;
-    }
-
-    public static T ToEnum<T>(this JsonElement self) where T : struct, Enum
-    {
-        return Enum.Parse<T>(self.GetStringNotNull());
-    }
-
-    public static object ToEnum(this JsonElement self, Type type)
-    {
-        return Enum.Parse(type, self.GetStringNotNull());
     }
 
     private static string GetStringNotNull(this JsonElement element)

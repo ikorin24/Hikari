@@ -279,8 +279,21 @@ public readonly struct ReactSource : IEquatable<ReactSource>
     public DateTime GetDateTime() => _element.GetDateTime();
     public DateTimeOffset GetDateTimeOffset() => _element.GetDateTimeOffset();
     public Guid GetGuid() => _element.GetGuid();
-    public T ToEnum<T>() where T : struct, Enum => _element.ToEnum<T>();
-    public object ToEnum(Type type) => _element.ToEnum(type);
+    public T ToEnum<T>() where T : struct, Enum => Enum.Parse<T>(GetStringNotNull(_element));
+    public object ToEnum(Type type) => Enum.Parse(type, GetStringNotNull(_element));
+
+    private static string GetStringNotNull(JsonElement element)
+    {
+        var str = element.GetString();
+        if(str == null) {
+            Throw();
+        }
+        return str;
+
+        [DoesNotReturn]
+        static void Throw() => throw new FormatException("null");
+    }
+
 
     public T ApplyProperty<T>(string propertyName, in T current, in T defaultValue)
     {
