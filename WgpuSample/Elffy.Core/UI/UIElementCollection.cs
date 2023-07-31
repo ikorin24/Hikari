@@ -160,17 +160,11 @@ public sealed class UIElementCollection
         }
     }
 
-    void IReactive.OnMount()
+    internal void MountElements()
     {
-        foreach(var item in _reactives) {
-            item.OnMount();
-        }
-    }
-
-    void IReactive.OnUnmount()
-    {
-        foreach(var item in _reactives) {
-            item.OnUnmount();
+        var reactives = _reactives;
+        foreach(var item in reactives) {
+            (item as IReactComponent)?.OnMount();
         }
     }
 

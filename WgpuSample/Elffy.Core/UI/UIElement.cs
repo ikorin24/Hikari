@@ -338,6 +338,7 @@ public abstract class UIElement : IToJson, IReactive
         foreach(var child in _children) {
             child.CreateModel(layer);
         }
+        _children.MountElements();
         return model;
     }
 
@@ -429,16 +430,6 @@ public abstract class UIElement : IToJson, IReactive
     protected virtual RectF DecideRect(in ContentAreaInfo parentContentArea)
     {
         return UILayouter.DecideRect(this, parentContentArea);
-    }
-
-    void IReactive.OnMount()
-    {
-        ((IReactive)Children).OnMount();
-    }
-
-    void IReactive.OnUnmount()
-    {
-        ((IReactive)Children).OnUnmount();
     }
 }
 

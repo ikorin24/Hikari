@@ -372,8 +372,8 @@ sealed partial class Counter
     partial void OnMount();
     partial void OnUnmount();
 
-    void IReactive.OnMount() => OnMount();
-    void IReactive.OnUnmount() => OnUnmount();
+    void IReactComponent.OnMount() => OnMount();
+    void IReactComponent.OnUnmount() => OnUnmount();
 
     partial record struct Props : IFromJson<Props>
     {
@@ -447,8 +447,8 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
     partial void OnMount();
     partial void OnUnmount();
 
-    void IReactive.OnMount() => OnMount();
-    void IReactive.OnUnmount() => OnUnmount();
+    void IReactComponent.OnMount() => OnMount();
+    void IReactComponent.OnUnmount() => OnUnmount();
 
     partial record struct Props : IFromJson<Props>
     {

@@ -5,6 +5,4 @@ namespace Elffy.UI;
 public interface IReactive
 {
     void ApplyDiff(in ReactSource source);
-    void OnMount();
-    void OnUnmount();
 }

@@ -38,17 +38,15 @@ public sealed class UITree
                     IReactComponent c => c.BuildUIElement(),
                     _ => throw new ArgumentException($"invalid object type: {_root.GetType()}")
                 };
+                (old as IReactComponent)?.OnUnmount();
                 _uiLayer.SetRoot(uiElement);
-                old?.OnUnmount();
-                _root.OnMount();
+                (_root as IReactComponent)?.OnMount();
                 break;
             }
-            case ApplySourceResult.PropertyDiffApplied: {
-                throw new NotImplementedException();
-            }
+            case ApplySourceResult.PropertyDiffApplied:
             case ApplySourceResult.ArrayDiffApplied:
             default: {
-                throw new NotImplementedException();
+                break;
             }
         }
     }
