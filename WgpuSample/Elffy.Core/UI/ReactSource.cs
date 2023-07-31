@@ -7,13 +7,14 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Elffy.UI;
 
-public readonly struct ReactSource : IEquatable<ReactSource>
+public readonly partial struct ReactSource : IEquatable<ReactSource>
 {
     private readonly JsonElement _element;
-    private readonly List<Delegate?>? _delegates;
+    private readonly List<Delegate>? _delegates;
     private readonly List<Type>? _types;
 
     internal JsonElement Element => _element;
@@ -27,7 +28,7 @@ public readonly struct ReactSource : IEquatable<ReactSource>
 
     public string? ObjectKey => HasObjectKey(out var key) ? key : null;
 
-    internal ReactSource(string str, List<Delegate?>? delegates, List<Type>? types)
+    internal ReactSource(string str, List<Delegate>? delegates, List<Type>? types)
     {
         // Clone the root element to make the lifetime permanent.
         using(var json = JsonDocument.Parse(str, Serializer.ParseOptions)) {
@@ -37,7 +38,7 @@ public readonly struct ReactSource : IEquatable<ReactSource>
         _types = types;
     }
 
-    private ReactSource(JsonElement element, List<Delegate?>? delegates, List<Type>? types)
+    private ReactSource(JsonElement element, List<Delegate>? delegates, List<Type>? types)
     {
         _element = element;
         _delegates = delegates;
@@ -52,7 +53,7 @@ public readonly struct ReactSource : IEquatable<ReactSource>
             {
                 true => typeProp.ValueKind switch
                 {
-                    JsonValueKind.Number => GetObjectType(typeProp.GetInt32()),
+                    JsonValueKind.String => GetTypeFromTable(typeProp.GetString(), _types),
                     _ => null,
                 },
                 false => null,
@@ -60,6 +61,30 @@ public readonly struct ReactSource : IEquatable<ReactSource>
             _ => null,
         };
         return type != null;
+    }
+
+    [GeneratedRegex("""
+        ^(?<i>\d+)@types$
+        """)]
+    private static partial Regex TypeRefData();
+
+    public static Type? GetTypeFromTable(string? value, List<Type>? types)
+    {
+        if(value == null || types == null) {
+            return null;
+        }
+        var regex = TypeRefData();
+        var match = regex.Match(value);
+        if(match == null) {
+            return null;
+        }
+        if(int.TryParse(match.Groups["i"].ValueSpan, out var index) == false) {
+            return null;
+        }
+        if((uint)index >= (uint)types.Count) {
+            return null;
+        }
+        return types[index];
     }
 
     public bool HasObjectKey([MaybeNullWhen(false)] out string key)
@@ -269,7 +294,7 @@ public readonly struct ReactSource : IEquatable<ReactSource>
     public bool Equals(ReactSource other)
     {
         return EqualityComparer<JsonElement>.Default.Equals(_element, other._element) &&
-               EqualityComparer<List<Delegate?>?>.Default.Equals(_delegates, other._delegates) &&
+               EqualityComparer<List<Delegate>?>.Default.Equals(_delegates, other._delegates) &&
                EqualityComparer<List<Type>?>.Default.Equals(_types, other._types);
     }
 
@@ -284,7 +309,7 @@ public readonly struct ReactSource : IEquatable<ReactSource>
 
     public struct ArrayEnumerator : IEnumerator<ReactSource>
     {
-        private readonly List<Delegate?>? _delegates;
+        private readonly List<Delegate>? _delegates;
         private readonly List<Type>? _types;
         private JsonElement.ArrayEnumerator _enumerator;
 

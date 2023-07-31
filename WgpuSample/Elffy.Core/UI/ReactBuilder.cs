@@ -11,7 +11,7 @@ namespace Elffy.UI;
 public ref struct ReactBuilder
 {
     private DefaultInterpolatedStringHandler _handler;
-    private List<Delegate?>? _delegates;
+    private List<Delegate>? _delegates;
     private List<Type>? _types;
 
     public ReactBuilder(int literalLength, int formattedCount)
@@ -33,20 +33,24 @@ public ref struct ReactBuilder
         _types ??= new List<Type>();
         var index = _types.Count;
         _types.Add(type);
+        _handler.AppendLiteral("\"");
         _handler.AppendFormatted(index);
+        _handler.AppendLiteral("@types\"");
     }
 
-    public void AppendFormatted(Action? action)
+    public void AppendFormatted(Action action)
     {
-        _delegates ??= new List<Delegate?>();
+        ArgumentNullException.ThrowIfNull(action);
+        _delegates ??= new();
         var index = _delegates.Count;
         _delegates.Add(action);
         _handler.AppendFormatted(index);
     }
 
-    public void AppendFormatted<T>(Action<T>? action)
+    public void AppendFormatted<T>(Action<T> action)
     {
-        _delegates ??= new List<Delegate?>();
+        ArgumentNullException.ThrowIfNull(action);
+        _delegates ??= new();
         var index = _delegates.Count;
         _delegates.Add(action);
         _handler.AppendFormatted(index);
