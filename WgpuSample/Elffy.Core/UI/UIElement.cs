@@ -338,7 +338,6 @@ public abstract class UIElement : IToJson, IReactive
         foreach(var child in _children) {
             child.CreateModel(layer);
         }
-        _children.MountElements();
         return model;
     }
 

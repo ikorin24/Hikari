@@ -29,18 +29,25 @@ public sealed class UITree
         _uiLayer ??= new UILayer(_screen, 100); // TODO: sort order
 
         var source = builder.FixAndClear();
-        var result = source.ApplyTo(ref _root, out var old);
+        IReactive? root = _root;
+        var result = source.ApplyTo(ref root, out var old);
         switch(result) {
             case ApplySourceResult.InstanceReplaced: {
-                var uiElement = _root switch
-                {
-                    UIElement e => e,
-                    IReactComponent c => c.BuildUIElement(),
-                    _ => throw new ArgumentException($"invalid object type: {_root.GetType()}")
-                };
-                (old as IReactComponent)?.OnUnmount();
-                _uiLayer.SetRoot(uiElement);
-                (_root as IReactComponent)?.OnMount();
+                switch(root) {
+                    case UIElement element: {
+                        _uiLayer.SetRoot(element);
+                        break;
+                    }
+                    case IReactComponent component: {
+                        var element = component.BuildUIElement();
+                        _uiLayer.SetRoot(element);
+                        break;
+                    }
+                    default: {
+                        throw new ArgumentException($"invalid object type: {root.GetType()}");
+                    }
+                }
+                _root = root;
                 break;
             }
             case ApplySourceResult.PropertyDiffApplied:

@@ -14,6 +14,8 @@ internal static class ReactComponentBuilder
             switch(obj) {
                 case UIElement element: {
                     Debug.Assert(element.Parent == null);
+                    element.ModelAlive.Subscribe(model => component.OnMount());
+                    element.ModelDead.Subscribe(model => component.OnUnmount());
                     element.ModelEarlyUpdate.Subscribe(model =>
                     {
                         if(component.NeedsToRerender) {
@@ -28,6 +30,8 @@ internal static class ReactComponentBuilder
                 }
                 case IReactComponent c: {
                     var element = c.BuildUIElement();
+                    element.ModelAlive.Subscribe(model => c.OnMount());
+                    element.ModelDead.Subscribe(model => c.OnUnmount());
                     component.RenderCompleted(c);
                     return element;
                 }

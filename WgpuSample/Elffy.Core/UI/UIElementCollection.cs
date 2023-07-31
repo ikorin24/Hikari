@@ -160,14 +160,6 @@ public sealed class UIElementCollection
         }
     }
 
-    internal void MountElements()
-    {
-        var reactives = _reactives;
-        foreach(var item in reactives) {
-            (item as IReactComponent)?.OnMount();
-        }
-    }
-
     public struct Enumerator : IEnumerator<UIElement>
     {
         private List<UIElement>.Enumerator _enumerator;
