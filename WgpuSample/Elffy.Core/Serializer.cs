@@ -210,7 +210,7 @@ public static class Serializer
             return (T)source.ToEnum(typeof(T));
         }
         if(typeof(T).IsAssignableTo(typeof(Delegate))) {
-            var d = source.RuntimeData.GetDelegate<Delegate>(source.Element) ?? throw new FormatException("null");
+            var d = source.RestoreDelegate<Delegate>() ?? throw new FormatException("null");
             return (T)(object)d;
         }
 
@@ -288,7 +288,7 @@ public static class Serializer
             return source.ToEnum(leftSideType);
         }
         if(leftSideType?.IsAssignableTo(typeof(Delegate)) == true) {
-            var d = source.RuntimeData.GetDelegate<Delegate>(source.Element) ?? throw new FormatException("null");
+            var d = source.RestoreDelegate<Delegate>() ?? throw new FormatException("null");
             return d;
         }
 

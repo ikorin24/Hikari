@@ -132,8 +132,7 @@ public ref struct ReactBuilder
 
     public ReactSource FixAndClear()
     {
-        var data = new DeserializeRuntimeData(_delegates, _types);
-        return new ReactSource(_handler.ToStringAndClear(), data);
+        return new ReactSource(_handler.ToStringAndClear(), _delegates, _types);
     }
 
     public static implicit operator ReactBuilder([StringSyntax(StringSyntaxAttribute.Json)] string s)

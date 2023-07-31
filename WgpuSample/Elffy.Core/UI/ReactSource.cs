@@ -5,7 +5,6 @@ using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
 
@@ -14,9 +13,8 @@ namespace Elffy.UI;
 public readonly struct ReactSource : IEquatable<ReactSource>
 {
     private readonly JsonElement _element;
-    private readonly DeserializeRuntimeData _data;
-
-    internal DeserializeRuntimeData RuntimeData => _data;
+    private readonly List<Delegate?>? _delegates;
+    private readonly List<Type>? _types;
 
     internal JsonElement Element => _element;
 
@@ -29,19 +27,21 @@ public readonly struct ReactSource : IEquatable<ReactSource>
 
     public string? ObjectKey => HasObjectKey(out var key) ? key : null;
 
-    internal ReactSource(string str, DeserializeRuntimeData data)
+    internal ReactSource(string str, List<Delegate?>? delegates, List<Type>? types)
     {
-        _data = data;
-
         // Clone the root element to make the lifetime permanent.
-        using var json = JsonDocument.Parse(str, Serializer.ParseOptions);
-        _element = json.RootElement.Clone();
+        using(var json = JsonDocument.Parse(str, Serializer.ParseOptions)) {
+            _element = json.RootElement.Clone();
+        }
+        _delegates = delegates;
+        _types = types;
     }
 
-    private ReactSource(JsonElement element, DeserializeRuntimeData data)
+    private ReactSource(JsonElement element, List<Delegate?>? delegates, List<Type>? types)
     {
         _element = element;
-        _data = data;
+        _delegates = delegates;
+        _types = types;
     }
 
     public bool HasObjectType([MaybeNullWhen(false)] out Type type)
@@ -52,7 +52,7 @@ public readonly struct ReactSource : IEquatable<ReactSource>
             {
                 true => typeProp.ValueKind switch
                 {
-                    JsonValueKind.Number => _data.GetType(typeProp),
+                    JsonValueKind.Number => GetObjectType(typeProp.GetInt32()),
                     _ => null,
                 },
                 false => null,
@@ -83,7 +83,7 @@ public readonly struct ReactSource : IEquatable<ReactSource>
     public bool TryGetProperty(string propertyName, out ReactSource value)
     {
         if(_element.TryGetProperty(propertyName, out var prop)) {
-            value = new ReactSource(prop, _data);
+            value = new ReactSource(prop, _delegates, _types);
             return true;
         }
         value = default;
@@ -203,13 +203,32 @@ public readonly struct ReactSource : IEquatable<ReactSource>
         return Serializer.Instantiate(this, type);
     }
 
+    internal T? RestoreDelegate<T>() where T : Delegate
+    {
+        var key = _element.GetInt32();
+        var delegates = _delegates;
+        if(delegates == null || (uint)key >= (uint)delegates.Count) {
+            return null;
+        }
+        return (T?)delegates[key];
+    }
+
+    private Type? GetObjectType(int key)
+    {
+        var types = _types;
+        if(types == null || (uint)key >= (uint)types.Count) {
+            return null;
+        }
+        return types[key];
+    }
+
     [DoesNotReturn]
     public void ThrowInvalidFormat() => throw new FormatException(ToDebugString());
 
     public string ToDebugString()
     {
-        var delegates = _data.Delegates;
-        var types = _data.Types;
+        var delegates = _delegates;
+        var types = _types;
 
         var buffer = new ArrayBufferWriter<byte>();
         var options = new JsonWriterOptions
@@ -224,19 +243,19 @@ public readonly struct ReactSource : IEquatable<ReactSource>
             writer.WriteStartObject("data");
             {
                 writer.WriteStartArray("delegates");
-                {
+                if(delegates != null) {
                     foreach(var d in delegates) {
                         writer.WriteStringValue(d?.Method?.Name);
                     }
                 }
                 writer.WriteEndArray();
-                writer.WriteStartArray("types");
-                {
+                if(types != null) {
+                    writer.WriteStartArray("types");
                     foreach(var t in types) {
                         writer.WriteStringValue(t.FullName);
                     }
+                    writer.WriteEndArray();
                 }
-                writer.WriteEndArray();
             }
             writer.WriteEndObject();
         }
@@ -245,21 +264,16 @@ public readonly struct ReactSource : IEquatable<ReactSource>
         return Encoding.UTF8.GetString(buffer.WrittenSpan);
     }
 
-    public override bool Equals(object? obj)
-    {
-        return obj is ReactSource source && Equals(source);
-    }
+    public override bool Equals(object? obj) => obj is ReactSource source && Equals(source);
 
     public bool Equals(ReactSource other)
     {
         return EqualityComparer<JsonElement>.Default.Equals(_element, other._element) &&
-               _data.Equals(other._data);
+               EqualityComparer<List<Delegate?>?>.Default.Equals(_delegates, other._delegates) &&
+               EqualityComparer<List<Type>?>.Default.Equals(_types, other._types);
     }
 
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(_element, _data);
-    }
+    public override int GetHashCode() => HashCode.Combine(_element, _delegates, _types);
 
     public record struct ArrayEnumerable(ReactSource Source) : IEnumerable<ReactSource>
     {
@@ -270,16 +284,18 @@ public readonly struct ReactSource : IEquatable<ReactSource>
 
     public struct ArrayEnumerator : IEnumerator<ReactSource>
     {
-        private readonly DeserializeRuntimeData _data;
+        private readonly List<Delegate?>? _delegates;
+        private readonly List<Type>? _types;
         private JsonElement.ArrayEnumerator _enumerator;
 
-        public ArrayEnumerator(ReactSource source)
+        internal ArrayEnumerator(in ReactSource source)
         {
-            _data = source.RuntimeData;
+            _delegates = source._delegates;
+            _types = source._types;
             _enumerator = source.Element.EnumerateArray();
         }
 
-        public ReactSource Current => new ReactSource(_enumerator.Current, _data);
+        public ReactSource Current => new ReactSource(_enumerator.Current, _delegates, _types);
 
         object IEnumerator.Current => throw new NotImplementedException();
 
@@ -289,78 +305,6 @@ public readonly struct ReactSource : IEquatable<ReactSource>
 
         public void Reset() => _enumerator.Reset();
     }
-}
-
-internal readonly struct DeserializeRuntimeData : IEquatable<DeserializeRuntimeData>
-{
-    private readonly List<Delegate?>? _delegates;
-    private readonly List<Type>? _types;
-
-    public static DeserializeRuntimeData None => default;
-
-    internal IEnumerable<Delegate?> Delegates => _delegates ?? Enumerable.Empty<Delegate?>();
-    internal IEnumerable<Type> Types => _types ?? Enumerable.Empty<Type>();
-
-    internal DeserializeRuntimeData(List<Delegate?>? delegates, List<Type>? types)
-    {
-        _delegates = delegates;
-        _types = types;
-    }
-
-    internal void Deconstruct(out List<Delegate?>? delegates, out int delegateIndex)
-    {
-        delegates = _delegates;
-        delegateIndex = delegates?.Count ?? 0;
-    }
-
-    //internal EventSubscription<T> AddEventHandler<T>(Event<T> targetEvent, JsonElement handler)
-    //{
-    //    var key = handler.GetInt32();
-    //    var d = GetDelegate(key);
-    //    return d switch
-    //    {
-    //        Action<T> action => targetEvent.Subscribe(action),
-    //        Action action => targetEvent.Subscribe(_ => action()),
-    //        null => EventSubscription<T>.None,
-    //        _ => throw new FormatException($"event handler type should be {typeof(Action<T>).FullName} or {typeof(Action).FullName}"),
-    //    };
-    //}
-
-    internal Type? GetType(JsonElement propValue)
-    {
-        var key = propValue.GetInt32();
-        return GetType(key);
-    }
-
-    internal T? GetDelegate<T>(JsonElement handler) where T : Delegate
-    {
-        var key = handler.GetInt32();
-        return (T?)GetDelegate(key);
-    }
-
-    private Delegate? GetDelegate(int key)
-    {
-        var delegates = _delegates;
-        if(delegates == null || (uint)key >= (uint)delegates.Count) {
-            return null;
-        }
-        return delegates[key];
-    }
-
-    private Type? GetType(int key)
-    {
-        var types = _types;
-        if(types == null || (uint)key >= (uint)types.Count) {
-            return null;
-        }
-        return types[key];
-    }
-
-    public override bool Equals(object? obj) => obj is DeserializeRuntimeData data && Equals(data);
-
-    public bool Equals(DeserializeRuntimeData other) => _delegates == other._delegates;
-
-    public override int GetHashCode() => HashCode.Combine(_delegates);
 }
 
 public enum ApplySourceResult
