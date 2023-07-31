@@ -365,8 +365,7 @@ sealed partial class Counter
     {
         __p = Props.FromJson(source);
         var innerSource = Render(__p).FixAndClear();
-        innerSource.ApplyTo(ref _rendered, out _);
-        //_needsToRerender = true;
+        _rendered = innerSource.Apply(_rendered, out _);
     }
 
     partial void OnMount();
@@ -440,8 +439,7 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
     {
         __p = Props.FromJson(source);
         var innerSource = Render(__p).FixAndClear();
-        innerSource.ApplyTo(ref _rendered, out _);
-        //_needsToRerender = true;
+        _rendered = innerSource.Apply(_rendered, out _);
     }
 
     partial void OnMount();

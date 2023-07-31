@@ -29,9 +29,8 @@ public sealed class UITree
         _uiLayer ??= new UILayer(_screen, 100); // TODO: sort order
 
         var source = builder.FixAndClear();
-        IReactive? root = _root;
-        var result = source.ApplyTo(ref root, out var old);
-        switch(result) {
+        var root = source.Apply(_root, out var applied);
+        switch(applied.Result) {
             case ApplySourceResult.InstanceReplaced: {
                 switch(root) {
                     case UIElement element: {

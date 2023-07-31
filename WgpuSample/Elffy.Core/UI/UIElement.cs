@@ -288,7 +288,7 @@ public abstract class UIElement : IToJson, IReactive
         BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, () => DefaultBorderColor, out _);
 
         if(source.TryGetProperty(nameof(Children), out var childrenProp)) {
-            childrenProp.ApplyDiffTo(Children);
+            childrenProp.ApplyDiff(Children);
         }
     }
 

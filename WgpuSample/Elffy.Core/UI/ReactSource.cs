@@ -148,35 +148,32 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
     public T ApplyProperty<T>(string propName, in T current, Func<T> defaultFactory, out (ApplySourceResult Result, T? Old) output) where T : notnull
     {
         ArgumentNullException.ThrowIfNull(defaultFactory);
-        if(TryGetProperty(propName, out var propertyValue)) {
-            var c = current;
-            output.Result = propertyValue.ApplyTo(ref c, out output.Old);
-            return c;
+        if(TryGetProperty(propName, out var propValue)) {
+            return propValue.Apply(current, out output);
         }
         output = (ApplySourceResult.InstanceReplaced, current);
         return defaultFactory.Invoke();
     }
 
-    public ApplySourceResult ApplyTo<T>([NotNull] ref T? target, out T? old) where T : notnull
+    public T Apply<T>(in T? current, out (ApplySourceResult Result, T? Old) output) where T : notnull
     {
-        if(target is IReactive reactive) {
-            if(HasObjectType(out var type) && type == target.GetType()) {
+        if(current is IReactive reactive) {
+            if(HasObjectType(out var type) && type == current.GetType()) {
                 reactive.ApplyDiff(this);
-                old = target;
-                return ApplySourceResult.PropertyDiffApplied;
+                output = (ApplySourceResult.PropertyDiffApplied, current);
+                return current;
             }
             else if(IsArray) {
                 reactive.ApplyDiff(this);
-                old = target;
-                return ApplySourceResult.ArrayDiffApplied;
+                output = (ApplySourceResult.ArrayDiffApplied, current);
+                return current;
             }
         }
-        old = target;
-        target = Instantiate<T>();
-        return ApplySourceResult.InstanceReplaced;
+        output = (ApplySourceResult.InstanceReplaced, current);
+        return Instantiate<T>();
     }
 
-    public void ApplyDiffTo<T>(T reactive) where T : class, IReactive
+    public void ApplyDiff<T>(T reactive) where T : class, IReactive
     {
         ArgumentNullException.ThrowIfNull(reactive);
         if(HasObjectType(out var type) && type == reactive.GetType()) {

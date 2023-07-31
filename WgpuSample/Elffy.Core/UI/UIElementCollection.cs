@@ -144,18 +144,10 @@ public sealed class UIElementCollection
                 else {
                     current = null;
                 }
-                item.ApplyTo(ref current, out var old);
-                tmp[i] = current;
-                //tmp[i] = ReactHelper.ApplyDiffOrNew(current, item);
+                tmp[i] = item.Apply(current, out _);
                 i++;
             }
-            //foreach(var item in reactives) {
-            //    item.OnUnmount();
-            //}
             reactives.Clear();
-            //foreach(var item in tmp) {
-            //    item.OnMount();
-            //}
             reactives.AddRange(tmp);
         }
     }
