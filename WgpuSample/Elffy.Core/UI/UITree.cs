@@ -7,8 +7,8 @@ namespace Elffy.UI;
 public sealed class UITree
 {
     private readonly Screen _screen;
-
     private UILayer? _uiLayer;
+    private IReactive? _root;
 
     public Screen Screen => _screen;
 
@@ -23,8 +23,6 @@ public sealed class UITree
         _uiLayer ??= new UILayer(_screen, 100); // TODO: sort order
         _uiLayer.SetRoot(element);
     }
-
-    private IReactive? _root;
 
     public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] ReactBuilder builder)
     {

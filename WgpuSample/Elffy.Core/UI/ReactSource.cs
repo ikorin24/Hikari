@@ -186,7 +186,7 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
             reactive.ApplyDiff(this);
         }
         else {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException($"the source cannot be applied to the specified target.(target = {reactive})\n{ToDebugString()}");
         }
     }
 
