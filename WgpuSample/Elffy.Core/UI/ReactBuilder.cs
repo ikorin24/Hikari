@@ -44,7 +44,9 @@ public ref struct ReactBuilder
         _delegates ??= new();
         var index = _delegates.Count;
         _delegates.Add(action);
+        _handler.AppendLiteral("\"");
         _handler.AppendFormatted(index);
+        _handler.AppendLiteral("@delegates\"");
     }
 
     public void AppendFormatted<T>(Action<T> action)
@@ -53,7 +55,9 @@ public ref struct ReactBuilder
         _delegates ??= new();
         var index = _delegates.Count;
         _delegates.Add(action);
+        _handler.AppendLiteral("\"");
         _handler.AppendFormatted(index);
+        _handler.AppendLiteral("@delegates\"");
     }
 
     public void AppendFormatted(sbyte value)

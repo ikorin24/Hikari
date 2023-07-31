@@ -53,7 +53,7 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
             {
                 true => typeProp.ValueKind switch
                 {
-                    JsonValueKind.String => GetTypeFromTable(typeProp.GetString(), _types),
+                    JsonValueKind.String => GetTypeFromList(typeProp.GetString(), _types),
                     _ => null,
                 },
                 false => null,
@@ -61,30 +61,6 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
             _ => null,
         };
         return type != null;
-    }
-
-    [GeneratedRegex("""
-        ^(?<i>\d+)@types$
-        """)]
-    private static partial Regex TypeRefData();
-
-    public static Type? GetTypeFromTable(string? value, List<Type>? types)
-    {
-        if(value == null || types == null) {
-            return null;
-        }
-        var regex = TypeRefData();
-        var match = regex.Match(value);
-        if(match == null) {
-            return null;
-        }
-        if(int.TryParse(match.Groups["i"].ValueSpan, out var index) == false) {
-            return null;
-        }
-        if((uint)index >= (uint)types.Count) {
-            return null;
-        }
-        return types[index];
     }
 
     public bool HasObjectKey([MaybeNullWhen(false)] out string key)
@@ -230,12 +206,42 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
 
     internal T? RestoreDelegate<T>() where T : Delegate
     {
-        var key = _element.GetInt32();
-        var delegates = _delegates;
-        if(delegates == null || (uint)key >= (uint)delegates.Count) {
+        var d = GetDelegateFromList(_element.GetString(), _delegates);
+        return (T?)d;
+    }
+
+    [GeneratedRegex(@"^(?<i>\d+)@types$")]
+    private static partial Regex TypeRefDataRegex();
+
+    [GeneratedRegex(@"^(?<i>\d+)@delegates$")]
+    private static partial Regex DelegateRefDataRegex();
+
+    private static Type? GetTypeFromList(string? value, List<Type>? types)
+    {
+        return FromList(value, TypeRefDataRegex(), types);
+    }
+
+    private static Delegate? GetDelegateFromList(string? value, List<Delegate>? delegates)
+    {
+        return FromList(value, DelegateRefDataRegex(), delegates);
+    }
+
+    private static T? FromList<T>(string? value, Regex regex, List<T>? list) where T : class
+    {
+        if(value == null || list == null) {
             return null;
         }
-        return (T?)delegates[key];
+        var match = regex.Match(value);
+        if(match == null) {
+            return null;
+        }
+        if(int.TryParse(match.Groups["i"].ValueSpan, out var index) == false) {
+            return null;
+        }
+        if((uint)index >= (uint)list.Count) {
+            return null;
+        }
+        return list[index];
     }
 
     private Type? GetObjectType(int key)
