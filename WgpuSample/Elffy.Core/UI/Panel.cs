@@ -2,7 +2,6 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
@@ -37,7 +36,6 @@ public sealed class Panel : UIElement, IFromJson<Panel>
     protected override void ApplyDiffProtected(in ReactSource source)
     {
         base.ApplyDiffProtected(source);
-        // TODO:
     }
 }
 
