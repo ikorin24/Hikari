@@ -66,6 +66,12 @@ public sealed class UIElementCollection
     {
         ArgumentNullException.ThrowIfNull(element);
         _children.Add(element);
+        element.ModelDead.Subscribe(model =>
+        {
+            if(_children.Remove(model.Element)) {
+                model.Element.ClearParent();
+            }
+        }).AddTo(element.ModelSubscriptions);
         var parent = _parent;
         if(parent != null) {
             element.SetParent(parent);
@@ -99,6 +105,12 @@ public sealed class UIElementCollection
                         dic.Add(key, uiElement);
                     }
                     list.Add(uiElement);
+                    uiElement.ModelDead.Subscribe(model =>
+                    {
+                        if(list.Remove(model.Element)) {
+                            model.Element.ClearParent();
+                        }
+                    }).AddTo(uiElement.ModelSubscriptions);
                     break;
                 }
                 case IReactComponent component: {
@@ -108,6 +120,12 @@ public sealed class UIElementCollection
                     }
                     var uiElement = component.BuildUIElement();
                     list.Add(uiElement);
+                    uiElement.ModelDead.Subscribe(model =>
+                    {
+                        if(list.Remove(model.Element)) {
+                            model.Element.ClearParent();
+                        }
+                    }).AddTo(uiElement.ModelSubscriptions);
                     break;
                 }
                 default: {

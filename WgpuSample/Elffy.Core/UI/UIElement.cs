@@ -15,7 +15,9 @@ public abstract class UIElement : IToJson, IReactive
     private EventSource<UIModel> _modelEarlyUpdate;
     private EventSource<UIModel> _modelUpdate;
     private EventSource<UIModel> _modelLateUpdate;
+    private EventSource<UIModel> _modelTerminated;
     private EventSource<UIModel> _modelDead;
+    private readonly SubscriptionBag _modelSubscriptions = new SubscriptionBag();
 
     private LayoutLength _width;
     private LayoutLength _height;
@@ -53,11 +55,18 @@ public abstract class UIElement : IToJson, IReactive
     internal Event<UIModel> ModelEarlyUpdate => _modelEarlyUpdate.Event;
     internal Event<UIModel> ModelUpdate => _modelUpdate.Event;
     internal Event<UIModel> ModelLateUpdate => _modelLateUpdate.Event;
+    internal Event<UIModel> ModelTerminated => _modelTerminated.Event;
     internal Event<UIModel> ModelDead => _modelDead.Event;
+    internal SubscriptionRegister ModelSubscriptions => _modelSubscriptions.Register;
 
     public UIElement? Parent => _parent;
     internal UIModel? Model => _model;
     public Screen? Screen => _model?.Screen;
+
+    public void Remove()
+    {
+        Model?.Terminate();
+    }
 
 
     public LayoutLength Width
@@ -314,6 +323,11 @@ public abstract class UIElement : IToJson, IReactive
         _parent = parent;
     }
 
+    internal void ClearParent()
+    {
+        _parent = null;
+    }
+
     internal void CreateModel(UILayer layer)
     {
         Debug.Assert(_model == null);
@@ -331,9 +345,25 @@ public abstract class UIElement : IToJson, IReactive
         model.LateUpdate
             .Subscribe(static model => model.Element._modelLateUpdate.Invoke(model))
             .AddTo(model.Subscriptions);
-        model.Dead
-            .Subscribe(static model => model.Element._modelDead.Invoke(model))
+        model.Terminated
+            .Subscribe(static model => model.Element._modelTerminated.Invoke(model))
             .AddTo(model.Subscriptions);
+        model.Dead
+            .Subscribe(static model =>
+            {
+                model.Element._modelDead.Invoke(model);
+                model.Element._modelSubscriptions.Dispose();
+            })
+            .AddTo(model.Subscriptions);
+
+        model.Terminated.Subscribe(static model =>
+        {
+            var element = model.Element;
+            foreach(var child in element.Children) {
+                child.Remove();
+            }
+        }).AddTo(model.Subscriptions);
+
         _model = model;
         foreach(var child in _children) {
             child.CreateModel(layer);
