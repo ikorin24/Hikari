@@ -276,16 +276,16 @@ public abstract class UIElement : IToJson, IReactive
 
     protected virtual void ApplyDiffProtected(in ReactSource source)
     {
-        Width = source.ApplyProperty(nameof(Width), Width, DefaultWidth, out _);
-        Height = source.ApplyProperty(nameof(Height), Height, DefaultHeight, out _);
-        Margin = source.ApplyProperty(nameof(Margin), Margin, DefaultMargin, out _);
-        Padding = source.ApplyProperty(nameof(Padding), Padding, DefaultPadding, out _);
-        HorizontalAlignment = source.ApplyProperty(nameof(HorizontalAlignment), HorizontalAlignment, DefaultHorizontalAlignment, out _);
-        VerticalAlignment = source.ApplyProperty(nameof(VerticalAlignment), VerticalAlignment, DefaultVerticalAlignment, out _);
-        BackgroundColor = source.ApplyProperty(nameof(BackgroundColor), BackgroundColor, DefaultBackgroundColor, out _);
-        BorderWidth = source.ApplyProperty(nameof(BorderWidth), BorderWidth, DefaultBorderWidth, out _);
-        BorderRadius = source.ApplyProperty(nameof(BorderRadius), BorderRadius, DefaultBorderRadius, out _);
-        BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, DefaultBorderColor, out _);
+        Width = source.ApplyProperty(nameof(Width), Width, () => DefaultWidth, out _);
+        Height = source.ApplyProperty(nameof(Height), Height, () => DefaultHeight, out _);
+        Margin = source.ApplyProperty(nameof(Margin), Margin, () => DefaultMargin, out _);
+        Padding = source.ApplyProperty(nameof(Padding), Padding, () => DefaultPadding, out _);
+        HorizontalAlignment = source.ApplyProperty(nameof(HorizontalAlignment), HorizontalAlignment, () => DefaultHorizontalAlignment, out _);
+        VerticalAlignment = source.ApplyProperty(nameof(VerticalAlignment), VerticalAlignment, () => DefaultVerticalAlignment, out _);
+        BackgroundColor = source.ApplyProperty(nameof(BackgroundColor), BackgroundColor, () => DefaultBackgroundColor, out _);
+        BorderWidth = source.ApplyProperty(nameof(BorderWidth), BorderWidth, () => DefaultBorderWidth, out _);
+        BorderRadius = source.ApplyProperty(nameof(BorderRadius), BorderRadius, () => DefaultBorderRadius, out _);
+        BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, () => DefaultBorderColor, out _);
 
         if(source.TryGetProperty(nameof(Children), out var childrenProp)) {
             childrenProp.ApplyDiffTo(Children);

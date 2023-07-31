@@ -63,8 +63,8 @@ public sealed class Button : UIElement, IFromJson<Button>
     protected override void ApplyDiffProtected(in ReactSource source)
     {
         base.ApplyDiffProtected(source);
-        Text = source.ApplyProperty(nameof(Text), Text, DefaultText, out _);
-        FontSize = source.ApplyProperty(nameof(FontSize), FontSize, DefaultFontSize, out _);
+        Text = source.ApplyProperty(nameof(Text), Text, () => DefaultText, out _);
+        FontSize = source.ApplyProperty(nameof(FontSize), FontSize, () => DefaultFontSize, out _);
     }
 
     public Button() : base()

@@ -145,16 +145,16 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
         static void Throw() => throw new FormatException("null");
     }
 
-
-    public T ApplyProperty<T>(string propertyName, in T current, in T defaultValue, out ApplySourceResult result) where T : notnull
+    public T ApplyProperty<T>(string propName, in T current, Func<T> defaultFactory, out (ApplySourceResult Result, T? Old) output) where T : notnull
     {
-        if(TryGetProperty(propertyName, out var propertyValue)) {
+        ArgumentNullException.ThrowIfNull(defaultFactory);
+        if(TryGetProperty(propName, out var propertyValue)) {
             var c = current;
-            result = propertyValue.ApplyTo(ref c, out var old);
+            output.Result = propertyValue.ApplyTo(ref c, out output.Old);
             return c;
         }
-        result = ApplySourceResult.InstanceReplaced;
-        return defaultValue;
+        output = (ApplySourceResult.InstanceReplaced, current);
+        return defaultFactory.Invoke();
     }
 
     public ApplySourceResult ApplyTo<T>([NotNull] ref T? target, out T? old) where T : notnull
