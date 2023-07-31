@@ -108,38 +108,13 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         if(element.Parent != null) {
             throw new ArgumentException("the element is already in UI tree");
         }
-        var model = element.CreateModel(this);
-        model.Alive.Subscribe(model =>
+        element.CreateModel(this);
+        element.ModelAlive.Subscribe(model =>
         {
-            if(_rootElement != null) {
-                // TODO: remove _rootElement from ui tree
-                throw new NotImplementedException();
-            }
+            _rootElement?.Model?.Terminate();
             _rootElement = model.Element;
         }).AddTo(Subscriptions);
     }
-
-    //public void RenderRoot(IReactComponent component)
-    //{
-    //    ArgumentNullException.ThrowIfNull(component);
-    //    var rootElement = _rootElement;
-    //    if(rootElement == null) {
-    //        var element = component.Build();
-    //        element.ModelAlive.Subscribe(model =>
-    //        {
-    //            if(_rootElement != null) {
-    //                // TODO: remove _rootElement from ui tree
-    //                throw new NotImplementedException();
-    //            }
-    //            _rootElement = model.Element;
-    //        });
-    //        _ = element.CreateModel(this);
-    //    }
-    //    else {
-    //        // TODO: same instance?
-    //        component.Apply(rootElement);
-    //    }
-    //}
 
     protected override void RenderShadowMap(in RenderShadowMapContext context, ReadOnlySpan<UIModel> objects)
     {

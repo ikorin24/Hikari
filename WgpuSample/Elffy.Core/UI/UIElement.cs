@@ -314,7 +314,7 @@ public abstract class UIElement : IToJson, IReactive
         _parent = parent;
     }
 
-    internal UIModel CreateModel(UILayer layer)
+    internal void CreateModel(UILayer layer)
     {
         Debug.Assert(_model == null);
         var shader = layer.GetRegisteredShader(GetType());
@@ -338,7 +338,6 @@ public abstract class UIElement : IToJson, IReactive
         foreach(var child in _children) {
             child.CreateModel(layer);
         }
-        return model;
     }
 
     internal void UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, Mouse mouse)
