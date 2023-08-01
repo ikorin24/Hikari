@@ -13,6 +13,7 @@ public sealed class Button : UIElement, IFromJson<Button>
     private string _text;
     private FontSize _fontSize;
     private EventSource<Button> _clicked;
+    private bool _isClickHolding = false;
 
     private static string DefaultText => "";
     private static FontSize DefaultFontSize => 16;
@@ -95,8 +96,6 @@ public sealed class Button : UIElement, IFromJson<Button>
         var mouse = model.Screen.Mouse;
         HandleButtonClick(mouse);
     }
-
-    private bool _isClickHolding = false;
 
     private void HandleButtonClick(Mouse mouse)
     {
