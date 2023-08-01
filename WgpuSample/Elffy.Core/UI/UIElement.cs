@@ -393,8 +393,8 @@ public abstract class UIElement : IToJson, IReactive
             layoutChanged = false;
         }
 
-        // TODO: consider border radius
-        var isMouseOver = rect.Contains(mouse.Position);
+        var isMouseOver = HitTest(rect, mouse.Position, borderRadius);
+
         if(isMouseOver != _isMouseOver) {
             _needToUpdate |= NeedToUpdateFlags.Material;
         }
@@ -414,6 +414,52 @@ public abstract class UIElement : IToJson, IReactive
         };
         foreach(var child in _children) {
             child.UpdateLayout(layoutChanged, contentArea, mouse);
+        }
+    }
+
+    private static bool HitTest(in RectF rect, in Vector2 mousePos, in Vector4 borderRadius)
+    {
+        var isMouseOver = rect.Contains(mousePos)
+            && BorderRadiusTL(rect, mousePos, borderRadius.X)
+            && BorderRadiusTR(rect, mousePos, borderRadius.Y)
+            && BorderRadiusBR(rect, mousePos, borderRadius.Z)
+            && BorderRadiusBL(rect, mousePos, borderRadius.W);
+        return isMouseOver;
+
+        static bool BorderRadiusTL(in RectF rect, in Vector2 mousePos, float r)
+        {
+            var center = rect.Position + new Vector2(r, r);
+            if(new RectF(rect.X, rect.Y, r, r).Contains(mousePos) && (center - mousePos).Length > r) {
+                return false;
+            }
+            return true;
+        }
+
+        static bool BorderRadiusTR(in RectF rect, in Vector2 mousePos, float r)
+        {
+            var center = rect.Position + new Vector2(rect.Width, 0) + new Vector2(-r, r);
+            if(new RectF(rect.X + rect.Width - r, rect.Y, r, r).Contains(mousePos) && (center - mousePos).Length > r) {
+                return false;
+            }
+            return true;
+        }
+
+        static bool BorderRadiusBR(in RectF rect, in Vector2 mousePos, float r)
+        {
+            var center = rect.Position + rect.Size - new Vector2(r, r);
+            if(new RectF(center, new(r, r)).Contains(mousePos) && (center - mousePos).Length > r) {
+                return false;
+            }
+            return true;
+        }
+
+        static bool BorderRadiusBL(in RectF rect, in Vector2 mousePos, float r)
+        {
+            var center = rect.Position + new Vector2(0, rect.Height) + new Vector2(r, -r);
+            if(new RectF(rect.X, rect.Y + rect.Height - r, r, r).Contains(mousePos) && (center - mousePos).Length > r) {
+                return false;
+            }
+            return true;
         }
     }
 
