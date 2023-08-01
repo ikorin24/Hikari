@@ -93,8 +93,31 @@ public sealed class Button : UIElement, IFromJson<Button>
     private void OnModelUpdate(UIModel model)
     {
         var mouse = model.Screen.Mouse;
-        if(IsMouseOver && mouse.IsUp(MouseButton.Left)) {
-            _clicked.Invoke(this);
+        HandleButtonClick(mouse);
+    }
+
+    private bool _isClickHolding = false;
+
+    private void HandleButtonClick(Mouse mouse)
+    {
+        var isMouseOver = IsMouseOver;
+        if(_isClickHolding) {
+            if(mouse.IsPressed(MouseButton.Left)) {
+                return;
+            }
+            else if(mouse.IsUp(MouseButton.Left)) {
+                _isClickHolding = false;
+                if(isMouseOver) {
+                    _clicked.Invoke(this);
+                }
+                return;
+            }
+        }
+        else {
+            if(isMouseOver && mouse.IsDown(MouseButton.Left)) {
+                _isClickHolding = true;
+                return;
+            }
         }
     }
 }
