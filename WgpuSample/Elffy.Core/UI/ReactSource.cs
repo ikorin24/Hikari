@@ -5,6 +5,8 @@ using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -16,6 +18,10 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
     private readonly JsonElement _element;
     private readonly List<Delegate>? _delegates;
     private readonly List<Type>? _types;
+
+    public static ReactSource Empty => default;
+
+    public bool IsEmpty => JsonElementEqualityComparer.Equals(_element, default);
 
     internal JsonElement Element => _element;
 
@@ -191,6 +197,8 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
 
     public ArrayEnumerable EnumerateArray() => new ArrayEnumerable(this);
 
+    public PropertyEnumerable EnumerateProperties() => new PropertyEnumerable(this);
+
     public T Instantiate<T>()
     {
         return Serializer.Instantiate<T>(this);
@@ -296,18 +304,21 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
 
     public bool Equals(ReactSource other)
     {
-        return EqualityComparer<JsonElement>.Default.Equals(_element, other._element) &&
-               EqualityComparer<List<Delegate>?>.Default.Equals(_delegates, other._delegates) &&
-               EqualityComparer<List<Type>?>.Default.Equals(_types, other._types);
+        return
+            JsonElementEqualityComparer.Equals(_element, other._element) &&
+            EqualityComparer<List<Delegate>?>.Default.Equals(_delegates, other._delegates) &&
+            EqualityComparer<List<Type>?>.Default.Equals(_types, other._types);
     }
 
     public override int GetHashCode() => HashCode.Combine(_element, _delegates, _types);
 
-    public record struct ArrayEnumerable(ReactSource Source) : IEnumerable<ReactSource>
+    public readonly record struct ArrayEnumerable(in ReactSource Source) : IEnumerable<ReactSource>
     {
         public ArrayEnumerator GetEnumerator() => new ArrayEnumerator(Source);
-        IEnumerator<ReactSource> IEnumerable<ReactSource>.GetEnumerator() => new ArrayEnumerator(Source);
-        IEnumerator IEnumerable.GetEnumerator() => new ArrayEnumerator(Source);
+
+        IEnumerator<ReactSource> IEnumerable<ReactSource>.GetEnumerator() => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
     public struct ArrayEnumerator : IEnumerator<ReactSource>
@@ -325,7 +336,51 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
 
         public ReactSource Current => new ReactSource(_enumerator.Current, _delegates, _types);
 
-        object IEnumerator.Current => throw new NotImplementedException();
+        object IEnumerator.Current => Current;
+
+        public void Dispose() => _enumerator.Dispose();
+
+        public bool MoveNext() => _enumerator.MoveNext();
+
+        public void Reset() => _enumerator.Reset();
+    }
+
+    public readonly record struct PropertyEnumerable(in ReactSource Source) : IEnumerable<ReactSourceProperty>
+    {
+        public PropertyEnumerator GetEnumerator() => new PropertyEnumerator(Source);
+
+        IEnumerator<ReactSourceProperty> IEnumerable<ReactSourceProperty>.GetEnumerator() => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    public struct PropertyEnumerator : IEnumerator<ReactSourceProperty>
+    {
+        private readonly List<Delegate>? _delegates;
+        private readonly List<Type>? _types;
+        private JsonElement.ObjectEnumerator _enumerator;
+
+        internal PropertyEnumerator(in ReactSource source)
+        {
+            _delegates = source._delegates;
+            _types = source._types;
+            _enumerator = source.Element.EnumerateObject();
+        }
+
+        public ReactSourceProperty Current
+        {
+            get
+            {
+                var current = _enumerator.Current;
+                return new ReactSourceProperty
+                {
+                    Name = current.Name,
+                    Value = new ReactSource(current.Value, _delegates, _types),
+                };
+            }
+        }
+
+        object IEnumerator.Current => Current;
 
         public void Dispose() => _enumerator.Dispose();
 
@@ -335,9 +390,80 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
     }
 }
 
+public readonly record struct ReactSourceProperty(string Name, ReactSource Value);
+
 public enum ApplySourceResult
 {
     InstanceReplaced = 0,
     PropertyDiffApplied = 1,
     ArrayDiffApplied = 2,
+}
+
+file static class JsonElementEqualityComparer
+{
+    private static readonly bool _canUseUnsafePath;
+    private static readonly FieldInfo[] _fields;
+
+    static JsonElementEqualityComparer()
+    {
+        _canUseUnsafePath = CheckUnsafePathAvailable(out _fields);
+    }
+
+    private static bool CheckUnsafePathAvailable(out FieldInfo[] fields)
+    {
+        fields = typeof(JsonElement).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if(Unsafe.SizeOf<JsonElement>() != Unsafe.SizeOf<JsonElementDummy>()) {
+            return false;
+        }
+        return
+            fields.Length == 2 &&
+            fields[0].FieldType == typeof(JsonDocument) &&
+            fields[1].FieldType == typeof(int);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Equals(JsonElement a, JsonElement b)
+    {
+        // JsonElement does not implement IEquatable<JsonElement>,
+        // so I compare the fields by unsafe way.
+        // If the way is not available, fallback to reflection.
+
+        if(_canUseUnsafePath) {
+            ref var a1 = ref Unsafe.As<JsonElement, JsonElementDummy>(ref a);
+            ref var b1 = ref Unsafe.As<JsonElement, JsonElementDummy>(ref b);
+            return
+                a1._parent == b1._parent &&
+                a1._idx == b1._idx;
+        }
+        else {
+            return EqualsFallback(a, b);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool EqualsFallback(JsonElement a, JsonElement b)
+    {
+        // That is same way as ValueType.Equals(object), but more faster because FieldInfo is cached.
+
+        for(int i = 0; i < _fields.Length; i++) {
+            object? v1 = _fields[i].GetValue(a);
+            object? v2 = _fields[i].GetValue(b);
+
+            if(v1 == null) {
+                if(v2 != null) {
+                    return false;
+                }
+            }
+            else if(!v1.Equals(v2)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private readonly struct JsonElementDummy
+    {
+        public readonly JsonDocument _parent;
+        public readonly int _idx;
+    }
 }
