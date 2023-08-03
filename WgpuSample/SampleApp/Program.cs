@@ -311,7 +311,10 @@ public partial class CountButton
             "BackgroundColor": "#fa5",
             "Text": "click me!",
             "FontSize": 30,
-            "Clicked": {{props.Clicked}}
+            "Clicked": {{props.Clicked}},
+            "&:Hover": {
+                "BackgroundColor": "#d62"
+            }
         }
         """;
     }
