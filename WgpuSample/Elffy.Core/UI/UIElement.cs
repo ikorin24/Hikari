@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
@@ -29,6 +30,7 @@ public abstract class UIElement : IToJson, IReactive
     private Thickness _borderWidth;
     private CornerRadius _borderRadius;
     private Brush _borderColor;
+    private PseudoClassState _pseudoClass;
 
     private LayoutResult _layoutResult;
     private bool _isMouseOver;
@@ -47,8 +49,6 @@ public abstract class UIElement : IToJson, IReactive
     {
         public required RectF Rect { get; init; }
         public required Vector4 BorderRadius { get; init; }
-        public required Brush BackgroundColor { get; init; }
-        public required Brush BorderColor { get; init; }
     }
 
     internal Event<UIModel> ModelAlive => _modelAlive.Event;
@@ -253,6 +253,21 @@ public abstract class UIElement : IToJson, IReactive
         if(source.TryGetProperty(nameof(BorderColor), out var borderColor)) {
             _borderColor = Brush.FromJson(borderColor);
         }
+        foreach(var (name, value) in source.EnumerateProperties()) {
+            if(name.StartsWith("&:")) {
+                var pseudo = name.AsSpan(2);
+                switch(pseudo) {
+                    case nameof(PseudoClass.Hover): {
+                        _pseudoClass.Set(PseudoClass.Hover, value);
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
+                }
+            }
+        }
+
         if(source.TryGetProperty(nameof(Children), out var children)) {
             Children = UIElementCollection.FromJson(children);
         }
@@ -404,8 +419,6 @@ public abstract class UIElement : IToJson, IReactive
         {
             Rect = rect,
             BorderRadius = borderRadius,
-            BackgroundColor = _backgroundColor,
-            BorderColor = _borderColor,
         };
         var contentArea = new ContentAreaInfo
         {
@@ -485,14 +498,22 @@ public abstract class UIElement : IToJson, IReactive
                     new Vector4(0, result.Rect.Size.Y, 0, 0),
                     new Vector4(0, 0, 1, 0),
                     new Vector4(0, 0, 0, 1));
+
+            var backgroundColor = _backgroundColor;
+            if(_isMouseOver && _pseudoClass.TryGet(PseudoClass.Hover, out var source)) {
+                if(source.TryGetProperty(nameof(BackgroundColor), out var backgroundColorProp)) {
+                    backgroundColor = backgroundColorProp.Instantiate<Brush>();
+                }
+            }
+
             var a = new UIUpdateResult
             {
                 ActualRect = result.Rect,
                 ActualBorderWidth = _borderWidth.ToVector4(),
                 ActualBorderRadius = result.BorderRadius,
                 MvpMatrix = uiProjection * modelMatrix,
-                BackgroundColor = result.BackgroundColor,
-                BorderColor = result.BorderColor,
+                BackgroundColor = backgroundColor,
+                BorderColor = _borderColor,
                 IsMouseOver = _isMouseOver,
                 IsMouseOverPrev = _isMouseOverPrev,
             };
@@ -535,4 +556,41 @@ public readonly ref struct UIUpdateResult
     public required Brush BorderColor { get; init; }
     public required bool IsMouseOver { get; init; }
     public required bool IsMouseOverPrev { get; init; }
+}
+
+internal enum PseudoClass
+{
+    Hover = 0,
+}
+
+internal struct PseudoClassState
+{
+    private ReactSource _hover;
+
+    public PseudoClassState()
+    {
+    }
+
+    public void Set(PseudoClass pseudoClass, ReactSource source)
+    {
+        GetRef(pseudoClass) = source;
+    }
+
+    public bool TryGet(PseudoClass pseudoClass, out ReactSource source)
+    {
+        source = GetRef(pseudoClass);
+        return source.IsEmpty == false;
+    }
+
+    [UnscopedRef]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ref ReactSource GetRef(PseudoClass pc)
+    {
+        switch(pc) {
+            case PseudoClass.Hover:
+                return ref _hover;
+            default:
+                throw new ArgumentException(pc.ToString());
+        }
+    }
 }
