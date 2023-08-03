@@ -1,18 +1,21 @@
 ﻿#nullable enable
+using System;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
 
-public sealed class Brush
+public readonly struct Brush
     : IFromJson<Brush>,
-      IToJson
+      IToJson,
+      IEquatable<Brush>
 {
     private readonly BrushType _type;
     private readonly Color4 _solidColor;
 
-    public static Brush White { get; } = new Brush(Color4.White);
-    public static Brush Black { get; } = new Brush(Color4.Black);
+    public static Brush Transparent => new Brush(Color4.Transparent);
+    public static Brush White => new Brush(Color4.White);
+    public static Brush Black => new Brush(Color4.Black);
 
     public BrushType Type => _type;
 
@@ -71,6 +74,32 @@ public sealed class Brush
             BrushType.Solid => _solidColor.ToJson(),
             _ => "#FFFFFF",
         };
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is Brush brush && Equals(brush);
+    }
+
+    public bool Equals(Brush other)
+    {
+        return _type == other._type &&
+               _solidColor.Equals(other._solidColor);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(_type, _solidColor);
+    }
+
+    public static bool operator ==(Brush left, Brush right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(Brush left, Brush right)
+    {
+        return !(left == right);
     }
 }
 
