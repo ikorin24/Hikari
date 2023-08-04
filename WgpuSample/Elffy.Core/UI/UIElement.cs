@@ -20,16 +20,7 @@ public abstract class UIElement : IToJson, IReactive
     private EventSource<UIModel> _modelDead;
     private readonly SubscriptionBag _modelSubscriptions = new SubscriptionBag();
 
-    private LayoutLength _width;
-    private LayoutLength _height;
-    private Thickness _margin;
-    private Thickness _padding;
-    private HorizontalAlignment _horizontalAlignment;
-    private VerticalAlignment _verticalAlignment;
-    private Brush _backgroundColor;
-    private Thickness _borderWidth;
-    private CornerRadius _borderRadius;
-    private Brush _borderColor;
+    private UIElementInfo _info;
     private PseudoClassState _pseudoClass;
 
     private LayoutResult _layoutResult;
@@ -71,110 +62,110 @@ public abstract class UIElement : IToJson, IReactive
 
     public LayoutLength Width
     {
-        get => _width;
+        get => _info.Width;
         set
         {
-            if(value == _width) { return; }
-            _width = value;
+            if(value == _info.Width) { return; }
+            _info.Width = value;
             _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
         }
     }
     public LayoutLength Height
     {
-        get => _height;
+        get => _info.Height;
         set
         {
-            if(value == _height) { return; }
-            _height = value;
+            if(value == _info.Height) { return; }
+            _info.Height = value;
             _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
         }
     }
 
     public Thickness Margin
     {
-        get => _margin;
+        get => _info.Margin;
         set
         {
-            if(value == _margin) { return; }
-            _margin = value;
+            if(value == _info.Margin) { return; }
+            _info.Margin = value;
             _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
         }
     }
 
     public Thickness Padding
     {
-        get => _padding;
+        get => _info.Padding;
         set
         {
-            if(value == _padding) { return; }
-            _padding = value;
+            if(value == _info.Padding) { return; }
+            _info.Padding = value;
             _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
         }
     }
 
     public HorizontalAlignment HorizontalAlignment
     {
-        get => _horizontalAlignment;
+        get => _info.HorizontalAlignment;
         set
         {
-            if(value == _horizontalAlignment) { return; }
-            _horizontalAlignment = value;
+            if(value == _info.HorizontalAlignment) { return; }
+            _info.HorizontalAlignment = value;
             _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
         }
     }
 
     public VerticalAlignment VerticalAlignment
     {
-        get => _verticalAlignment;
+        get => _info.VerticalAlignment;
         set
         {
-            if(value == _verticalAlignment) { return; }
-            _verticalAlignment = value;
+            if(value == _info.VerticalAlignment) { return; }
+            _info.VerticalAlignment = value;
             _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
         }
     }
 
     public Brush BackgroundColor
     {
-        get => _backgroundColor;
+        get => _info.BackgroundColor;
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            if(value == _backgroundColor) { return; }
-            _backgroundColor = value;
+            if(value == _info.BackgroundColor) { return; }
+            _info.BackgroundColor = value;
             _needToUpdate |= NeedToUpdateFlags.Material;
         }
     }
 
     public Thickness BorderWidth
     {
-        get => _borderWidth;
+        get => _info.BorderWidth;
         set
         {
-            if(value == _borderWidth) { return; }
-            _borderWidth = value;
+            if(value == _info.BorderWidth) { return; }
+            _info.BorderWidth = value;
             _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
         }
     }
 
     public CornerRadius BorderRadius
     {
-        get => _borderRadius;
+        get => _info.BorderRadius;
         set
         {
-            if(value == _borderRadius) { return; }
-            _borderRadius = value;
+            if(value == _info.BorderRadius) { return; }
+            _info.BorderRadius = value;
             _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
         }
     }
 
     public Brush BorderColor
     {
-        get => _borderColor;
+        get => _info.BorderColor;
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            _borderColor = value;
+            _info.BorderColor = value;
             _needToUpdate |= NeedToUpdateFlags.Material;
         }
     }
@@ -206,17 +197,7 @@ public abstract class UIElement : IToJson, IReactive
 
     protected UIElement()
     {
-        // set default values
-        _width = DefaultWidth;
-        _height = DefaultHeight;
-        _margin = DefaultMargin;
-        _padding = DefaultPadding;
-        _horizontalAlignment = DefaultHorizontalAlignment;
-        _verticalAlignment = DefaultVerticalAlignment;
-        _backgroundColor = DefaultBackgroundColor;
-        _borderWidth = DefaultBorderWidth;
-        _borderRadius = DefaultBorderRadius;
-        _borderColor = DefaultBorderColor;
+        _info = UIElementInfo.Default;
         Children = new UIElementCollection();
         _needToUpdate = NeedToUpdateFlags.Material | NeedToUpdateFlags.Layout;
     }
@@ -224,34 +205,34 @@ public abstract class UIElement : IToJson, IReactive
     protected UIElement(in ReactSource source) : this()
     {
         if(source.TryGetProperty(nameof(Width), out var width)) {
-            _width = LayoutLength.FromJson(width);
+            _info.Width = LayoutLength.FromJson(width);
         }
         if(source.TryGetProperty(nameof(Height), out var height)) {
-            _height = LayoutLength.FromJson(height);
+            _info.Height = LayoutLength.FromJson(height);
         }
         if(source.TryGetProperty(nameof(Margin), out var margin)) {
-            _margin = Thickness.FromJson(margin);
+            _info.Margin = Thickness.FromJson(margin);
         }
         if(source.TryGetProperty(nameof(Padding), out var padding)) {
-            _padding = Thickness.FromJson(padding);
+            _info.Padding = Thickness.FromJson(padding);
         }
         if(source.TryGetProperty(nameof(HorizontalAlignment), out var horizontalAlignment)) {
-            _horizontalAlignment = horizontalAlignment.ToEnum<HorizontalAlignment>();
+            _info.HorizontalAlignment = horizontalAlignment.ToEnum<HorizontalAlignment>();
         }
         if(source.TryGetProperty(nameof(VerticalAlignment), out var verticalAlignment)) {
-            _verticalAlignment = verticalAlignment.ToEnum<VerticalAlignment>();
+            _info.VerticalAlignment = verticalAlignment.ToEnum<VerticalAlignment>();
         }
         if(source.TryGetProperty(nameof(BackgroundColor), out var backgroundColor)) {
-            _backgroundColor = Brush.FromJson(backgroundColor);
+            _info.BackgroundColor = Brush.FromJson(backgroundColor);
         }
         if(source.TryGetProperty(nameof(BorderWidth), out var borderWidth)) {
-            _borderWidth = Thickness.FromJson(borderWidth);
+            _info.BorderWidth = Thickness.FromJson(borderWidth);
         }
         if(source.TryGetProperty(nameof(BorderRadius), out var borderRadius)) {
-            _borderRadius = CornerRadius.FromJson(borderRadius);
+            _info.BorderRadius = CornerRadius.FromJson(borderRadius);
         }
         if(source.TryGetProperty(nameof(BorderColor), out var borderColor)) {
-            _borderColor = Brush.FromJson(borderColor);
+            _info.BorderColor = Brush.FromJson(borderColor);
         }
         foreach(var (name, value) in source.EnumerateProperties()) {
             if(name.StartsWith("&:")) {
@@ -276,16 +257,16 @@ public abstract class UIElement : IToJson, IReactive
     protected virtual void ToJsonProtected(Utf8JsonWriter writer)
     {
         writer.WriteString("@type", GetType().FullName);
-        writer.Write(nameof(Width), _width);
-        writer.Write(nameof(Height), _height);
-        writer.Write(nameof(Margin), _margin);
-        writer.Write(nameof(Padding), _padding);
-        writer.WriteEnum(nameof(HorizontalAlignment), _horizontalAlignment);
-        writer.WriteEnum(nameof(VerticalAlignment), _verticalAlignment);
-        writer.Write(nameof(BackgroundColor), _backgroundColor);
-        writer.Write(nameof(BorderWidth), _borderWidth);
-        writer.Write(nameof(BorderRadius), _borderRadius);
-        writer.Write(nameof(BorderColor), _borderColor);
+        writer.Write(nameof(Width), _info.Width);
+        writer.Write(nameof(Height), _info.Height);
+        writer.Write(nameof(Margin), _info.Margin);
+        writer.Write(nameof(Padding), _info.Padding);
+        writer.WriteEnum(nameof(HorizontalAlignment), _info.HorizontalAlignment);
+        writer.WriteEnum(nameof(VerticalAlignment), _info.VerticalAlignment);
+        writer.Write(nameof(BackgroundColor), _info.BackgroundColor);
+        writer.Write(nameof(BorderWidth), _info.BorderWidth);
+        writer.Write(nameof(BorderRadius), _info.BorderRadius);
+        writer.Write(nameof(BorderColor), _info.BorderColor);
         writer.Write(nameof(Children), _children);
     }
 
@@ -385,50 +366,57 @@ public abstract class UIElement : IToJson, IReactive
 
     internal void UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, Mouse mouse)
     {
-        bool layoutChanged;
-        //mouse.Position
-
         // 'rect' is top-left based in Screen
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
         // 'rect' is { X = 10, Y = 40, Width = 200, Heigh = 100 }
-        RectF rect;
-        Vector4 borderRadius;
-        if(parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout)) {
-            rect = DecideRect(parentContentArea);
-            borderRadius = UILayouter.DecideBorderRadius(_borderRadius, rect.Size);
+
+        var layoutNeedToUpdate = _needToUpdate.HasFlag(NeedToUpdateFlags.Layout);
+        LayoutResult layoutResult;
+        ContentAreaInfo contentArea;
+        var layoutChanged = parentLayoutChanged || layoutNeedToUpdate;
+        if(layoutChanged) {
+            (layoutResult, contentArea) = Relayout(_info, parentContentArea);
             _needToUpdate &= ~NeedToUpdateFlags.Layout;
             _needToUpdate |= NeedToUpdateFlags.Material;
-            layoutChanged = true;
         }
         else {
-            rect = _layoutResult.Rect;
-            borderRadius = _layoutResult.BorderRadius;
-            layoutChanged = false;
+            layoutResult = _layoutResult;
+            contentArea = new ContentAreaInfo
+            {
+                Rect = layoutResult.Rect,
+                Padding = _info.Padding,
+            };
         }
-
-        var isMouseOver = HitTest(rect, mouse.Position, borderRadius);
-
+        var isMouseOver = HitTest(mouse.Position, layoutResult.Rect, layoutResult.BorderRadius);
         if(isMouseOver != _isMouseOver) {
             _needToUpdate |= NeedToUpdateFlags.Material;
         }
         _isMouseOverPrev = _isMouseOver;
         _isMouseOver = isMouseOver;
-        _layoutResult = new LayoutResult
-        {
-            Rect = rect,
-            BorderRadius = borderRadius,
-        };
-        var contentArea = new ContentAreaInfo
-        {
-            Rect = rect,
-            Padding = _padding,
-        };
+        _layoutResult = layoutResult;
         foreach(var child in _children) {
             child.UpdateLayout(layoutChanged, contentArea, mouse);
         }
+
+        static (LayoutResult, ContentAreaInfo) Relayout(in UIElementInfo info, in ContentAreaInfo parentContentArea)
+        {
+            var rect = UILayouter.DecideRect(info, parentContentArea);
+            var borderRadius = UILayouter.DecideBorderRadius(info.BorderRadius, rect.Size);
+            var layoutResult = new LayoutResult
+            {
+                Rect = rect,
+                BorderRadius = borderRadius,
+            };
+            var contentArea = new ContentAreaInfo
+            {
+                Rect = rect,
+                Padding = info.Padding,
+            };
+            return (layoutResult, contentArea);
+        }
     }
 
-    private static bool HitTest(in RectF rect, in Vector2 mousePos, in Vector4 borderRadius)
+    private static bool HitTest(in Vector2 mousePos, in RectF rect, in Vector4 borderRadius)
     {
         var isMouseOver = rect.Contains(mousePos)
             && BorderRadiusTL(rect, mousePos, borderRadius.X)
@@ -480,26 +468,27 @@ public abstract class UIElement : IToJson, IReactive
         Debug.Assert(model != null);
 
         if(model != null && _needToUpdate.HasFlag(NeedToUpdateFlags.Material)) {
-            var result = _layoutResult;
+            var rect = _layoutResult.Rect;
+            var borderRadius = _layoutResult.BorderRadius;
 
             // origin is bottom-left of rect because clip space is bottom-left based
             var modelOrigin = new Vector3
             {
-                X = result.Rect.Position.X,
-                Y = screenSize.Y - result.Rect.Position.Y - result.Rect.Size.Y,
+                X = rect.Position.X,
+                Y = screenSize.Y - rect.Position.Y - rect.Size.Y,
                 Z = 0,
             };
             var modelMatrix =
                 modelOrigin.ToTranslationMatrix4() *
                 new Matrix4(
-                    new Vector4(result.Rect.Size.X, 0, 0, 0),
-                    new Vector4(0, result.Rect.Size.Y, 0, 0),
+                    new Vector4(rect.Size.X, 0, 0, 0),
+                    new Vector4(0, rect.Size.Y, 0, 0),
                     new Vector4(0, 0, 1, 0),
                     new Vector4(0, 0, 0, 1));
 
-            var backgroundColor = _backgroundColor;
-            var borderWidth = _borderWidth;
-            var borderColor = _borderColor;
+            var backgroundColor = _info.BackgroundColor;
+            var borderWidth = _info.BorderWidth;
+            var borderColor = _info.BorderColor;
             if(_isMouseOver && _pseudoClass.TryGet(PseudoClass.Hover, out var source)) {
                 // properties for material
                 // BackgroundColor, BorderWidth, BorderColor
@@ -516,9 +505,9 @@ public abstract class UIElement : IToJson, IReactive
 
             var a = new UIUpdateResult
             {
-                ActualRect = result.Rect,
+                ActualRect = rect,
                 ActualBorderWidth = borderWidth.ToVector4(),
-                ActualBorderRadius = result.BorderRadius,
+                ActualBorderRadius = borderRadius,
                 MvpMatrix = uiProjection * modelMatrix,
                 BackgroundColor = backgroundColor,
                 BorderColor = borderColor,
@@ -529,11 +518,43 @@ public abstract class UIElement : IToJson, IReactive
             _needToUpdate &= ~NeedToUpdateFlags.Material;
         }
     }
+}
 
-    protected virtual RectF DecideRect(in ContentAreaInfo parentContentArea)
-    {
-        return UILayouter.DecideRect(this, parentContentArea);
-    }
+public record struct UIElementInfo(
+    LayoutLength Width,
+    LayoutLength Height,
+    Thickness Margin,
+    Thickness Padding,
+    HorizontalAlignment HorizontalAlignment,
+    VerticalAlignment VerticalAlignment,
+    Brush BackgroundColor,
+    Thickness BorderWidth,
+    CornerRadius BorderRadius,
+    Brush BorderColor
+)
+{
+    internal static UIElementInfo Default => new(
+        DefaultWidth,
+        DefaultHeight,
+        DefaultMargin,
+        DefaultPadding,
+        DefaultHorizontalAlignment,
+        DefaultVerticalAlignment,
+        DefaultBackgroundColor,
+        DefaultBorderWidth,
+        DefaultBorderRadius,
+        DefaultBorderColor);
+
+    private static LayoutLength DefaultWidth => new LayoutLength(1f, LayoutLengthType.Proportion);
+    private static LayoutLength DefaultHeight => new LayoutLength(1f, LayoutLengthType.Proportion);
+    private static Thickness DefaultMargin => new Thickness(0f);
+    private static Thickness DefaultPadding => new Thickness(0f);
+    private static HorizontalAlignment DefaultHorizontalAlignment => HorizontalAlignment.Center;
+    private static VerticalAlignment DefaultVerticalAlignment => VerticalAlignment.Center;
+    private static Brush DefaultBackgroundColor => Brush.White;
+    private static Thickness DefaultBorderWidth => new Thickness(0f);
+    private static CornerRadius DefaultBorderRadius => CornerRadius.Zero;
+    private static Brush DefaultBorderColor => Brush.Black;
 }
 
 public readonly struct ContentAreaInfo : IEquatable<ContentAreaInfo>

@@ -4,7 +4,7 @@ namespace Elffy.UI;
 
 internal static class UILayouter
 {
-    public static RectF DecideRect(UIElement target, in ContentAreaInfo area)
+    public static RectF DecideRect(in UIElementInfo target, in ContentAreaInfo area)
     {
         var areaSize = Vector2.Max(Vector2.Zero, area.Rect.Size);
 
