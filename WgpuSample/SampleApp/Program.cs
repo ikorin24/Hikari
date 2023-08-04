@@ -308,12 +308,15 @@ public partial class CountButton
             "Height": {{props.Height}},
             "BorderRadius": {{props.Height / 2f}},
             "BorderColor": "#ff4310",
+            "BorderWidth": 10,
             "BackgroundColor": "#fa5",
             "Text": "click me!",
             "FontSize": 30,
             "Clicked": {{props.Clicked}},
             "&:Hover": {
-                "BackgroundColor": "#d62"
+                "BackgroundColor": "#8fc",
+                "BorderWidth": 20,
+                "BorderColor": "#6df"
             }
         }
         """;

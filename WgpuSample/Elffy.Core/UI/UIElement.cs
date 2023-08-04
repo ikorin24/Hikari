@@ -498,20 +498,30 @@ public abstract class UIElement : IToJson, IReactive
                     new Vector4(0, 0, 0, 1));
 
             var backgroundColor = _backgroundColor;
+            var borderWidth = _borderWidth;
+            var borderColor = _borderColor;
             if(_isMouseOver && _pseudoClass.TryGet(PseudoClass.Hover, out var source)) {
+                // properties for material
+                // BackgroundColor, BorderWidth, BorderColor
                 if(source.TryGetProperty(nameof(BackgroundColor), out var backgroundColorProp)) {
                     backgroundColor = backgroundColorProp.Instantiate<Brush>();
+                }
+                if(source.TryGetProperty(nameof(BorderWidth), out var borderWidthProp)) {
+                    borderWidth = borderWidthProp.Instantiate<Thickness>();
+                }
+                if(source.TryGetProperty(nameof(BorderColor), out var borderColorProp)) {
+                    borderColor = borderColorProp.Instantiate<Brush>();
                 }
             }
 
             var a = new UIUpdateResult
             {
                 ActualRect = result.Rect,
-                ActualBorderWidth = _borderWidth.ToVector4(),
+                ActualBorderWidth = borderWidth.ToVector4(),
                 ActualBorderRadius = result.BorderRadius,
                 MvpMatrix = uiProjection * modelMatrix,
                 BackgroundColor = backgroundColor,
-                BorderColor = _borderColor,
+                BorderColor = borderColor,
                 IsMouseOver = _isMouseOver,
                 IsMouseOverPrev = _isMouseOverPrev,
             };
