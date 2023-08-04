@@ -22,7 +22,6 @@ public abstract class UIElement : IToJson, IReactive
 
     private UIElementInfo _info;
     private PseudoClassState _pseudoClassState;
-    private PseudoClassFlags _pseudoClassFlags;
 
     private LayoutResult _layoutResult;
     private bool _isMouseOver;
@@ -200,7 +199,6 @@ public abstract class UIElement : IToJson, IReactive
     {
         _info = UIElementInfo.Default;
         _pseudoClassState = new PseudoClassState();
-        _pseudoClassFlags = PseudoClassFlags.None;
         Children = new UIElementCollection();
         _needToUpdate = NeedToUpdateFlags.Material | NeedToUpdateFlags.Layout;
     }
@@ -376,37 +374,91 @@ public abstract class UIElement : IToJson, IReactive
 
         var layoutChanged = parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout);
         var info = _info;
-        //if(_isMouseOver) {
-        //    _pseudoClassFlags |= PseudoClassFlags.Hover;
-        //    if(_pseudoClassState.TryGet(PseudoClass.Hover, out var hoverInfo)) {
-        //        info.Merge(hoverInfo);
-        //        layoutChanged = true;
-        //    }
-        //}
-        //else {
-        //    if(_pseudoClassFlags.HasFlag(PseudoClassFlags.Hover)) {
-        //        _pseudoClassFlags &= ~PseudoClassFlags.Hover;
-        //        layoutChanged = _pseudoClassState.Has(PseudoClass.Hover);
-        //    }
-        //}
 
         LayoutResult layoutResult;
         ContentAreaInfo contentArea;
-        if(layoutChanged) {
-            (layoutResult, contentArea) = Relayout(info, parentContentArea);
+        bool isMouseOver;
+
+        if(_isMouseOver) {
+            if(_pseudoClassState.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
+                var (layoutResult1, contentArea1) = Relayout(info, parentContentArea);
+                var isMouseOver1 = HitTest(mouse.Position, layoutResult1.Rect, layoutResult1.BorderRadius);
+                info.Merge(hoverInfo);
+                var (layoutResult2, contentArea2) = Relayout(info, parentContentArea);
+                var isMouseOver2 = HitTest(mouse.Position, layoutResult2.Rect, layoutResult2.BorderRadius);
+                if(isMouseOver1 && isMouseOver2) {
+                    isMouseOver = true;
+                    layoutResult = layoutResult2;
+                    contentArea = contentArea2;
+                }
+                else if(!isMouseOver1 && !isMouseOver2) {
+                    isMouseOver = false;
+                    layoutResult = layoutResult1;
+                    contentArea = contentArea1;
+                }
+                else {
+                    isMouseOver = true;
+                    layoutResult = layoutResult2;
+                    contentArea = contentArea2;
+                }
+            }
+            else {
+                if(layoutChanged) {
+                    (layoutResult, contentArea) = Relayout(info, parentContentArea);
+                }
+                else {
+                    layoutResult = _layoutResult;
+                    contentArea = new()
+                    {
+                        Rect = _layoutResult.Rect,
+                        Padding = info.Padding
+                    };
+                }
+                isMouseOver = HitTest(mouse.Position, layoutResult.Rect, layoutResult.BorderRadius);
+            }
             _needToUpdate &= ~NeedToUpdateFlags.Layout;
             _needToUpdate |= NeedToUpdateFlags.Material;
         }
         else {
-            layoutResult = _layoutResult;
-            contentArea = new ContentAreaInfo
-            {
-                Rect = layoutResult.Rect,
-                Padding = info.Padding,
-            };
+            if(_pseudoClassState.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
+                var (layoutResult1, contentArea1) = Relayout(info, parentContentArea);
+                var isMouseOver1 = HitTest(mouse.Position, layoutResult1.Rect, layoutResult1.BorderRadius);
+                info.Merge(hoverInfo);
+                var (layoutResult2, contentArea2) = Relayout(info, parentContentArea);
+                var isMouseOver2 = HitTest(mouse.Position, layoutResult2.Rect, layoutResult2.BorderRadius);
+                if(isMouseOver1 && isMouseOver2) {
+                    isMouseOver = true;
+                    layoutResult = layoutResult2;
+                    contentArea = contentArea2;
+                }
+                else if(!isMouseOver1 && !isMouseOver2) {
+                    isMouseOver = false;
+                    layoutResult = layoutResult1;
+                    contentArea = contentArea1;
+                }
+                else {
+                    isMouseOver = false;
+                    layoutResult = layoutResult1;
+                    contentArea = contentArea1;
+                }
+            }
+            else {
+                if(layoutChanged) {
+                    (layoutResult, contentArea) = Relayout(info, parentContentArea);
+                }
+                else {
+                    layoutResult = _layoutResult;
+                    contentArea = new()
+                    {
+                        Rect = _layoutResult.Rect,
+                        Padding = info.Padding
+                    };
+                }
+                isMouseOver = HitTest(mouse.Position, layoutResult.Rect, layoutResult.BorderRadius);
+            }
+            _needToUpdate &= ~NeedToUpdateFlags.Layout;
+            _needToUpdate |= NeedToUpdateFlags.Material;
         }
-        var isMouseOver = HitTest(mouse.Position, layoutResult.Rect, layoutResult.BorderRadius);
-
 
 
         if(isMouseOver != _isMouseOver) {
@@ -627,6 +679,11 @@ internal record struct UIElementPseudoInfo(
 {
     static UIElementPseudoInfo() => Serializer.RegisterConstructor(FromJson);
 
+    public readonly bool HasLayoutInfo =>
+        Width.HasValue || Height.HasValue || Margin.HasValue ||
+        Padding.HasValue || HorizontalAlignment.HasValue || VerticalAlignment.HasValue ||
+        BorderWidth.HasValue;
+
     public static UIElementPseudoInfo FromJson(in ReactSource source)
     {
         return new UIElementPseudoInfo
@@ -715,13 +772,6 @@ public readonly ref struct UIUpdateResult
 internal enum PseudoClass
 {
     Hover = 0,
-}
-
-[Flags]
-internal enum PseudoClassFlags
-{
-    None = 0,
-    Hover = 1,
 }
 
 internal struct PseudoClassState
