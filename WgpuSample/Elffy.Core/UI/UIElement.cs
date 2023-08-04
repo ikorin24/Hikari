@@ -21,7 +21,8 @@ public abstract class UIElement : IToJson, IReactive
     private readonly SubscriptionBag _modelSubscriptions = new SubscriptionBag();
 
     private UIElementInfo _info;
-    private PseudoClassState _pseudoClass;
+    private PseudoClassState _pseudoClassState;
+    private PseudoClassFlags _pseudoClassFlags;
 
     private LayoutResult _layoutResult;
     private bool _isMouseOver;
@@ -198,6 +199,8 @@ public abstract class UIElement : IToJson, IReactive
     protected UIElement()
     {
         _info = UIElementInfo.Default;
+        _pseudoClassState = new PseudoClassState();
+        _pseudoClassFlags = PseudoClassFlags.None;
         Children = new UIElementCollection();
         _needToUpdate = NeedToUpdateFlags.Material | NeedToUpdateFlags.Layout;
     }
@@ -239,7 +242,7 @@ public abstract class UIElement : IToJson, IReactive
                 var pseudo = name.AsSpan(2);
                 switch(pseudo) {
                     case nameof(PseudoClass.Hover): {
-                        _pseudoClass.Set(PseudoClass.Hover, value);
+                        _pseudoClassState.Set(PseudoClass.Hover, value);
                         break;
                     }
                     default: {
@@ -366,15 +369,31 @@ public abstract class UIElement : IToJson, IReactive
 
     internal void UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, Mouse mouse)
     {
+        //System.Threading.Thread.Sleep(100);
         // 'rect' is top-left based in Screen
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
         // 'rect' is { X = 10, Y = 40, Width = 200, Heigh = 100 }
 
+        var layoutChanged = parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout);
+        var info = _info;
+        //if(_isMouseOver) {
+        //    _pseudoClassFlags |= PseudoClassFlags.Hover;
+        //    if(_pseudoClassState.TryGet(PseudoClass.Hover, out var hoverInfo)) {
+        //        info.Merge(hoverInfo);
+        //        layoutChanged = true;
+        //    }
+        //}
+        //else {
+        //    if(_pseudoClassFlags.HasFlag(PseudoClassFlags.Hover)) {
+        //        _pseudoClassFlags &= ~PseudoClassFlags.Hover;
+        //        layoutChanged = _pseudoClassState.Has(PseudoClass.Hover);
+        //    }
+        //}
+
         LayoutResult layoutResult;
         ContentAreaInfo contentArea;
-        var layoutChanged = parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout);
         if(layoutChanged) {
-            (layoutResult, contentArea) = Relayout(_info, parentContentArea);
+            (layoutResult, contentArea) = Relayout(info, parentContentArea);
             _needToUpdate &= ~NeedToUpdateFlags.Layout;
             _needToUpdate |= NeedToUpdateFlags.Material;
         }
@@ -383,10 +402,13 @@ public abstract class UIElement : IToJson, IReactive
             contentArea = new ContentAreaInfo
             {
                 Rect = layoutResult.Rect,
-                Padding = _info.Padding,
+                Padding = info.Padding,
             };
         }
         var isMouseOver = HitTest(mouse.Position, layoutResult.Rect, layoutResult.BorderRadius);
+
+
+
         if(isMouseOver != _isMouseOver) {
             _needToUpdate |= NeedToUpdateFlags.Material;
         }
@@ -396,23 +418,23 @@ public abstract class UIElement : IToJson, IReactive
         foreach(var child in _children) {
             child.UpdateLayout(layoutChanged, contentArea, mouse);
         }
+    }
 
-        static (LayoutResult, ContentAreaInfo) Relayout(in UIElementInfo info, in ContentAreaInfo parentContentArea)
+    private static (LayoutResult, ContentAreaInfo) Relayout(in UIElementInfo info, in ContentAreaInfo parentContentArea)
+    {
+        var rect = UILayouter.DecideRect(info, parentContentArea);
+        var borderRadius = UILayouter.DecideBorderRadius(info.BorderRadius, rect.Size);
+        var layoutResult = new LayoutResult
         {
-            var rect = UILayouter.DecideRect(info, parentContentArea);
-            var borderRadius = UILayouter.DecideBorderRadius(info.BorderRadius, rect.Size);
-            var layoutResult = new LayoutResult
-            {
-                Rect = rect,
-                BorderRadius = borderRadius,
-            };
-            var contentArea = new ContentAreaInfo
-            {
-                Rect = rect,
-                Padding = info.Padding,
-            };
-            return (layoutResult, contentArea);
-        }
+            Rect = rect,
+            BorderRadius = borderRadius,
+        };
+        var contentArea = new ContentAreaInfo
+        {
+            Rect = rect,
+            Padding = info.Padding,
+        };
+        return (layoutResult, contentArea);
     }
 
     private static bool HitTest(in Vector2 mousePos, in RectF rect, in Vector4 borderRadius)
@@ -488,17 +510,17 @@ public abstract class UIElement : IToJson, IReactive
             var backgroundColor = _info.BackgroundColor;
             var borderWidth = _info.BorderWidth;
             var borderColor = _info.BorderColor;
-            if(_isMouseOver && _pseudoClass.TryGet(PseudoClass.Hover, out var source)) {
+            if(_isMouseOver && _pseudoClassState.TryGet(PseudoClass.Hover, out var hoverInfo)) {
                 // properties for material
                 // BackgroundColor, BorderWidth, BorderColor
-                if(source.TryGetProperty(nameof(BackgroundColor), out var backgroundColorProp)) {
-                    backgroundColor = backgroundColorProp.Instantiate<Brush>();
+                if(hoverInfo.BackgroundColor.HasValue) {
+                    backgroundColor = hoverInfo.BackgroundColor.Value;
                 }
-                if(source.TryGetProperty(nameof(BorderWidth), out var borderWidthProp)) {
-                    borderWidth = borderWidthProp.Instantiate<Thickness>();
+                if(hoverInfo.BorderWidth.HasValue) {
+                    borderWidth = hoverInfo.BorderWidth.Value;
                 }
-                if(source.TryGetProperty(nameof(BorderColor), out var borderColorProp)) {
-                    borderColor = borderColorProp.Instantiate<Brush>();
+                if(hoverInfo.BorderColor.HasValue) {
+                    borderColor = hoverInfo.BorderColor.Value;
                 }
             }
 
@@ -519,7 +541,7 @@ public abstract class UIElement : IToJson, IReactive
     }
 }
 
-public record struct UIElementInfo(
+internal record struct UIElementInfo(
     LayoutLength Width,
     LayoutLength Height,
     Thickness Margin,
@@ -554,6 +576,110 @@ public record struct UIElementInfo(
     private static Thickness DefaultBorderWidth => new Thickness(0f);
     private static CornerRadius DefaultBorderRadius => CornerRadius.Zero;
     private static Brush DefaultBorderColor => Brush.Black;
+
+    internal void Merge(in UIElementPseudoInfo p)
+    {
+        if(p.Width.HasValue) {
+            Width = p.Width.Value;
+        }
+        if(p.Height.HasValue) {
+            Height = p.Height.Value;
+        }
+        if(p.Margin.HasValue) {
+            Margin = p.Margin.Value;
+        }
+        if(p.Padding.HasValue) {
+            Padding = p.Padding.Value;
+        }
+        if(p.HorizontalAlignment.HasValue) {
+            HorizontalAlignment = p.HorizontalAlignment.Value;
+        }
+        if(p.VerticalAlignment.HasValue) {
+            VerticalAlignment = p.VerticalAlignment.Value;
+        }
+        if(p.BackgroundColor.HasValue) {
+            BackgroundColor = p.BackgroundColor.Value;
+        }
+        if(p.BorderWidth.HasValue) {
+            BorderWidth = p.BorderWidth.Value;
+        }
+        if(p.BorderRadius.HasValue) {
+            BorderRadius = p.BorderRadius.Value;
+        }
+        if(p.BorderColor.HasValue) {
+            BorderColor = p.BorderColor.Value;
+        }
+    }
+}
+
+internal record struct UIElementPseudoInfo(
+    LayoutLength? Width,
+    LayoutLength? Height,
+    Thickness? Margin,
+    Thickness? Padding,
+    HorizontalAlignment? HorizontalAlignment,
+    VerticalAlignment? VerticalAlignment,
+    Brush? BackgroundColor,
+    Thickness? BorderWidth,
+    CornerRadius? BorderRadius,
+    Brush? BorderColor
+) : IFromJson<UIElementPseudoInfo>, IToJson
+{
+    static UIElementPseudoInfo() => Serializer.RegisterConstructor(FromJson);
+
+    public static UIElementPseudoInfo FromJson(in ReactSource source)
+    {
+        return new UIElementPseudoInfo
+        {
+            Width = source.TryGetProperty(nameof(Width), out var widthProp) ? widthProp.Instantiate<LayoutLength>() : null,
+            Height = source.TryGetProperty(nameof(Height), out var heightProp) ? heightProp.Instantiate<LayoutLength>() : null,
+            Margin = source.TryGetProperty(nameof(Margin), out var marginProp) ? marginProp.Instantiate<Thickness>() : null,
+            Padding = source.TryGetProperty(nameof(Padding), out var paddingProp) ? paddingProp.Instantiate<Thickness>() : null,
+            HorizontalAlignment = source.TryGetProperty(nameof(HorizontalAlignment), out var horizontalAlignmentProp) ? horizontalAlignmentProp.Instantiate<HorizontalAlignment>() : null,
+            VerticalAlignment = source.TryGetProperty(nameof(VerticalAlignment), out var verticalAlignmentProp) ? verticalAlignmentProp.Instantiate<VerticalAlignment>() : null,
+            BackgroundColor = source.TryGetProperty(nameof(BackgroundColor), out var backgroundColorProp) ? backgroundColorProp.Instantiate<Brush>() : null,
+            BorderWidth = source.TryGetProperty(nameof(BorderWidth), out var borderWidthProp) ? borderWidthProp.Instantiate<Thickness>() : null,
+            BorderRadius = source.TryGetProperty(nameof(BorderRadius), out var borderRadiusProp) ? borderRadiusProp.Instantiate<CornerRadius>() : null,
+            BorderColor = source.TryGetProperty(nameof(BorderColor), out var borderColorProp) ? borderColorProp.Instantiate<Brush>() : null,
+        };
+    }
+
+    public readonly JsonValueKind ToJson(Utf8JsonWriter writer)
+    {
+        writer.WriteStartObject();
+        if(Width.HasValue) {
+            writer.Write(nameof(Width), Width.Value);
+        }
+        if(Height.HasValue) {
+            writer.Write(nameof(Height), Height.Value);
+        }
+        if(Margin.HasValue) {
+            writer.Write(nameof(Margin), Margin.Value);
+        }
+        if(Padding.HasValue) {
+            writer.Write(nameof(Padding), Padding.Value);
+        }
+        if(HorizontalAlignment.HasValue) {
+            writer.WriteEnum(nameof(HorizontalAlignment), HorizontalAlignment.Value);
+        }
+        if(VerticalAlignment.HasValue) {
+            writer.WriteEnum(nameof(VerticalAlignment), VerticalAlignment.Value);
+        }
+        if(BackgroundColor.HasValue) {
+            writer.Write(nameof(BackgroundColor), BackgroundColor.Value);
+        }
+        if(BorderWidth.HasValue) {
+            writer.Write(nameof(BorderWidth), BorderWidth.Value);
+        }
+        if(BorderRadius.HasValue) {
+            writer.Write(nameof(BorderRadius), BorderRadius.Value);
+        }
+        if(BorderColor.HasValue) {
+            writer.Write(nameof(BorderColor), BorderColor.Value);
+        }
+        writer.WriteEndObject();
+        return JsonValueKind.Object;
+    }
 }
 
 public readonly struct ContentAreaInfo : IEquatable<ContentAreaInfo>
@@ -591,28 +717,38 @@ internal enum PseudoClass
     Hover = 0,
 }
 
+[Flags]
+internal enum PseudoClassFlags
+{
+    None = 0,
+    Hover = 1,
+}
+
 internal struct PseudoClassState
 {
-    private ReactSource _hover;
+    private UIElementPseudoInfo? _hover;
 
-    public PseudoClassState()
+    public void Set(PseudoClass pseudoClass, in ReactSource source)
     {
+        GetRef(pseudoClass) = UIElementPseudoInfo.FromJson(source);
     }
 
-    public void Set(PseudoClass pseudoClass, ReactSource source)
-    {
-        GetRef(pseudoClass) = source;
-    }
+    public bool Has(PseudoClass pseudoClass) => GetRef(pseudoClass).HasValue;
 
-    public bool TryGet(PseudoClass pseudoClass, out ReactSource source)
+    public bool TryGet(PseudoClass pseudoClass, out UIElementPseudoInfo info)
     {
-        source = GetRef(pseudoClass);
-        return source.IsEmpty == false;
+        ref var r = ref GetRef(pseudoClass);
+        if(r.HasValue) {
+            info = r.Value;
+            return true;
+        }
+        info = default;
+        return false;
     }
 
     [UnscopedRef]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ref ReactSource GetRef(PseudoClass pc)
+    private ref UIElementPseudoInfo? GetRef(PseudoClass pc)
     {
         switch(pc) {
             case PseudoClass.Hover:
