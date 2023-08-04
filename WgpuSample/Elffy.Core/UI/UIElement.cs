@@ -370,10 +370,9 @@ public abstract class UIElement : IToJson, IReactive
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
         // 'rect' is { X = 10, Y = 40, Width = 200, Heigh = 100 }
 
-        var layoutNeedToUpdate = _needToUpdate.HasFlag(NeedToUpdateFlags.Layout);
         LayoutResult layoutResult;
         ContentAreaInfo contentArea;
-        var layoutChanged = parentLayoutChanged || layoutNeedToUpdate;
+        var layoutChanged = parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout);
         if(layoutChanged) {
             (layoutResult, contentArea) = Relayout(_info, parentContentArea);
             _needToUpdate &= ~NeedToUpdateFlags.Layout;
