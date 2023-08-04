@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
 
@@ -65,15 +65,22 @@ public readonly struct Brush
         }
     }
 
-    public JsonNode? ToJson()
+    public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
-        //throw new NotImplementedException();
-
-        return _type switch
-        {
-            BrushType.Solid => _solidColor.ToJson(),
-            _ => "#FFFFFF",
-        };
+        writer.WriteStartObject();
+        writer.WriteString("@type", typeof(Brush).FullName);
+        writer.WriteEnum(nameof(Type), _type);
+        switch(_type) {
+            case BrushType.Solid: {
+                writer.Write(nameof(SolidColor), _solidColor);
+                break;
+            }
+            default: {
+                throw new UnreachableException();
+            }
+        }
+        writer.WriteEndObject();
+        return JsonValueKind.Object;
     }
 
     public override bool Equals(object? obj)

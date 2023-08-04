@@ -3,7 +3,6 @@ using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
 
@@ -108,9 +107,10 @@ public readonly struct Thickness
         }
     }
 
-    public JsonNode? ToJson()
+    public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
-        return $"{Top}px {Right}px {Bottom}px {Left}px";
+        writer.WriteStringValue($"{Top}px {Right}px {Bottom}px {Left}px");
+        return JsonValueKind.String;
     }
 
     public static bool operator ==(Thickness left, Thickness right) => left.Equals(right);

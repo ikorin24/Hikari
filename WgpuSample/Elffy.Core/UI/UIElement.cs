@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Text.Json.Nodes;
+using System.Text.Json;
 
 namespace Elffy.UI;
 
@@ -273,24 +273,20 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    protected virtual JsonNode ToJsonProtected()
+    protected virtual void ToJsonProtected(Utf8JsonWriter writer)
     {
-        var obj = new JsonObject()
-        {
-            ["@type"] = GetType().FullName,
-            [nameof(Width)] = _width.ToJson(),
-            [nameof(Height)] = _height.ToJson(),
-            [nameof(Margin)] = _margin.ToJson(),
-            [nameof(Padding)] = _padding.ToJson(),
-            [nameof(HorizontalAlignment)] = _horizontalAlignment.ToJson(),
-            [nameof(VerticalAlignment)] = _verticalAlignment.ToJson(),
-            [nameof(BackgroundColor)] = _backgroundColor.ToJson(),
-            [nameof(BorderWidth)] = _borderWidth.ToJson(),
-            [nameof(BorderRadius)] = _borderRadius.ToJson(),
-            [nameof(BorderColor)] = _borderColor.ToJson(),
-            [nameof(Children)] = _children.ToJson(),
-        };
-        return obj;
+        writer.WriteString("@type", GetType().FullName);
+        writer.Write(nameof(Width), _width);
+        writer.Write(nameof(Height), _height);
+        writer.Write(nameof(Margin), _margin);
+        writer.Write(nameof(Padding), _padding);
+        writer.WriteEnum(nameof(HorizontalAlignment), _horizontalAlignment);
+        writer.WriteEnum(nameof(VerticalAlignment), _verticalAlignment);
+        writer.Write(nameof(BackgroundColor), _backgroundColor);
+        writer.Write(nameof(BorderWidth), _borderWidth);
+        writer.Write(nameof(BorderRadius), _borderRadius);
+        writer.Write(nameof(BorderColor), _borderColor);
+        writer.Write(nameof(Children), _children);
     }
 
     void IReactive.ApplyDiff(in ReactSource source)
@@ -316,10 +312,12 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    public JsonNode? ToJson()
+    public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
-        var node = ToJsonProtected();
-        return node;
+        writer.WriteStartObject();
+        ToJsonProtected(writer);
+        writer.WriteEndObject();
+        return JsonValueKind.Object;
     }
 
     protected void RequestUpdateLayout()

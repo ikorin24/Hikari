@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Elffy.Effective;
 using Elffy.UI;
 using System;
 using System.Buffers;
@@ -6,9 +7,9 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace Elffy;
 
@@ -127,21 +128,103 @@ public static class Serializer
 
     public static string Serialize<T>(T value) where T : notnull, IToJson
     {
-        var node = value.ToJson();
-        return node?.ToJsonString(DefaultWriteSerializerOptions) ?? "null";
+        var bufferWriter = new ArrayBufferWriter<byte>();
+        Serialize(value, bufferWriter);
+        return Encoding.UTF8.GetString(bufferWriter.WrittenSpan);
     }
 
-    public static void Serialize<T>(T value, IBufferWriter<byte> bufferWriter) where T : notnull, IToJson
+    public static void Serialize<T>(T value, IBufferWriter<byte> buffer) where T : notnull, IToJson
     {
-        using var writer = new Utf8JsonWriter(bufferWriter, DefaultWriterOptions);
-        var node = value.ToJson();
-        if(node is null) {
-            writer.WriteNullValue();
-        }
-        else {
-            node.WriteTo(writer, DefaultWriteSerializerOptions);
-        }
+        using var writer = new Utf8JsonWriter(buffer, DefaultWriterOptions);
+        value.ToJson(writer);
     }
+
+    public static void SerializeUtf8<T>(T value, ReadOnlySpanAction<byte> utf8Handler) where T : notnull, IToJson
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        Serialize(value, buffer);
+        utf8Handler.Invoke(buffer.WrittenSpan);
+    }
+
+    public static void SerializeUtf8<T, TArg>(T value, TArg arg, ReadOnlySpanAction<byte, TArg> utf8Handler) where T : notnull, IToJson
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        Serialize(value, buffer);
+        utf8Handler.Invoke(buffer.WrittenSpan, arg);
+    }
+
+    public static TResult SerializeUtf8<T, TResult>(T value, ReadOnlySpanFunc<byte, TResult> utf8Handler) where T : notnull, IToJson
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        Serialize(value, buffer);
+        return utf8Handler.Invoke(buffer.WrittenSpan);
+    }
+
+    public static TResult SerializeUtf8<T, TArg, TResult>(T value, TArg arg, ReadOnlySpanFunc<byte, TArg, TResult> utf8Handler) where T : notnull, IToJson
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        Serialize(value, buffer);
+        return utf8Handler.Invoke(buffer.WrittenSpan, arg);
+    }
+
+    public static void SerializeUtf16<T>(T value, ReadOnlySpanAction<char> utf16Handler) where T : notnull, IToJson
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        Serialize(value, buffer);
+        var utf8Span = buffer.WrittenSpan;
+        var enc = Encoding.UTF8;
+        using var tmp = new ValueTypeRentMemory<char>(enc.GetCharCount(utf8Span), false, out var charSpan);
+        var len = enc.GetChars(utf8Span, charSpan);
+        utf16Handler.Invoke(charSpan[..len]);
+    }
+
+    public static void SerializeUtf16<T, TArg>(T value, TArg arg, ReadOnlySpanAction<char, TArg> utf16Handler) where T : notnull, IToJson
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        Serialize(value, buffer);
+        var utf8Span = buffer.WrittenSpan;
+        var enc = Encoding.UTF8;
+        using var tmp = new ValueTypeRentMemory<char>(enc.GetCharCount(utf8Span), false, out var charSpan);
+        var len = enc.GetChars(utf8Span, charSpan);
+        utf16Handler.Invoke(charSpan[..len], arg);
+    }
+
+    public static TResult SerializeUtf16<T, TResult>(T value, ReadOnlySpanFunc<char, TResult> utf16Handler) where T : notnull, IToJson
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        Serialize(value, buffer);
+        var utf8Span = buffer.WrittenSpan;
+        var enc = Encoding.UTF8;
+        using var tmp = new ValueTypeRentMemory<char>(enc.GetCharCount(utf8Span), false, out var charSpan);
+        var len = enc.GetChars(utf8Span, charSpan);
+        return utf16Handler.Invoke(charSpan[..len]);
+    }
+
+    public static TResult SerializeUtf16<T, TArg, TResult>(T value, TArg arg, ReadOnlySpanFunc<char, TArg, TResult> utf16Handler) where T : notnull, IToJson
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        Serialize(value, buffer);
+        var utf8Span = buffer.WrittenSpan;
+        var enc = Encoding.UTF8;
+        using var tmp = new ValueTypeRentMemory<char>(enc.GetCharCount(utf8Span), false, out var charSpan);
+        var len = enc.GetChars(utf8Span, charSpan);
+        return utf16Handler.Invoke(charSpan[..len], arg);
+    }
+
+    internal static unsafe void SerializeUtf16<T>(T value, ref ReactBuilder arg, F f, JsonMarker _ = default) where T : notnull, IToJson
+    {
+        var buffer = new ArrayBufferWriter<byte>(); // TODO: use pooled buffer
+        Serialize(value, buffer);
+        var utf8Span = buffer.WrittenSpan;
+        var enc = Encoding.UTF8;
+        using var tmp = new ValueTypeRentMemory<char>(enc.GetCharCount(utf8Span), false, out var charSpan);
+        var len = enc.GetChars(utf8Span, charSpan);
+        f.Invoke(charSpan[..len], ref arg);
+    }
+
+    internal delegate void F(ReadOnlySpan<char> span, ref ReactBuilder arg);
+    internal record struct EnumMarker;
+    internal record struct JsonMarker;
 
     //public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlyMemory<byte> utf8Json, DeserializeRuntimeData data = default)
     //{
@@ -422,16 +505,16 @@ internal static class ExternalConstructor
         return default;
     }
 
-    public static JsonNode ToJson(this Color4 self)
+    public static JsonValueKind ToJson(this Color4 self, Utf8JsonWriter writer)
     {
-        return new JsonObject
-        {
-            ["@type"] = typeof(Color4).FullName,
-            [nameof(Color4.R)] = self.R,
-            [nameof(Color4.G)] = self.G,
-            [nameof(Color4.B)] = self.B,
-            [nameof(Color4.A)] = self.A
-        };
+        writer.WriteStartObject();
+        writer.WriteString("@type", typeof(Color4).FullName);
+        writer.WriteNumber(nameof(Color4.R), self.R);
+        writer.WriteNumber(nameof(Color4.G), self.G);
+        writer.WriteNumber(nameof(Color4.B), self.B);
+        writer.WriteNumber(nameof(Color4.A), self.A);
+        writer.WriteEndObject();
+        return JsonValueKind.Object;
     }
 }
 
@@ -443,27 +526,34 @@ public interface IFromJson<TSelf>
 
 public interface IToJson
 {
-    JsonNode? ToJson();
+    JsonValueKind ToJson(Utf8JsonWriter writer);
 }
 
 internal static class EnumJsonHelper
 {
-    public static JsonValue ToJson<T>(this T self) where T : struct, Enum
+    public static JsonValueKind ToJson<T>(this T self, Utf8JsonWriter writer) where T : struct, Enum
     {
         var str = self.ToString();
-        return JsonValue.Create(str)!;
+        writer.WriteStringValue(str);
+        return JsonValueKind.String;
     }
 
-    private static string GetStringNotNull(this JsonElement element)
+    public static void Write<T>(this Utf8JsonWriter writer, ReadOnlySpan<char> propertyName, T value) where T : IToJson
     {
-        var str = element.GetString();
-        if(str == null) {
-            Throw();
-        }
-        return str;
+        writer.WritePropertyName(propertyName);
+        value.ToJson(writer);
+    }
 
-        [DoesNotReturn]
-        static void Throw() => throw new FormatException("null");
+    public static void Write(this Utf8JsonWriter writer, ReadOnlySpan<char> propertyName, Color4 value)
+    {
+        writer.WritePropertyName(propertyName);
+        value.ToJson(writer);
+    }
+
+    public static void WriteEnum<T>(this Utf8JsonWriter writer, ReadOnlySpan<char> propertyName, T value) where T : struct, Enum
+    {
+        writer.WritePropertyName(propertyName);
+        value.ToJson(writer);
     }
 }
 

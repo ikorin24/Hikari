@@ -1,8 +1,8 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
 
@@ -63,14 +63,21 @@ public readonly struct LayoutLength
         }
     }
 
-    public JsonNode? ToJson()
+    public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
-        return Type switch
-        {
-            LayoutLengthType.Length => Value,
-            LayoutLengthType.Proportion => $"{Value * 100f}%",
-            _ => 0,
-        };
+        switch(Type) {
+            case LayoutLengthType.Length: {
+                writer.WriteNumberValue(Value);
+                return JsonValueKind.Number;
+            }
+            case LayoutLengthType.Proportion: {
+                writer.WriteStringValue($"{Value * 100f}%");
+                return JsonValueKind.String;
+            }
+            default: {
+                throw new UnreachableException();
+            }
+        }
     }
 
     public static LayoutLength Length(float length) => new LayoutLength(length, LayoutLengthType.Length);
@@ -82,16 +89,6 @@ public readonly struct LayoutLength
     public bool Equals(LayoutLength other) => Value == other.Value && Type == other.Type;
 
     public override int GetHashCode() => HashCode.Combine(Value, Type);
-
-    public override string ToString()
-    {
-        return Type switch
-        {
-            LayoutLengthType.Length => Value.ToString(),
-            LayoutLengthType.Proportion => $"{Value * 100f}%",
-            _ => base.ToString() ?? "",
-        };
-    }
 
     public static bool operator ==(LayoutLength left, LayoutLength right) => left.Equals(right);
 

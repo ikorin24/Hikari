@@ -2,7 +2,6 @@
 using Elffy.Effective;
 using System;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
 
@@ -41,9 +40,10 @@ public readonly struct FontSize
         }
     }
 
-    public JsonNode? ToJson()
+    public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
-        return $"{_px}px";
+        writer.WriteStringValue($"{_px}px");
+        return JsonValueKind.String;
     }
 
     public static implicit operator FontSize(float value) => new(value);

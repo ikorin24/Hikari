@@ -2,7 +2,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace Elffy.UI;
 
@@ -107,9 +106,10 @@ public readonly struct CornerRadius
         }
     }
 
-    public JsonNode? ToJson()
+    public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
-        return $"{TopLeft} {TopRight} {BottomRight} {BottomLeft}";
+        writer.WriteStringValue($"{TopLeft} {TopRight} {BottomRight} {BottomLeft}");
+        return JsonValueKind.String;
     }
 
     public Vector4 ToVector4() => new Vector4(TopLeft, TopRight, BottomRight, BottomLeft);

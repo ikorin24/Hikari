@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text.Json.Nodes;
+using System.Text.Json;
 
 namespace Elffy.UI;
 
@@ -27,10 +27,9 @@ public sealed class Panel : UIElement, IFromJson<Panel>
     {
     }
 
-    protected override JsonNode ToJsonProtected()
+    protected override void ToJsonProtected(Utf8JsonWriter writer)
     {
-        var node = base.ToJsonProtected();
-        return node;
+        base.ToJsonProtected(writer);
     }
 
     protected override void ApplyDiffProtected(in ReactSource source)

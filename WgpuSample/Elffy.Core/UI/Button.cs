@@ -4,7 +4,7 @@ using Elffy.Effective;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text.Json.Nodes;
+using System.Text.Json;
 
 namespace Elffy.UI;
 
@@ -53,12 +53,11 @@ public sealed class Button : UIElement, IFromJson<Button>
 
     public static Button FromJson(in ReactSource source) => new Button(source);
 
-    protected override JsonNode ToJsonProtected()
+    protected override void ToJsonProtected(Utf8JsonWriter writer)
     {
-        var node = base.ToJsonProtected();
-        node[nameof(Text)] = _text;
-        node[nameof(FontSize)] = _fontSize.ToJson();
-        return node;
+        base.ToJsonProtected(writer);
+        writer.WriteString(nameof(Text), _text);
+        writer.Write(nameof(FontSize), _fontSize);
     }
 
     protected override void ApplyDiffProtected(in ReactSource source)

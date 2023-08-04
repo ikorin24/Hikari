@@ -121,16 +121,15 @@ public ref struct ReactBuilder
 
     public void AppendFormatted<T>(T value, JsonMarker _ = default) where T : IToJson
     {
-        var json = value.ToJson();
-        var jsonStr = json?.ToJsonString();
-        _handler.AppendFormatted(jsonStr);
+        Serializer.SerializeUtf16(value, ref this, (ReadOnlySpan<char> chars, ref ReactBuilder self) =>
+        {
+            self._handler.AppendFormatted(chars);
+        });
     }
 
     public void AppendFormatted<T>(T value, EnumMarker _ = default) where T : struct, Enum
     {
-        var json = value.ToJson();
-        var jsonStr = json?.ToJsonString();
-        _handler.AppendFormatted(jsonStr);
+        _handler.AppendFormatted(value.ToString());
     }
 
     [EditorBrowsable(EditorBrowsableState.Never)]

@@ -4,7 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json.Nodes;
+using System.Text.Json;
 using System.Threading;
 
 namespace Elffy.UI;
@@ -136,14 +136,15 @@ public sealed class UIElementCollection
         return new UIElementCollection(list, reactives, dic);
     }
 
-    public JsonNode? ToJson()
+    public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
         var children = _children;
-        var array = new JsonArray();
+        writer.WriteStartArray();
         foreach(var child in children) {
-            array.Add(child.ToJson());
+            child.ToJson(writer);
         }
-        return array;
+        writer.WriteEndArray();
+        return JsonValueKind.Array;
     }
 
     void IReactive.ApplyDiff(in ReactSource source)
