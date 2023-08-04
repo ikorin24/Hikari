@@ -5,6 +5,7 @@ using System.Text.Json;
 
 namespace Elffy.UI;
 
+[DebuggerDisplay("{DebugView}")]
 public readonly struct Brush
     : IFromJson<Brush>,
       IToJson,
@@ -12,6 +13,13 @@ public readonly struct Brush
 {
     private readonly BrushType _type;
     private readonly Color4 _solidColor;
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebugView => _type switch
+    {
+        BrushType.Solid => _solidColor.ToColorByte().ToHexCode(),
+        _ => "?",
+    };
 
     public static Brush Transparent => new Brush(Color4.Transparent);
     public static Brush White => new Brush(Color4.White);

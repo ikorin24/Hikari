@@ -1,10 +1,12 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace Elffy.UI;
 
+[DebuggerDisplay("{DebugView}")]
 public readonly struct CornerRadius
     : IEquatable<CornerRadius>,
       IFromJson<CornerRadius>,
@@ -14,6 +16,9 @@ public readonly struct CornerRadius
     public required float TopRight { get; init; }
     public required float BottomRight { get; init; }
     public required float BottomLeft { get; init; }
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebugView => $"{TopLeft}px {TopRight}px {BottomRight}px {BottomLeft}px";
 
     public static CornerRadius Zero => default;
 
@@ -108,7 +113,7 @@ public readonly struct CornerRadius
 
     public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
-        writer.WriteStringValue($"{TopLeft} {TopRight} {BottomRight} {BottomLeft}");
+        writer.WriteStringValue($"{TopLeft}px {TopRight}px {BottomRight}px {BottomLeft}px");
         return JsonValueKind.String;
     }
 

@@ -6,6 +6,7 @@ using System.Text.Json;
 
 namespace Elffy.UI;
 
+[DebuggerDisplay("{DebugView}")]
 public readonly struct LayoutLength
     : IEquatable<LayoutLength>,
       IFromJson<LayoutLength>,
@@ -13,6 +14,9 @@ public readonly struct LayoutLength
 {
     public required float Value { get; init; }
     public required LayoutLengthType Type { get; init; }
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebugView => $"{Value}{(Type == LayoutLengthType.Length ? "px" : "%")}";
 
     static LayoutLength() => Serializer.RegisterConstructor(FromJson);
 

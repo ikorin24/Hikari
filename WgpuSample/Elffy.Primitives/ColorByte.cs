@@ -37,6 +37,8 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly void Deconstruct(out byte r, out byte g, out byte b, out byte a) => (r, g, b, a) = (R, G, B, A);
 
+        public readonly string ToHexCode() => $"#{R:X2}{G:X2}{B:X2}{A:X2}";
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly Color3 ToColor3() => new((float)R / byte.MaxValue, (float)G / byte.MaxValue, (float)B / byte.MaxValue);
 
