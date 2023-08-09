@@ -168,8 +168,6 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    protected bool IsHover => _isHover;
-
     private static LayoutLength DefaultWidth => new LayoutLength(1f, LayoutLengthType.Proportion);
     private static LayoutLength DefaultHeight => new LayoutLength(1f, LayoutLengthType.Proportion);
     private static Thickness DefaultMargin => new Thickness(0f);
