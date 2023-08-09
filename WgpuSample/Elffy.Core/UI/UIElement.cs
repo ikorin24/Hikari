@@ -367,6 +367,7 @@ public abstract class UIElement : IToJson, IReactive
 
         var layoutChanged = parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout);
         var info = _info;
+        var isHoverPrev = _isHover;
 
         LayoutResult layout;
         Thickness padding;
@@ -382,7 +383,7 @@ public abstract class UIElement : IToJson, IReactive
             {
                 (true, true) => (true, layout2, mergedInfo.Padding),
                 (false, false) => (false, layout1, info.Padding),
-                _ => _isHover ? (true, layout2, mergedInfo.Padding) : (false, layout1, info.Padding),
+                _ => isHoverPrev ? (true, layout2, mergedInfo.Padding) : (false, layout1, info.Padding),
             };
         }
         else {
@@ -397,7 +398,7 @@ public abstract class UIElement : IToJson, IReactive
         _needToUpdate &= ~NeedToUpdateFlags.Layout;
         _needToUpdate |= NeedToUpdateFlags.Material;
 
-        if(isHover != _isHover) {
+        if(isHover != isHoverPrev) {
             _needToUpdate |= NeedToUpdateFlags.Material;
         }
         _isHover = isHover;
