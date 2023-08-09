@@ -34,7 +34,7 @@ public abstract class UIElement : IToJson, IReactive
     private enum NeedToUpdateFlags : uint
     {
         None = 0,
-        Material = 1,
+        //Material = 1,
         Layout = 2,
     }
 
@@ -64,7 +64,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.Width) { return; }
             _info.Width = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+            _needToUpdate |= NeedToUpdateFlags.Layout;
         }
     }
     public LayoutLength Height
@@ -74,7 +74,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.Height) { return; }
             _info.Height = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+            _needToUpdate |= NeedToUpdateFlags.Layout;
         }
     }
 
@@ -85,7 +85,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.Margin) { return; }
             _info.Margin = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+            _needToUpdate |= NeedToUpdateFlags.Layout;
         }
     }
 
@@ -96,7 +96,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.Padding) { return; }
             _info.Padding = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+            _needToUpdate |= NeedToUpdateFlags.Layout;
         }
     }
 
@@ -107,7 +107,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.HorizontalAlignment) { return; }
             _info.HorizontalAlignment = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+            _needToUpdate |= NeedToUpdateFlags.Layout;
         }
     }
 
@@ -118,7 +118,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.VerticalAlignment) { return; }
             _info.VerticalAlignment = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+            _needToUpdate |= NeedToUpdateFlags.Layout;
         }
     }
 
@@ -130,7 +130,6 @@ public abstract class UIElement : IToJson, IReactive
             ArgumentNullException.ThrowIfNull(value);
             if(value == _info.BackgroundColor) { return; }
             _info.BackgroundColor = value;
-            _needToUpdate |= NeedToUpdateFlags.Material;
         }
     }
 
@@ -141,7 +140,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.BorderWidth) { return; }
             _info.BorderWidth = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+            _needToUpdate |= NeedToUpdateFlags.Layout;
         }
     }
 
@@ -152,7 +151,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.BorderRadius) { return; }
             _info.BorderRadius = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout | NeedToUpdateFlags.Material;
+            _needToUpdate |= NeedToUpdateFlags.Layout;
         }
     }
 
@@ -163,7 +162,6 @@ public abstract class UIElement : IToJson, IReactive
         {
             ArgumentNullException.ThrowIfNull(value);
             _info.BorderColor = value;
-            _needToUpdate |= NeedToUpdateFlags.Material;
         }
     }
 
@@ -196,7 +194,7 @@ public abstract class UIElement : IToJson, IReactive
         _info = UIElementInfo.Default;
         _pseudoClasses = new PseudoClasses();
         Children = new UIElementCollection();
-        _needToUpdate = NeedToUpdateFlags.Material | NeedToUpdateFlags.Layout;
+        _needToUpdate = NeedToUpdateFlags.Layout;
 
         ModelUpdate.Subscribe(static model =>
         {
@@ -322,11 +320,6 @@ public abstract class UIElement : IToJson, IReactive
         _needToUpdate |= NeedToUpdateFlags.Layout;
     }
 
-    protected void RequestUpdateMaterial()
-    {
-        _needToUpdate |= NeedToUpdateFlags.Material;
-    }
-
     internal void SetParent(UIElement parent)
     {
         Debug.Assert(_parent == null);
@@ -389,7 +382,8 @@ public abstract class UIElement : IToJson, IReactive
         var needToRelayout =
             parentLayoutChanged ||
             _needToUpdate.HasFlag(NeedToUpdateFlags.Layout) ||
-            (mouse.PositionDelta.IsZero == false && _pseudoClasses[PseudoClass.Hover]?.HasLayoutInfo == true);
+            (mouse.PositionDelta.IsZero == false && _pseudoClasses[PseudoClass.Hover]?.HasLayoutInfo == true) ||
+            mouse.IsChanged(MouseButton.Left);
 
         var isHoverPrev = _isHover;
         UIElementInfo appliedInfo;
@@ -440,12 +434,8 @@ public abstract class UIElement : IToJson, IReactive
         }
 
         _needToUpdate &= ~NeedToUpdateFlags.Layout;
-        _needToUpdate |= NeedToUpdateFlags.Material;
 
         var layoutChanged = _layoutCache?.Layout != layout;
-        if(isHover != isHoverPrev || layoutChanged) {
-            _needToUpdate |= NeedToUpdateFlags.Material;
-        }
         _isHover = isHover;
         _layoutCache = (layout, appliedInfo);
         var contentArea = new ContentAreaInfo
@@ -528,11 +518,8 @@ public abstract class UIElement : IToJson, IReactive
         Debug.Assert(model != null);
         if(model == null) { return; }
 
-        if(!_needToUpdate.HasFlag(NeedToUpdateFlags.Material)) {
-            return;
-        }
         Debug.Assert(_layoutCache != null);
-        var ((rect, borderRadius, _), _) = _layoutCache.Value;
+        var ((rect, borderRadius, _), appliedInfo) = _layoutCache.Value;
 
         // origin is bottom-left of rect because clip space is bottom-left based
         var modelOrigin = new Vector3
@@ -549,26 +536,17 @@ public abstract class UIElement : IToJson, IReactive
                 new Vector4(0, 0, 1, 0),
                 new Vector4(0, 0, 0, 1));
 
-        var info = _info;
-        if(_isHover && _pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo)) {
-            info = info.Merged(hoverInfo);
-        }
-        if(_isClickHolding && _pseudoClasses.TryGet(PseudoClass.Active, out var activeInfo)) {
-            info = info.Merged(activeInfo);
-        }
-
         var result = new UIUpdateResult
         {
             ActualRect = rect,
-            ActualBorderWidth = info.BorderWidth.ToVector4(),
+            ActualBorderWidth = appliedInfo.BorderWidth.ToVector4(),
             ActualBorderRadius = borderRadius,
             MvpMatrix = uiProjection * modelMatrix,
-            BackgroundColor = info.BackgroundColor,
-            BorderColor = info.BorderColor,
-            IsMouseOver = _isHover,
+            BackgroundColor = appliedInfo.BackgroundColor,
+            BorderColor = appliedInfo.BorderColor,
+            IsHover = _isHover,
         };
         model.Material.UpdateMaterial(this, result);
-        _needToUpdate &= ~NeedToUpdateFlags.Material;
     }
 }
 
@@ -766,7 +744,7 @@ internal readonly record struct LayoutResult
     }
 }
 
-public readonly ref struct UIUpdateResult
+public readonly record struct UIUpdateResult
 {
     public required RectF ActualRect { get; init; }
     public required Vector4 ActualBorderWidth { get; init; }
@@ -774,7 +752,7 @@ public readonly ref struct UIUpdateResult
     public required Matrix4 MvpMatrix { get; init; }
     public required Brush BackgroundColor { get; init; }
     public required Brush BorderColor { get; init; }
-    public required bool IsMouseOver { get; init; }
+    public required bool IsHover { get; init; }
 }
 
 internal enum PseudoClass

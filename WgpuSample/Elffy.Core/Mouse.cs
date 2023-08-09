@@ -64,6 +64,15 @@ public sealed class Mouse
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsChanged(MouseButton button)
+    {
+        lock(_sync) {
+            ref readonly var key = ref _namedKeys[(uint)button];
+            return key.IsKeyUp || key.IsKeyDown;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsDown(MouseButton button)
     {
         lock(_sync) {

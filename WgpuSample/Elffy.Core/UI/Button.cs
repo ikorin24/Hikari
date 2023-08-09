@@ -10,31 +10,28 @@ namespace Elffy.UI;
 
 public sealed class Button : UIElement, IFromJson<Button>
 {
-    private string _text;
-    private FontSize _fontSize;
+    private ButtonInfo _buttonInfo;
 
-    private static string DefaultText => "";
-    private static FontSize DefaultFontSize => 16;
+    internal ref readonly ButtonInfo ButtonInfo => ref _buttonInfo;
 
     public string Text
     {
-        get => _text;
+        get => _buttonInfo.Text;
         set
         {
-            if(value == _text) { return; }
-            _text = value;
-            RequestUpdateMaterial();
+            ArgumentNullException.ThrowIfNull(value);
+            if(value == _buttonInfo.Text) { return; }
+            _buttonInfo.Text = value;
         }
     }
 
     public FontSize FontSize
     {
-        get => _fontSize;
+        get => _buttonInfo.FontSize;
         set
         {
-            if(value == _fontSize) { return; }
-            _fontSize = value;
-            RequestUpdateMaterial();
+            if(value == _buttonInfo.FontSize) { return; }
+            _buttonInfo.FontSize = value;
         }
     }
 
@@ -52,34 +49,47 @@ public sealed class Button : UIElement, IFromJson<Button>
     protected override void ToJsonProtected(Utf8JsonWriter writer)
     {
         base.ToJsonProtected(writer);
-        writer.WriteString(nameof(Text), _text);
-        writer.Write(nameof(FontSize), _fontSize);
+        writer.WriteString(nameof(Text), Text);
+        writer.Write(nameof(FontSize), FontSize);
     }
 
     protected override void ApplyDiffProtected(in ReactSource source)
     {
         base.ApplyDiffProtected(source);
-        Text = source.ApplyProperty(nameof(Text), Text, () => DefaultText, out _);
-        FontSize = source.ApplyProperty(nameof(FontSize), FontSize, () => DefaultFontSize, out _);
+        Text = source.ApplyProperty(nameof(Text), Text, () => ButtonInfo.DefaultText, out _);
+        FontSize = source.ApplyProperty(nameof(FontSize), FontSize, () => ButtonInfo.DefaultFontSize, out _);
     }
 
     public Button() : base()
     {
-        _text = DefaultText;
-        _fontSize = DefaultFontSize;
+        _buttonInfo = ButtonInfo.Default;
     }
 
     private Button(in ReactSource source) : base(source)
     {
-        _text = DefaultText;
-        _fontSize = DefaultFontSize;
+        _buttonInfo = ButtonInfo.Default;
         if(source.TryGetProperty(nameof(Text), out var text)) {
-            _text = Serializer.Instantiate<string>(text);
+            Text = Serializer.Instantiate<string>(text);
         }
         if(source.TryGetProperty(nameof(FontSize), out var fontSize)) {
-            _fontSize = Serializer.Instantiate<FontSize>(fontSize);
+            FontSize = Serializer.Instantiate<FontSize>(fontSize);
         }
     }
+}
+
+internal record struct ButtonInfo
+{
+    public required string Text { get; set; }
+    public required FontSize FontSize { get; set; }
+
+    public static ButtonInfo Default => new()
+    {
+        Text = DefaultText,
+        FontSize = DefaultFontSize,
+    };
+
+    public static string DefaultText => "";
+    public static FontSize DefaultFontSize => 16;
 }
 
 file sealed class ButtonShader : UIShader
@@ -418,9 +428,11 @@ file sealed class ButtonShader : UIShader
         private Own<BindGroup> _bindGroup1;
         private MaybeOwn<Texture> _texture;
         private readonly MaybeOwn<Sampler> _sampler;
+        private BufferData? _bufferData;
+        private ButtonInfo? _buttonInfo;
 
         [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_mat4x4_f32)]
-        private readonly struct BufferData
+        private readonly record struct BufferData
         {
             public required Matrix4 Mvp { get; init; }
             public required Color4 SolidColor { get; init; }
@@ -508,8 +520,11 @@ file sealed class ButtonShader : UIShader
         public override void UpdateMaterial(UIElement element, in UIUpdateResult result)
         {
             var button = (Button)element;
-            UpdateForButton(button);
-            WriteUniform(new()
+            if(_buttonInfo != button.ButtonInfo) {
+                _buttonInfo = button.ButtonInfo;
+                UpdateButtonTexture(button.ButtonInfo);
+            }
+            var bufferData = new BufferData
             {
                 Mvp = result.MvpMatrix,
                 SolidColor = result.BackgroundColor.SolidColor,
@@ -517,10 +532,14 @@ file sealed class ButtonShader : UIShader
                 BorderWidth = result.ActualBorderWidth,
                 BorderRadius = result.ActualBorderRadius,
                 BorderSolidColor = result.BorderColor.SolidColor,
-            });
+            };
+            if(_bufferData != bufferData) {
+                _bufferData = bufferData;
+                WriteUniform(bufferData);
+            }
         }
 
-        private void UpdateForButton(Button button)
+        private void UpdateButtonTexture(in ButtonInfo button)
         {
             var text = button.Text;
             if(string.IsNullOrEmpty(text) == false) {
