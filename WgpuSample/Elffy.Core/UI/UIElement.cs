@@ -21,7 +21,7 @@ public abstract class UIElement : IToJson, IReactive
     private readonly SubscriptionBag _modelSubscriptions = new SubscriptionBag();
 
     private UIElementInfo _info;
-    private PseudoClassState _pseudoClassState;
+    private PseudoClasses _pseudoClasses;
 
     private LayoutResult _layoutResult;
     private bool _isMouseOver;
@@ -198,7 +198,7 @@ public abstract class UIElement : IToJson, IReactive
     protected UIElement()
     {
         _info = UIElementInfo.Default;
-        _pseudoClassState = new PseudoClassState();
+        _pseudoClasses = new PseudoClasses();
         Children = new UIElementCollection();
         _needToUpdate = NeedToUpdateFlags.Material | NeedToUpdateFlags.Layout;
     }
@@ -240,7 +240,7 @@ public abstract class UIElement : IToJson, IReactive
                 var pseudo = name.AsSpan(2);
                 switch(pseudo) {
                     case nameof(PseudoClass.Hover): {
-                        _pseudoClassState.Set(PseudoClass.Hover, value);
+                        _pseudoClasses.Set(PseudoClass.Hover, value);
                         break;
                     }
                     default: {
@@ -380,7 +380,7 @@ public abstract class UIElement : IToJson, IReactive
         bool isMouseOver;
 
         if(_isMouseOver) {
-            if(_pseudoClassState.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
+            if(_pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
                 var (layoutResult1, contentArea1) = Relayout(info, parentContentArea);
                 var isMouseOver1 = HitTest(mouse.Position, layoutResult1.Rect, layoutResult1.BorderRadius);
                 info.Merge(hoverInfo);
@@ -420,7 +420,7 @@ public abstract class UIElement : IToJson, IReactive
             _needToUpdate |= NeedToUpdateFlags.Material;
         }
         else {
-            if(_pseudoClassState.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
+            if(_pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
                 var (layoutResult1, contentArea1) = Relayout(info, parentContentArea);
                 var isMouseOver1 = HitTest(mouse.Position, layoutResult1.Rect, layoutResult1.BorderRadius);
                 info.Merge(hoverInfo);
@@ -562,7 +562,7 @@ public abstract class UIElement : IToJson, IReactive
             var backgroundColor = _info.BackgroundColor;
             var borderWidth = _info.BorderWidth;
             var borderColor = _info.BorderColor;
-            if(_isMouseOver && _pseudoClassState.TryGet(PseudoClass.Hover, out var hoverInfo)) {
+            if(_isMouseOver && _pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo)) {
                 // properties for material
                 // BackgroundColor, BorderWidth, BorderColor
                 if(hoverInfo.BackgroundColor.HasValue) {
@@ -774,7 +774,7 @@ internal enum PseudoClass
     Hover = 0,
 }
 
-internal struct PseudoClassState
+internal struct PseudoClasses
 {
     private UIElementPseudoInfo? _hover;
 
