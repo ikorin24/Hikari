@@ -311,6 +311,7 @@ public sealed class Screen
 
         operations.ApplyRemove();
         _keyboard.PrepareNextFrame();
+        _mouse.PrepareNextFrame();
 
         Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
     }

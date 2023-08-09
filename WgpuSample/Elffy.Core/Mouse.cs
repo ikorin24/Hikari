@@ -8,6 +8,7 @@ public sealed class Mouse
     private readonly Screen _screen;
     private PosBuf _posBuf;
     private readonly KeyBuf[] _namedKeys = new KeyBuf[3];
+    private bool _areAnyButtonsChanged;
     private readonly object _sync = new();
 
     private bool _isOnScreen;
@@ -16,6 +17,16 @@ public sealed class Mouse
     public Screen Screen => _screen;
 
     public bool IsOnScreen => _isOnScreen;
+
+    internal bool AreAnyButtonsChanged
+    {
+        get
+        {
+            lock(_sync) {
+                return _areAnyButtonsChanged;
+            }
+        }
+    }
 
     public Vector2 Position
     {
@@ -82,6 +93,7 @@ public sealed class Mouse
             lock(_sync) {
                 _namedKeys[button.number].SetValue(pressed);
             }
+            _areAnyButtonsChanged = true;
         }
         else {
             // nop
@@ -118,6 +130,11 @@ public sealed class Mouse
                 _namedKeys[i].InitFrame();
             }
         }
+    }
+
+    internal void PrepareNextFrame()
+    {
+        _areAnyButtonsChanged = false;
     }
 
     private struct PosBuf

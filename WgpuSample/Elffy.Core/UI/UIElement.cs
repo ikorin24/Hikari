@@ -737,6 +737,7 @@ internal struct PseudoClasses
 
     public bool Has(PseudoClass pseudoClass) => GetRef(pseudoClass).HasValue;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGet(PseudoClass pseudoClass, out UIElementPseudoInfo info)
     {
         ref var r = ref GetRef(pseudoClass);
