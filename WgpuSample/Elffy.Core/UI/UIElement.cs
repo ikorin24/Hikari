@@ -18,6 +18,7 @@ public abstract class UIElement : IToJson, IReactive
     private EventSource<UIModel> _modelLateUpdate;
     private EventSource<UIModel> _modelTerminated;
     private EventSource<UIModel> _modelDead;
+    private EventSource<UIElement> _clicked;
     private readonly SubscriptionBag _modelSubscriptions = new SubscriptionBag();
 
     private UIElementInfo _info;
@@ -25,6 +26,8 @@ public abstract class UIElement : IToJson, IReactive
 
     private LayoutResult? _layoutCache;
     private bool _isHover;
+    private bool _isClickHolding;
+    private bool _needToInvokeClicked;
     private NeedToUpdateFlags _needToUpdate;
 
     [Flags]
@@ -43,6 +46,7 @@ public abstract class UIElement : IToJson, IReactive
     internal Event<UIModel> ModelDead => _modelDead.Event;
     internal SubscriptionRegister ModelSubscriptions => _modelSubscriptions.Register;
 
+    public Event<UIElement> Clicked => _clicked.Event;
     public UIElement? Parent => _parent;
     internal UIModel? Model => _model;
     public Screen? Screen => _model?.Screen;
@@ -193,6 +197,15 @@ public abstract class UIElement : IToJson, IReactive
         _pseudoClasses = new PseudoClasses();
         Children = new UIElementCollection();
         _needToUpdate = NeedToUpdateFlags.Material | NeedToUpdateFlags.Layout;
+
+        ModelUpdate.Subscribe(static model =>
+        {
+            var self = model.Element;
+            if(self._needToInvokeClicked) {
+                self._needToInvokeClicked = false;
+                self._clicked.Invoke(self);
+            }
+        });
     }
 
     protected UIElement(in ReactSource source) : this()
@@ -227,6 +240,12 @@ public abstract class UIElement : IToJson, IReactive
         if(source.TryGetProperty(nameof(BorderColor), out var borderColor)) {
             _info.BorderColor = Brush.FromJson(borderColor);
         }
+        if(source.TryGetProperty(nameof(Clicked), out var clicked)) {
+            var action = clicked.Instantiate<Action<UIElement>>();
+            _clicked.Event.Subscribe(action);
+        }
+
+
         foreach(var (name, value) in source.EnumerateProperties()) {
             if(name.StartsWith("&:")) {
                 var pseudo = name.AsSpan(2);
@@ -361,53 +380,37 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    //private EventSource<UIElement> _clicked;
-    private bool _isClickHolding = false;
-
     internal LayoutResult UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, Mouse mouse)
     {
         // 'rect' is top-left based in Screen
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
         // 'rect' is { X = 10, Y = 40, Width = 200, Heigh = 100 }
 
-        var layoutChanged = parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout);
+        var layoutUpdateNeeded = parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout);
         var info = _info;
         var isHoverPrev = _isHover;
-
         LayoutResult layout;
-        Thickness padding;
         bool isHover;
-
+        layout = Relayout(info, parentContentArea);
+        isHover = HitTest(mouse.Position, layout.Rect, layout.BorderRadius);
         if(_pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
-            var layout1 = Relayout(info, parentContentArea);
-            var isHover1 = HitTest(mouse.Position, layout1.Rect, layout1.BorderRadius);
             var mergedInfo = info.Merged(hoverInfo);
             var layout2 = Relayout(mergedInfo, parentContentArea);
             var isHover2 = HitTest(mouse.Position, layout2.Rect, layout2.BorderRadius);
-            (isHover, layout, padding) = (isHover1, isHover2) switch
+            (isHover, layout) = (isHover, isHover2) switch
             {
-                (true, true) => (true, layout2, mergedInfo.Padding),
-                (false, false) => (false, layout1, info.Padding),
-                _ => isHoverPrev ? (true, layout2, mergedInfo.Padding) : (false, layout1, info.Padding),
+                (true, true) => (true, layout2),
+                (false, false) => (false, layout),
+                _ => isHoverPrev ? (true, layout2) : (false, layout),
             };
             info = mergedInfo;
-        }
-        else {
-            //layout = (layoutChanged, _layoutCache) switch
-            //{
-            //    (false, LayoutResult cache) => cache,
-            //    _ => Relayout(info, parentContentArea),
-            //};
-            layout = Relayout(info, parentContentArea);
-            isHover = HitTest(mouse.Position, layout.Rect, layout.BorderRadius);
-            padding = info.Padding;
         }
 
         if(_isClickHolding) {
             if(mouse.IsUp(MouseButton.Left)) {
                 _isClickHolding = false;
                 if(isHover) {
-                    //_clicked.Invoke(this);
+                    _needToInvokeClicked = true;
                 }
             }
         }
@@ -418,12 +421,9 @@ public abstract class UIElement : IToJson, IReactive
         }
 
         if(_isClickHolding && _pseudoClasses.TryGet(PseudoClass.Active, out var activeInfo) && activeInfo.HasLayoutInfo) {
-            var mergedInfo = info.Merged(activeInfo);
-            layout = Relayout(mergedInfo, parentContentArea);
-            padding = mergedInfo.Padding;
+            info = info.Merged(activeInfo);
+            layout = Relayout(info, parentContentArea);
         }
-
-
 
         _needToUpdate &= ~NeedToUpdateFlags.Layout;
         _needToUpdate |= NeedToUpdateFlags.Material;
@@ -436,10 +436,10 @@ public abstract class UIElement : IToJson, IReactive
         var contentArea = new ContentAreaInfo
         {
             Rect = layout.Rect,
-            Padding = padding,
+            Padding = info.Padding,
         };
         foreach(var child in _children) {
-            child.UpdateLayout(layoutChanged, contentArea, mouse);
+            child.UpdateLayout(layoutUpdateNeeded, contentArea, mouse);
         }
         return layout;
     }

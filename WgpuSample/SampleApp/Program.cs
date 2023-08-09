@@ -276,7 +276,7 @@ public partial class Counter
                 "@key": "1",
                 "Width": 550,
                 "Height": 150,
-                "Clicked": {{(Button _) =>
+                "Clicked": {{(UIElement _) =>
                 {
                     SetState(ref _count, _count + 1);
                 }}}
@@ -314,11 +314,18 @@ public partial class CountButton
             "FontSize": 30,
             "Clicked": {{props.Clicked}},
             "&:Hover": {
-                "Width": {{props.Width - 100}},
-                "Height": {{props.Height - 100}},
+                "Width": {{props.Width + 20}},
+                "Height": {{props.Height + 20}},
                 "BackgroundColor": "#8fc",
                 "BorderWidth": 20,
                 "BorderColor": "#6df"
+            },
+            "&:Active": {
+                "Width": {{props.Width + 30}},
+                "Height": {{props.Height + 30}},
+                "BackgroundColor": "#4f4",
+                "BorderWidth": 30,
+                "BorderColor": "#0f0"
             }
         }
         """;

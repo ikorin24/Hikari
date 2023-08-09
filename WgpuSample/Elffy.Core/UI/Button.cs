@@ -12,13 +12,9 @@ public sealed class Button : UIElement, IFromJson<Button>
 {
     private string _text;
     private FontSize _fontSize;
-    private EventSource<Button> _clicked;
-    private bool _isClickHolding = false;
 
     private static string DefaultText => "";
     private static FontSize DefaultFontSize => 16;
-
-    public Event<Button> Clicked => _clicked.Event;
 
     public string Text
     {
@@ -82,40 +78,6 @@ public sealed class Button : UIElement, IFromJson<Button>
         }
         if(source.TryGetProperty(nameof(FontSize), out var fontSize)) {
             _fontSize = Serializer.Instantiate<FontSize>(fontSize);
-        }
-        if(source.TryGetProperty(nameof(Clicked), out var clicked)) {
-            var action = clicked.Instantiate<Action<Button>>();
-            _clicked.Event.Subscribe(action);
-        }
-        ModelUpdate.Subscribe(model => OnModelUpdate(model));
-    }
-
-    private void OnModelUpdate(UIModel model)
-    {
-        var mouse = model.Screen.Mouse;
-        HandleButtonClick(mouse);
-    }
-
-    private void HandleButtonClick(Mouse mouse)
-    {
-        var isHover = IsHover;
-        if(_isClickHolding) {
-            if(mouse.IsPressed(MouseButton.Left)) {
-                return;
-            }
-            else if(mouse.IsUp(MouseButton.Left)) {
-                _isClickHolding = false;
-                if(isHover) {
-                    _clicked.Invoke(this);
-                }
-                return;
-            }
-        }
-        else {
-            if(isHover && mouse.IsDown(MouseButton.Left)) {
-                _isClickHolding = true;
-                return;
-            }
         }
     }
 }
