@@ -23,9 +23,8 @@ public abstract class UIElement : IToJson, IReactive
     private UIElementInfo _info;
     private PseudoClasses _pseudoClasses;
 
-    private LayoutResult _layoutResult;
-    private bool _isMouseOver;
-    private bool _isMouseOverPrev;
+    private LayoutResult? _layoutCache;
+    private bool _isHover;
     private NeedToUpdateFlags _needToUpdate;
 
     [Flags]
@@ -36,11 +35,7 @@ public abstract class UIElement : IToJson, IReactive
         Layout = 2,
     }
 
-    private readonly struct LayoutResult
-    {
-        public required RectF Rect { get; init; }
-        public required Vector4 BorderRadius { get; init; }
-    }
+    private readonly record struct LayoutResult(RectF Rect, Vector4 BorderRadius);
 
     internal Event<UIModel> ModelAlive => _modelAlive.Event;
     internal Event<UIModel> ModelEarlyUpdate => _modelEarlyUpdate.Event;
@@ -181,8 +176,7 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    protected bool IsMouseOver => _isMouseOver;
-    protected bool IsMouseOverPrev => _isMouseOverPrev;
+    protected bool IsHover => _isHover;
 
     private static LayoutLength DefaultWidth => new LayoutLength(1f, LayoutLengthType.Proportion);
     private static LayoutLength DefaultHeight => new LayoutLength(1f, LayoutLengthType.Proportion);
@@ -367,7 +361,6 @@ public abstract class UIElement : IToJson, IReactive
 
     internal void UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, Mouse mouse)
     {
-        //System.Threading.Thread.Sleep(100);
         // 'rect' is top-left based in Screen
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
         // 'rect' is { X = 10, Y = 40, Width = 200, Heigh = 100 }
@@ -375,104 +368,51 @@ public abstract class UIElement : IToJson, IReactive
         var layoutChanged = parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout);
         var info = _info;
 
-        LayoutResult layoutResult;
-        ContentAreaInfo contentArea;
-        bool isMouseOver;
+        LayoutResult layout;
+        Thickness padding;
+        bool isHover;
 
-        if(_isMouseOver) {
-            if(_pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
-                var (layoutResult1, contentArea1) = Relayout(info, parentContentArea);
-                var isMouseOver1 = HitTest(mouse.Position, layoutResult1.Rect, layoutResult1.BorderRadius);
-                info.Merge(hoverInfo);
-                var (layoutResult2, contentArea2) = Relayout(info, parentContentArea);
-                var isMouseOver2 = HitTest(mouse.Position, layoutResult2.Rect, layoutResult2.BorderRadius);
-                if(isMouseOver1 && isMouseOver2) {
-                    isMouseOver = true;
-                    layoutResult = layoutResult2;
-                    contentArea = contentArea2;
-                }
-                else if(!isMouseOver1 && !isMouseOver2) {
-                    isMouseOver = false;
-                    layoutResult = layoutResult1;
-                    contentArea = contentArea1;
-                }
-                else {
-                    isMouseOver = true;
-                    layoutResult = layoutResult2;
-                    contentArea = contentArea2;
-                }
-            }
-            else {
-                if(layoutChanged) {
-                    (layoutResult, contentArea) = Relayout(info, parentContentArea);
-                }
-                else {
-                    layoutResult = _layoutResult;
-                    contentArea = new()
-                    {
-                        Rect = _layoutResult.Rect,
-                        Padding = info.Padding
-                    };
-                }
-                isMouseOver = HitTest(mouse.Position, layoutResult.Rect, layoutResult.BorderRadius);
-            }
-            _needToUpdate &= ~NeedToUpdateFlags.Layout;
-            _needToUpdate |= NeedToUpdateFlags.Material;
+        if(_pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
+            var layout1 = Relayout(info, parentContentArea);
+            var isHover1 = HitTest(mouse.Position, layout1.Rect, layout1.BorderRadius);
+            var mergedInfo = info.Merged(hoverInfo);
+            var layout2 = Relayout(mergedInfo, parentContentArea);
+            var isHover2 = HitTest(mouse.Position, layout2.Rect, layout2.BorderRadius);
+            (isHover, layout, padding) = (isHover1, isHover2) switch
+            {
+                (true, true) => (true, layout2, mergedInfo.Padding),
+                (false, false) => (false, layout1, info.Padding),
+                _ => _isHover ? (true, layout2, mergedInfo.Padding) : (false, layout1, info.Padding),
+            };
         }
         else {
-            if(_pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
-                var (layoutResult1, contentArea1) = Relayout(info, parentContentArea);
-                var isMouseOver1 = HitTest(mouse.Position, layoutResult1.Rect, layoutResult1.BorderRadius);
-                info.Merge(hoverInfo);
-                var (layoutResult2, contentArea2) = Relayout(info, parentContentArea);
-                var isMouseOver2 = HitTest(mouse.Position, layoutResult2.Rect, layoutResult2.BorderRadius);
-                if(isMouseOver1 && isMouseOver2) {
-                    isMouseOver = true;
-                    layoutResult = layoutResult2;
-                    contentArea = contentArea2;
-                }
-                else if(!isMouseOver1 && !isMouseOver2) {
-                    isMouseOver = false;
-                    layoutResult = layoutResult1;
-                    contentArea = contentArea1;
-                }
-                else {
-                    isMouseOver = false;
-                    layoutResult = layoutResult1;
-                    contentArea = contentArea1;
-                }
-            }
-            else {
-                if(layoutChanged) {
-                    (layoutResult, contentArea) = Relayout(info, parentContentArea);
-                }
-                else {
-                    layoutResult = _layoutResult;
-                    contentArea = new()
-                    {
-                        Rect = _layoutResult.Rect,
-                        Padding = info.Padding
-                    };
-                }
-                isMouseOver = HitTest(mouse.Position, layoutResult.Rect, layoutResult.BorderRadius);
-            }
-            _needToUpdate &= ~NeedToUpdateFlags.Layout;
+            layout = (layoutChanged, _layoutCache) switch
+            {
+                (false, LayoutResult cache) => cache,
+                _ => Relayout(info, parentContentArea),
+            };
+            isHover = HitTest(mouse.Position, layout.Rect, layout.BorderRadius);
+            padding = info.Padding;
+        }
+        _needToUpdate &= ~NeedToUpdateFlags.Layout;
+        _needToUpdate |= NeedToUpdateFlags.Material;
+
+        if(isHover != _isHover) {
             _needToUpdate |= NeedToUpdateFlags.Material;
         }
-
-
-        if(isMouseOver != _isMouseOver) {
-            _needToUpdate |= NeedToUpdateFlags.Material;
-        }
-        _isMouseOverPrev = _isMouseOver;
-        _isMouseOver = isMouseOver;
-        _layoutResult = layoutResult;
+        _isHover = isHover;
+        _layoutCache = layout;
+        var contentArea = new ContentAreaInfo
+        {
+            Rect = layout.Rect,
+            Padding = padding,
+        };
         foreach(var child in _children) {
             child.UpdateLayout(layoutChanged, contentArea, mouse);
         }
     }
 
-    private static (LayoutResult, ContentAreaInfo) Relayout(in UIElementInfo info, in ContentAreaInfo parentContentArea)
+    private static LayoutResult Relayout(in UIElementInfo info, in ContentAreaInfo parentContentArea)
     {
         var rect = UILayouter.DecideRect(info, parentContentArea);
         var borderRadius = UILayouter.DecideBorderRadius(info.BorderRadius, rect.Size);
@@ -481,12 +421,7 @@ public abstract class UIElement : IToJson, IReactive
             Rect = rect,
             BorderRadius = borderRadius,
         };
-        var contentArea = new ContentAreaInfo
-        {
-            Rect = rect,
-            Padding = info.Padding,
-        };
-        return (layoutResult, contentArea);
+        return layoutResult;
     }
 
     private static bool HitTest(in Vector2 mousePos, in RectF rect, in Vector4 borderRadius)
@@ -539,57 +474,58 @@ public abstract class UIElement : IToJson, IReactive
     {
         var model = _model;
         Debug.Assert(model != null);
+        if(model == null) { return; }
 
-        if(model != null && _needToUpdate.HasFlag(NeedToUpdateFlags.Material)) {
-            var rect = _layoutResult.Rect;
-            var borderRadius = _layoutResult.BorderRadius;
-
-            // origin is bottom-left of rect because clip space is bottom-left based
-            var modelOrigin = new Vector3
-            {
-                X = rect.Position.X,
-                Y = screenSize.Y - rect.Position.Y - rect.Size.Y,
-                Z = 0,
-            };
-            var modelMatrix =
-                modelOrigin.ToTranslationMatrix4() *
-                new Matrix4(
-                    new Vector4(rect.Size.X, 0, 0, 0),
-                    new Vector4(0, rect.Size.Y, 0, 0),
-                    new Vector4(0, 0, 1, 0),
-                    new Vector4(0, 0, 0, 1));
-
-            var backgroundColor = _info.BackgroundColor;
-            var borderWidth = _info.BorderWidth;
-            var borderColor = _info.BorderColor;
-            if(_isMouseOver && _pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo)) {
-                // properties for material
-                // BackgroundColor, BorderWidth, BorderColor
-                if(hoverInfo.BackgroundColor.HasValue) {
-                    backgroundColor = hoverInfo.BackgroundColor.Value;
-                }
-                if(hoverInfo.BorderWidth.HasValue) {
-                    borderWidth = hoverInfo.BorderWidth.Value;
-                }
-                if(hoverInfo.BorderColor.HasValue) {
-                    borderColor = hoverInfo.BorderColor.Value;
-                }
-            }
-
-            var a = new UIUpdateResult
-            {
-                ActualRect = rect,
-                ActualBorderWidth = borderWidth.ToVector4(),
-                ActualBorderRadius = borderRadius,
-                MvpMatrix = uiProjection * modelMatrix,
-                BackgroundColor = backgroundColor,
-                BorderColor = borderColor,
-                IsMouseOver = _isMouseOver,
-                IsMouseOverPrev = _isMouseOverPrev,
-            };
-            model.Material.UpdateMaterial(this, a);
-            _needToUpdate &= ~NeedToUpdateFlags.Material;
+        if(!_needToUpdate.HasFlag(NeedToUpdateFlags.Material)) {
+            return;
         }
+        Debug.Assert(_layoutCache != null);
+        var (rect, borderRadius) = _layoutCache.Value;
+
+        // origin is bottom-left of rect because clip space is bottom-left based
+        var modelOrigin = new Vector3
+        {
+            X = rect.Position.X,
+            Y = screenSize.Y - rect.Position.Y - rect.Size.Y,
+            Z = 0,
+        };
+        var modelMatrix =
+            modelOrigin.ToTranslationMatrix4() *
+            new Matrix4(
+                new Vector4(rect.Size.X, 0, 0, 0),
+                new Vector4(0, rect.Size.Y, 0, 0),
+                new Vector4(0, 0, 1, 0),
+                new Vector4(0, 0, 0, 1));
+
+        var backgroundColor = _info.BackgroundColor;
+        var borderWidth = _info.BorderWidth;
+        var borderColor = _info.BorderColor;
+        if(_isHover && _pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo)) {
+            // properties for material
+            // BackgroundColor, BorderWidth, BorderColor
+            if(hoverInfo.BackgroundColor.HasValue) {
+                backgroundColor = hoverInfo.BackgroundColor.Value;
+            }
+            if(hoverInfo.BorderWidth.HasValue) {
+                borderWidth = hoverInfo.BorderWidth.Value;
+            }
+            if(hoverInfo.BorderColor.HasValue) {
+                borderColor = hoverInfo.BorderColor.Value;
+            }
+        }
+
+        var a = new UIUpdateResult
+        {
+            ActualRect = rect,
+            ActualBorderWidth = borderWidth.ToVector4(),
+            ActualBorderRadius = borderRadius,
+            MvpMatrix = uiProjection * modelMatrix,
+            BackgroundColor = backgroundColor,
+            BorderColor = borderColor,
+            IsMouseOver = _isHover,
+        };
+        model.Material.UpdateMaterial(this, a);
+        _needToUpdate &= ~NeedToUpdateFlags.Material;
     }
 }
 
@@ -628,6 +564,22 @@ internal record struct UIElementInfo(
     private static Thickness DefaultBorderWidth => new Thickness(0f);
     private static CornerRadius DefaultBorderRadius => CornerRadius.Zero;
     private static Brush DefaultBorderColor => Brush.Black;
+
+    internal readonly UIElementInfo Merged(in UIElementPseudoInfo p)
+    {
+        return new(
+            p.Width ?? Width,
+            p.Height ?? Height,
+            p.Margin ?? Margin,
+            p.Padding ?? Padding,
+            p.HorizontalAlignment ?? HorizontalAlignment,
+            p.VerticalAlignment ?? VerticalAlignment,
+            p.BackgroundColor ?? BackgroundColor,
+            p.BorderWidth ?? BorderWidth,
+            p.BorderRadius ?? BorderRadius,
+            p.BorderColor ?? BorderColor
+        );
+    }
 
     internal void Merge(in UIElementPseudoInfo p)
     {
@@ -766,7 +718,6 @@ public readonly ref struct UIUpdateResult
     public required Brush BackgroundColor { get; init; }
     public required Brush BorderColor { get; init; }
     public required bool IsMouseOver { get; init; }
-    public required bool IsMouseOverPrev { get; init; }
 }
 
 internal enum PseudoClass

@@ -98,21 +98,21 @@ public sealed class Button : UIElement, IFromJson<Button>
 
     private void HandleButtonClick(Mouse mouse)
     {
-        var isMouseOver = IsMouseOver;
+        var isHover = IsHover;
         if(_isClickHolding) {
             if(mouse.IsPressed(MouseButton.Left)) {
                 return;
             }
             else if(mouse.IsUp(MouseButton.Left)) {
                 _isClickHolding = false;
-                if(isMouseOver) {
+                if(isHover) {
                     _clicked.Invoke(this);
                 }
                 return;
             }
         }
         else {
-            if(isMouseOver && mouse.IsDown(MouseButton.Left)) {
+            if(isHover && mouse.IsDown(MouseButton.Left)) {
                 _isClickHolding = true;
                 return;
             }
