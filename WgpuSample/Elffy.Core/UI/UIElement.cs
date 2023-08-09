@@ -35,8 +35,6 @@ public abstract class UIElement : IToJson, IReactive
         Layout = 2,
     }
 
-    private readonly record struct LayoutResult(RectF Rect, Vector4 BorderRadius);
-
     internal Event<UIModel> ModelAlive => _modelAlive.Event;
     internal Event<UIModel> ModelEarlyUpdate => _modelEarlyUpdate.Event;
     internal Event<UIModel> ModelUpdate => _modelUpdate.Event;
@@ -359,7 +357,7 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    internal void UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, Mouse mouse)
+    internal LayoutResult UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, Mouse mouse)
     {
         // 'rect' is top-left based in Screen
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
@@ -411,6 +409,7 @@ public abstract class UIElement : IToJson, IReactive
         foreach(var child in _children) {
             child.UpdateLayout(layoutChanged, contentArea, mouse);
         }
+        return layout;
     }
 
     private static LayoutResult Relayout(in UIElementInfo info, in ContentAreaInfo parentContentArea)
@@ -708,6 +707,18 @@ public readonly struct ContentAreaInfo : IEquatable<ContentAreaInfo>
     public static bool operator ==(ContentAreaInfo left, ContentAreaInfo right) => left.Equals(right);
 
     public static bool operator !=(ContentAreaInfo left, ContentAreaInfo right) => !(left == right);
+}
+
+internal readonly record struct LayoutResult
+{
+    public required RectF Rect { get; init; }
+    public required Vector4 BorderRadius { get; init; }
+
+    public void Deconstruct(out RectF rect, out Vector4 borderRadius)
+    {
+        rect = Rect;
+        borderRadius = BorderRadius;
+    }
 }
 
 public readonly ref struct UIUpdateResult
