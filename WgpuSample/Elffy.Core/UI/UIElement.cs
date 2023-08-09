@@ -617,7 +617,7 @@ internal record struct UIElementInfo(
     }
 }
 
-internal record struct UIElementPseudoInfo(
+internal readonly record struct UIElementPseudoInfo(
     LayoutLength? Width,
     LayoutLength? Height,
     Thickness? Margin,
@@ -632,7 +632,7 @@ internal record struct UIElementPseudoInfo(
 {
     static UIElementPseudoInfo() => Serializer.RegisterConstructor(FromJson);
 
-    public readonly bool HasLayoutInfo =>
+    public bool HasLayoutInfo =>
         Width.HasValue || Height.HasValue || Margin.HasValue ||
         Padding.HasValue || HorizontalAlignment.HasValue || VerticalAlignment.HasValue ||
         BorderWidth.HasValue;
@@ -654,7 +654,7 @@ internal record struct UIElementPseudoInfo(
         };
     }
 
-    public readonly JsonValueKind ToJson(Utf8JsonWriter writer)
+    public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
         writer.WriteStartObject();
         if(Width.HasValue) {
