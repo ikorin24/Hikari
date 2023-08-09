@@ -369,8 +369,9 @@ public abstract class UIElement : IToJson, IReactive
         var needToRelayout =
             parentLayoutChanged ||
             _needToLayoutUpdate ||
-            (mouse.PositionDelta.IsZero == false && _pseudoClasses[PseudoClass.Hover]?.HasLayoutInfo == true) ||
+            (mouse.PositionDelta?.IsZero == false && _pseudoClasses[PseudoClass.Hover]?.HasLayoutInfo == true) ||
             mouse.IsChanged(MouseButton.Left);
+        var mousePos = mouse.Position;
 
         var isHoverPrev = _isHover;
         UIElementInfo appliedInfo;
@@ -384,22 +385,28 @@ public abstract class UIElement : IToJson, IReactive
             // First, layout without considering pseudo classes
             appliedInfo = _info;
             var layout1 = Relayout(appliedInfo, parentContentArea);
-            var isHover1 = HitTest(mouse.Position, layout1.Rect, layout1.BorderRadius);
 
-            // layout with considering hover pseudo classes if needed
-            if(_pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
-                var mergedInfo = appliedInfo.Merged(hoverInfo);
-                var layout2 = Relayout(mergedInfo, parentContentArea);
-                var isHover2 = HitTest(mouse.Position, layout2.Rect, layout2.BorderRadius);
-                (isHover, layout, appliedInfo) = (isHover1, isHover2) switch
-                {
-                    (true, true) => (true, layout2, mergedInfo),
-                    (false, false) => (false, layout1, appliedInfo),
-                    _ => isHoverPrev ? (true, layout2, mergedInfo) : (false, layout1, appliedInfo),
-                };
+            if(mousePos.HasValue) {
+                var isHover1 = HitTest(mousePos.Value, layout1.Rect, layout1.BorderRadius);
+
+                // layout with considering hover pseudo classes if needed
+                if(_pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
+                    var mergedInfo = appliedInfo.Merged(hoverInfo);
+                    var layout2 = Relayout(mergedInfo, parentContentArea);
+                    var isHover2 = HitTest(mousePos.Value, layout2.Rect, layout2.BorderRadius);
+                    (isHover, layout, appliedInfo) = (isHover1, isHover2) switch
+                    {
+                        (true, true) => (true, layout2, mergedInfo),
+                        (false, false) => (false, layout1, appliedInfo),
+                        _ => isHoverPrev ? (true, layout2, mergedInfo) : (false, layout1, appliedInfo),
+                    };
+                }
+                else {
+                    (isHover, layout) = (isHover1, layout1);
+                }
             }
             else {
-                (isHover, layout) = (isHover1, layout1);
+                (isHover, layout) = (false, layout1);
             }
         }
 

@@ -197,7 +197,7 @@ internal class Program
         var cameraPos = camera.Position;
         var posChanged = false;
         if(mouse.IsPressed(MouseButton.Left)) {
-            var vec = mouse.PositionDelta * (MathTool.PiOver180 * 0.5f);
+            var vec = (mouse.PositionDelta ?? Vector2.Zero) * (MathTool.PiOver180 * 0.5f);
             cameraPos = CalcCameraPosition(cameraPos, target, vec.X, vec.Y);
             posChanged = true;
         }

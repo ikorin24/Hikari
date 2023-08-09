@@ -28,7 +28,7 @@ public sealed class Mouse
         }
     }
 
-    public Vector2 Position
+    public Vector2? Position
     {
         get
         {
@@ -38,7 +38,7 @@ public sealed class Mouse
         }
     }
 
-    public Vector2 PositionDelta
+    public Vector2? PositionDelta
     {
         get
         {
@@ -127,6 +127,9 @@ public sealed class Mouse
     {
         lock(_sync) {
             _isOnScreen = entered;
+            if(entered == false) {
+                _posBuf.SetValue(null);
+            }
         }
     }
 
@@ -148,17 +151,17 @@ public sealed class Mouse
 
     private struct PosBuf
     {
-        private Vector2 _delta;
-        private Vector2 _current;
-        private Vector2 _newValue;
+        private Vector2? _delta;
+        private Vector2? _current;
+        private Vector2? _newValue;
         private bool _changed;
 
-        public Vector2 Current => _current;
+        public Vector2? Current => _current;
 
-        public Vector2 Delta => _delta;
+        public Vector2? Delta => _delta;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetValue(Vector2 value)
+        public void SetValue(Vector2? value)
         {
             _newValue = value;
             _changed = true;
