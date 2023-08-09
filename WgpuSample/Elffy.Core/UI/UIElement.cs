@@ -426,12 +426,16 @@ public abstract class UIElement : IToJson, IReactive
 
     private static bool HitTest(in Vector2 mousePos, in RectF rect, in Vector4 borderRadius)
     {
-        var isMouseOver = rect.Contains(mousePos)
+        if(borderRadius.IsZero) {
+            return rect.Contains(mousePos);
+        }
+        else {
+            return rect.Contains(mousePos)
             && BorderRadiusTL(rect, mousePos, borderRadius.X)
             && BorderRadiusTR(rect, mousePos, borderRadius.Y)
             && BorderRadiusBR(rect, mousePos, borderRadius.Z)
             && BorderRadiusBL(rect, mousePos, borderRadius.W);
-        return isMouseOver;
+        }
 
         static bool BorderRadiusTL(in RectF rect, in Vector2 mousePos, float r)
         {
