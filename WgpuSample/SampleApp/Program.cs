@@ -316,6 +316,7 @@ public partial class CountButton
             "&:Hover": {
                 "Width": {{props.Width + 20}},
                 "Height": {{props.Height + 20}},
+                "BorderRadius": {{(props.Height + 20) / 2f}},
                 "BackgroundColor": "#8fc",
                 "BorderWidth": 20,
                 "BorderColor": "#6df"
@@ -323,6 +324,7 @@ public partial class CountButton
             "&:Active": {
                 "Width": {{props.Width + 30}},
                 "Height": {{props.Height + 30}},
+                "BorderRadius": {{(props.Height + 30) / 2f}},
                 "BackgroundColor": "#4f4",
                 "BorderWidth": 30,
                 "BorderColor": "#0f0"

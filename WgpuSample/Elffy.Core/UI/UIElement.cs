@@ -28,15 +28,7 @@ public abstract class UIElement : IToJson, IReactive
     private bool _isHover;
     private bool _isClickHolding;
     private bool _needToInvokeClicked;
-    private NeedToUpdateFlags _needToUpdate;
-
-    [Flags]
-    private enum NeedToUpdateFlags : uint
-    {
-        None = 0,
-        //Material = 1,
-        Layout = 2,
-    }
+    private bool _needToLayoutUpdate;
 
     internal Event<UIModel> ModelAlive => _modelAlive.Event;
     internal Event<UIModel> ModelEarlyUpdate => _modelEarlyUpdate.Event;
@@ -64,7 +56,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.Width) { return; }
             _info.Width = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout;
+            _needToLayoutUpdate = true;
         }
     }
     public LayoutLength Height
@@ -74,7 +66,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.Height) { return; }
             _info.Height = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout;
+            _needToLayoutUpdate = true;
         }
     }
 
@@ -85,7 +77,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.Margin) { return; }
             _info.Margin = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout;
+            _needToLayoutUpdate = true;
         }
     }
 
@@ -96,7 +88,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.Padding) { return; }
             _info.Padding = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout;
+            _needToLayoutUpdate = true;
         }
     }
 
@@ -107,7 +99,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.HorizontalAlignment) { return; }
             _info.HorizontalAlignment = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout;
+            _needToLayoutUpdate = true;
         }
     }
 
@@ -118,7 +110,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.VerticalAlignment) { return; }
             _info.VerticalAlignment = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout;
+            _needToLayoutUpdate = true;
         }
     }
 
@@ -140,7 +132,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.BorderWidth) { return; }
             _info.BorderWidth = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout;
+            _needToLayoutUpdate = true;
         }
     }
 
@@ -151,7 +143,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             if(value == _info.BorderRadius) { return; }
             _info.BorderRadius = value;
-            _needToUpdate |= NeedToUpdateFlags.Layout;
+            _needToLayoutUpdate = true;
         }
     }
 
@@ -194,7 +186,7 @@ public abstract class UIElement : IToJson, IReactive
         _info = UIElementInfo.Default;
         _pseudoClasses = new PseudoClasses();
         Children = new UIElementCollection();
-        _needToUpdate = NeedToUpdateFlags.Layout;
+        _needToLayoutUpdate = true;
 
         ModelUpdate.Subscribe(static model =>
         {
@@ -315,11 +307,6 @@ public abstract class UIElement : IToJson, IReactive
         return JsonValueKind.Object;
     }
 
-    protected void RequestUpdateLayout()
-    {
-        _needToUpdate |= NeedToUpdateFlags.Layout;
-    }
-
     internal void SetParent(UIElement parent)
     {
         Debug.Assert(_parent == null);
@@ -381,7 +368,7 @@ public abstract class UIElement : IToJson, IReactive
 
         var needToRelayout =
             parentLayoutChanged ||
-            _needToUpdate.HasFlag(NeedToUpdateFlags.Layout) ||
+            _needToLayoutUpdate ||
             (mouse.PositionDelta.IsZero == false && _pseudoClasses[PseudoClass.Hover]?.HasLayoutInfo == true) ||
             mouse.IsChanged(MouseButton.Left);
 
@@ -433,8 +420,7 @@ public abstract class UIElement : IToJson, IReactive
             layout = Relayout(appliedInfo, parentContentArea);
         }
 
-        _needToUpdate &= ~NeedToUpdateFlags.Layout;
-
+        _needToLayoutUpdate = false;
         var layoutChanged = _layoutCache?.Layout != layout;
         _isHover = isHover;
         _layoutCache = (layout, appliedInfo);
