@@ -24,7 +24,7 @@ public abstract class UIElement : IToJson, IReactive
     private UIElementInfo _info;
     private PseudoClasses _pseudoClasses;
 
-    private LayoutResult? _layoutCache;
+    private (LayoutResult Layout, UIElementInfo AppliedInfo)? _layoutCache;
     private bool _isHover;
     private bool _isClickHolding;
     private bool _needToInvokeClicked;
@@ -386,60 +386,75 @@ public abstract class UIElement : IToJson, IReactive
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
         // 'rect' is { X = 10, Y = 40, Width = 200, Heigh = 100 }
 
-        var layoutUpdateNeeded = parentLayoutChanged || _needToUpdate.HasFlag(NeedToUpdateFlags.Layout);
-        var info = _info;
+        var needToRelayout =
+            parentLayoutChanged ||
+            _needToUpdate.HasFlag(NeedToUpdateFlags.Layout) ||
+            (mouse.PositionDelta.IsZero == false && _pseudoClasses[PseudoClass.Hover]?.HasLayoutInfo == true);
+
         var isHoverPrev = _isHover;
+        UIElementInfo appliedInfo;
         LayoutResult layout;
         bool isHover;
-        layout = Relayout(info, parentContentArea);
-        isHover = HitTest(mouse.Position, layout.Rect, layout.BorderRadius);
-        if(_pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
-            var mergedInfo = info.Merged(hoverInfo);
-            var layout2 = Relayout(mergedInfo, parentContentArea);
-            var isHover2 = HitTest(mouse.Position, layout2.Rect, layout2.BorderRadius);
-            (isHover, layout) = (isHover, isHover2) switch
-            {
-                (true, true) => (true, layout2),
-                (false, false) => (false, layout),
-                _ => isHoverPrev ? (true, layout2) : (false, layout),
-            };
-            info = mergedInfo;
-        }
-
-        if(_isClickHolding) {
-            if(mouse.IsUp(MouseButton.Left)) {
-                _isClickHolding = false;
-                if(isHover) {
-                    _needToInvokeClicked = true;
-                }
-            }
+        if(needToRelayout == false && _layoutCache.HasValue) {
+            (layout, appliedInfo) = _layoutCache.Value;
+            isHover = _isHover;
         }
         else {
-            if(isHover && mouse.IsDown(MouseButton.Left)) {
-                _isClickHolding = true;
+            // First, layout without considering pseudo classes
+            appliedInfo = _info;
+            var layout1 = Relayout(appliedInfo, parentContentArea);
+            var isHover1 = HitTest(mouse.Position, layout1.Rect, layout1.BorderRadius);
+
+            // layout with considering hover pseudo classes if needed
+            if(_pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
+                var mergedInfo = appliedInfo.Merged(hoverInfo);
+                var layout2 = Relayout(mergedInfo, parentContentArea);
+                var isHover2 = HitTest(mouse.Position, layout2.Rect, layout2.BorderRadius);
+                (isHover, layout, appliedInfo) = (isHover1, isHover2) switch
+                {
+                    (true, true) => (true, layout2, mergedInfo),
+                    (false, false) => (false, layout1, appliedInfo),
+                    _ => isHoverPrev ? (true, layout2, mergedInfo) : (false, layout1, appliedInfo),
+                };
+            }
+            else {
+                (isHover, layout) = (isHover1, layout1);
             }
         }
 
+        // set or clear flag for click holding
+        if(_isClickHolding && mouse.IsUp(MouseButton.Left)) {
+            _isClickHolding = false;
+            if(isHover) {
+                _needToInvokeClicked = true;
+            }
+        }
+        else if(isHover && mouse.IsDown(MouseButton.Left)) {
+            _isClickHolding = true;
+        }
+
+        // overwrite layout if 'active'
         if(_isClickHolding && _pseudoClasses.TryGet(PseudoClass.Active, out var activeInfo) && activeInfo.HasLayoutInfo) {
-            info = info.Merged(activeInfo);
-            layout = Relayout(info, parentContentArea);
+            appliedInfo = appliedInfo.Merged(activeInfo);
+            layout = Relayout(appliedInfo, parentContentArea);
         }
 
         _needToUpdate &= ~NeedToUpdateFlags.Layout;
         _needToUpdate |= NeedToUpdateFlags.Material;
 
-        if(isHover != isHoverPrev) {
+        var layoutChanged = _layoutCache?.Layout != layout;
+        if(isHover != isHoverPrev || layoutChanged) {
             _needToUpdate |= NeedToUpdateFlags.Material;
         }
         _isHover = isHover;
-        _layoutCache = layout;
+        _layoutCache = (layout, appliedInfo);
         var contentArea = new ContentAreaInfo
         {
             Rect = layout.Rect,
-            Padding = info.Padding,
+            Padding = layout.Padding,
         };
         foreach(var child in _children) {
-            child.UpdateLayout(layoutUpdateNeeded, contentArea, mouse);
+            child.UpdateLayout(layoutChanged, contentArea, mouse);
         }
         return layout;
     }
@@ -452,6 +467,7 @@ public abstract class UIElement : IToJson, IReactive
         {
             Rect = rect,
             BorderRadius = borderRadius,
+            Padding = info.Padding,
         };
         return layoutResult;
     }
@@ -516,7 +532,7 @@ public abstract class UIElement : IToJson, IReactive
             return;
         }
         Debug.Assert(_layoutCache != null);
-        var (rect, borderRadius) = _layoutCache.Value;
+        var ((rect, borderRadius, _), _) = _layoutCache.Value;
 
         // origin is bottom-left of rect because clip space is bottom-left based
         var modelOrigin = new Vector3
@@ -740,11 +756,13 @@ internal readonly record struct LayoutResult
 {
     public required RectF Rect { get; init; }
     public required Vector4 BorderRadius { get; init; }
+    public required Thickness Padding { get; init; }
 
-    public void Deconstruct(out RectF rect, out Vector4 borderRadius)
+    public void Deconstruct(out RectF rect, out Vector4 borderRadius, out Thickness padding)
     {
         rect = Rect;
         borderRadius = BorderRadius;
+        padding = Padding;
     }
 }
 
@@ -774,6 +792,8 @@ internal struct PseudoClasses
     {
         GetRef(pseudoClass) = UIElementPseudoInfo.FromJson(source);
     }
+
+    public UIElementPseudoInfo? this[PseudoClass pseudoClass] => GetRef(pseudoClass);
 
     public bool Has(PseudoClass pseudoClass) => GetRef(pseudoClass).HasValue;
 
