@@ -235,6 +235,10 @@ public abstract class UIElement : IToJson, IReactive
                         _pseudoClasses.Set(PseudoClass.Hover, value);
                         break;
                     }
+                    case nameof(PseudoClass.Active): {
+                        _pseudoClasses.Set(PseudoClass.Active, value);
+                        break;
+                    }
                     default: {
                         break;
                     }
@@ -357,6 +361,9 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
+    //private EventSource<UIElement> _clicked;
+    private bool _isClickHolding = false;
+
     internal LayoutResult UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, Mouse mouse)
     {
         // 'rect' is top-left based in Screen
@@ -383,16 +390,41 @@ public abstract class UIElement : IToJson, IReactive
                 (false, false) => (false, layout1, info.Padding),
                 _ => isHoverPrev ? (true, layout2, mergedInfo.Padding) : (false, layout1, info.Padding),
             };
+            info = mergedInfo;
         }
         else {
-            layout = (layoutChanged, _layoutCache) switch
-            {
-                (false, LayoutResult cache) => cache,
-                _ => Relayout(info, parentContentArea),
-            };
+            //layout = (layoutChanged, _layoutCache) switch
+            //{
+            //    (false, LayoutResult cache) => cache,
+            //    _ => Relayout(info, parentContentArea),
+            //};
+            layout = Relayout(info, parentContentArea);
             isHover = HitTest(mouse.Position, layout.Rect, layout.BorderRadius);
             padding = info.Padding;
         }
+
+        if(_isClickHolding) {
+            if(mouse.IsUp(MouseButton.Left)) {
+                _isClickHolding = false;
+                if(isHover) {
+                    //_clicked.Invoke(this);
+                }
+            }
+        }
+        else {
+            if(isHover && mouse.IsDown(MouseButton.Left)) {
+                _isClickHolding = true;
+            }
+        }
+
+        if(_isClickHolding && _pseudoClasses.TryGet(PseudoClass.Active, out var activeInfo) && activeInfo.HasLayoutInfo) {
+            var mergedInfo = info.Merged(activeInfo);
+            layout = Relayout(mergedInfo, parentContentArea);
+            padding = mergedInfo.Padding;
+        }
+
+
+
         _needToUpdate &= ~NeedToUpdateFlags.Layout;
         _needToUpdate |= NeedToUpdateFlags.Material;
 
@@ -431,10 +463,10 @@ public abstract class UIElement : IToJson, IReactive
         }
         else {
             return rect.Contains(mousePos)
-            && BorderRadiusTL(rect, mousePos, borderRadius.X)
-            && BorderRadiusTR(rect, mousePos, borderRadius.Y)
-            && BorderRadiusBR(rect, mousePos, borderRadius.Z)
-            && BorderRadiusBL(rect, mousePos, borderRadius.W);
+                && BorderRadiusTL(rect, mousePos, borderRadius.X)
+                && BorderRadiusTR(rect, mousePos, borderRadius.Y)
+                && BorderRadiusBR(rect, mousePos, borderRadius.Z)
+                && BorderRadiusBL(rect, mousePos, borderRadius.W);
         }
 
         static bool BorderRadiusTL(in RectF rect, in Vector2 mousePos, float r)
@@ -501,34 +533,25 @@ public abstract class UIElement : IToJson, IReactive
                 new Vector4(0, 0, 1, 0),
                 new Vector4(0, 0, 0, 1));
 
-        var backgroundColor = _info.BackgroundColor;
-        var borderWidth = _info.BorderWidth;
-        var borderColor = _info.BorderColor;
+        var info = _info;
         if(_isHover && _pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo)) {
-            // properties for material
-            // BackgroundColor, BorderWidth, BorderColor
-            if(hoverInfo.BackgroundColor.HasValue) {
-                backgroundColor = hoverInfo.BackgroundColor.Value;
-            }
-            if(hoverInfo.BorderWidth.HasValue) {
-                borderWidth = hoverInfo.BorderWidth.Value;
-            }
-            if(hoverInfo.BorderColor.HasValue) {
-                borderColor = hoverInfo.BorderColor.Value;
-            }
+            info = info.Merged(hoverInfo);
+        }
+        if(_isClickHolding && _pseudoClasses.TryGet(PseudoClass.Active, out var activeInfo)) {
+            info = info.Merged(activeInfo);
         }
 
-        var a = new UIUpdateResult
+        var result = new UIUpdateResult
         {
             ActualRect = rect,
-            ActualBorderWidth = borderWidth.ToVector4(),
+            ActualBorderWidth = info.BorderWidth.ToVector4(),
             ActualBorderRadius = borderRadius,
             MvpMatrix = uiProjection * modelMatrix,
-            BackgroundColor = backgroundColor,
-            BorderColor = borderColor,
+            BackgroundColor = info.BackgroundColor,
+            BorderColor = info.BorderColor,
             IsMouseOver = _isHover,
         };
-        model.Material.UpdateMaterial(this, a);
+        model.Material.UpdateMaterial(this, result);
         _needToUpdate &= ~NeedToUpdateFlags.Material;
     }
 }
@@ -739,11 +762,13 @@ public readonly ref struct UIUpdateResult
 internal enum PseudoClass
 {
     Hover = 0,
+    Active = 1,
 }
 
 internal struct PseudoClasses
 {
     private UIElementPseudoInfo? _hover;
+    private UIElementPseudoInfo? _active;
 
     public void Set(PseudoClass pseudoClass, in ReactSource source)
     {
@@ -771,6 +796,8 @@ internal struct PseudoClasses
         switch(pc) {
             case PseudoClass.Hover:
                 return ref _hover;
+            case PseudoClass.Active:
+                return ref _active;
             default:
                 throw new ArgumentException(pc.ToString());
         }
