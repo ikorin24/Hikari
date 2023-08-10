@@ -3,7 +3,6 @@ using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace Elffy.UI;
@@ -676,6 +675,18 @@ public readonly record struct PseudoInfo
         Width.HasValue || Height.HasValue || Margin.HasValue ||
         Padding.HasValue || HorizontalAlignment.HasValue || VerticalAlignment.HasValue ||
         BorderWidth.HasValue;
+
+    public bool TryGetEx<T>(string propName, [MaybeNullWhen(false)] out T value)
+    {
+        foreach(var (name, v) in Ex) {
+            if(name == propName) {
+                value = v.Instantiate<T>();
+                return true;
+            }
+        }
+        value = default;
+        return false;
+    }
 
     public static PseudoInfo FromJson(in ReactSource source)
     {
