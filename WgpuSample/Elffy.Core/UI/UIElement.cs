@@ -154,6 +154,7 @@ public abstract class UIElement : IToJson, IReactive
         set
         {
             ArgumentNullException.ThrowIfNull(value);
+            if(value == _info.BorderColor) { return; }
             _info.BorderColor = value;
         }
     }
@@ -166,6 +167,30 @@ public abstract class UIElement : IToJson, IReactive
         {
             _children = value;
             value.Parent = this;
+        }
+    }
+
+    public UIElementPseudoInfo? HoverProps
+    {
+        get => _pseudoClasses[PseudoClass.Hover];
+        set
+        {
+            ref var current = ref _pseudoClasses[PseudoClass.Hover];
+            if(current == _pseudoClasses[PseudoClass.Hover]) { return; }
+            current = value;
+            _needToLayoutUpdate = true;
+        }
+    }
+
+    public UIElementPseudoInfo? ActiveProps
+    {
+        get => _pseudoClasses[PseudoClass.Active];
+        set
+        {
+            ref var current = ref _pseudoClasses[PseudoClass.Active];
+            if(current == _pseudoClasses[PseudoClass.Active]) { return; }
+            current = value;
+            _needToLayoutUpdate = true;
         }
     }
 
@@ -629,7 +654,7 @@ internal record struct UIElementInfo(
     }
 }
 
-internal readonly record struct UIElementPseudoInfo
+public readonly record struct UIElementPseudoInfo
     : IFromJson<UIElementPseudoInfo>,
       IToJson
 {
@@ -650,6 +675,7 @@ internal readonly record struct UIElementPseudoInfo
     public CornerRadius? BorderRadius { get; init; }
     public Brush? BorderColor { get; init; }
 
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private readonly ImmutableArray<Prop> _ex;
     public ImmutableArray<Prop> Ex
     {
@@ -838,7 +864,13 @@ internal struct PseudoClasses
         GetRef(pseudoClass) = UIElementPseudoInfo.FromJson(source);
     }
 
-    public UIElementPseudoInfo? this[PseudoClass pseudoClass] => GetRef(pseudoClass);
+    public void Set(PseudoClass pseudoClass, in UIElementPseudoInfo info)
+    {
+        GetRef(pseudoClass) = info;
+    }
+
+    [UnscopedRef]
+    public ref UIElementPseudoInfo? this[PseudoClass pseudoClass] => ref GetRef(pseudoClass);
 
     public bool Has(PseudoClass pseudoClass) => GetRef(pseudoClass).HasValue;
 
