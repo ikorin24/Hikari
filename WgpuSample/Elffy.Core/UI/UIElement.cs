@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Elffy.Effective;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -634,9 +633,11 @@ internal readonly record struct UIElementPseudoInfo
     : IFromJson<UIElementPseudoInfo>,
       IToJson
 {
+    public readonly record struct Prop(string PropName, ReactSource Value);
+
     static UIElementPseudoInfo() => Serializer.RegisterConstructor(FromJson);
 
-    private static readonly ImmutableArray<(string PropName, ReactSource Value)> EmptyEx = ImmutableArray<(string PropName, ReactSource Value)>.Empty;
+    private static readonly ImmutableArray<Prop> EmptyEx = ImmutableArray<Prop>.Empty;
 
     public LayoutLength? Width { get; init; }
     public LayoutLength? Height { get; init; }
@@ -649,8 +650,8 @@ internal readonly record struct UIElementPseudoInfo
     public CornerRadius? BorderRadius { get; init; }
     public Brush? BorderColor { get; init; }
 
-    private readonly ImmutableArray<(string PropName, ReactSource Value)> _ex;
-    public ImmutableArray<(string PropName, ReactSource Value)> Ex
+    private readonly ImmutableArray<Prop> _ex;
+    public ImmutableArray<Prop> Ex
     {
         get => _ex.IsDefault ? EmptyEx : _ex;
         init => _ex = value.IsDefault ? EmptyEx : value;
@@ -673,7 +674,8 @@ internal readonly record struct UIElementPseudoInfo
         Thickness? borderWidth = null;
         CornerRadius? borderRadius = null;
         Brush? borderColor = null;
-        using var ex = new TemporalBuffer<(string PropName, ReactSource Value)>();
+        var ex = ImmutableArray.CreateBuilder<Prop>();
+
         foreach(var (name, value) in source.EnumerateProperties()) {
             switch(name) {
                 case nameof(Width): {
@@ -717,7 +719,7 @@ internal readonly record struct UIElementPseudoInfo
                     break;
                 }
                 default: {
-                    ex.Add((name, value));
+                    ex.Add(new(name, value));
                     break;
                 }
             }
@@ -735,7 +737,7 @@ internal readonly record struct UIElementPseudoInfo
             BorderWidth = borderWidth,
             BorderRadius = borderRadius,
             BorderColor = borderColor,
-            Ex = ex.IsEmpty ? EmptyEx : ImmutableArray.Create(ex.AsSpan()),
+            Ex = ex.Count == 0 ? EmptyEx : ex.ToImmutable(),
         };
     }
 
