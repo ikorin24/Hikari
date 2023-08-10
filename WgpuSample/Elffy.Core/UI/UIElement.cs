@@ -23,7 +23,8 @@ public abstract class UIElement : IToJson, IReactive
     private readonly SubscriptionBag _modelSubscriptions = new SubscriptionBag();
 
     private UIElementInfo _info;
-    private PseudoClasses _pseudoClasses;
+    private PseudoInfo? _hoverInfo;
+    private PseudoInfo? _activeInfo;
 
     private (LayoutResult Layout, UIElementInfo AppliedInfo)? _layoutCache;
     private bool _isHover;
@@ -170,26 +171,24 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    public UIElementPseudoInfo? HoverProps
+    public PseudoInfo? HoverProps
     {
-        get => _pseudoClasses[PseudoClass.Hover];
+        get => _hoverInfo;
         set
         {
-            ref var current = ref _pseudoClasses[PseudoClass.Hover];
-            if(current == _pseudoClasses[PseudoClass.Hover]) { return; }
-            current = value;
+            if(_hoverInfo == value) { return; }
+            _hoverInfo = value;
             _needToLayoutUpdate = true;
         }
     }
 
-    public UIElementPseudoInfo? ActiveProps
+    public PseudoInfo? ActiveProps
     {
-        get => _pseudoClasses[PseudoClass.Active];
+        get => _activeInfo;
         set
         {
-            ref var current = ref _pseudoClasses[PseudoClass.Active];
-            if(current == _pseudoClasses[PseudoClass.Active]) { return; }
-            current = value;
+            if(_activeInfo == value) { return; }
+            _activeInfo = value;
             _needToLayoutUpdate = true;
         }
     }
@@ -197,7 +196,8 @@ public abstract class UIElement : IToJson, IReactive
     protected UIElement()
     {
         _info = UIElementInfo.Default;
-        _pseudoClasses = new PseudoClasses();
+        _hoverInfo = null;
+        _activeInfo = null;
         Children = new UIElementCollection();
         _needToLayoutUpdate = true;
 
@@ -253,12 +253,12 @@ public abstract class UIElement : IToJson, IReactive
             if(name.StartsWith("&:")) {
                 var pseudo = name.AsSpan(2);
                 switch(pseudo) {
-                    case nameof(PseudoClass.Hover): {
-                        _pseudoClasses.Set(PseudoClass.Hover, value);
+                    case "Hover": {
+                        _hoverInfo = PseudoInfo.FromJson(value);
                         break;
                     }
-                    case nameof(PseudoClass.Active): {
-                        _pseudoClasses.Set(PseudoClass.Active, value);
+                    case "Active": {
+                        _activeInfo = PseudoInfo.FromJson(value);
                         break;
                     }
                     default: {
@@ -382,7 +382,7 @@ public abstract class UIElement : IToJson, IReactive
         var needToRelayout =
             parentLayoutChanged ||
             _needToLayoutUpdate ||
-            (mouse.PositionDelta?.IsZero == false && _pseudoClasses[PseudoClass.Hover]?.HasLayoutInfo == true) ||
+            (mouse.PositionDelta?.IsZero == false && _hoverInfo?.HasLayoutInfo == true) ||
             mouse.IsChanged(MouseButton.Left);
         var mousePos = mouse.Position;
 
@@ -403,8 +403,8 @@ public abstract class UIElement : IToJson, IReactive
                 var isHover1 = HitTest(mousePos.Value, layout1.Rect, layout1.BorderRadius);
 
                 // layout with considering hover pseudo classes if needed
-                if(_pseudoClasses.TryGet(PseudoClass.Hover, out var hoverInfo) && hoverInfo.HasLayoutInfo) {
-                    var mergedInfo = appliedInfo.Merged(hoverInfo);
+                if(_hoverInfo?.HasLayoutInfo == true) {
+                    var mergedInfo = appliedInfo.Merged(_hoverInfo.Value);
                     var layout2 = Relayout(mergedInfo, parentContentArea);
                     var isHover2 = HitTest(mousePos.Value, layout2.Rect, layout2.BorderRadius);
                     (isHover, layout, appliedInfo) = (isHover1, isHover2) switch
@@ -435,8 +435,8 @@ public abstract class UIElement : IToJson, IReactive
         }
 
         // overwrite layout if 'active'
-        if(_isClickHolding && _pseudoClasses.TryGet(PseudoClass.Active, out var activeInfo) && activeInfo.HasLayoutInfo) {
-            appliedInfo = appliedInfo.Merged(activeInfo);
+        if(_isClickHolding && _activeInfo?.HasLayoutInfo == true) {
+            appliedInfo = appliedInfo.Merged(_activeInfo.Value);
             layout = Relayout(appliedInfo, parentContentArea);
         }
 
@@ -592,7 +592,7 @@ internal record struct UIElementInfo(
     internal static CornerRadius DefaultBorderRadius => CornerRadius.Zero;
     internal static Brush DefaultBorderColor => Brush.Black;
 
-    internal readonly UIElementInfo Merged(in UIElementPseudoInfo p)
+    internal readonly UIElementInfo Merged(in PseudoInfo p)
     {
         return new(
             p.Width ?? Width,
@@ -608,7 +608,7 @@ internal record struct UIElementInfo(
         );
     }
 
-    internal void Merge(in UIElementPseudoInfo p)
+    internal void Merge(in PseudoInfo p)
     {
         if(p.Width.HasValue) {
             Width = p.Width.Value;
@@ -643,13 +643,13 @@ internal record struct UIElementInfo(
     }
 }
 
-public readonly record struct UIElementPseudoInfo
-    : IFromJson<UIElementPseudoInfo>,
+public readonly record struct PseudoInfo
+    : IFromJson<PseudoInfo>,
       IToJson
 {
     public readonly record struct Prop(string PropName, ReactSource Value);
 
-    static UIElementPseudoInfo() => Serializer.RegisterConstructor(FromJson);
+    static PseudoInfo() => Serializer.RegisterConstructor(FromJson);
 
     private static readonly ImmutableArray<Prop> EmptyEx = ImmutableArray<Prop>.Empty;
 
@@ -677,7 +677,7 @@ public readonly record struct UIElementPseudoInfo
         Padding.HasValue || HorizontalAlignment.HasValue || VerticalAlignment.HasValue ||
         BorderWidth.HasValue;
 
-    public static UIElementPseudoInfo FromJson(in ReactSource source)
+    public static PseudoInfo FromJson(in ReactSource source)
     {
         LayoutLength? width = null;
         LayoutLength? height = null;
@@ -740,7 +740,7 @@ public readonly record struct UIElementPseudoInfo
             }
         }
 
-        return new UIElementPseudoInfo
+        return new PseudoInfo
         {
             Width = width,
             Height = height,
@@ -835,57 +835,4 @@ public readonly record struct UIUpdateResult
     public required Brush BackgroundColor { get; init; }
     public required Brush BorderColor { get; init; }
     public required bool IsHover { get; init; }
-}
-
-internal enum PseudoClass
-{
-    Hover = 0,
-    Active = 1,
-}
-
-internal struct PseudoClasses
-{
-    private UIElementPseudoInfo? _hover;
-    private UIElementPseudoInfo? _active;
-
-    public void Set(PseudoClass pseudoClass, in ReactSource source)
-    {
-        GetRef(pseudoClass) = UIElementPseudoInfo.FromJson(source);
-    }
-
-    public void Set(PseudoClass pseudoClass, in UIElementPseudoInfo info)
-    {
-        GetRef(pseudoClass) = info;
-    }
-
-    [UnscopedRef]
-    public ref UIElementPseudoInfo? this[PseudoClass pseudoClass] => ref GetRef(pseudoClass);
-
-    public bool Has(PseudoClass pseudoClass) => GetRef(pseudoClass).HasValue;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGet(PseudoClass pseudoClass, out UIElementPseudoInfo info)
-    {
-        ref var r = ref GetRef(pseudoClass);
-        if(r.HasValue) {
-            info = r.Value;
-            return true;
-        }
-        info = default;
-        return false;
-    }
-
-    [UnscopedRef]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ref UIElementPseudoInfo? GetRef(PseudoClass pc)
-    {
-        switch(pc) {
-            case PseudoClass.Hover:
-                return ref _hover;
-            case PseudoClass.Active:
-                return ref _active;
-            default:
-                throw new ArgumentException(pc.ToString());
-        }
-    }
 }
