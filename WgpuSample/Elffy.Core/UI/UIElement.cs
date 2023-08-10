@@ -194,17 +194,6 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    private static LayoutLength DefaultWidth => new LayoutLength(1f, LayoutLengthType.Proportion);
-    private static LayoutLength DefaultHeight => new LayoutLength(1f, LayoutLengthType.Proportion);
-    private static Thickness DefaultMargin => new Thickness(0f);
-    private static Thickness DefaultPadding => new Thickness(0f);
-    private static HorizontalAlignment DefaultHorizontalAlignment => HorizontalAlignment.Center;
-    private static VerticalAlignment DefaultVerticalAlignment => VerticalAlignment.Center;
-    private static Brush DefaultBackgroundColor => Brush.White;
-    private static Thickness DefaultBorderWidth => new Thickness(0f);
-    private static CornerRadius DefaultBorderRadius => CornerRadius.Zero;
-    private static Brush DefaultBorderColor => Brush.Black;
-
     protected UIElement()
     {
         _info = UIElementInfo.Default;
@@ -307,16 +296,16 @@ public abstract class UIElement : IToJson, IReactive
 
     protected virtual void ApplyDiffProtected(in ReactSource source)
     {
-        Width = source.ApplyProperty(nameof(Width), Width, () => DefaultWidth, out _);
-        Height = source.ApplyProperty(nameof(Height), Height, () => DefaultHeight, out _);
-        Margin = source.ApplyProperty(nameof(Margin), Margin, () => DefaultMargin, out _);
-        Padding = source.ApplyProperty(nameof(Padding), Padding, () => DefaultPadding, out _);
-        HorizontalAlignment = source.ApplyProperty(nameof(HorizontalAlignment), HorizontalAlignment, () => DefaultHorizontalAlignment, out _);
-        VerticalAlignment = source.ApplyProperty(nameof(VerticalAlignment), VerticalAlignment, () => DefaultVerticalAlignment, out _);
-        BackgroundColor = source.ApplyProperty(nameof(BackgroundColor), BackgroundColor, () => DefaultBackgroundColor, out _);
-        BorderWidth = source.ApplyProperty(nameof(BorderWidth), BorderWidth, () => DefaultBorderWidth, out _);
-        BorderRadius = source.ApplyProperty(nameof(BorderRadius), BorderRadius, () => DefaultBorderRadius, out _);
-        BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, () => DefaultBorderColor, out _);
+        Width = source.ApplyProperty(nameof(Width), Width, () => UIElementInfo.DefaultWidth, out _);
+        Height = source.ApplyProperty(nameof(Height), Height, () => UIElementInfo.DefaultHeight, out _);
+        Margin = source.ApplyProperty(nameof(Margin), Margin, () => UIElementInfo.DefaultMargin, out _);
+        Padding = source.ApplyProperty(nameof(Padding), Padding, () => UIElementInfo.DefaultPadding, out _);
+        HorizontalAlignment = source.ApplyProperty(nameof(HorizontalAlignment), HorizontalAlignment, () => UIElementInfo.DefaultHorizontalAlignment, out _);
+        VerticalAlignment = source.ApplyProperty(nameof(VerticalAlignment), VerticalAlignment, () => UIElementInfo.DefaultVerticalAlignment, out _);
+        BackgroundColor = source.ApplyProperty(nameof(BackgroundColor), BackgroundColor, () => UIElementInfo.DefaultBackgroundColor, out _);
+        BorderWidth = source.ApplyProperty(nameof(BorderWidth), BorderWidth, () => UIElementInfo.DefaultBorderWidth, out _);
+        BorderRadius = source.ApplyProperty(nameof(BorderRadius), BorderRadius, () => UIElementInfo.DefaultBorderRadius, out _);
+        BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, () => UIElementInfo.DefaultBorderColor, out _);
 
         if(source.TryGetProperty(nameof(Children), out var childrenProp)) {
             childrenProp.ApplyDiff(Children);
@@ -592,16 +581,16 @@ internal record struct UIElementInfo(
         DefaultBorderRadius,
         DefaultBorderColor);
 
-    private static LayoutLength DefaultWidth => new LayoutLength(1f, LayoutLengthType.Proportion);
-    private static LayoutLength DefaultHeight => new LayoutLength(1f, LayoutLengthType.Proportion);
-    private static Thickness DefaultMargin => new Thickness(0f);
-    private static Thickness DefaultPadding => new Thickness(0f);
-    private static HorizontalAlignment DefaultHorizontalAlignment => HorizontalAlignment.Center;
-    private static VerticalAlignment DefaultVerticalAlignment => VerticalAlignment.Center;
-    private static Brush DefaultBackgroundColor => Brush.White;
-    private static Thickness DefaultBorderWidth => new Thickness(0f);
-    private static CornerRadius DefaultBorderRadius => CornerRadius.Zero;
-    private static Brush DefaultBorderColor => Brush.Black;
+    internal static LayoutLength DefaultWidth => new LayoutLength(1f, LayoutLengthType.Proportion);
+    internal static LayoutLength DefaultHeight => new LayoutLength(1f, LayoutLengthType.Proportion);
+    internal static Thickness DefaultMargin => new Thickness(0f);
+    internal static Thickness DefaultPadding => new Thickness(0f);
+    internal static HorizontalAlignment DefaultHorizontalAlignment => HorizontalAlignment.Center;
+    internal static VerticalAlignment DefaultVerticalAlignment => VerticalAlignment.Center;
+    internal static Brush DefaultBackgroundColor => Brush.White;
+    internal static Thickness DefaultBorderWidth => new Thickness(0f);
+    internal static CornerRadius DefaultBorderRadius => CornerRadius.Zero;
+    internal static Brush DefaultBorderColor => Brush.Black;
 
     internal readonly UIElementInfo Merged(in UIElementPseudoInfo p)
     {
