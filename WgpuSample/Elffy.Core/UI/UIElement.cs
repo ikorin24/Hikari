@@ -1,5 +1,7 @@
 ﻿#nullable enable
+using Elffy.Effective;
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -628,20 +630,31 @@ internal record struct UIElementInfo(
     }
 }
 
-internal readonly record struct UIElementPseudoInfo(
-    LayoutLength? Width,
-    LayoutLength? Height,
-    Thickness? Margin,
-    Thickness? Padding,
-    HorizontalAlignment? HorizontalAlignment,
-    VerticalAlignment? VerticalAlignment,
-    Brush? BackgroundColor,
-    Thickness? BorderWidth,
-    CornerRadius? BorderRadius,
-    Brush? BorderColor
-) : IFromJson<UIElementPseudoInfo>, IToJson
+internal readonly record struct UIElementPseudoInfo
+    : IFromJson<UIElementPseudoInfo>,
+      IToJson
 {
     static UIElementPseudoInfo() => Serializer.RegisterConstructor(FromJson);
+
+    private static readonly ImmutableArray<(string PropName, ReactSource Value)> EmptyEx = ImmutableArray<(string PropName, ReactSource Value)>.Empty;
+
+    public LayoutLength? Width { get; init; }
+    public LayoutLength? Height { get; init; }
+    public Thickness? Margin { get; init; }
+    public Thickness? Padding { get; init; }
+    public HorizontalAlignment? HorizontalAlignment { get; init; }
+    public VerticalAlignment? VerticalAlignment { get; init; }
+    public Brush? BackgroundColor { get; init; }
+    public Thickness? BorderWidth { get; init; }
+    public CornerRadius? BorderRadius { get; init; }
+    public Brush? BorderColor { get; init; }
+
+    private readonly ImmutableArray<(string PropName, ReactSource Value)> _ex;
+    public ImmutableArray<(string PropName, ReactSource Value)> Ex
+    {
+        get => _ex.IsDefault ? EmptyEx : _ex;
+        init => _ex = value.IsDefault ? EmptyEx : value;
+    }
 
     public bool HasLayoutInfo =>
         Width.HasValue || Height.HasValue || Margin.HasValue ||
@@ -650,18 +663,79 @@ internal readonly record struct UIElementPseudoInfo(
 
     public static UIElementPseudoInfo FromJson(in ReactSource source)
     {
+        LayoutLength? width = null;
+        LayoutLength? height = null;
+        Thickness? margin = null;
+        Thickness? padding = null;
+        HorizontalAlignment? horizontalAlignment = null;
+        VerticalAlignment? verticalAlignment = null;
+        Brush? backgroundColor = null;
+        Thickness? borderWidth = null;
+        CornerRadius? borderRadius = null;
+        Brush? borderColor = null;
+        using var ex = new TemporalBuffer<(string PropName, ReactSource Value)>();
+        foreach(var (name, value) in source.EnumerateProperties()) {
+            switch(name) {
+                case nameof(Width): {
+                    width = value.Instantiate<LayoutLength>();
+                    break;
+                }
+                case nameof(Height): {
+                    height = value.Instantiate<LayoutLength>();
+                    break;
+                }
+                case nameof(Margin): {
+                    margin = value.Instantiate<Thickness>();
+                    break;
+                }
+                case nameof(Padding): {
+                    padding = value.Instantiate<Thickness>();
+                    break;
+                }
+                case nameof(HorizontalAlignment): {
+                    horizontalAlignment = value.Instantiate<HorizontalAlignment>();
+                    break;
+                }
+                case nameof(VerticalAlignment): {
+                    verticalAlignment = value.Instantiate<VerticalAlignment>();
+                    break;
+                }
+                case nameof(BackgroundColor): {
+                    backgroundColor = value.Instantiate<Brush>();
+                    break;
+                }
+                case nameof(BorderWidth): {
+                    borderWidth = value.Instantiate<Thickness>();
+                    break;
+                }
+                case nameof(BorderRadius): {
+                    borderRadius = value.Instantiate<CornerRadius>();
+                    break;
+                }
+                case nameof(BorderColor): {
+                    borderColor = value.Instantiate<Brush>();
+                    break;
+                }
+                default: {
+                    ex.Add((name, value));
+                    break;
+                }
+            }
+        }
+
         return new UIElementPseudoInfo
         {
-            Width = source.TryGetProperty(nameof(Width), out var widthProp) ? widthProp.Instantiate<LayoutLength>() : null,
-            Height = source.TryGetProperty(nameof(Height), out var heightProp) ? heightProp.Instantiate<LayoutLength>() : null,
-            Margin = source.TryGetProperty(nameof(Margin), out var marginProp) ? marginProp.Instantiate<Thickness>() : null,
-            Padding = source.TryGetProperty(nameof(Padding), out var paddingProp) ? paddingProp.Instantiate<Thickness>() : null,
-            HorizontalAlignment = source.TryGetProperty(nameof(HorizontalAlignment), out var horizontalAlignmentProp) ? horizontalAlignmentProp.Instantiate<HorizontalAlignment>() : null,
-            VerticalAlignment = source.TryGetProperty(nameof(VerticalAlignment), out var verticalAlignmentProp) ? verticalAlignmentProp.Instantiate<VerticalAlignment>() : null,
-            BackgroundColor = source.TryGetProperty(nameof(BackgroundColor), out var backgroundColorProp) ? backgroundColorProp.Instantiate<Brush>() : null,
-            BorderWidth = source.TryGetProperty(nameof(BorderWidth), out var borderWidthProp) ? borderWidthProp.Instantiate<Thickness>() : null,
-            BorderRadius = source.TryGetProperty(nameof(BorderRadius), out var borderRadiusProp) ? borderRadiusProp.Instantiate<CornerRadius>() : null,
-            BorderColor = source.TryGetProperty(nameof(BorderColor), out var borderColorProp) ? borderColorProp.Instantiate<Brush>() : null,
+            Width = width,
+            Height = height,
+            Margin = margin,
+            Padding = padding,
+            HorizontalAlignment = horizontalAlignment,
+            VerticalAlignment = verticalAlignment,
+            BackgroundColor = backgroundColor,
+            BorderWidth = borderWidth,
+            BorderRadius = borderRadius,
+            BorderColor = borderColor,
+            Ex = ex.IsEmpty ? EmptyEx : ImmutableArray.Create(ex.AsSpan()),
         };
     }
 
