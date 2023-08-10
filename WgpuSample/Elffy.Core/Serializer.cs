@@ -39,19 +39,19 @@ public static class Serializer
         public static ConstructorInfo New<T>(CtorFunc<T> func) where T : notnull
         {
             if(typeof(T).IsValueType) {
-                var funcUntyped = new CtorFunc<ValueType>((in ReactSource x) =>
+                var funcUntyped = new CtorFunc<ValueType>((in ObjectSource x) =>
                 {
                     return (ValueType)(object)func(x);
                 });
                 return new ConstructorInfo(typeof(T), func, funcUntyped);
             }
             else {
-                var f = new CtorFuncCovariant<T>((in ReactSource s) => func(s));
+                var f = new CtorFuncCovariant<T>((in ObjectSource s) => func(s));
                 return new ConstructorInfo(typeof(T), f, null);
             }
         }
 
-        public T Invoke<T>(in ReactSource source)
+        public T Invoke<T>(in ObjectSource source)
         {
             if(typeof(T).IsValueType) {
 
@@ -68,7 +68,7 @@ public static class Serializer
             }
         }
 
-        public object InvokeUntyped(in ReactSource source)
+        public object InvokeUntyped(in ObjectSource source)
         {
             if(_type.IsValueType) {
                 Debug.Assert(_funcUntyped is not null);
@@ -79,7 +79,7 @@ public static class Serializer
             }
         }
 
-        private delegate T CtorFuncCovariant<out T>(in ReactSource source);
+        private delegate T CtorFuncCovariant<out T>(in ObjectSource source);
     }
 
     private static readonly ConcurrentDictionary<Type, ConstructorInfo> _constructorFuncs = new();
@@ -211,7 +211,7 @@ public static class Serializer
         return utf16Handler.Invoke(charSpan[..len], arg);
     }
 
-    internal static unsafe void SerializeUtf16<T>(T value, ref ReactBuilder arg, F f, JsonMarker _ = default) where T : notnull, IToJson
+    internal static unsafe void SerializeUtf16<T>(T value, ref ObjectSourceBuilder arg, F f, JsonMarker _ = default) where T : notnull, IToJson
     {
         var buffer = new ArrayBufferWriter<byte>(); // TODO: use pooled buffer
         Serialize(value, buffer);
@@ -222,7 +222,7 @@ public static class Serializer
         f.Invoke(charSpan[..len], ref arg);
     }
 
-    internal delegate void F(ReadOnlySpan<char> span, ref ReactBuilder arg);
+    internal delegate void F(ReadOnlySpan<char> span, ref ObjectSourceBuilder arg);
     internal record struct EnumMarker;
     internal record struct JsonMarker;
 
@@ -255,7 +255,7 @@ public static class Serializer
     //    };
     //}
 
-    internal static T Instantiate<T>(in ReactSource source)
+    internal static T Instantiate<T>(in ObjectSource source)
     {
         return DeserializeCore<T>(source);
     }
@@ -265,12 +265,12 @@ public static class Serializer
     //    return DeserializeCore(element, null, data);
     //}
 
-    public static object Instantiate(in ReactSource source, Type? type)
+    public static object Instantiate(in ObjectSource source, Type? type)
     {
         return DeserializeCore(source, type);
     }
 
-    private static T DeserializeCore<T>(in ReactSource source)
+    private static T DeserializeCore<T>(in ObjectSource source)
     {
         if(typeof(T) == typeof(string)) { var x = source.GetStringNotNull(); return Unsafe.As<string, T>(ref x); }
         if(typeof(T) == typeof(bool)) { var x = source.GetBoolean(); return Unsafe.As<bool, T>(ref x); }
@@ -348,7 +348,7 @@ public static class Serializer
         }
     }
 
-    private static object DeserializeCore(in ReactSource source, Type? leftSideType)
+    private static object DeserializeCore(in ObjectSource source, Type? leftSideType)
     {
         if(leftSideType == typeof(string)) { return source.GetStringNotNull(); }
         if(leftSideType == typeof(bool)) { return source.GetBoolean(); }
@@ -426,7 +426,7 @@ public static class Serializer
         }
     }
 
-    private static object CreateArray(in ReactSource source, Type leftSideType)
+    private static object CreateArray(in ObjectSource source, Type leftSideType)
     {
         Debug.Assert(source.ValueKind == JsonValueKind.Array);
         if(leftSideType.IsSZArray) {
@@ -469,7 +469,7 @@ public static class Serializer
 
 internal static class ExternalConstructor
 {
-    public static Color4 Color4FromJson(in ReactSource source)
+    public static Color4 Color4FromJson(in ObjectSource source)
     {
         switch(source.ValueKind) {
             case JsonValueKind.String: {
@@ -521,7 +521,7 @@ internal static class ExternalConstructor
 public interface IFromJson<TSelf>
     where TSelf : IFromJson<TSelf>
 {
-    abstract static TSelf FromJson(in ReactSource source);
+    abstract static TSelf FromJson(in ObjectSource source);
 }
 
 public interface IToJson
@@ -558,4 +558,4 @@ internal static class EnumJsonHelper
 }
 
 // [NOTE] no covariant
-public delegate T CtorFunc<T>(in ReactSource source);
+public delegate T CtorFunc<T>(in ObjectSource source);

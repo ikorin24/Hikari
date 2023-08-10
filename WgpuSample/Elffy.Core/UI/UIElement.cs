@@ -210,7 +210,7 @@ public abstract class UIElement : IToJson, IReactive
         });
     }
 
-    protected UIElement(in ReactSource source) : this()
+    protected UIElement(in ObjectSource source) : this()
     {
         if(source.TryGetProperty(nameof(Width), out var width)) {
             _info.Width = LayoutLength.FromJson(width);
@@ -288,12 +288,12 @@ public abstract class UIElement : IToJson, IReactive
         writer.Write(nameof(Children), _children);
     }
 
-    void IReactive.ApplyDiff(in ReactSource source)
+    void IReactive.ApplyDiff(in ObjectSource source)
     {
         ApplyDiffProtected(source);
     }
 
-    protected virtual void ApplyDiffProtected(in ReactSource source)
+    protected virtual void ApplyDiffProtected(in ObjectSource source)
     {
         Width = source.ApplyProperty(nameof(Width), Width, () => UIElementInfo.DefaultWidth, out _);
         Height = source.ApplyProperty(nameof(Height), Height, () => UIElementInfo.DefaultHeight, out _);
@@ -646,7 +646,7 @@ public readonly record struct PseudoInfo
     : IFromJson<PseudoInfo>,
       IToJson
 {
-    public readonly record struct Prop(string PropName, ReactSource Value);
+    public readonly record struct Prop(string PropName, ObjectSource Value);
 
     static PseudoInfo() => Serializer.RegisterConstructor(FromJson);
 
@@ -688,7 +688,7 @@ public readonly record struct PseudoInfo
         return false;
     }
 
-    public static PseudoInfo FromJson(in ReactSource source)
+    public static PseudoInfo FromJson(in ObjectSource source)
     {
         LayoutLength? width = null;
         LayoutLength? height = null;

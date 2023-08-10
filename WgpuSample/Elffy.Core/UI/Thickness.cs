@@ -68,7 +68,7 @@ public readonly struct Thickness
 
     public override int GetHashCode() => HashCode.Combine(Left, Top, Right, Bottom);
 
-    public static Thickness FromJson(in ReactSource source)
+    public static Thickness FromJson(in ObjectSource source)
     {
         // 10
         // "10px"

@@ -8,7 +8,7 @@ internal static class ReactComponentBuilder
 {
     public static UIElement BuildUIElement(this IReactComponent component)
     {
-        var source = component.GetReactSource();
+        var source = component.GetSource();
         var obj = source.Instantiate<object>();
         while(true) {
             switch(obj) {
@@ -19,7 +19,7 @@ internal static class ReactComponentBuilder
                     element.ModelEarlyUpdate.Subscribe(model =>
                     {
                         if(component.NeedsToRerender) {
-                            var source = component.GetReactSource();
+                            var source = component.GetSource();
                             var target = (IReactive)model.Element;
                             target.ApplyDiff(source);
                             component.RenderCompleted(target);

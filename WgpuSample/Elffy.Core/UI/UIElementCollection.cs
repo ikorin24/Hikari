@@ -91,7 +91,7 @@ public sealed class UIElementCollection
 
     IEnumerator IEnumerable.GetEnumerator() => _children.GetEnumerator();
 
-    public static UIElementCollection FromJson(in ReactSource source)
+    public static UIElementCollection FromJson(in ObjectSource source)
     {
         var list = new List<UIElement>(source.GetArrayLength());
         var reactives = new List<IReactive>();
@@ -147,7 +147,7 @@ public sealed class UIElementCollection
         return JsonValueKind.Array;
     }
 
-    void IReactive.ApplyDiff(in ReactSource source)
+    void IReactive.ApplyDiff(in ObjectSource source)
     {
         var reactives = _reactives;
         var i = 0;

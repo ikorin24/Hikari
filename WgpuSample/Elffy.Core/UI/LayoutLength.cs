@@ -32,7 +32,7 @@ public readonly struct LayoutLength
         [DoesNotReturn] static void ThrowOutOfRange() => throw new ArgumentOutOfRangeException(nameof(value));
     }
 
-    public static LayoutLength FromJson(in ReactSource source)
+    public static LayoutLength FromJson(in ObjectSource source)
     {
         // 10
         // "10px"

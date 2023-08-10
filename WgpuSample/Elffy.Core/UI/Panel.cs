@@ -17,13 +17,13 @@ public sealed class Panel : UIElement, IFromJson<Panel>
         });
     }
 
-    public static Panel FromJson(in ReactSource source) => new Panel(source);
+    public static Panel FromJson(in ObjectSource source) => new Panel(source);
 
     public Panel()
     {
     }
 
-    private Panel(in ReactSource source) : base(source)
+    private Panel(in ObjectSource source) : base(source)
     {
     }
 
@@ -32,7 +32,7 @@ public sealed class Panel : UIElement, IFromJson<Panel>
         base.ToJsonProtected(writer);
     }
 
-    protected override void ApplyDiffProtected(in ReactSource source)
+    protected override void ApplyDiffProtected(in ObjectSource source)
     {
         base.ApplyDiffProtected(source);
     }

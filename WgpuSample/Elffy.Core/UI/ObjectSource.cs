@@ -13,13 +13,13 @@ using System.Text.RegularExpressions;
 
 namespace Elffy.UI;
 
-public readonly partial struct ReactSource : IEquatable<ReactSource>
+public readonly partial struct ObjectSource : IEquatable<ObjectSource>
 {
     private readonly JsonElement _element;
     private readonly List<Delegate>? _delegates;
     private readonly List<Type>? _types;
 
-    public static ReactSource Empty => default;
+    public static ObjectSource Empty => default;
 
     public bool IsEmpty => JsonElementEqualityComparer.Equals(_element, default);
 
@@ -34,7 +34,7 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
 
     public string? ObjectKey => HasObjectKey(out var key) ? key : null;
 
-    internal ReactSource(string str, List<Delegate>? delegates, List<Type>? types)
+    internal ObjectSource(string str, List<Delegate>? delegates, List<Type>? types)
     {
         // Clone the root element to make the lifetime permanent.
         using(var json = JsonDocument.Parse(str, Serializer.ParseOptions)) {
@@ -44,7 +44,7 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
         _types = types;
     }
 
-    private ReactSource(JsonElement element, List<Delegate>? delegates, List<Type>? types)
+    private ObjectSource(JsonElement element, List<Delegate>? delegates, List<Type>? types)
     {
         _element = element;
         _delegates = delegates;
@@ -87,10 +87,10 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
         return key != null;
     }
 
-    public bool TryGetProperty(string propertyName, out ReactSource value)
+    public bool TryGetProperty(string propertyName, out ObjectSource value)
     {
         if(_element.TryGetProperty(propertyName, out var prop)) {
-            value = new ReactSource(prop, _delegates, _types);
+            value = new ObjectSource(prop, _delegates, _types);
             return true;
         }
         value = default;
@@ -300,9 +300,9 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
         return Encoding.UTF8.GetString(buffer.WrittenSpan);
     }
 
-    public override bool Equals(object? obj) => obj is ReactSource source && Equals(source);
+    public override bool Equals(object? obj) => obj is ObjectSource source && Equals(source);
 
-    public bool Equals(ReactSource other)
+    public bool Equals(ObjectSource other)
     {
         return
             JsonElementEqualityComparer.Equals(_element, other._element) &&
@@ -312,29 +312,29 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
 
     public override int GetHashCode() => HashCode.Combine(_element, _delegates, _types);
 
-    public readonly record struct ArrayEnumerable(in ReactSource Source) : IEnumerable<ReactSource>
+    public readonly record struct ArrayEnumerable(in ObjectSource Source) : IEnumerable<ObjectSource>
     {
         public ArrayEnumerator GetEnumerator() => new ArrayEnumerator(Source);
 
-        IEnumerator<ReactSource> IEnumerable<ReactSource>.GetEnumerator() => GetEnumerator();
+        IEnumerator<ObjectSource> IEnumerable<ObjectSource>.GetEnumerator() => GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    public struct ArrayEnumerator : IEnumerator<ReactSource>
+    public struct ArrayEnumerator : IEnumerator<ObjectSource>
     {
         private readonly List<Delegate>? _delegates;
         private readonly List<Type>? _types;
         private JsonElement.ArrayEnumerator _enumerator;
 
-        internal ArrayEnumerator(in ReactSource source)
+        internal ArrayEnumerator(in ObjectSource source)
         {
             _delegates = source._delegates;
             _types = source._types;
             _enumerator = source.Element.EnumerateArray();
         }
 
-        public ReactSource Current => new ReactSource(_enumerator.Current, _delegates, _types);
+        public ObjectSource Current => new ObjectSource(_enumerator.Current, _delegates, _types);
 
         object IEnumerator.Current => Current;
 
@@ -345,37 +345,37 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
         public void Reset() => _enumerator.Reset();
     }
 
-    public readonly record struct PropertyEnumerable(in ReactSource Source) : IEnumerable<ReactSourceProperty>
+    public readonly record struct PropertyEnumerable(in ObjectSource Source) : IEnumerable<ObjectSourceProperty>
     {
         public PropertyEnumerator GetEnumerator() => new PropertyEnumerator(Source);
 
-        IEnumerator<ReactSourceProperty> IEnumerable<ReactSourceProperty>.GetEnumerator() => GetEnumerator();
+        IEnumerator<ObjectSourceProperty> IEnumerable<ObjectSourceProperty>.GetEnumerator() => GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    public struct PropertyEnumerator : IEnumerator<ReactSourceProperty>
+    public struct PropertyEnumerator : IEnumerator<ObjectSourceProperty>
     {
         private readonly List<Delegate>? _delegates;
         private readonly List<Type>? _types;
         private JsonElement.ObjectEnumerator _enumerator;
 
-        internal PropertyEnumerator(in ReactSource source)
+        internal PropertyEnumerator(in ObjectSource source)
         {
             _delegates = source._delegates;
             _types = source._types;
             _enumerator = source.Element.EnumerateObject();
         }
 
-        public ReactSourceProperty Current
+        public ObjectSourceProperty Current
         {
             get
             {
                 var current = _enumerator.Current;
-                return new ReactSourceProperty
+                return new ObjectSourceProperty
                 {
                     Name = current.Name,
-                    Value = new ReactSource(current.Value, _delegates, _types),
+                    Value = new ObjectSource(current.Value, _delegates, _types),
                 };
             }
         }
@@ -388,9 +388,19 @@ public readonly partial struct ReactSource : IEquatable<ReactSource>
 
         public void Reset() => _enumerator.Reset();
     }
+
+    public static bool operator ==(ObjectSource left, ObjectSource right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(ObjectSource left, ObjectSource right)
+    {
+        return !(left == right);
+    }
 }
 
-public readonly record struct ReactSourceProperty(string Name, ReactSource Value);
+public readonly record struct ObjectSourceProperty(string Name, ObjectSource Value);
 
 public enum ApplySourceResult
 {

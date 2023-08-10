@@ -44,7 +44,7 @@ public sealed class Button : UIElement, IFromJson<Button>
         });
     }
 
-    public static Button FromJson(in ReactSource source) => new Button(source);
+    public static Button FromJson(in ObjectSource source) => new Button(source);
 
     protected override void ToJsonProtected(Utf8JsonWriter writer)
     {
@@ -53,7 +53,7 @@ public sealed class Button : UIElement, IFromJson<Button>
         writer.Write(nameof(FontSize), FontSize);
     }
 
-    protected override void ApplyDiffProtected(in ReactSource source)
+    protected override void ApplyDiffProtected(in ObjectSource source)
     {
         base.ApplyDiffProtected(source);
         Text = source.ApplyProperty(nameof(Text), Text, () => ButtonInfo.DefaultText, out _);
@@ -65,7 +65,7 @@ public sealed class Button : UIElement, IFromJson<Button>
         _buttonInfo = ButtonInfo.Default;
     }
 
-    private Button(in ReactSource source) : base(source)
+    private Button(in ObjectSource source) : base(source)
     {
         _buttonInfo = ButtonInfo.Default;
         if(source.TryGetProperty(nameof(Text), out var text)) {

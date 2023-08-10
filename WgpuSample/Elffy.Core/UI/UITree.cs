@@ -24,11 +24,11 @@ public sealed class UITree
         _uiLayer.SetRoot(element);
     }
 
-    public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] ReactBuilder builder)
+    public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] ObjectSourceBuilder builder)
     {
         _uiLayer ??= new UILayer(_screen, 100); // TODO: sort order
 
-        var source = builder.FixAndClear();
+        var source = builder.ToSourceClear();
         var root = source.Apply(_root, out var applied);
         switch(applied.Result) {
             case ApplySourceResult.InstanceReplaced: {

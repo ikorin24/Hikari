@@ -4,5 +4,5 @@ namespace Elffy.UI;
 
 public interface IReactive
 {
-    void ApplyDiff(in ReactSource source);
+    void ApplyDiff(in ObjectSource source);
 }

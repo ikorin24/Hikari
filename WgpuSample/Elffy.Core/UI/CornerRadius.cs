@@ -78,7 +78,7 @@ public readonly struct CornerRadius
         return HashCode.Combine(TopLeft, TopRight, BottomRight, BottomLeft);
     }
 
-    public static CornerRadius FromJson(in ReactSource source)
+    public static CornerRadius FromJson(in ObjectSource source)
     {
         switch(source.ValueKind) {
             case JsonValueKind.Number: {

@@ -8,13 +8,13 @@ using System.Runtime.CompilerServices;
 namespace Elffy.UI;
 
 [InterpolatedStringHandler]
-public ref struct ReactBuilder
+public ref struct ObjectSourceBuilder
 {
     private DefaultInterpolatedStringHandler _handler;
     private List<Delegate>? _delegates;
     private List<Type>? _types;
 
-    public ReactBuilder(int literalLength, int formattedCount)
+    public ObjectSourceBuilder(int literalLength, int formattedCount)
     {
         _handler = new DefaultInterpolatedStringHandler(literalLength, formattedCount);
         _delegates = null;
@@ -121,7 +121,7 @@ public ref struct ReactBuilder
 
     public void AppendFormatted<T>(T value, JsonMarker _ = default) where T : IToJson
     {
-        Serializer.SerializeUtf16(value, ref this, (ReadOnlySpan<char> chars, ref ReactBuilder self) =>
+        Serializer.SerializeUtf16(value, ref this, (ReadOnlySpan<char> chars, ref ObjectSourceBuilder self) =>
         {
             self._handler.AppendFormatted(chars);
         });
@@ -137,14 +137,14 @@ public ref struct ReactBuilder
     [EditorBrowsable(EditorBrowsableState.Never)]
     public record struct JsonMarker;
 
-    public ReactSource FixAndClear()
+    public ObjectSource ToSourceClear()
     {
-        return new ReactSource(_handler.ToStringAndClear(), _delegates, _types);
+        return new ObjectSource(_handler.ToStringAndClear(), _delegates, _types);
     }
 
-    public static implicit operator ReactBuilder([StringSyntax(StringSyntaxAttribute.Json)] string s)
+    public static implicit operator ObjectSourceBuilder([StringSyntax(StringSyntaxAttribute.Json)] string s)
     {
-        var h = new ReactBuilder(s?.Length ?? 0, 0);
+        var h = new ObjectSourceBuilder(s?.Length ?? 0, 0);
         h.AppendLiteral(s ?? "");
         return h;
     }

@@ -20,7 +20,7 @@ public readonly struct FontSize
         _px = px;
     }
 
-    public static FontSize FromJson(in ReactSource source)
+    public static FontSize FromJson(in ObjectSource source)
     {
         switch(source.ValueKind) {
             case JsonValueKind.String: {

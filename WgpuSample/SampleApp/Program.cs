@@ -250,7 +250,7 @@ public partial class Counter
         LayoutLength Height
     );
     private int _count;
-    private partial ReactBuilder Render(in Props props)
+    private partial ObjectSourceBuilder Render(in Props props)
     {
         var text = $"click count: {_count}";
         return $$"""
@@ -299,7 +299,7 @@ public partial class CountButton
 {
     private partial record struct Props(int Width, int Height, Action<Button> Clicked);
 
-    private partial ReactBuilder Render(in Props props)
+    private partial ObjectSourceBuilder Render(in Props props)
     {
         return $$"""
         {
@@ -356,7 +356,7 @@ sealed partial class Counter
 
     bool IReactComponent.NeedsToRerender => _needsToRerender;
 
-    private partial ReactBuilder Render(in Props props);
+    private partial ObjectSourceBuilder Render(in Props props);
 
     private void SetState<T>(ref T state, in T newValue)
     {
@@ -364,13 +364,13 @@ sealed partial class Counter
         _needsToRerender = true;
     }
 
-    public static Counter FromJson(in ReactSource source)
+    public static Counter FromJson(in ObjectSource source)
     {
         var props = Props.FromJson(source);
         return new Counter(props);
     }
 
-    ReactSource IReactComponent.GetReactSource() => Render(__p).FixAndClear();
+    ObjectSource IReactComponent.GetSource() => Render(__p).ToSourceClear();
 
     void IReactComponent.RenderCompleted<T>(T rendered)
     {
@@ -378,10 +378,10 @@ sealed partial class Counter
         _needsToRerender = false;
     }
 
-    void IReactive.ApplyDiff(in ReactSource source)
+    void IReactive.ApplyDiff(in ObjectSource source)
     {
         __p = Props.FromJson(source);
-        var innerSource = Render(__p).FixAndClear();
+        var innerSource = Render(__p).ToSourceClear();
         _rendered = innerSource.Apply(_rendered, out _);
     }
 
@@ -398,7 +398,7 @@ sealed partial class Counter
             Serializer.RegisterConstructor(FromJson);
         }
 
-        public static Props FromJson(in ReactSource source)
+        public static Props FromJson(in ObjectSource source)
         {
             return new()
             {
@@ -430,7 +430,7 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
 
     bool IReactComponent.NeedsToRerender => _needsToRerender;
 
-    private partial ReactBuilder Render(in Props props);
+    private partial ObjectSourceBuilder Render(in Props props);
 
     private void SetState<T>(ref T state, in T newValue)
     {
@@ -438,13 +438,13 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
         _needsToRerender = true;
     }
 
-    public static CountButton FromJson(in ReactSource source)
+    public static CountButton FromJson(in ObjectSource source)
     {
         var props = Props.FromJson(source);
         return new CountButton(props);
     }
 
-    ReactSource IReactComponent.GetReactSource() => Render(__p).FixAndClear();
+    ObjectSource IReactComponent.GetSource() => Render(__p).ToSourceClear();
 
     void IReactComponent.RenderCompleted<T>(T rendered)
     {
@@ -452,10 +452,10 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
         _needsToRerender = false;
     }
 
-    void IReactive.ApplyDiff(in ReactSource source)
+    void IReactive.ApplyDiff(in ObjectSource source)
     {
         __p = Props.FromJson(source);
-        var innerSource = Render(__p).FixAndClear();
+        var innerSource = Render(__p).ToSourceClear();
         _rendered = innerSource.Apply(_rendered, out _);
     }
 
@@ -472,7 +472,7 @@ sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
             Serializer.RegisterConstructor(FromJson);
         }
 
-        public static Props FromJson(in ReactSource source)
+        public static Props FromJson(in ObjectSource source)
         {
             return new()
             {

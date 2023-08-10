@@ -57,7 +57,7 @@ public readonly struct Brush
         return new Brush(color);
     }
 
-    public static Brush FromJson(in ReactSource source)
+    public static Brush FromJson(in ObjectSource source)
     {
         // "#ffee23"
         // "red"
