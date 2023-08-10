@@ -9,7 +9,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
 {
     private static T ShadowShaderSource<TArg, T>(uint cascade, TArg arg, ReadOnlySpanFunc<byte, TArg, T> func)
     {
-        using var builder = new Utf8StringBuilder();
+        using var builder = new Utf8StringBuilder(1024);
         builder.Append("const CASCADE: u32 = "u8);
         builder.Append(cascade);
         builder.Append("""

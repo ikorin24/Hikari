@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Elffy.Internal;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -36,6 +37,69 @@ public sealed class Panel : UIElement, IFromJson<Panel>
     {
         base.ApplyDiffProtected(source);
     }
+}
+
+internal static class UIShaderSource
+{
+    public static ReadOnlySpan<byte> TypeDef => """
+        struct Vin {
+            @location(0) pos: vec3<f32>,
+            @location(1) uv: vec2<f32>,
+        }
+        struct V2F {
+            @builtin(position) clip_pos: vec4<f32>,
+            @location(0) uv: vec2<f32>,
+        }
+        struct ScreenInfo {
+            size: vec2<u32>,
+        }
+        struct BufferData
+        {
+            mvp: mat4x4<f32>,
+            solid_color: vec4<f32>,
+            rect: vec4<f32>,            // (x, y, width, height)
+            border_width: vec4<f32>,    // (top, right, bottom, left)
+            border_radius: vec4<f32>,   // (top-left, top-right, bottom-right, bottom-left)
+            border_solid_color: vec4<f32>,
+        }
+        """u8;
+
+    public static ReadOnlySpan<byte> ConstDef => """
+        const PI: f32 = 3.141592653589793;
+        const INV_PI: f32 = 0.3183098861837907;
+        """u8;
+
+    public static ReadOnlySpan<byte> Group0 => """
+        @group(0) @binding(0) var<uniform> screen: ScreenInfo;
+        @group(0) @binding(1) var<uniform> data: BufferData;
+        """u8;
+
+    public static ReadOnlySpan<byte> Fn_pow_x2 => """
+        fn pow_x2(x: f32) -> f32 {
+            return x * x;
+        }
+        """u8;
+
+    public static ReadOnlySpan<byte> Fn_blend => """
+        fn blend(src: vec4<f32>, dst: vec4<f32>, x: f32) -> vec4<f32> {
+            let a = src.a * x;
+            return vec4(
+                src.rgb * a + (1.0 - a) * dst.rgb,
+                a + (1.0 - a) * dst.a,
+            );
+        }
+        """u8;
+
+    public static ReadOnlySpan<byte> Fn_vs_main => """
+        @vertex fn vs_main(
+            v: Vin,
+        ) -> V2F {
+            var o: V2F;
+            o.clip_pos = data.mvp * vec4<f32>(v.pos, 1.0);
+            o.uv = v.uv;
+            return o;
+        }
+        """u8;
 }
 
 file sealed class PanelShader : UIShader
@@ -240,11 +304,163 @@ file sealed class PanelShader : UIShader
         }
         """u8;
 
+    private static ReadOnlySpan<byte> Fn_fs_main => """
+        @fragment fn fs_main(
+            f: V2F,
+        ) -> @location(0) vec4<f32> {
+            // pixel coordinates, which is not normalized
+            let fragcoord: vec2<f32> = f.clip_pos.xy;
+            var color: vec4<f32> = data.solid_color;
+
+            let b_radius = data.border_radius;
+            let b_color = array<vec4<f32>, 4>(
+                blend(data.border_solid_color, color, min(1.0, data.border_width.x)),
+                blend(data.border_solid_color, color, min(1.0, data.border_width.y)),
+                blend(data.border_solid_color, color, min(1.0, data.border_width.z)),
+                blend(data.border_solid_color, color, min(1.0, data.border_width.w)),
+            );
+
+            // top-left corner
+            let center_tl = data.rect.xy + vec2<f32>(b_radius.x, b_radius.x);
+            if(fragcoord.x < center_tl.x && fragcoord.y < center_tl.y) {
+                let d = fragcoord - center_tl;
+                let len_d = length(d);
+                if(len_d > b_radius.x + 1.0) {
+                    discard;
+                }
+                if(len_d > b_radius.x) {
+                    return blend(b_color[0], vec4<f32>(), 1.0 - (len_d - b_radius.x));
+                }
+                var a = b_radius.x - data.border_width.w;   // x-axis radius of ellipse
+                var b = b_radius.x - data.border_width.x;   // y-axis radius of ellipse
+
+                // vector from center of ellipse to the crossed point of 'd' and the ellipse
+                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
+                let len_v = length(v);
+                var blend_coeff = max(0.0, min(1.0, len_d - len_v));
+                if(u32(fragcoord.y) <= u32(data.rect.y) + u32(data.border_width.x) - 1u) {
+                    // It's heuristic for error of float number
+                    blend_coeff = 1.0;
+                }
+                if(u32(fragcoord.x) <= u32(data.rect.x) + u32(data.border_width.x) - 1u) {
+                    // It's heuristic for error of float number
+                    blend_coeff = 1.0;
+                }
+                return blend(b_color[0], color, blend_coeff);
+            }
+
+            // top-right corner
+            let center_tr = data.rect.xy + vec2<f32>(data.rect.z - b_radius.y, b_radius.y);
+            if(fragcoord.x >= center_tr.x && fragcoord.y < center_tr.y) {
+                let d = fragcoord - center_tr;
+                let len_d = length(d);
+                if(len_d > b_radius.x + 1.0) {
+                    discard;
+                }
+                if(len_d > b_radius.x) {
+                    return vec4<f32>(
+                        data.border_solid_color.rgb, 
+                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
+                    );
+                }
+                var a = b_radius.y - data.border_width.y;   // x-axis radius of ellipse
+                var b = b_radius.y - data.border_width.x;   // y-axis radius of ellipse
+
+                // vector from center of ellipse to the crossed point of 'd' and the ellipse
+                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
+                let len_v = length(v);
+                if(len_d > len_v) {
+                    return data.border_solid_color;
+                }
+                let diff = len_v - len_d;
+                if(diff <= 1.0) {
+                    return blend(data.border_solid_color, color, 1.0 - diff);
+                }
+            }
+
+            // bottom-right corner
+            let center_br = data.rect.xy + vec2<f32>(data.rect.z - b_radius.z, data.rect.w - b_radius.z);
+            if(fragcoord.x >= center_br.x && fragcoord.y >= center_br.y) {
+                let d = fragcoord - center_br;
+                let len_d = length(d);
+                if(len_d > b_radius.x + 1.0) {
+                    discard;
+                }
+                if(len_d > b_radius.x) {
+                    return vec4<f32>(
+                        data.border_solid_color.rgb, 
+                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
+                    );
+                }
+                var a = b_radius.z - data.border_width.y;   // x-axis radius of ellipse
+                var b = b_radius.z - data.border_width.z;   // y-axis radius of ellipse
+
+                // vector from center of ellipse to the crossed point of 'd' and the ellipse
+                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
+                let len_v = length(v);
+                if(len_d > len_v) {
+                    return data.border_solid_color;
+                }
+                let diff = len_v - len_d;
+                if(diff <= 1.0) {
+                    return blend(data.border_solid_color, color, 1.0 - diff);
+                }
+            }
+
+            // bottom-left corner
+            let center_bl = data.rect.xy + vec2<f32>(b_radius.w, data.rect.w - b_radius.w);
+            if(fragcoord.x < center_bl.x && fragcoord.y >= center_bl.y) {
+                let d = fragcoord - center_bl;
+                let len_d = length(d);
+                if(len_d > b_radius.x + 1.0) {
+                    discard;
+                }
+                if(len_d > b_radius.x) {
+                    return vec4<f32>(
+                        data.border_solid_color.rgb, 
+                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
+                    );
+                }
+                var a = b_radius.z - data.border_width.w;   // x-axis radius of ellipse
+                var b = b_radius.z - data.border_width.z;   // y-axis radius of ellipse
+
+                // vector from center of ellipse to the crossed point of 'd' and the ellipse
+                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
+                let len_v = length(v);
+                if(len_d > len_v) {
+                    return data.border_solid_color;
+                }
+                let diff = len_v - len_d;
+                if(diff <= 1.0) {
+                    return blend(data.border_solid_color, color, 1.0 - diff);
+                }
+            }
+
+            // top border
+            if(fragcoord.y < data.rect.y + data.border_width.x) {
+                return b_color[0];
+            }
+            // right border
+            if(fragcoord.x >= data.rect.x + data.rect.z - data.border_width.y) {
+                return data.border_solid_color;
+            }
+            // left border
+            if(fragcoord.x < data.rect.x + data.border_width.w) {
+                return data.border_solid_color;
+            }
+            // bottom border
+            if(fragcoord.y >= data.rect.y + data.rect.w - data.border_width.z) {
+                return data.border_solid_color;
+            }
+            return color;
+        }
+        """u8;
+
     private readonly Own<Texture> _emptyTexture;
     private readonly Own<Sampler> _emptyTextureSampler;
 
-    private PanelShader(UILayer operation)
-        : base(ShaderSource, operation, Desc)
+    private PanelShader(UILayer operation, ReadOnlySpan<byte> shaderSource)
+        : base(shaderSource, operation, Desc)
     {
         _emptyTexture = Texture.Create(operation.Screen, new TextureDescriptor
         {
@@ -322,7 +538,15 @@ file sealed class PanelShader : UIShader
 
     public static Own<PanelShader> Create(UILayer layer)
     {
-        return CreateOwn(new PanelShader(layer));
+        using var sb = Utf8StringBuilder.FromLines(
+            UIShaderSource.TypeDef,
+            UIShaderSource.ConstDef,
+            UIShaderSource.Group0,
+            UIShaderSource.Fn_pow_x2,
+            UIShaderSource.Fn_blend,
+            UIShaderSource.Fn_vs_main,
+            Fn_fs_main);
+        return CreateOwn(new PanelShader(layer, sb.Utf8String));
     }
 
     public override Own<UIMaterial> CreateMaterial()
