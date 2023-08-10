@@ -9,6 +9,7 @@ namespace Elffy.Effective;
 
 [DebuggerTypeProxy(typeof(TemporalBufferDebuggerTypeProxy<>))]
 [DebuggerDisplay("Count = {Count}")]
+[Obsolete("don't use", true)]
 public ref struct TemporalBuffer<T>
 {
     private T[]? _rent;
@@ -86,6 +87,7 @@ public ref struct TemporalBuffer<T>
     }
 }
 
+[Obsolete("don't use", true)]
 internal sealed class TemporalBufferDebuggerTypeProxy<T>
 {
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
