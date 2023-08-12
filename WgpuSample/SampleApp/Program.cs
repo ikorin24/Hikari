@@ -258,7 +258,7 @@ public partial class Counter
             "@type": {{typeof(Panel)}},
             "Width": {{props.Width}},
             "Height": {{props.Height}},
-            "BackgroundColor": "#fff",
+            "BackgroundColor": "#ddd",
             "BorderRadius": "10px",
             "Children": [
             {
@@ -267,7 +267,7 @@ public partial class Counter
                 "VerticalAlignment": "Top",
                 "Height": 80,
                 "FontSize": 30,
-                "BackgroundColor": "#4f4",
+                "BackgroundColor": "#27acd9",
                 "BorderRadius": "10px 10px 0px 0px",
                 "Text": {{text}}
             },
@@ -307,27 +307,23 @@ public partial class CountButton
             "Width": {{props.Width}},
             "Height": {{props.Height}},
             "BorderRadius": {{props.Height / 2f}},
-            "BorderColor": "#ff4310",
+            "BorderColor": "#27acd9",
             "BorderWidth": 10,
-            "BackgroundColor": "#fa5",
+            "BackgroundColor": "#fff",
             "Text": "click me!",
             "FontSize": 30,
+            "Color": "red",
             "Clicked": {{props.Clicked}},
             "&:Hover": {
-                "Width": {{props.Width + 20}},
-                "Height": {{props.Height + 20}},
-                "BorderRadius": {{(props.Height + 20) / 2f}},
-                "BackgroundColor": "#8fc",
-                "BorderWidth": 20,
-                "BorderColor": "#6df"
+                "Width": {{props.Width + 1}},
+                "Height": {{props.Height + 1}},
+                "BackgroundColor": "#27acd9",
             },
             "&:Active": {
-                "Width": {{props.Width + 30}},
-                "Height": {{props.Height + 30}},
-                "BorderRadius": {{(props.Height + 30) / 2f}},
-                "BackgroundColor": "#4f4",
-                "BorderWidth": 30,
-                "BorderColor": "#0f0"
+                "Width": {{props.Width - 4}},
+                "Height": {{props.Height - 4}},
+                "BackgroundColor": "#1089d9",
+                "BorderColor": "#1089d9",
             }
         }
         """;
