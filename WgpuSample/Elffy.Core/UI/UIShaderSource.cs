@@ -100,21 +100,21 @@ internal static class UIShaderSource
         ) -> vec4<f32> {
             // pixel coordinates, which is not normalized
             let f_pos: vec2<f32> = floor(f.clip_pos.xy);
-            let pos: vec2<f32> = round(data.rect.xy);
-            let size: vec2<f32> = round(data.rect.zw);
+            let pos: vec2<f32> = floor(data.rect.xy);
+            let size: vec2<f32> = floor(data.rect.zw);
             var back_color: vec4<f32> = calc_back_color(f_pos, pos, size);
             let b_color: vec4<f32> = data.border_solid_color;
             let b_radius = array<f32, 4>(
-                round(data.border_radius.x),
-                round(data.border_radius.y),
-                round(data.border_radius.z),
-                round(data.border_radius.w),
+                floor(data.border_radius.x),
+                floor(data.border_radius.y),
+                floor(data.border_radius.z),
+                floor(data.border_radius.w),
             );
             let b_width = array<f32, 4>(
-                round(data.border_width.x),
-                round(data.border_width.y),
-                round(data.border_width.z),
-                round(data.border_width.w),
+                floor(data.border_width.x),
+                floor(data.border_width.y),
+                floor(data.border_width.z),
+                floor(data.border_width.w),
             );
             let center = array<vec2<f32>, 4>(
                 pos + vec2<f32>(b_radius[0], b_radius[0]),
