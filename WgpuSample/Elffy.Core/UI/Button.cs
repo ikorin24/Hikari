@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Elffy;
 using Elffy.Effective;
+using Elffy.Internal;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -94,57 +95,12 @@ internal record struct ButtonInfo
 
 file sealed class ButtonShader : UIShader
 {
-    private static ReadOnlySpan<byte> ShaderSource => """
-        struct Vin {
-            @location(0) pos: vec3<f32>,
-            @location(1) uv: vec2<f32>,
-        }
-        struct V2F {
-            @builtin(position) clip_pos: vec4<f32>,
-            @location(0) uv: vec2<f32>,
-        }
-        struct ScreenInfo {
-            size: vec2<u32>,
-        }
-        struct BufferData
-        {
-            mvp: mat4x4<f32>,
-            solid_color: vec4<f32>,
-            rect: vec4<f32>,            // (x, y, width, height)
-            border_width: vec4<f32>,    // (top, right, bottom, left)
-            border_radius: vec4<f32>,   // (top-left, top-right, bottom-right, bottom-left)
-            border_solid_color: vec4<f32>,
-        }
-
-        @group(0) @binding(0) var<uniform> screen: ScreenInfo;
-        @group(0) @binding(1) var<uniform> data: BufferData;
+    private static ReadOnlySpan<byte> Group1 => """
         @group(1) @binding(0) var tex: texture_2d<f32>;
         @group(1) @binding(1) var tex_sampler: sampler;
+        """u8;
 
-        const PI: f32 = 3.141592653589793;
-        const INV_PI: f32 = 0.3183098861837907;
-
-        @vertex fn vs_main(
-            v: Vin,
-        ) -> V2F {
-            var o: V2F;
-            o.clip_pos = data.mvp * vec4<f32>(v.pos, 1.0);
-            o.uv = v.uv;
-            return o;
-        }
-
-        fn pow_x2(x: f32) -> f32 {
-            return x * x;
-        }
-
-        fn blend(src: vec4<f32>, dst: vec4<f32>, x: f32) -> vec4<f32> {
-            let a = src.a * x;
-            return vec4(
-                src.rgb * a + (1.0 - a) * dst.rgb,
-                a + (1.0 - a) * dst.a,
-            );
-        }
-
+    private static ReadOnlySpan<byte> Fn_get_texel_color => """
         const TEXT_HALIGN_LEFT: u32 = 0u;
         const TEXT_HALIGN_CENTER: u32 = 1u;
         const TEXT_HALIGN_RIGHT: u32 = 2u;
@@ -152,14 +108,20 @@ file sealed class ButtonShader : UIShader
         const TEXT_VALIGN_CENTER: u32 = 1u;
         const TEXT_VALIGN_BOTTOM: u32 = 2u;
 
-        fn get_texel_color(fragcoord: vec2<f32>, h_align: u32, v_align: u32) -> vec4<f32> {
+        fn get_texel_color(
+            f_pos: vec2<f32>, 
+            h_align: u32, 
+            v_align: u32,
+            rect_pos: vec2<f32>,
+            rect_size: vec2<f32>,
+        ) -> vec4<f32> {
             let tex_size: vec2<i32> = textureDimensions(tex, 0).xy;
             var offset_in_rect: vec2<f32>;
             if(h_align == TEXT_HALIGN_CENTER) {
-                offset_in_rect.x = (data.rect.z - vec2<f32>(tex_size).x) * 0.5;
+                offset_in_rect.x = (rect_size.x - vec2<f32>(tex_size).x) * 0.5;
             }
             else if(h_align == TEXT_HALIGN_RIGHT) {
-                offset_in_rect.x = data.rect.z - vec2<f32>(tex_size).x;
+                offset_in_rect.x = rect_size.x - vec2<f32>(tex_size).x;
             }
             else {
                 // h_align == TEXT_HALIGN_LEFT
@@ -167,16 +129,16 @@ file sealed class ButtonShader : UIShader
             }
 
             if(v_align == TEXT_VALIGN_CENTER) {
-                offset_in_rect.y = (data.rect.w - vec2<f32>(tex_size).y) * 0.5;
+                offset_in_rect.y = (rect_size.y - vec2<f32>(tex_size).y) * 0.5;
             }
             else if(v_align == TEXT_VALIGN_TOP) {
                 offset_in_rect.y = 0.0;
             }
             else {
                 // v_align == TEXT_VALIGN_BOTTOM
-                offset_in_rect.y = data.rect.w - vec2<f32>(tex_size).y;
+                offset_in_rect.y = rect_size.y - vec2<f32>(tex_size).y;
             }
-            let texel_pos: vec2<f32> = fragcoord - (data.rect.xy + offset_in_rect);
+            let texel_pos: vec2<f32> = f_pos - (rect_pos + offset_in_rect);
             if(texel_pos.x < 0.0 || texel_pos.x >= f32(tex_size.x) || texel_pos.y < 0.0 || texel_pos.y >= f32(tex_size.y)) {
                 return vec4<f32>(0.0, 0.0, 0.0, 0.0);
             }
@@ -184,158 +146,13 @@ file sealed class ButtonShader : UIShader
                 return textureLoad(tex, vec2<i32>(texel_pos), 0);
             }
         }
-
-        @fragment fn fs_main(
-            f: V2F,
-        ) -> @location(0) vec4<f32> {
-            // pixel coordinates, which is not normalized
-            let fragcoord: vec2<f32> = f.clip_pos.xy;
-            let texel_color = get_texel_color(fragcoord, TEXT_HALIGN_CENTER, TEXT_VALIGN_CENTER);
-            var color: vec4<f32> = blend(texel_color, data.solid_color, 1.0);
-
-            let b_radius = data.border_radius;
-
-            // top-left corner
-            let center_tl = data.rect.xy + vec2<f32>(b_radius.x, b_radius.x);
-            if(fragcoord.x < center_tl.x && fragcoord.y < center_tl.y) {
-                let d = fragcoord - center_tl;
-                let len_d = length(d);
-                if(len_d > b_radius.x + 1.0) {
-                    discard;
-                }
-                if(len_d > b_radius.x) {
-                    return vec4<f32>(
-                        data.border_solid_color.rgb, 
-                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
-                    );
-                }
-                var a = b_radius.x - data.border_width.w;   // x-axis radius of ellipse
-                var b = b_radius.x - data.border_width.x;   // y-axis radius of ellipse
-
-                // vector from center of ellipse to the crossed point of 'd' and the ellipse
-                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
-                let len_v = length(v);
-                if(len_d > len_v) {
-                    return data.border_solid_color;
-                }
-                let diff = len_v - len_d;
-                if(diff <= 1.0) {
-                    return blend(data.border_solid_color, color, 1.0 - diff);
-                }
-            }
-
-            // top-right corner
-            let center_tr = data.rect.xy + vec2<f32>(data.rect.z - b_radius.y, b_radius.y);
-            if(fragcoord.x >= center_tr.x && fragcoord.y < center_tr.y) {
-                let d = fragcoord - center_tr;
-                let len_d = length(d);
-                if(len_d > b_radius.x + 1.0) {
-                    discard;
-                }
-                if(len_d > b_radius.x) {
-                    return vec4<f32>(
-                        data.border_solid_color.rgb, 
-                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
-                    );
-                }
-                var a = b_radius.y - data.border_width.y;   // x-axis radius of ellipse
-                var b = b_radius.y - data.border_width.x;   // y-axis radius of ellipse
-
-                // vector from center of ellipse to the crossed point of 'd' and the ellipse
-                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
-                let len_v = length(v);
-                if(len_d > len_v) {
-                    return data.border_solid_color;
-                }
-                let diff = len_v - len_d;
-                if(diff <= 1.0) {
-                    return blend(data.border_solid_color, color, 1.0 - diff);
-                }
-            }
-
-            // bottom-right corner
-            let center_br = data.rect.xy + vec2<f32>(data.rect.z - b_radius.z, data.rect.w - b_radius.z);
-            if(fragcoord.x >= center_br.x && fragcoord.y >= center_br.y) {
-                let d = fragcoord - center_br;
-                let len_d = length(d);
-                if(len_d > b_radius.x + 1.0) {
-                    discard;
-                }
-                if(len_d > b_radius.x) {
-                    return vec4<f32>(
-                        data.border_solid_color.rgb, 
-                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
-                    );
-                }
-                var a = b_radius.z - data.border_width.y;   // x-axis radius of ellipse
-                var b = b_radius.z - data.border_width.z;   // y-axis radius of ellipse
-
-                // vector from center of ellipse to the crossed point of 'd' and the ellipse
-                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
-                let len_v = length(v);
-                if(len_d > len_v) {
-                    return data.border_solid_color;
-                }
-                let diff = len_v - len_d;
-                if(diff <= 1.0) {
-                    return blend(data.border_solid_color, color, 1.0 - diff);
-                }
-            }
-
-            // bottom-left corner
-            let center_bl = data.rect.xy + vec2<f32>(b_radius.w, data.rect.w - b_radius.w);
-            if(fragcoord.x < center_bl.x && fragcoord.y >= center_bl.y) {
-                let d = fragcoord - center_bl;
-                let len_d = length(d);
-                if(len_d > b_radius.x + 1.0) {
-                    discard;
-                }
-                if(len_d > b_radius.x) {
-                    return vec4<f32>(
-                        data.border_solid_color.rgb, 
-                        data.border_solid_color.a * (1.0 - (len_d - b_radius.x)),
-                    );
-                }
-                var a = b_radius.z - data.border_width.w;   // x-axis radius of ellipse
-                var b = b_radius.z - data.border_width.z;   // y-axis radius of ellipse
-
-                // vector from center of ellipse to the crossed point of 'd' and the ellipse
-                let v: vec2<f32> = d * a * b / sqrt(pow_x2(b * d.x) + pow_x2(a * d.y));
-                let len_v = length(v);
-                if(len_d > len_v) {
-                    return data.border_solid_color;
-                }
-                let diff = len_v - len_d;
-                if(diff <= 1.0) {
-                    return blend(data.border_solid_color, color, 1.0 - diff);
-                }
-            }
-
-            // top border
-            if(fragcoord.y < data.rect.y + data.border_width.x) {
-                return data.border_solid_color;
-            }
-            // right border
-            if(fragcoord.x >= data.rect.x + data.rect.z - data.border_width.y) {
-                return data.border_solid_color;
-            }
-            // left border
-            if(fragcoord.x < data.rect.x + data.border_width.w) {
-                return data.border_solid_color;
-            }
-            // bottom border
-            if(fragcoord.y >= data.rect.y + data.rect.w - data.border_width.z) {
-                return data.border_solid_color;
-            }
-            return color;
-        }
         """u8;
 
     private readonly Own<Texture> _emptyTexture;
     private readonly Own<Sampler> _emptyTextureSampler;
 
-    private ButtonShader(UILayer operation)
-        : base(ShaderSource, operation, Desc)
+    private ButtonShader(UILayer operation, ReadOnlySpan<byte> shaderSource)
+        : base(shaderSource, operation, Desc)
     {
         _emptyTexture = Texture.Create(operation.Screen, new TextureDescriptor
         {
@@ -413,7 +230,36 @@ file sealed class ButtonShader : UIShader
 
     public static Own<ButtonShader> Create(UILayer layer)
     {
-        return CreateOwn(new ButtonShader(layer));
+        var fs_main = """
+            fn calc_back_color(
+                f_pos: vec2<f32>,
+                pos: vec2<f32>,
+                size: vec2<f32>,
+            ) -> vec4<f32> {
+                let texel_color = get_texel_color(f_pos, TEXT_HALIGN_CENTER, TEXT_VALIGN_CENTER, pos, size);
+                return blend(texel_color, data.solid_color, 1.0);
+            }
+
+            @fragment fn fs_main(
+                f: V2F,
+            ) -> @location(0) vec4<f32> {
+                return ui_color_shared_algorithm(f);
+            }
+            """u8;
+
+        using var sb = Utf8StringBuilder.FromLines(
+            UIShaderSource.TypeDef,
+            UIShaderSource.ConstDef,
+            UIShaderSource.Group0,
+            Group1,
+            UIShaderSource.Fn_pow_x2,
+            UIShaderSource.Fn_blend,
+            UIShaderSource.Fn_vs_main,
+            UIShaderSource.Fn_corner_area_color,
+            Fn_get_texel_color,
+            UIShaderSource.Fn_ui_color_shared_algorithm,
+            fs_main);
+        return CreateOwn(new ButtonShader(layer, sb.Utf8String));
     }
 
     public override Own<UIMaterial> CreateMaterial()
