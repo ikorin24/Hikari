@@ -99,9 +99,7 @@ namespace Elffy.Text
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool MoveNext()
             {
-#if NET5_0_OR_GREATER
             Next:
-#endif
                 if(_str.IsEmpty) {
                     return false;
                 }
@@ -112,14 +110,12 @@ namespace Elffy.Text
                     (_current, _str) = _str.Split2(_separatorStr);
                 }
 
-                if((_options & StringSplitOptions.RemoveEmptyEntries) == StringSplitOptions.RemoveEmptyEntries) {
+                if((_options & StringSplitOptions.TrimEntries) == StringSplitOptions.TrimEntries) {
                     _current = _current.Trim();
                 }
-#if NET5_0_OR_GREATER
-                if((_options & StringSplitOptions.TrimEntries) == StringSplitOptions.TrimEntries) {
+                if((_options & StringSplitOptions.RemoveEmptyEntries) == StringSplitOptions.RemoveEmptyEntries && _current.IsEmpty) {
                     goto Next;
                 }
-#endif
                 return true;
             }
         }

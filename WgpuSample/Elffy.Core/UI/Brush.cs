@@ -97,16 +97,17 @@ public readonly struct Brush
         // "#ffee23"
         // "red"
 
-
         switch(source.ValueKind) {
             case JsonValueKind.String: {
                 var str = source.GetStringNotNull();
                 if(str.StartsWith("LinearGradient(") && str.EndsWith(")")) {
-                    //return ParseLinearGradient(str.AsSpan()[15..^1]);
-                    throw new NotImplementedException();
+                    var (directionDegree, stops) = LinearGradientParser.ParseContent(str.AsSpan()[15..^1]);
+                    return new Brush(directionDegree, stops);
                 }
-                var color = ExternalConstructor.Color4FromJson(source);
-                return Solid(color);
+                else {
+                    var color = ExternalConstructor.Color4FromJson(source);
+                    return new Brush(color);
+                }
             }
             default: {
                 source.ThrowInvalidFormat();
@@ -169,7 +170,7 @@ public enum BrushType
 
 public readonly record struct GradientStop(Color4 Color, float Offset);
 
-public static class LinearGradientParser
+internal static class LinearGradientParser
 {
     [DebuggerDisplay("{DebugView}")]
     private struct ColorPosOrGradientCenter
@@ -298,7 +299,7 @@ public static class LinearGradientParser
         return false;
     }
 
-    public static void ParseContent(ReadOnlySpan<char> str)
+    public static (float DirectionDegree, GradientStop[] Stops) ParseContent(ReadOnlySpan<char> str)
     {
         // "blue, red"
         // "blue 20%, red 80%"
@@ -306,49 +307,61 @@ public static class LinearGradientParser
         // "45deg, blue 20%, 50%, red 80%"
         // "45deg, blue 20% 30%, 50%, red 80%"
 
-        // TODO: avoid allocation
-
-        Debug.WriteLine(str.ToString());
-
         var degree = 0f;
         var first = true;
-        var splits = str.ToString().Split(',', StringSplitOptions.TrimEntries);
-
+        var splits = str.Split(',', StringSplitOptions.TrimEntries);
         var list = new List<ColorPosOrGradientCenter>();
         foreach(var block in splits) {
             if(first && IsDegree(block, out var deg)) {
                 degree = deg;
             }
             else {
-                var values = block.Split(' ', StringSplitOptions.TrimEntries);
-                if(values.Length == 1) {
-                    if(IsColor(values[0], out var c)) {
+                var blocks = block.Split(' ', StringSplitOptions.TrimEntries);
+                var n = 0;
+                ReadOnlySpan<char> block0;
+                ReadOnlySpan<char> block1 = default;
+                ReadOnlySpan<char> block2 = default;
+                using(var e = blocks.GetEnumerator()) {
+                    if(e.MoveNext() == false) { throw new FormatException(); }
+                    block0 = e.Current;
+                    n++;
+                    if(e.MoveNext()) {
+                        block1 = e.Current;
+                        n++;
+                        if(e.MoveNext()) {
+                            block2 = e.Current;
+                            n++;
+                        }
+                    }
+                }
+                if(n == 1) {
+                    if(IsColor(block0, out var c)) {
                         list.Add(new ColorPosOrGradientCenter(c));
                     }
-                    else if(!first && IsPercent(values[0], out var p)) {
+                    else if(!first && IsPercent(block0, out var p)) {
                         list.Add(new ColorPosOrGradientCenter(p * 0.01f));
                     }
                     else {
                         throw new FormatException();
                     }
                 }
-                else if(values.Length == 2) {
-                    if(IsColor(values[0], out var color) == false) {
+                else if(n == 2) {
+                    if(IsColor(block0, out var color) == false) {
                         throw new FormatException();
                     }
-                    if(IsPercent(values[1], out var p1) == false) {
+                    if(IsPercent(block1, out var p1) == false) {
                         throw new FormatException();
                     }
                     list.Add(new ColorPosOrGradientCenter(color, p1 * 0.01f));
                 }
                 else {
-                    if(IsColor(values[0], out var color) == false) {
+                    if(IsColor(block0, out var color) == false) {
                         throw new FormatException();
                     }
-                    if(IsPercent(values[1], out var p1) == false) {
+                    if(IsPercent(block1, out var p1) == false) {
                         throw new FormatException();
                     }
-                    if(IsPercent(values[2], out var p2) == false) {
+                    if(IsPercent(block2, out var p2) == false) {
                         throw new FormatException();
                     }
                     list.Add(new ColorPosOrGradientCenter(color, p1 * 0.01f));
@@ -357,8 +370,16 @@ public static class LinearGradientParser
             }
             first = false;
         }
-        Validate(list.AsSpan());
-        return;
+
+        var data = list.AsSpan();
+        Validate(data);
+        var stops = new GradientStop[data.Length];
+        for(int i = 0; i < stops.Length; i++) {
+            var offset = data[i].Pos;
+            Debug.Assert(offset.HasValue);
+            stops[i] = new GradientStop(data[i].Color, offset.Value);
+        }
+        return (degree, stops);
     }
 
     private static void Validate(Span<ColorPosOrGradientCenter> span)
@@ -401,7 +422,6 @@ public static class LinearGradientParser
             }
         }
 
-
         for(int i = 0; i < span.Length; i++) {
             if(span[i].IsColorPos(out _, out _)) { continue; }
             var center = span[i].GradientCenter;
@@ -418,8 +438,6 @@ public static class LinearGradientParser
                 span[i] = new ColorPosOrGradientCenter(prevColor, next.Value - diff2 * 2);
             }
         }
-
-        return;
     }
 }
 
