@@ -42,6 +42,9 @@ public readonly struct Brush
 
     private Brush(float directionDegree, GradientStop[] gradientStops)
     {
+        if(gradientStops.Length < 2) {
+            throw new ArgumentException("GradientStops must have at least 2 elements.");
+        }
         _type = BrushType.LinearGradient;
         _solidColor = default;
         _directionDegree = directionDegree;
