@@ -91,6 +91,8 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool TryFromWebColorName(string name, out Color3 color) => WebColors.TryGetColor3(name, out color);
 
+        public static bool TryFromWebColorName(ReadOnlySpan<char> name, out Color3 color) => WebColors.TryGetColor3(name, out color);
+
         /// <summary>Get color from web color name, which must be small letter.</summary>
         /// <param name="name">web color name</param>
         /// <returns>color</returns>
@@ -99,6 +101,12 @@ namespace Elffy
             WebColors.TryGetColor3(name, out var color) ? color :
             throw new ArgumentException($"Web color name is not defined. The name must be small letter. (name='{name}')");
 
+        public static Color3 FromWebColorName(ReadOnlySpan<char> name) =>
+            WebColors.TryGetColor3(name, out var color) ? color :
+            throw new ArgumentException($"Web color name is not defined. The name must be small letter. (name='{name.ToString()}')");
+
         public static bool IsWebColorDefined(string name) => WebColors.IsDefined(name);
+
+        public static bool IsWebColorDefined(ReadOnlySpan<char> name) => WebColors.IsDefined(name);
     }
 }
