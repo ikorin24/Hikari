@@ -47,7 +47,6 @@ partial class SpanExtension
 }
 
 [DebuggerTypeProxy(typeof(Utf16StringsDebuggerTypeProxy))]
-//[DebuggerDisplay("ReadOnlySpan<char>[{Count()}]")]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
 public readonly ref struct SplitUtf16Strings
 {
