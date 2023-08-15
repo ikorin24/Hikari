@@ -17,6 +17,9 @@ internal static class UIShaderSource
         public required Color4 BorderSolidColor { get; init; }
     }
 
+    [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_vec4_f32, Size = 32)]
+    public readonly record struct BrushData(Color4 Color, float Offset);
+
     public static ReadOnlySpan<byte> TypeDef => """
         struct Vin {
             @location(0) pos: vec3<f32>,

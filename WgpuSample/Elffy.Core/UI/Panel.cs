@@ -188,12 +188,6 @@ file sealed class PanelShader : UIShader
             }
         }
 
-        private void WriteUniform(in UIShaderSource.BufferData data)
-        {
-            var buffer = _buffer.AsValue();
-            buffer.WriteData(0, data);
-        }
-
         internal static Own<Material> Create(UIShader shader, Texture texture, Sampler sampler)
         {
             var screen = shader.Screen;
@@ -222,7 +216,7 @@ file sealed class PanelShader : UIShader
 
         public override void UpdateMaterial(UIElement element, in UIUpdateResult result)
         {
-            WriteUniform(new()
+            _buffer.AsValue().WriteData(0, new UIShaderSource.BufferData
             {
                 Mvp = result.MvpMatrix,
                 SolidColor = result.BackgroundColor.SolidColor,

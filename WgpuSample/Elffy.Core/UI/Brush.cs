@@ -158,13 +158,14 @@ public readonly struct Brush
 
         switch(_type) {
             case BrushType.Solid: {
-                Span<byte> span = stackalloc byte[48];
+                Span<byte> span = stackalloc byte[16 + 32];
                 BinaryPrimitives.WriteSingleLittleEndian(span[0..4], 0f);
-                BinaryPrimitives.WriteSingleLittleEndian(span[16..20], _solidColor.R);
-                BinaryPrimitives.WriteSingleLittleEndian(span[20..24], _solidColor.G);
-                BinaryPrimitives.WriteSingleLittleEndian(span[24..28], _solidColor.B);
-                BinaryPrimitives.WriteSingleLittleEndian(span[28..32], _solidColor.A);
-                BinaryPrimitives.WriteSingleLittleEndian(span[32..36], 0f);
+                var brushData = span[16..].MarshalCast<byte, UIShaderSource.BrushData>();
+                brushData[0] = new()
+                {
+                    Color = _solidColor,
+                    Offset = 0f,
+                };
                 action.Invoke(span, arg);
                 break;
             }
@@ -172,14 +173,13 @@ public readonly struct Brush
                 using var mem = new ValueTypeRentMemory<byte>(16 + _gradientStops.Length * 32, false, out var span);
                 BinaryPrimitives.WriteSingleLittleEndian(span[0..4], _directionRadian);
                 span[4..16].Clear();
+                var brushData = span[16..].MarshalCast<byte, UIShaderSource.BrushData>();
                 for(int i = 0; i < _gradientStops.Length; i++) {
-                    var o = 16 + i * 32;
-                    BinaryPrimitives.WriteSingleLittleEndian(span[(o + 0)..(o + 4)], _gradientStops[i].Color.R);
-                    BinaryPrimitives.WriteSingleLittleEndian(span[(o + 4)..(o + 8)], _gradientStops[i].Color.G);
-                    BinaryPrimitives.WriteSingleLittleEndian(span[(o + 8)..(o + 12)], _gradientStops[i].Color.B);
-                    BinaryPrimitives.WriteSingleLittleEndian(span[(o + 12)..(o + 16)], _gradientStops[i].Color.A);
-                    BinaryPrimitives.WriteSingleLittleEndian(span[(o + 16)..(o + 20)], _gradientStops[i].Offset);
-                    span[(o + 20)..(o + 32)].Clear();
+                    brushData[i] = new()
+                    {
+                        Color = _gradientStops[i].Color,
+                        Offset = _gradientStops[i].Offset,
+                    };
                     action.Invoke(span, arg);
                 }
                 break;

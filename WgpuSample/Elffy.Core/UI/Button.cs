@@ -282,15 +282,13 @@ file sealed class ButtonShader : UIShader
 
         private Material(
             UIShader shader,
-            Own<BindGroup> bindGroup0,
-            Own<BindGroup> bindGroup1,
-            Own<Buffer> buffer,
             MaybeOwn<Texture> texture,
             MaybeOwn<Sampler> sampler)
             : base(shader)
         {
-            _bindGroup0 = bindGroup0;
-            _bindGroup1 = bindGroup1;
+            var buffer = Buffer.Create(Screen, (nuint)Unsafe.SizeOf<UIShaderSource.BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
+            _bindGroup0 = CreateBindGroup0(Screen, shader.Operation.BindGroupLayout0, buffer.AsValue());
+            _bindGroup1 = CreateBindGroup1(Screen, shader.Operation.BindGroupLayout1, texture.AsValue().View, sampler.AsValue());
             _texture = texture;
             _buffer = buffer;
             _sampler = sampler;
@@ -315,28 +313,23 @@ file sealed class ButtonShader : UIShader
             }
         }
 
-        private void WriteUniform(in UIShaderSource.BufferData data)
-        {
-            var buffer = _buffer.AsValue();
-            buffer.WriteData(0, data);
-        }
-
         internal static Own<Material> Create(UIShader shader, MaybeOwn<Texture> texture, MaybeOwn<Sampler> sampler)
         {
-            var screen = shader.Screen;
-            var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<UIShaderSource.BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
-            var bindGroup0 = BindGroup.Create(screen, new()
+            var self = new Material(shader, texture, sampler);
+            return CreateOwn(self);
+        }
+
+        private static Own<BindGroup> CreateBindGroup0(Screen screen, BindGroupLayout layout, Buffer buffer)
+        {
+            return BindGroup.Create(screen, new()
             {
-                Layout = shader.Operation.BindGroupLayout0,
+                Layout = layout,
                 Entries = new[]
                 {
                     BindGroupEntry.Buffer(0, screen.InfoBuffer),
-                    BindGroupEntry.Buffer(1, buffer.AsValue()),
+                    BindGroupEntry.Buffer(1, buffer),
                 },
             });
-            var bindGroup1 = CreateBindGroup1(screen, shader.Operation.BindGroupLayout1, texture.AsValue().View, sampler.AsValue());
-            var self = new Material(shader, bindGroup0, bindGroup1, buffer, texture, sampler);
-            return CreateOwn(self);
         }
 
         private static Own<BindGroup> CreateBindGroup1(Screen screen, BindGroupLayout layout, TextureView textureView, Sampler sampler)
@@ -370,8 +363,9 @@ file sealed class ButtonShader : UIShader
             };
             if(_bufferData != bufferData) {
                 _bufferData = bufferData;
-                WriteUniform(bufferData);
+                _buffer.AsValue().WriteData(0, bufferData);
             }
+            UpdateBackground(result.BackgroundColor);
         }
 
         private void UpdateButtonTexture(in ButtonInfo button)
