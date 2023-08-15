@@ -163,17 +163,6 @@ file sealed class PanelShader : UIShader
         private readonly Own<BindGroup> _bindGroup0;
         private readonly Own<BindGroup> _bindGroup1;
 
-        [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_mat4x4_f32)]
-        private readonly struct BufferData
-        {
-            public required Matrix4 Mvp { get; init; }
-            public required Color4 SolidColor { get; init; }
-            public required RectF Rect { get; init; }
-            public required Vector4 BorderWidth { get; init; }
-            public required Vector4 BorderRadius { get; init; }
-            public required Color4 BorderSolidColor { get; init; }
-        }
-
         public override BindGroup BindGroup0 => _bindGroup0.AsValue();
         public override BindGroup BindGroup1 => _bindGroup1.AsValue();
 
@@ -199,7 +188,7 @@ file sealed class PanelShader : UIShader
             }
         }
 
-        private void WriteUniform(in BufferData data)
+        private void WriteUniform(in UIShaderSource.BufferData data)
         {
             var buffer = _buffer.AsValue();
             buffer.WriteData(0, data);
@@ -208,7 +197,7 @@ file sealed class PanelShader : UIShader
         internal static Own<Material> Create(UIShader shader, Texture texture, Sampler sampler)
         {
             var screen = shader.Screen;
-            var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
+            var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<UIShaderSource.BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
             var bindGroup0 = BindGroup.Create(screen, new()
             {
                 Layout = shader.Operation.BindGroupLayout0,

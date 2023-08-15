@@ -1,10 +1,22 @@
 ﻿#nullable enable
 using System;
+using System.Runtime.InteropServices;
 
 namespace Elffy.UI;
 
 internal static class UIShaderSource
 {
+    [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_mat4x4_f32)]
+    public readonly record struct BufferData
+    {
+        public required Matrix4 Mvp { get; init; }
+        public required Color4 SolidColor { get; init; }
+        public required RectF Rect { get; init; }
+        public required Vector4 BorderWidth { get; init; }
+        public required Vector4 BorderRadius { get; init; }
+        public required Color4 BorderSolidColor { get; init; }
+    }
+
     public static ReadOnlySpan<byte> TypeDef => """
         struct Vin {
             @location(0) pos: vec3<f32>,

@@ -274,19 +274,8 @@ file sealed class ButtonShader : UIShader
         private Own<BindGroup> _bindGroup1;
         private MaybeOwn<Texture> _texture;
         private readonly MaybeOwn<Sampler> _sampler;
-        private BufferData? _bufferData;
+        private UIShaderSource.BufferData? _bufferData;
         private ButtonInfo? _buttonInfo;
-
-        [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_mat4x4_f32)]
-        private readonly record struct BufferData
-        {
-            public required Matrix4 Mvp { get; init; }
-            public required Color4 SolidColor { get; init; }
-            public required RectF Rect { get; init; }
-            public required Vector4 BorderWidth { get; init; }
-            public required Vector4 BorderRadius { get; init; }
-            public required Color4 BorderSolidColor { get; init; }
-        }
 
         public override BindGroup BindGroup0 => _bindGroup0.AsValue();
         public override BindGroup BindGroup1 => _bindGroup1.AsValue();
@@ -326,7 +315,7 @@ file sealed class ButtonShader : UIShader
             }
         }
 
-        private void WriteUniform(in BufferData data)
+        private void WriteUniform(in UIShaderSource.BufferData data)
         {
             var buffer = _buffer.AsValue();
             buffer.WriteData(0, data);
@@ -335,7 +324,7 @@ file sealed class ButtonShader : UIShader
         internal static Own<Material> Create(UIShader shader, MaybeOwn<Texture> texture, MaybeOwn<Sampler> sampler)
         {
             var screen = shader.Screen;
-            var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
+            var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<UIShaderSource.BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
             var bindGroup0 = BindGroup.Create(screen, new()
             {
                 Layout = shader.Operation.BindGroupLayout0,
@@ -370,7 +359,7 @@ file sealed class ButtonShader : UIShader
                 _buttonInfo = button.ButtonInfo;
                 UpdateButtonTexture(button.ButtonInfo);
             }
-            var bufferData = new BufferData
+            var bufferData = new UIShaderSource.BufferData
             {
                 Mvp = result.MvpMatrix,
                 SolidColor = result.BackgroundColor.SolidColor,
