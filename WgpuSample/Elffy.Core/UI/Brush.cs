@@ -1,6 +1,8 @@
 ﻿#nullable enable
 using Elffy.Effective;
+using Elffy.Mathematics;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
@@ -15,13 +17,14 @@ public readonly struct Brush
 {
     private readonly BrushType _type;
     private readonly Color4 _solidColor;
-    private readonly float _directionDegree;
+    private readonly float _directionRadian;
     private readonly GradientStop[] _gradientStops;
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebugView => _type switch
     {
         BrushType.Solid => _solidColor.ToColorByte().ToHexCode(),
+        BrushType.LinearGradient => "LinearGradient",
         _ => "?",
     };
 
@@ -40,14 +43,14 @@ public readonly struct Brush
         _gradientStops = Array.Empty<GradientStop>();
     }
 
-    private Brush(float directionDegree, GradientStop[] gradientStops)
+    private Brush(float directionRadian, GradientStop[] gradientStops)
     {
         if(gradientStops.Length < 2) {
             throw new ArgumentException("GradientStops must have at least 2 elements.");
         }
         _type = BrushType.LinearGradient;
         _solidColor = default;
-        _directionDegree = directionDegree;
+        _directionRadian = directionRadian;
         _gradientStops = gradientStops;
     }
 
@@ -90,9 +93,9 @@ public readonly struct Brush
         return new Brush(color);
     }
 
-    public static Brush LinearGradient(float directionDegree, ReadOnlySpan<GradientStop> gradientStops)
+    public static Brush LinearGradient(float directionRadian, ReadOnlySpan<GradientStop> gradientStops)
     {
-        return new Brush(directionDegree, gradientStops.ToArray());
+        return new Brush(directionRadian, gradientStops.ToArray());
     }
 
     public static Brush FromJson(in ObjectSource source)
@@ -105,7 +108,7 @@ public readonly struct Brush
                 var str = source.GetStringNotNull();
                 if(str.StartsWith("LinearGradient(") && str.EndsWith(")")) {
                     var (directionDegree, stops) = LinearGradientParser.ParseContent(str.AsSpan()[15..^1]);
-                    return new Brush(directionDegree, stops);
+                    return new Brush(directionDegree.ToRadian(), stops);
                 }
                 else {
                     var color = ExternalConstructor.Color4FromJson(source);
@@ -137,6 +140,56 @@ public readonly struct Brush
         return JsonValueKind.Object;
     }
 
+    internal int GetBufferDataSize() => _type switch
+    {
+        BrushType.Solid => 48,
+        BrushType.LinearGradient => 16 + _gradientStops.Length * 32,
+        _ => throw new NotImplementedException(),
+    };
+
+    internal void GetBufferData<T>(T arg, ReadOnlySpanAction<byte, T> action)
+    {
+        // | position | size | type        | data       |
+        // | 0 - 3    | 4    | f32         | direction  |
+        // | 4 - 15   | 12   |             | (padding)  |
+        // | 16 - 47  | 32   | Color4, f32 | BrushData  |
+        // | 48 - 79  | 32   | Color4, f32 | BrushData  |
+        // | ...      | 32   | Color4, f32 | BrushData  |
+
+        switch(_type) {
+            case BrushType.Solid: {
+                Span<byte> span = stackalloc byte[48];
+                BinaryPrimitives.WriteSingleLittleEndian(span[0..4], 0f);
+                BinaryPrimitives.WriteSingleLittleEndian(span[16..20], _solidColor.R);
+                BinaryPrimitives.WriteSingleLittleEndian(span[20..24], _solidColor.G);
+                BinaryPrimitives.WriteSingleLittleEndian(span[24..28], _solidColor.B);
+                BinaryPrimitives.WriteSingleLittleEndian(span[28..32], _solidColor.A);
+                BinaryPrimitives.WriteSingleLittleEndian(span[32..36], 0f);
+                action.Invoke(span, arg);
+                break;
+            }
+            case BrushType.LinearGradient: {
+                using var mem = new ValueTypeRentMemory<byte>(16 + _gradientStops.Length * 32, false, out var span);
+                BinaryPrimitives.WriteSingleLittleEndian(span[0..4], _directionRadian);
+                span[4..16].Clear();
+                for(int i = 0; i < _gradientStops.Length; i++) {
+                    var o = 16 + i * 32;
+                    BinaryPrimitives.WriteSingleLittleEndian(span[(o + 0)..(o + 4)], _gradientStops[i].Color.R);
+                    BinaryPrimitives.WriteSingleLittleEndian(span[(o + 4)..(o + 8)], _gradientStops[i].Color.G);
+                    BinaryPrimitives.WriteSingleLittleEndian(span[(o + 8)..(o + 12)], _gradientStops[i].Color.B);
+                    BinaryPrimitives.WriteSingleLittleEndian(span[(o + 12)..(o + 16)], _gradientStops[i].Color.A);
+                    BinaryPrimitives.WriteSingleLittleEndian(span[(o + 16)..(o + 20)], _gradientStops[i].Offset);
+                    span[(o + 20)..(o + 32)].Clear();
+                    action.Invoke(span, arg);
+                }
+                break;
+            }
+            default: {
+                throw new NotImplementedException();
+            }
+        }
+    }
+
     public override bool Equals(object? obj)
     {
         return obj is Brush brush && Equals(brush);
@@ -145,12 +198,14 @@ public readonly struct Brush
     public bool Equals(Brush other)
     {
         return _type == other._type &&
-               _solidColor.Equals(other._solidColor);
+               _solidColor.Equals(other._solidColor) &&
+               _directionRadian == other._directionRadian &&
+               _gradientStops.AsSpan().SequenceEqual(other._gradientStops);
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(_type, _solidColor);
+        return HashCode.Combine(_type, _solidColor, _directionRadian, _gradientStops);
     }
 
     public static bool operator ==(Brush left, Brush right)
