@@ -1,5 +1,7 @@
 ﻿#nullable enable
+using Elffy.Effective;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -13,6 +15,8 @@ public readonly struct Brush
 {
     private readonly BrushType _type;
     private readonly Color4 _solidColor;
+    private readonly float _directionDegree;
+    private readonly GradientStop[] _gradientStops;
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebugView => _type switch
@@ -33,12 +37,27 @@ public readonly struct Brush
     {
         _type = BrushType.Solid;
         _solidColor = solidColor;
+        _gradientStops = Array.Empty<GradientStop>();
+    }
+
+    private Brush(float directionDegree, GradientStop[] gradientStops)
+    {
+        _type = BrushType.LinearGradient;
+        _solidColor = default;
+        _directionDegree = directionDegree;
+        _gradientStops = gradientStops;
     }
 
     public bool TryGetSolidColor(out Color4 solidColor)
     {
         solidColor = _solidColor;
         return _type == BrushType.Solid;
+    }
+
+    public bool TryGetLinearGradient(out ReadOnlyMemory<GradientStop> gradientStops)
+    {
+        gradientStops = _gradientStops;
+        return _type == BrushType.LinearGradient;
     }
 
     public Color4 SolidColor
@@ -52,17 +71,40 @@ public readonly struct Brush
         }
     }
 
+    public ReadOnlyMemory<GradientStop> GradientStops
+    {
+        get
+        {
+            if(_type != BrushType.LinearGradient) {
+                ThrowHelper.ThrowInvalidOperation($"{nameof(Type)} is not {nameof(BrushType.LinearGradient)}");
+            }
+            return _gradientStops;
+        }
+    }
+
     public static Brush Solid(Color4 color)
     {
         return new Brush(color);
+    }
+
+    public static Brush LinearGradient(float directionDegree, ReadOnlySpan<GradientStop> gradientStops)
+    {
+        return new Brush(directionDegree, gradientStops.ToArray());
     }
 
     public static Brush FromJson(in ObjectSource source)
     {
         // "#ffee23"
         // "red"
+
+
         switch(source.ValueKind) {
             case JsonValueKind.String: {
+                var str = source.GetStringNotNull();
+                if(str.StartsWith("LinearGradient(") && str.EndsWith(")")) {
+                    //return ParseLinearGradient(str.AsSpan()[15..^1]);
+                    throw new NotImplementedException();
+                }
                 var color = ExternalConstructor.Color4FromJson(source);
                 return Solid(color);
             }
@@ -121,6 +163,277 @@ public readonly struct Brush
 public enum BrushType
 {
     Solid = 0,
-    //LinearGradient,
+    LinearGradient,
     //RadialGradient,
+}
+
+public readonly record struct GradientStop(Color4 Color, float Offset);
+
+public static class LinearGradientParser
+{
+    [DebuggerDisplay("{DebugView}")]
+    private struct ColorPosOrGradientCenter
+    {
+        private Color4 _color;
+        private float? _colorPos1;
+        private float _gradientCenter;
+        private readonly bool _isColorPos;
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private readonly string DebugView
+        {
+            get
+            {
+                if(_isColorPos) {
+                    return _colorPos1 switch
+                    {
+                        null => $"{_color.ToColorByte().ToHexCode()}",
+                        float pos1 => $"{_color.ToColorByte().ToHexCode()} {pos1 * 100:N0}%",
+                    };
+                }
+                else {
+                    return $"{_gradientCenter * 100:N0}%";
+                }
+            }
+        }
+
+        public Color4 Color
+        {
+            readonly get => _isColorPos ? _color : throw new InvalidOperationException();
+            set
+            {
+                if(_isColorPos) {
+                    _color = value;
+                }
+                else {
+                    throw new InvalidOperationException();
+                }
+            }
+        }
+        public float? Pos
+        {
+            readonly get => _isColorPos ? _colorPos1 : throw new InvalidOperationException();
+            set
+            {
+                if(_isColorPos) {
+                    _colorPos1 = value;
+                }
+                else {
+                    throw new InvalidOperationException();
+                }
+            }
+        }
+        public float GradientCenter
+        {
+            readonly get => _isColorPos ? throw new InvalidOperationException() : _gradientCenter;
+            set
+            {
+                if(_isColorPos) {
+                    throw new InvalidOperationException();
+                }
+                else {
+                    _gradientCenter = value;
+                }
+            }
+        }
+
+        public ColorPosOrGradientCenter(Color4 color)
+        {
+            _color = color;
+            _colorPos1 = null;
+            _gradientCenter = 0;
+            _isColorPos = true;
+        }
+
+        public ColorPosOrGradientCenter(Color4 color, float pos1)
+        {
+            _color = color;
+            _colorPos1 = pos1;
+            _gradientCenter = 0;
+            _isColorPos = true;
+        }
+
+        public ColorPosOrGradientCenter(float gradientCenter)
+        {
+            _color = default;
+            _colorPos1 = default;
+            _gradientCenter = gradientCenter;
+            _isColorPos = false;
+        }
+
+        public readonly bool IsColorPos(out Color4 color, out float? pos1)
+        {
+            if(_isColorPos) {
+                color = _color;
+                pos1 = _colorPos1;
+                return true;
+            }
+            color = default;
+            pos1 = default;
+            return false;
+        }
+    }
+
+    private static bool IsDegree(ReadOnlySpan<char> str, out float degree)
+    {
+        if(str.EndsWith("deg") && float.TryParse(str[..^3], out var deg)) {
+            degree = deg;
+            return true;
+        }
+        degree = 0;
+        return false;
+    }
+
+    private static bool IsColor(ReadOnlySpan<char> str, out Color4 color)
+    {
+        return Color4.TryFromHexCode(str, out color) || Color4.TryFromWebColorName(str, out color);
+    }
+
+    private static bool IsPercent(ReadOnlySpan<char> str, out float percent)
+    {
+        if(str.EndsWith("%")) {
+            return float.TryParse(str[..^1], out percent);
+        }
+        percent = 0;
+        return false;
+    }
+
+    public static void ParseContent(ReadOnlySpan<char> str)
+    {
+        // "blue, red"
+        // "blue 20%, red 80%"
+        // "45deg, blue 20%, red 80%"
+        // "45deg, blue 20%, 50%, red 80%"
+        // "45deg, blue 20% 30%, 50%, red 80%"
+
+        // TODO: avoid allocation
+
+        Debug.WriteLine(str.ToString());
+
+        var degree = 0f;
+        var first = true;
+        var splits = str.ToString().Split(',', StringSplitOptions.TrimEntries);
+
+        var list = new List<ColorPosOrGradientCenter>();
+        foreach(var block in splits) {
+            if(first && IsDegree(block, out var deg)) {
+                degree = deg;
+            }
+            else {
+                var values = block.Split(' ', StringSplitOptions.TrimEntries);
+                if(values.Length == 1) {
+                    if(IsColor(values[0], out var c)) {
+                        list.Add(new ColorPosOrGradientCenter(c));
+                    }
+                    else if(!first && IsPercent(values[0], out var p)) {
+                        list.Add(new ColorPosOrGradientCenter(p * 0.01f));
+                    }
+                    else {
+                        throw new FormatException();
+                    }
+                }
+                else if(values.Length == 2) {
+                    if(IsColor(values[0], out var color) == false) {
+                        throw new FormatException();
+                    }
+                    if(IsPercent(values[1], out var p1) == false) {
+                        throw new FormatException();
+                    }
+                    list.Add(new ColorPosOrGradientCenter(color, p1 * 0.01f));
+                }
+                else {
+                    if(IsColor(values[0], out var color) == false) {
+                        throw new FormatException();
+                    }
+                    if(IsPercent(values[1], out var p1) == false) {
+                        throw new FormatException();
+                    }
+                    if(IsPercent(values[2], out var p2) == false) {
+                        throw new FormatException();
+                    }
+                    list.Add(new ColorPosOrGradientCenter(color, p1 * 0.01f));
+                    list.Add(new ColorPosOrGradientCenter(color, p2 * 0.01f));
+                }
+            }
+            first = false;
+        }
+        Validate(list.AsSpan());
+        return;
+    }
+
+    private static void Validate(Span<ColorPosOrGradientCenter> span)
+    {
+        if(span.Length < 2) {
+            throw new FormatException();
+        }
+
+        {
+            if(span[0].IsColorPos(out var color, out var p) == false) {
+                throw new FormatException();
+            }
+            span[0].Pos = p ?? 0;
+        }
+        {
+            if(span[^1].IsColorPos(out var color, out var p) == false) {
+                throw new FormatException();
+            }
+            span[^1].Pos = p ?? 1;
+        }
+
+        float currentPos = span[0].Pos!.Value;
+        for(int i = 0; i < span.Length; i++) {
+            if(span[i].IsColorPos(out var color, out float? p)) {
+                float p_;
+                if(p == null) {
+                    var q = span[(i + 1)..].First(
+                        out var index,
+                        static x => x.IsColorPos(out _, out var p) && p.HasValue).Pos!.Value;
+                    p_ = currentPos + (q - currentPos) / (float)(index + 2);
+                }
+                else {
+                    p_ = float.Max(p.Value, currentPos);
+                }
+                span[i].Pos = p_;
+                currentPos = p_;
+            }
+            else {
+                span[i].GradientCenter = float.Max(currentPos, span[i].GradientCenter);
+            }
+        }
+
+
+        for(int i = 0; i < span.Length; i++) {
+            if(span[i].IsColorPos(out _, out _)) { continue; }
+            var center = span[i].GradientCenter;
+            if(span[i - 1].IsColorPos(out var prevColor, out var prev) == false) { throw new FormatException(); }
+            if(span[i + 1].IsColorPos(out var nextColor, out var next) == false) { throw new FormatException(); }
+            Debug.Assert(prev.HasValue);
+            Debug.Assert(next.HasValue);
+            var diff1 = center - prev.Value;
+            var diff2 = next.Value - center;
+            if(diff1 < diff2) {
+                span[i] = new ColorPosOrGradientCenter(nextColor, prev.Value + diff1 * 2);
+            }
+            else {
+                span[i] = new ColorPosOrGradientCenter(prevColor, next.Value - diff2 * 2);
+            }
+        }
+
+        return;
+    }
+}
+
+file static class SpanExtensions
+{
+    public static ref T First<T>(this Span<T> span, out int index, Func<T, bool> condition)
+    {
+        for(int i = 0; i < span.Length; i++) {
+            if(condition(span[i])) {
+                index = i;
+                return ref span[i];
+            }
+        }
+
+        throw new InvalidOperationException();
+    }
 }
