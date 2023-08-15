@@ -83,6 +83,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
     {
         base.Release();
         _bindGroupLayout0.Dispose();
+        _bindGroupLayout1.Dispose();
     }
 
     private void UpdateLayout()
