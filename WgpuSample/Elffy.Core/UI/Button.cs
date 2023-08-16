@@ -195,12 +195,15 @@ file sealed class ButtonShader : UIShader
                 let i1 = min(i0 + 1u, background.color_count - 1u);
                 let o0: f32 = background.colors[i0].offset;
                 let o1: f32 = background.colors[i1].offset;
+                let gamma22 = vec4<f32>(2.2, 2.2, 2.2, 2.2);
+                let gamma22i = vec4<f32>(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2);
+
                 let mixed_color = mix(
-                    background.colors[i0].color,
-                    background.colors[i1].color,
+                    pow(background.colors[i0].color, gamma22i),
+                    pow(background.colors[i1].color, gamma22i),
                     saturate((a - o0) / (o1 - o0 + 0.0001)),
                 );
-                return blend(texel_color, mixed_color, 1.0);
+                return blend(texel_color, pow(mixed_color, gamma22), 1.0);
             }
 
             @fragment fn fs_main(
