@@ -159,72 +159,23 @@ file sealed class PanelShader : UIShader
 
     private sealed class Material : UIMaterial
     {
-        private readonly Own<Buffer> _buffer;
-        private readonly Own<BindGroup> _bindGroup0;
-        private readonly Own<BindGroup> _bindGroup1;
-
-        public override BindGroup BindGroup0 => _bindGroup0.AsValue();
-        public override BindGroup BindGroup1 => _bindGroup1.AsValue();
-
         private Material(
             UIShader shader,
-            Own<BindGroup> bindGroup0,
-            Own<BindGroup> bindGroup1,
-            Own<Buffer> buffer)
-            : base(shader)
+            Texture texture,
+            Sampler sampler)
+            : base(shader, texture, sampler)
         {
-            _bindGroup0 = bindGroup0;
-            _bindGroup1 = bindGroup1;
-            _buffer = buffer;
-        }
-
-        protected override void Release(bool manualRelease)
-        {
-            base.Release(manualRelease);
-            if(manualRelease) {
-                _bindGroup0.Dispose();
-                _bindGroup1.Dispose();
-                _buffer.Dispose();
-            }
         }
 
         internal static Own<Material> Create(UIShader shader, Texture texture, Sampler sampler)
         {
-            var screen = shader.Screen;
-            var buffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<UIShaderSource.BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
-            var bindGroup0 = BindGroup.Create(screen, new()
-            {
-                Layout = shader.Operation.BindGroupLayout0,
-                Entries = new[]
-                {
-                    BindGroupEntry.Buffer(0, screen.InfoBuffer),
-                    BindGroupEntry.Buffer(1, buffer.AsValue()),
-                },
-            });
-            var bindGroup1 = BindGroup.Create(screen, new()
-            {
-                Layout = shader.Operation.BindGroupLayout1,
-                Entries = new[]
-                {
-                    BindGroupEntry.TextureView(0, texture.View),
-                    BindGroupEntry.Sampler(1, sampler),
-                },
-            });
-            var self = new Material(shader, bindGroup0, bindGroup1, buffer);
+            var self = new Material(shader, texture, sampler);
             return CreateOwn(self);
         }
 
         public override void UpdateMaterial(UIElement element, in UIUpdateResult result)
         {
-            _buffer.AsValue().WriteData(0, new UIShaderSource.BufferData
-            {
-                Mvp = result.MvpMatrix,
-                SolidColor = result.BackgroundColor.SolidColor,
-                Rect = result.ActualRect,
-                BorderWidth = result.ActualBorderWidth,
-                BorderRadius = result.ActualBorderRadius,
-                BorderSolidColor = result.BorderColor.SolidColor,
-            });
+            base.UpdateMaterial(element, result);
         }
     }
 }

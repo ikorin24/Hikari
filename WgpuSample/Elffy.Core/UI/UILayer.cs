@@ -11,6 +11,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 {
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly Own<BindGroupLayout> _bindGroupLayout1;
+    private readonly Own<BindGroupLayout> _bindGroupLayout2;
     private UIElement? _rootElement;
     private bool _isLayoutDirty = false;
 
@@ -53,15 +54,17 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
     public BindGroupLayout BindGroupLayout1 => _bindGroupLayout1.AsValue();
+    public BindGroupLayout BindGroupLayout2 => _bindGroupLayout2.AsValue();
 
     public UILayer(Screen screen, int sortOrder)
         : base(
             screen,
-            CreatePipelineLayout(screen, out var bindGroupLayout0, out var bindGroupLayout1),
+            CreatePipelineLayout(screen, out var bindGroupLayout0, out var bindGroupLayout1, out var bindGroupLayout2),
             sortOrder)
     {
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout1 = bindGroupLayout1;
+        _bindGroupLayout2 = bindGroupLayout2;
         screen.Resized.Subscribe(arg =>
         {
             _isLayoutDirty = true;
@@ -84,6 +87,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         base.Release();
         _bindGroupLayout0.Dispose();
         _bindGroupLayout1.Dispose();
+        _bindGroupLayout2.Dispose();
     }
 
     private void UpdateLayout()
@@ -158,7 +162,11 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         return context.CreateSurfaceRenderPass(colorClear: null, depthStencil: null);
     }
 
-    private static Own<PipelineLayout> CreatePipelineLayout(Screen screen, out Own<BindGroupLayout> layout0, out Own<BindGroupLayout> layout1)
+    private static Own<PipelineLayout> CreatePipelineLayout(
+        Screen screen,
+        out Own<BindGroupLayout> layout0,
+        out Own<BindGroupLayout> layout1,
+        out Own<BindGroupLayout> layout2)
     {
         return PipelineLayout.Create(screen, new()
         {
@@ -188,6 +196,15 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
                         BindGroupLayoutEntry.Sampler(1, ShaderStages.Vertex | ShaderStages.Fragment, SamplerBindingType.NonFiltering),
                     },
                 }).AsValue(out layout1),
+
+                // group 2
+                BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new[]
+                    {
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
+                    },
+                }).AsValue(out layout2),
             },
         });
     }

@@ -25,6 +25,7 @@ internal sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShad
         pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
         pass.SetBindGroup(0, material.BindGroup0);
         pass.SetBindGroup(1, material.BindGroup1);
+        pass.SetBindGroup(2, material.BindGroup2);
         pass.DrawIndexed(mesh.IndexCount);
     }
 

@@ -269,48 +269,14 @@ file sealed class ButtonShader : UIShader
 
     private sealed class Material : UIMaterial
     {
-        private readonly Own<Buffer> _buffer;
-        private readonly Own<BindGroup> _bindGroup0;
-        private Own<BindGroup> _bindGroup1;
-        private MaybeOwn<Texture> _texture;
-        private readonly MaybeOwn<Sampler> _sampler;
-        private UIShaderSource.BufferData? _bufferData;
         private ButtonInfo? _buttonInfo;
-
-        public override BindGroup BindGroup0 => _bindGroup0.AsValue();
-        public override BindGroup BindGroup1 => _bindGroup1.AsValue();
 
         private Material(
             UIShader shader,
             MaybeOwn<Texture> texture,
             MaybeOwn<Sampler> sampler)
-            : base(shader)
+            : base(shader, texture, sampler)
         {
-            var buffer = Buffer.Create(Screen, (nuint)Unsafe.SizeOf<UIShaderSource.BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
-            _bindGroup0 = CreateBindGroup0(Screen, shader.Operation.BindGroupLayout0, buffer.AsValue());
-            _bindGroup1 = CreateBindGroup1(Screen, shader.Operation.BindGroupLayout1, texture.AsValue().View, sampler.AsValue());
-            _texture = texture;
-            _buffer = buffer;
-            _sampler = sampler;
-        }
-
-        public override void Validate()
-        {
-            base.Validate();
-            _texture.Validate();
-            _sampler.Validate();
-        }
-
-        protected override void Release(bool manualRelease)
-        {
-            base.Release(manualRelease);
-            if(manualRelease) {
-                _bindGroup0.Dispose();
-                _bindGroup1.Dispose();
-                _buffer.Dispose();
-                _texture.Dispose();
-                _sampler.Dispose();
-            }
         }
 
         internal static Own<Material> Create(UIShader shader, MaybeOwn<Texture> texture, MaybeOwn<Sampler> sampler)
@@ -319,53 +285,14 @@ file sealed class ButtonShader : UIShader
             return CreateOwn(self);
         }
 
-        private static Own<BindGroup> CreateBindGroup0(Screen screen, BindGroupLayout layout, Buffer buffer)
-        {
-            return BindGroup.Create(screen, new()
-            {
-                Layout = layout,
-                Entries = new[]
-                {
-                    BindGroupEntry.Buffer(0, screen.InfoBuffer),
-                    BindGroupEntry.Buffer(1, buffer),
-                },
-            });
-        }
-
-        private static Own<BindGroup> CreateBindGroup1(Screen screen, BindGroupLayout layout, TextureView textureView, Sampler sampler)
-        {
-            return BindGroup.Create(screen, new()
-            {
-                Layout = layout,
-                Entries = new[]
-                {
-                    BindGroupEntry.TextureView(0, textureView),
-                    BindGroupEntry.Sampler(1, sampler),
-                },
-            });
-        }
-
         public override void UpdateMaterial(UIElement element, in UIUpdateResult result)
         {
+            base.UpdateMaterial(element, result);
             var button = (Button)element;
             if(_buttonInfo != button.ButtonInfo) {
                 _buttonInfo = button.ButtonInfo;
                 UpdateButtonTexture(button.ButtonInfo);
             }
-            var bufferData = new UIShaderSource.BufferData
-            {
-                Mvp = result.MvpMatrix,
-                SolidColor = result.BackgroundColor.SolidColor,
-                Rect = result.ActualRect,
-                BorderWidth = result.ActualBorderWidth,
-                BorderRadius = result.ActualBorderRadius,
-                BorderSolidColor = result.BorderColor.SolidColor,
-            };
-            if(_bufferData != bufferData) {
-                _bufferData = bufferData;
-                _buffer.AsValue().WriteData(0, bufferData);
-            }
-            UpdateBackground(result.BackgroundColor);
         }
 
         private void UpdateButtonTexture(in ButtonInfo button)
@@ -392,12 +319,7 @@ file sealed class ButtonShader : UIShader
                         Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
                         Usage = TextureUsages.TextureBinding,
                     }, image.GetPixels().AsBytes());
-
-                    var bindGroup1 = CreateBindGroup1(self.Screen, self.Operation.BindGroupLayout1, texture.AsValue().View, self._sampler.AsValue());
-                    self._bindGroup1.Dispose();
-                    self._texture.Dispose();
-                    self._bindGroup1 = bindGroup1;
-                    self._texture = texture;
+                    self.UpdateTexture(texture);
                 });
             }
         }
