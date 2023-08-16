@@ -95,59 +95,6 @@ internal record struct ButtonInfo
 
 file sealed class ButtonShader : UIShader
 {
-    private static ReadOnlySpan<byte> Group1 => """
-        @group(1) @binding(0) var tex: texture_2d<f32>;
-        @group(1) @binding(1) var tex_sampler: sampler;
-        """u8;
-
-    private static ReadOnlySpan<byte> Fn_get_texel_color => """
-        const TEXT_HALIGN_LEFT: u32 = 0u;
-        const TEXT_HALIGN_CENTER: u32 = 1u;
-        const TEXT_HALIGN_RIGHT: u32 = 2u;
-        const TEXT_VALIGN_TOP: u32 = 0u;
-        const TEXT_VALIGN_CENTER: u32 = 1u;
-        const TEXT_VALIGN_BOTTOM: u32 = 2u;
-
-        fn get_texel_color(
-            f_pos: vec2<f32>, 
-            h_align: u32, 
-            v_align: u32,
-            rect_pos: vec2<f32>,
-            rect_size: vec2<f32>,
-        ) -> vec4<f32> {
-            let tex_size: vec2<i32> = textureDimensions(tex, 0).xy;
-            var offset_in_rect: vec2<f32>;
-            if(h_align == TEXT_HALIGN_CENTER) {
-                offset_in_rect.x = (rect_size.x - vec2<f32>(tex_size).x) * 0.5;
-            }
-            else if(h_align == TEXT_HALIGN_RIGHT) {
-                offset_in_rect.x = rect_size.x - vec2<f32>(tex_size).x;
-            }
-            else {
-                // h_align == TEXT_HALIGN_LEFT
-                offset_in_rect.x = 0.0;
-            }
-
-            if(v_align == TEXT_VALIGN_CENTER) {
-                offset_in_rect.y = (rect_size.y - vec2<f32>(tex_size).y) * 0.5;
-            }
-            else if(v_align == TEXT_VALIGN_TOP) {
-                offset_in_rect.y = 0.0;
-            }
-            else {
-                // v_align == TEXT_VALIGN_BOTTOM
-                offset_in_rect.y = rect_size.y - vec2<f32>(tex_size).y;
-            }
-            let texel_pos: vec2<f32> = f_pos - (rect_pos + offset_in_rect);
-            if(texel_pos.x < 0.0 || texel_pos.x >= f32(tex_size.x) || texel_pos.y < 0.0 || texel_pos.y >= f32(tex_size.y)) {
-                return vec4<f32>(0.0, 0.0, 0.0, 0.0);
-            }
-            else {
-                return textureLoad(tex, vec2<i32>(texel_pos), 0);
-            }
-        }
-        """u8;
-
     private readonly Own<Texture> _emptyTexture;
     private readonly Own<Sampler> _emptyTextureSampler;
 
@@ -237,7 +184,23 @@ file sealed class ButtonShader : UIShader
                 size: vec2<f32>,
             ) -> vec4<f32> {
                 let texel_color = get_texel_color(f_pos, TEXT_HALIGN_CENTER, TEXT_VALIGN_CENTER, pos, size);
-                return blend(texel_color, data.solid_color, 1.0);
+                let a: f32 = ((f_pos - pos) / size).x;
+
+                var j0: f32 = 0.0;
+                for(var i = 0u; i < background.color_count; i++) {
+                    let ok: f32 = step(background.colors[i].offset, a);
+                    j0 = j0 * (1.0 - ok) + f32(i) * ok;
+                }
+                let i0: u32 = u32(j0);
+                let i1 = min(i0 + 1u, background.color_count - 1u);
+                let o0: f32 = background.colors[i0].offset;
+                let o1: f32 = background.colors[i1].offset;
+                let mixed_color = mix(
+                    background.colors[i0].color,
+                    background.colors[i1].color,
+                    saturate((a - o0) / (o1 - o0 + 0.0001)),
+                );
+                return blend(texel_color, mixed_color, 1.0);
             }
 
             @fragment fn fs_main(
@@ -251,12 +214,13 @@ file sealed class ButtonShader : UIShader
             UIShaderSource.TypeDef,
             UIShaderSource.ConstDef,
             UIShaderSource.Group0,
-            Group1,
+            UIShaderSource.Group1,
+            UIShaderSource.Group2,
             UIShaderSource.Fn_pow_x2,
             UIShaderSource.Fn_blend,
             UIShaderSource.Fn_vs_main,
             UIShaderSource.Fn_corner_area_color,
-            Fn_get_texel_color,
+            UIShaderSource.Fn_get_texel_color,
             UIShaderSource.Fn_ui_color_shared_algorithm,
             fs_main);
         return CreateOwn(new ButtonShader(layer, sb.Utf8String));

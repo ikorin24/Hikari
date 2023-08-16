@@ -129,7 +129,8 @@ file sealed class PanelShader : UIShader
                 pos: vec2<f32>,
                 size: vec2<f32>,
             ) -> vec4<f32> {
-                return data.solid_color;
+                //return data.solid_color;
+                return background.colors[0].color;
             }
 
             @fragment fn fs_main(
@@ -143,6 +144,7 @@ file sealed class PanelShader : UIShader
             UIShaderSource.TypeDef,
             UIShaderSource.ConstDef,
             UIShaderSource.Group0,
+            UIShaderSource.Group2,
             UIShaderSource.Fn_pow_x2,
             UIShaderSource.Fn_blend,
             UIShaderSource.Fn_vs_main,

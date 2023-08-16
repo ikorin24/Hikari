@@ -151,17 +151,19 @@ public readonly struct Brush
     {
         // | position | size | type        | data       |
         // | 0 - 3    | 4    | f32         | direction  |
-        // | 4 - 15   | 12   |             | (padding)  |
-        // | 16 - 47  | 32   | Color4, f32 | BrushData  |
-        // | 48 - 79  | 32   | Color4, f32 | BrushData  |
-        // | ...      | 32   | Color4, f32 | BrushData  |
+        // | 4 - 7    | 4    | u32         | count      |
+        // | 8 - 15   | 8    |             | (padding)  |
+        // | 16 - 47  | 32   | Color4, f32 | ColorPoint |
+        // | 48 - 79  | 32   | Color4, f32 | ColorPoint |
+        // | ...      | 32   | Color4, f32 | ColorPoint |
 
         switch(_type) {
             case BrushType.Solid: {
                 Span<byte> span = stackalloc byte[16 + 32];
                 BinaryPrimitives.WriteSingleLittleEndian(span[0..4], 0f);
-                var brushData = span[16..].MarshalCast<byte, UIShaderSource.BrushData>();
-                brushData[0] = new()
+                BinaryPrimitives.WriteUInt32LittleEndian(span[4..8], 1u);
+                var points = span[16..].MarshalCast<byte, UIShaderSource.ColorPoint>();
+                points[0] = new()
                 {
                     Color = _solidColor,
                     Offset = 0f,
@@ -172,16 +174,17 @@ public readonly struct Brush
             case BrushType.LinearGradient: {
                 using var mem = new ValueTypeRentMemory<byte>(16 + _gradientStops.Length * 32, false, out var span);
                 BinaryPrimitives.WriteSingleLittleEndian(span[0..4], _directionRadian);
-                span[4..16].Clear();
-                var brushData = span[16..].MarshalCast<byte, UIShaderSource.BrushData>();
+                BinaryPrimitives.WriteUInt32LittleEndian(span[4..8], (uint)_gradientStops.Length);
+                span[8..16].Clear();
+                var points = span[16..].MarshalCast<byte, UIShaderSource.ColorPoint>();
                 for(int i = 0; i < _gradientStops.Length; i++) {
-                    brushData[i] = new()
+                    points[i] = new()
                     {
                         Color = _gradientStops[i].Color,
                         Offset = _gradientStops[i].Offset,
                     };
-                    action.Invoke(span, arg);
                 }
+                action.Invoke(span, arg);
                 break;
             }
             default: {

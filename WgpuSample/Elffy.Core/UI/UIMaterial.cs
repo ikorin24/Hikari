@@ -28,9 +28,9 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         MaybeOwn<Texture> texture,
         MaybeOwn<Sampler> sampler) : base(shader)
     {
-        var screen = Screen;
         texture.ThrowArgumentExceptionIfNone(nameof(texture));
         sampler.ThrowArgumentExceptionIfNone(nameof(sampler));
+        var screen = Screen;
         _texture = texture;
         _sampler = sampler;
 
@@ -82,7 +82,6 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         var bufferData = new UIShaderSource.BufferData
         {
             Mvp = result.MvpMatrix,
-            SolidColor = result.BackgroundColor.SolidColor,
             Rect = result.ActualRect,
             BorderWidth = result.ActualBorderWidth,
             BorderRadius = result.ActualBorderRadius,
@@ -124,7 +123,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
                 background.GetBufferData(this, static (span, self) =>
                 {
                     self._backgroundBuffer.Dispose();
-                    self._backgroundBuffer = Buffer.CreateInitSpan(self.Screen, span, BufferUsages.Uniform | BufferUsages.CopyDst);
+                    self._backgroundBuffer = Buffer.CreateInitSpan(self.Screen, span, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
                     self.SetBindGroup2();
                 });
             }

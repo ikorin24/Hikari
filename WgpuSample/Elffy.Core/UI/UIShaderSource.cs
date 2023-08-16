@@ -10,7 +10,7 @@ internal static class UIShaderSource
     public readonly record struct BufferData
     {
         public required Matrix4 Mvp { get; init; }
-        public required Color4 SolidColor { get; init; }
+        //public required Color4 SolidColor { get; init; }
         public required RectF Rect { get; init; }
         public required Vector4 BorderWidth { get; init; }
         public required Vector4 BorderRadius { get; init; }
@@ -18,7 +18,7 @@ internal static class UIShaderSource
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_vec4_f32, Size = 32)]
-    public readonly record struct BrushData(Color4 Color, float Offset);
+    public readonly record struct ColorPoint(Color4 Color, float Offset);
 
     public static ReadOnlySpan<byte> TypeDef => """
         struct Vin {
@@ -35,11 +35,23 @@ internal static class UIShaderSource
         struct BufferData
         {
             mvp: mat4x4<f32>,
-            solid_color: vec4<f32>,
             rect: vec4<f32>,            // (x, y, width, height)
             border_width: vec4<f32>,    // (top, right, bottom, left)
             border_radius: vec4<f32>,   // (top-left, top-right, bottom-right, bottom-left)
             border_solid_color: vec4<f32>,
+        }
+
+        struct BrushBufferData
+        {
+            direction: f32,
+            color_count: u32,
+            colors: array<ColorPoint>,
+        }
+
+        struct ColorPoint
+        {
+            color: vec4<f32>,
+            offset: f32,
         }
         """u8;
 
@@ -51,6 +63,13 @@ internal static class UIShaderSource
     public static ReadOnlySpan<byte> Group0 => """
         @group(0) @binding(0) var<uniform> screen: ScreenInfo;
         @group(0) @binding(1) var<uniform> data: BufferData;
+        """u8;
+    public static ReadOnlySpan<byte> Group1 => """
+        @group(1) @binding(0) var tex: texture_2d<f32>;
+        @group(1) @binding(1) var tex_sampler: sampler;
+        """u8;
+    public static ReadOnlySpan<byte> Group2 => """
+        @group(2) @binding(0) var<storage, read> background: BrushBufferData;
         """u8;
 
     public static ReadOnlySpan<byte> Fn_pow_x2 => """
@@ -106,6 +125,54 @@ internal static class UIShaderSource
             let b = saturate(len_d - length(v) + 0.5);
             let b_color_blend = blend(b_color, back_color, b);
             return vec4<f32>(b_color_blend.rgb, b_color_blend.a * a);
+        }
+        """u8;
+
+    public static ReadOnlySpan<byte> Fn_get_texel_color => """
+        const TEXT_HALIGN_LEFT: u32 = 0u;
+        const TEXT_HALIGN_CENTER: u32 = 1u;
+        const TEXT_HALIGN_RIGHT: u32 = 2u;
+        const TEXT_VALIGN_TOP: u32 = 0u;
+        const TEXT_VALIGN_CENTER: u32 = 1u;
+        const TEXT_VALIGN_BOTTOM: u32 = 2u;
+
+        fn get_texel_color(
+            f_pos: vec2<f32>, 
+            h_align: u32, 
+            v_align: u32,
+            rect_pos: vec2<f32>,
+            rect_size: vec2<f32>,
+        ) -> vec4<f32> {
+            let tex_size: vec2<i32> = textureDimensions(tex, 0).xy;
+            var offset_in_rect: vec2<f32>;
+            if(h_align == TEXT_HALIGN_CENTER) {
+                offset_in_rect.x = (rect_size.x - vec2<f32>(tex_size).x) * 0.5;
+            }
+            else if(h_align == TEXT_HALIGN_RIGHT) {
+                offset_in_rect.x = rect_size.x - vec2<f32>(tex_size).x;
+            }
+            else {
+                // h_align == TEXT_HALIGN_LEFT
+                offset_in_rect.x = 0.0;
+            }
+
+            if(v_align == TEXT_VALIGN_CENTER) {
+                offset_in_rect.y = (rect_size.y - vec2<f32>(tex_size).y) * 0.5;
+            }
+            else if(v_align == TEXT_VALIGN_TOP) {
+                offset_in_rect.y = 0.0;
+            }
+            else {
+                // v_align == TEXT_VALIGN_BOTTOM
+                offset_in_rect.y = rect_size.y - vec2<f32>(tex_size).y;
+            }
+            let texel_pos: vec2<f32> = f_pos - (rect_pos + offset_in_rect);
+            if(texel_pos.x < 0.0 || texel_pos.x >= f32(tex_size.x) || texel_pos.y < 0.0 || texel_pos.y >= f32(tex_size.y)) {
+                return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+            }
+            else {
+                return textureLoad(tex, vec2<i32>(texel_pos), 0);
+            }
         }
         """u8;
 
