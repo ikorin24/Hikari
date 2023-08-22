@@ -91,7 +91,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
             _bufferData = bufferData;
             _buffer.AsValue().WriteData(0, bufferData);
         }
-        UpdateBackground(result.BackgroundColor);
+        UpdateBackground(result.Background);
     }
 
     protected void UpdateTexture(MaybeOwn<Texture> texture)

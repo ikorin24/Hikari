@@ -258,7 +258,7 @@ public partial class Counter
             "@type": {{typeof(Panel)}},
             "Width": {{props.Width}},
             "Height": {{props.Height}},
-            "BackgroundColor": "#ddd",
+            "Background": "#ddd",
             "BorderRadius": "10px",
             "Children": [
             {
@@ -267,7 +267,7 @@ public partial class Counter
                 "VerticalAlignment": "Top",
                 "Height": 80,
                 "FontSize": 30,
-                "BackgroundColor": "#27acd9",
+                "Background": "#27acd9",
                 "BorderRadius": "10px 10px 0px 0px",
                 "Text": {{text}}
             },
@@ -309,7 +309,7 @@ public partial class CountButton
             "BorderRadius": {{props.Height / 2f}},
             "BorderColor": "#27acd9",
             "BorderWidth": 10,
-            "BackgroundColor": "#fff",
+            "Background": "#fff",
             "Text": "click me!",
             "FontSize": 30,
             "Color": "red",
@@ -317,12 +317,12 @@ public partial class CountButton
             "&:Hover": {
                 "Width": {{props.Width + 1}},
                 "Height": {{props.Height + 1}},
-                "BackgroundColor": "#27acd9",
+                "Background": "#27acd9",
             },
             "&:Active": {
                 "Width": {{props.Width - 4}},
                 "Height": {{props.Height - 4}},
-                "BackgroundColor": "#1089d9",
+                "Background": "#1089d9",
                 "BorderColor": "#1089d9",
             }
         }

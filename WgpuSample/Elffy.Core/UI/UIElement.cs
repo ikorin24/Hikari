@@ -115,14 +115,14 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    public Brush BackgroundColor
+    public Brush Background
     {
-        get => _info.BackgroundColor;
+        get => _info.Background;
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            if(value == _info.BackgroundColor) { return; }
-            _info.BackgroundColor = value;
+            if(value == _info.Background) { return; }
+            _info.Background = value;
         }
     }
 
@@ -230,8 +230,8 @@ public abstract class UIElement : IToJson, IReactive
         if(source.TryGetProperty(nameof(VerticalAlignment), out var verticalAlignment)) {
             _info.VerticalAlignment = verticalAlignment.ToEnum<VerticalAlignment>();
         }
-        if(source.TryGetProperty(nameof(BackgroundColor), out var backgroundColor)) {
-            _info.BackgroundColor = Brush.FromJson(backgroundColor);
+        if(source.TryGetProperty(nameof(Background), out var backgroundColor)) {
+            _info.Background = Brush.FromJson(backgroundColor);
         }
         if(source.TryGetProperty(nameof(BorderWidth), out var borderWidth)) {
             _info.BorderWidth = Thickness.FromJson(borderWidth);
@@ -281,7 +281,7 @@ public abstract class UIElement : IToJson, IReactive
         writer.Write(nameof(Padding), _info.Padding);
         writer.WriteEnum(nameof(HorizontalAlignment), _info.HorizontalAlignment);
         writer.WriteEnum(nameof(VerticalAlignment), _info.VerticalAlignment);
-        writer.Write(nameof(BackgroundColor), _info.BackgroundColor);
+        writer.Write(nameof(Background), _info.Background);
         writer.Write(nameof(BorderWidth), _info.BorderWidth);
         writer.Write(nameof(BorderRadius), _info.BorderRadius);
         writer.Write(nameof(BorderColor), _info.BorderColor);
@@ -301,7 +301,7 @@ public abstract class UIElement : IToJson, IReactive
         Padding = source.ApplyProperty(nameof(Padding), Padding, () => UIElementInfo.DefaultPadding, out _);
         HorizontalAlignment = source.ApplyProperty(nameof(HorizontalAlignment), HorizontalAlignment, () => UIElementInfo.DefaultHorizontalAlignment, out _);
         VerticalAlignment = source.ApplyProperty(nameof(VerticalAlignment), VerticalAlignment, () => UIElementInfo.DefaultVerticalAlignment, out _);
-        BackgroundColor = source.ApplyProperty(nameof(BackgroundColor), BackgroundColor, () => UIElementInfo.DefaultBackgroundColor, out _);
+        Background = source.ApplyProperty(nameof(Background), Background, () => UIElementInfo.DefaultBackground, out _);
         BorderWidth = source.ApplyProperty(nameof(BorderWidth), BorderWidth, () => UIElementInfo.DefaultBorderWidth, out _);
         BorderRadius = source.ApplyProperty(nameof(BorderRadius), BorderRadius, () => UIElementInfo.DefaultBorderRadius, out _);
         BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, () => UIElementInfo.DefaultBorderColor, out _);
@@ -547,7 +547,7 @@ public abstract class UIElement : IToJson, IReactive
             ActualBorderWidth = appliedInfo.BorderWidth.ToVector4(),
             ActualBorderRadius = borderRadius,
             MvpMatrix = uiProjection * modelMatrix,
-            BackgroundColor = appliedInfo.BackgroundColor,
+            Background = appliedInfo.Background,
             BorderColor = appliedInfo.BorderColor,
             IsHover = _isHover,
         };
@@ -562,7 +562,7 @@ internal record struct UIElementInfo(
     Thickness Padding,
     HorizontalAlignment HorizontalAlignment,
     VerticalAlignment VerticalAlignment,
-    Brush BackgroundColor,
+    Brush Background,
     Thickness BorderWidth,
     CornerRadius BorderRadius,
     Brush BorderColor
@@ -575,7 +575,7 @@ internal record struct UIElementInfo(
         DefaultPadding,
         DefaultHorizontalAlignment,
         DefaultVerticalAlignment,
-        DefaultBackgroundColor,
+        DefaultBackground,
         DefaultBorderWidth,
         DefaultBorderRadius,
         DefaultBorderColor);
@@ -586,7 +586,7 @@ internal record struct UIElementInfo(
     internal static Thickness DefaultPadding => new Thickness(0f);
     internal static HorizontalAlignment DefaultHorizontalAlignment => HorizontalAlignment.Center;
     internal static VerticalAlignment DefaultVerticalAlignment => VerticalAlignment.Center;
-    internal static Brush DefaultBackgroundColor => Brush.White;
+    internal static Brush DefaultBackground => Brush.White;
     internal static Thickness DefaultBorderWidth => new Thickness(0f);
     internal static CornerRadius DefaultBorderRadius => CornerRadius.Zero;
     internal static Brush DefaultBorderColor => Brush.Black;
@@ -600,7 +600,7 @@ internal record struct UIElementInfo(
             p.Padding ?? Padding,
             p.HorizontalAlignment ?? HorizontalAlignment,
             p.VerticalAlignment ?? VerticalAlignment,
-            p.BackgroundColor ?? BackgroundColor,
+            p.Background ?? Background,
             p.BorderWidth ?? BorderWidth,
             p.BorderRadius ?? BorderRadius,
             p.BorderColor ?? BorderColor
@@ -627,8 +627,8 @@ internal record struct UIElementInfo(
         if(p.VerticalAlignment.HasValue) {
             VerticalAlignment = p.VerticalAlignment.Value;
         }
-        if(p.BackgroundColor.HasValue) {
-            BackgroundColor = p.BackgroundColor.Value;
+        if(p.Background.HasValue) {
+            Background = p.Background.Value;
         }
         if(p.BorderWidth.HasValue) {
             BorderWidth = p.BorderWidth.Value;
@@ -658,7 +658,7 @@ public readonly record struct PseudoInfo
     public Thickness? Padding { get; init; }
     public HorizontalAlignment? HorizontalAlignment { get; init; }
     public VerticalAlignment? VerticalAlignment { get; init; }
-    public Brush? BackgroundColor { get; init; }
+    public Brush? Background { get; init; }
     public Thickness? BorderWidth { get; init; }
     public CornerRadius? BorderRadius { get; init; }
     public Brush? BorderColor { get; init; }
@@ -728,7 +728,7 @@ public readonly record struct PseudoInfo
                     verticalAlignment = value.Instantiate<VerticalAlignment>();
                     break;
                 }
-                case nameof(BackgroundColor): {
+                case nameof(Background): {
                     backgroundColor = value.Instantiate<Brush>();
                     break;
                 }
@@ -759,7 +759,7 @@ public readonly record struct PseudoInfo
             Padding = padding,
             HorizontalAlignment = horizontalAlignment,
             VerticalAlignment = verticalAlignment,
-            BackgroundColor = backgroundColor,
+            Background = backgroundColor,
             BorderWidth = borderWidth,
             BorderRadius = borderRadius,
             BorderColor = borderColor,
@@ -788,8 +788,8 @@ public readonly record struct PseudoInfo
         if(VerticalAlignment.HasValue) {
             writer.WriteEnum(nameof(VerticalAlignment), VerticalAlignment.Value);
         }
-        if(BackgroundColor.HasValue) {
-            writer.Write(nameof(BackgroundColor), BackgroundColor.Value);
+        if(Background.HasValue) {
+            writer.Write(nameof(Background), Background.Value);
         }
         if(BorderWidth.HasValue) {
             writer.Write(nameof(BorderWidth), BorderWidth.Value);
@@ -843,7 +843,7 @@ public readonly record struct UIUpdateResult
     public required Vector4 ActualBorderWidth { get; init; }
     public required Vector4 ActualBorderRadius { get; init; }
     public required Matrix4 MvpMatrix { get; init; }
-    public required Brush BackgroundColor { get; init; }
+    public required Brush Background { get; init; }
     public required Brush BorderColor { get; init; }
     public required bool IsHover { get; init; }
 }
