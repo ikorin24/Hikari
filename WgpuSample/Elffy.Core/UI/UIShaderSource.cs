@@ -58,8 +58,6 @@ internal static class UIShaderSource
     public static ReadOnlySpan<byte> ConstDef => """
         const PI = 3.141592653589793;
         const INV_PI = 0.3183098861837907;
-        const GAMMA22 = vec4<f32>(2.2, 2.2, 2.2, 2.2);
-        const GAMMA22_INV = vec4<f32>(0.45454545454545453, 0.45454545454545453, 0.45454545454545453, 0.45454545454545453);
         """u8;
 
     public static ReadOnlySpan<byte> Group0 => """
@@ -292,15 +290,34 @@ internal static class UIShaderSource
             let i1 = min(i0 + 1u, background.color_count - 1u);
             let o0: f32 = background.colors[i0].offset;
             let o1: f32 = background.colors[i1].offset;
-            let gamma22 = vec4<f32>(2.2, 2.2, 2.2, 2.2);
-            let gamma22i = vec4<f32>(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2);
-
             let mixed_color = mix(
-                pow(background.colors[i0].color, gamma22i),
-                pow(background.colors[i1].color, gamma22i),
+                background.colors[i0].color,
+                background.colors[i1].color,
                 saturate((a - o0) / (o1 - o0 + 0.0001)),
             );
-            return pow(mixed_color, gamma22);
+            return mixed_color;
+        }
+        """u8;
+
+    public static ReadOnlySpan<byte> Fn_gamma22 => """
+        fn gamma22(color: vec4<f32>) -> vec4<f32> {
+            return vec4<f32>(
+                pow(color.rgb, vec3<f32>(2.2, 2.2, 2.2)),
+                color.a,
+            );
+        }
+        """u8;
+
+    public static ReadOnlySpan<byte> Fn_degamma22 => """
+        fn degamma22(color: vec4<f32>) -> vec4<f32> {
+            return vec4<f32>(
+                pow(color.rgb, vec3<f32>(
+                    0.454545454,
+                    0.454545454,
+                    0.454545454,
+                )),
+                color.a,
+            );
         }
         """u8;
 }

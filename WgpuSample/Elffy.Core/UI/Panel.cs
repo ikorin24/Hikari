@@ -1,8 +1,6 @@
 ﻿#nullable enable
 using Elffy.Internal;
 using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 
 namespace Elffy.UI;
@@ -129,14 +127,15 @@ file sealed class PanelShader : UIShader
                 pos: vec2<f32>,
                 size: vec2<f32>,
             ) -> vec4<f32> {
-                //return data.solid_color;
-                return background.colors[0].color;
+                let texel_color = get_texel_color(f_pos, TEXT_HALIGN_CENTER, TEXT_VALIGN_CENTER, pos, size);
+                let bg_color = calc_background_brush_color(f_pos, pos, size);
+                return blend(texel_color, bg_color, 1.0);
             }
 
             @fragment fn fs_main(
                 f: V2F,
             ) -> @location(0) vec4<f32> {
-                return ui_color_shared_algorithm(f);
+                return gamma22(ui_color_shared_algorithm(f));
             }
             """u8;
 
@@ -144,12 +143,16 @@ file sealed class PanelShader : UIShader
             UIShaderSource.TypeDef,
             UIShaderSource.ConstDef,
             UIShaderSource.Group0,
+            UIShaderSource.Group1,
             UIShaderSource.Group2,
             UIShaderSource.Fn_pow_x2,
             UIShaderSource.Fn_blend,
             UIShaderSource.Fn_vs_main,
             UIShaderSource.Fn_corner_area_color,
+            UIShaderSource.Fn_get_texel_color,
+            UIShaderSource.Fn_calc_background_brush_color,
             UIShaderSource.Fn_ui_color_shared_algorithm,
+            UIShaderSource.Fn_gamma22,
             fs_main);
         return CreateOwn(new PanelShader(layer, sb.Utf8String));
     }

@@ -3,8 +3,6 @@ using Elffy;
 using Elffy.Effective;
 using Elffy.Internal;
 using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 
 namespace Elffy.UI;
@@ -191,7 +189,7 @@ file sealed class ButtonShader : UIShader
             @fragment fn fs_main(
                 f: V2F,
             ) -> @location(0) vec4<f32> {
-                return ui_color_shared_algorithm(f);
+                return gamma22(ui_color_shared_algorithm(f));
             }
             """u8;
 
@@ -208,6 +206,7 @@ file sealed class ButtonShader : UIShader
             UIShaderSource.Fn_get_texel_color,
             UIShaderSource.Fn_calc_background_brush_color,
             UIShaderSource.Fn_ui_color_shared_algorithm,
+            UIShaderSource.Fn_gamma22,
             fs_main);
         return CreateOwn(new ButtonShader(layer, sb.Utf8String));
     }
