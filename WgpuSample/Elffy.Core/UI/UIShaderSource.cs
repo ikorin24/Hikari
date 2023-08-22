@@ -56,8 +56,10 @@ internal static class UIShaderSource
         """u8;
 
     public static ReadOnlySpan<byte> ConstDef => """
-        const PI: f32 = 3.141592653589793;
-        const INV_PI: f32 = 0.3183098861837907;
+        const PI = 3.141592653589793;
+        const INV_PI = 0.3183098861837907;
+        const GAMMA22 = vec4<f32>(2.2, 2.2, 2.2, 2.2);
+        const GAMMA22_INV = vec4<f32>(0.45454545454545453, 0.45454545454545453, 0.45454545454545453, 0.45454545454545453);
         """u8;
 
     public static ReadOnlySpan<byte> Group0 => """
@@ -252,6 +254,53 @@ internal static class UIShaderSource
             }
 
             return back_color;
+        }
+        """u8;
+
+    public static ReadOnlySpan<byte> Fn_calc_background_brush_color => """
+        fn calc_background_brush_color(
+            f_pos: vec2<f32>,
+            pos: vec2<f32>,
+            size: vec2<f32>,
+        ) -> vec4<f32> {
+            var point0: vec2<f32>;
+            var point1: vec2<f32>;
+            let dir = background.direction;
+            if(background.direction < PI * 0.5) {
+                point0 = vec2<f32>(0.0, f32(size.y));
+                point1 = vec2<f32>(f32(size.x), 0.0);
+            } else if(background.direction < PI) {
+                point0 = vec2<f32>(0.0, 0.0);
+                point1 = size;
+            } else if(background.direction < PI * 1.5) {
+                point0 = vec2<f32>(f32(size.x), 0.0);
+                point1 = vec2<f32>(0.0, f32(size.y));
+            } else {
+                point0 = size;
+                point1 = vec2<f32>(0.0, 0.0);
+            }
+            let n = vec2<f32>(sin(dir), -cos(dir));
+            let x: vec2<f32> = f_pos - pos;
+            let a: f32 = abs(dot(n, x) - dot(n, point0)) / abs(dot(n, point1) - dot(n, point0));
+
+            var j0: f32 = 0.0;
+            for(var i = 0u; i < background.color_count; i++) {
+                let ok: f32 = step(background.colors[i].offset, a);
+                j0 = j0 * (1.0 - ok) + f32(i) * ok;
+            }
+            let i0: u32 = u32(j0);
+            let i1 = min(i0 + 1u, background.color_count - 1u);
+            let o0: f32 = background.colors[i0].offset;
+            let o1: f32 = background.colors[i1].offset;
+            let gamma22 = vec4<f32>(2.2, 2.2, 2.2, 2.2);
+            let gamma22i = vec4<f32>(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2);
+
+            let mixed_color = mix(
+                pow(background.colors[i0].color, gamma22i),
+                pow(background.colors[i1].color, gamma22i),
+                saturate((a - o0) / (o1 - o0 + 0.0001)),
+            );
+            return pow(mixed_color, gamma22);
         }
         """u8;
 }

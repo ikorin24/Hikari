@@ -17,7 +17,7 @@ public readonly struct Brush
 {
     private readonly BrushType _type;
     private readonly Color4 _solidColor;
-    private readonly float _directionRadian;
+    private readonly float _directionRadian;    // [0, 2*PI)
     private readonly GradientStop[] _gradientStops;
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -48,6 +48,12 @@ public readonly struct Brush
         if(gradientStops.Length < 2) {
             throw new ArgumentException("GradientStops must have at least 2 elements.");
         }
+        // directionRadian must be in range [0, 2*PI)
+        while(directionRadian < 0) {
+            directionRadian += 2 * float.Pi;
+        }
+        directionRadian %= 2 * float.Pi;
+
         _type = BrushType.LinearGradient;
         _solidColor = default;
         _directionRadian = directionRadian;
@@ -149,18 +155,20 @@ public readonly struct Brush
 
     internal void GetBufferData<T>(T arg, ReadOnlySpanAction<byte, T> action)
     {
-        // | position | size | type        | data       |
-        // | 0 - 3    | 4    | f32         | direction  |
-        // | 4 - 7    | 4    | u32         | count      |
-        // | 8 - 15   | 8    |             | (padding)  |
-        // | 16 - 47  | 32   | Color4, f32 | ColorPoint |
-        // | 48 - 79  | 32   | Color4, f32 | ColorPoint |
-        // | ...      | 32   | Color4, f32 | ColorPoint |
+        // | position | size | type        | data       | note              |
+        // | 0 - 3    | 4    | f32         | direction  | radian, [0, 2*Pi] |
+        // | 4 - 7    | 4    | u32         | count      |                   |
+        // | 8 - 15   | 8    |             | (padding)  |                   |
+        // | 16 - 47  | 32   | Color4, f32 | ColorPoint |                   |
+        // | 48 - 79  | 32   | Color4, f32 | ColorPoint |                   |
+        // | ...      | 32   | Color4, f32 | ColorPoint |                   |
 
         switch(_type) {
             case BrushType.Solid: {
                 Span<byte> span = stackalloc byte[16 + 32];
+                // direction
                 BinaryPrimitives.WriteSingleLittleEndian(span[0..4], 0f);
+                // count
                 BinaryPrimitives.WriteUInt32LittleEndian(span[4..8], 1u);
                 var points = span[16..].MarshalCast<byte, UIShaderSource.ColorPoint>();
                 points[0] = new()
@@ -173,7 +181,12 @@ public readonly struct Brush
             }
             case BrushType.LinearGradient: {
                 using var mem = new ValueTypeRentMemory<byte>(16 + _gradientStops.Length * 32, false, out var span);
-                BinaryPrimitives.WriteSingleLittleEndian(span[0..4], _directionRadian);
+
+                var dir = _directionRadian;
+                // make 'dir' into range of (0, 2 * Pi)
+                dir %= (2 * MathF.PI);
+
+                BinaryPrimitives.WriteSingleLittleEndian(span[0..4], dir);
                 BinaryPrimitives.WriteUInt32LittleEndian(span[4..8], (uint)_gradientStops.Length);
                 span[8..16].Clear();
                 var points = span[16..].MarshalCast<byte, UIShaderSource.ColorPoint>();

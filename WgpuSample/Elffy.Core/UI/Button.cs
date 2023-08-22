@@ -184,26 +184,8 @@ file sealed class ButtonShader : UIShader
                 size: vec2<f32>,
             ) -> vec4<f32> {
                 let texel_color = get_texel_color(f_pos, TEXT_HALIGN_CENTER, TEXT_VALIGN_CENTER, pos, size);
-                let a: f32 = ((f_pos - pos) / size).x;
-
-                var j0: f32 = 0.0;
-                for(var i = 0u; i < background.color_count; i++) {
-                    let ok: f32 = step(background.colors[i].offset, a);
-                    j0 = j0 * (1.0 - ok) + f32(i) * ok;
-                }
-                let i0: u32 = u32(j0);
-                let i1 = min(i0 + 1u, background.color_count - 1u);
-                let o0: f32 = background.colors[i0].offset;
-                let o1: f32 = background.colors[i1].offset;
-                let gamma22 = vec4<f32>(2.2, 2.2, 2.2, 2.2);
-                let gamma22i = vec4<f32>(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2);
-
-                let mixed_color = mix(
-                    pow(background.colors[i0].color, gamma22i),
-                    pow(background.colors[i1].color, gamma22i),
-                    saturate((a - o0) / (o1 - o0 + 0.0001)),
-                );
-                return blend(texel_color, pow(mixed_color, gamma22), 1.0);
+                let bg_color = calc_background_brush_color(f_pos, pos, size);
+                return blend(texel_color, bg_color, 1.0);
             }
 
             @fragment fn fs_main(
@@ -224,6 +206,7 @@ file sealed class ButtonShader : UIShader
             UIShaderSource.Fn_vs_main,
             UIShaderSource.Fn_corner_area_color,
             UIShaderSource.Fn_get_texel_color,
+            UIShaderSource.Fn_calc_background_brush_color,
             UIShaderSource.Fn_ui_color_shared_algorithm,
             fs_main);
         return CreateOwn(new ButtonShader(layer, sb.Utf8String));
