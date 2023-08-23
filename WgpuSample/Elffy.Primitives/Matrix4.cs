@@ -2,7 +2,6 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Elffy.Mathematics;
 using NVec3 = System.Numerics.Vector3;
 using NMat4 = System.Numerics.Matrix4x4;
 using System.Diagnostics.CodeAnalysis;
@@ -105,6 +104,11 @@ namespace Elffy
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => ref Unsafe.As<float, Vector4>(ref M03);
         }
+
+        public readonly Vector4 Row0 => new Vector4(M00, M01, M02, M03);
+        public readonly Vector4 Row1 => new Vector4(M10, M11, M12, M13);
+        public readonly Vector4 Row2 => new Vector4(M20, M21, M22, M23);
+        public readonly Vector4 Row3 => new Vector4(M30, M31, M32, M33);
 
         public static unsafe readonly int SizeInBytes = sizeof(Matrix4);
 
@@ -234,7 +238,7 @@ namespace Elffy
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector4 operator *(in Matrix4 matrix, in Vector4 vec)
-            => new Vector4(Row0(matrix).Dot(vec), Row1(matrix).Dot(vec), Row2(matrix).Dot(vec), Row3(matrix).Dot(vec));
+            => new Vector4(matrix.Row0.Dot(vec), matrix.Row1.Dot(vec), matrix.Row2.Dot(vec), matrix.Row3.Dot(vec));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Matrix4 operator *(in Matrix4 m1, in Matrix4 m2)
@@ -351,16 +355,6 @@ namespace Elffy
                 0, 0, 0, 1
             );
         }
-
-        public static ref readonly Vector4 Col0(in Matrix4 matrix) => ref Unsafe.As<float, Vector4>(ref Unsafe.AsRef(matrix.M00));
-        public static ref readonly Vector4 Col1(in Matrix4 matrix) => ref Unsafe.As<float, Vector4>(ref Unsafe.AsRef(matrix.M01));
-        public static ref readonly Vector4 Col2(in Matrix4 matrix) => ref Unsafe.As<float, Vector4>(ref Unsafe.AsRef(matrix.M02));
-        public static ref readonly Vector4 Col3(in Matrix4 matrix) => ref Unsafe.As<float, Vector4>(ref Unsafe.AsRef(matrix.M03));
-        public static Vector4 Row0(in Matrix4 matrix) => new Vector4(matrix.M00, matrix.M01, matrix.M02, matrix.M03);
-        public static Vector4 Row1(in Matrix4 matrix) => new Vector4(matrix.M10, matrix.M11, matrix.M12, matrix.M13);
-        public static Vector4 Row2(in Matrix4 matrix) => new Vector4(matrix.M20, matrix.M21, matrix.M22, matrix.M23);
-        public static Vector4 Row3(in Matrix4 matrix) => new Vector4(matrix.M30, matrix.M31, matrix.M32, matrix.M33);
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ref readonly NMat4 AsNMat4(in Matrix4 m) => ref Unsafe.As<Matrix4, NMat4>(ref Unsafe.AsRef(m));
