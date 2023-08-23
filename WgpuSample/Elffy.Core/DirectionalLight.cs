@@ -156,7 +156,7 @@ public sealed class DirectionalLight : IScreenManaged
 
             Matrix4 cascadedProj;
             if(camera.ProjectionMode.IsPerspective(out var fovy)) {
-                Matrix4.PerspectiveProjection(fovy, camera.Aspect, n, f, out cascadedProj);
+                cascadedProj = Matrix4.PerspectiveProjection(fovy, camera.Aspect, n, f);
             }
             else if(camera.ProjectionMode.IsOrthographic(out var height)) {
                 throw new NotImplementedException();        // TODO:
@@ -175,12 +175,11 @@ public sealed class DirectionalLight : IScreenManaged
                 max = Vector3.Max(max, p);
             }
             var aabbInLightSpace = Bounds.FromMinMax(min, max);
-            Matrix4.OrthographicProjection(
+            var lproj = Matrix4.OrthographicProjection(
                 aabbInLightSpace.Min.X, aabbInLightSpace.Max.X,
                 aabbInLightSpace.Min.Y, aabbInLightSpace.Max.Y,
                 -(aabbInLightSpace.Max.Z + float.Clamp(aabbInLightSpace.Size.Z * 2.0f, 10, 200)),  // TODO:
-                -aabbInLightSpace.Min.Z,
-                out var lproj);
+                -aabbInLightSpace.Min.Z);
             lightMatrices[i] = GLToWebGpu * lproj * lview;
         }
     }
