@@ -133,7 +133,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 
         var rootElement = _rootElement;
         var screenSize = Screen.ClientSize;
-        var proj = Matrix4.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, -1f, 1f);
+        var proj = Matrix4.GL.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, -1f, 1f);
         var GLToWebGpu = new Matrix4(
             new Vector4(1, 0, 0, 0),
             new Vector4(0, 1, 0, 0),

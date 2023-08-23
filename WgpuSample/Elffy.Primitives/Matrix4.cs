@@ -10,7 +10,7 @@ namespace Elffy
 {
     /// <summary>Matrix of 4x4</summary>
     [StructLayout(LayoutKind.Explicit)]
-    public struct Matrix4 : IEquatable<Matrix4>
+    public partial struct Matrix4 : IEquatable<Matrix4>
     {
         // =================================================
         // [Field Order]

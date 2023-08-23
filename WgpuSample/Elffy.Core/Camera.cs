@@ -389,12 +389,12 @@ public sealed class Camera
         }
 
         if(mode.IsPerspective(out var fovy)) {
-            return GLToWebGpu * Matrix4.PerspectiveProjection(fovy, aspect, near, far);
+            return GLToWebGpu * Matrix4.GL.PerspectiveProjection(fovy, aspect, near, far);
         }
         else if(mode.IsOrthographic(out var height)) {
             var y = height / 2f;
             var x = y * aspect;
-            return GLToWebGpu * Matrix4.OrthographicProjection(-x, x, -y, y, near, far);
+            return GLToWebGpu * Matrix4.GL.OrthographicProjection(-x, x, -y, y, near, far);
         }
         else {
             throw new UnreachableException("invalid camera projection mode");
