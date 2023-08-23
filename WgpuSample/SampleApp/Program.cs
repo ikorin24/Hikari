@@ -197,7 +197,7 @@ internal class Program
         var cameraPos = camera.Position;
         var posChanged = false;
         if(mouse.IsPressed(MouseButton.Left)) {
-            var vec = (mouse.PositionDelta ?? Vector2.Zero) * (MathTool.PiOver180 * 0.5f);
+            var vec = (mouse.PositionDelta ?? Vector2.Zero) * ((float.Pi / 180f) * 0.5f);
             cameraPos = CalcCameraPosition(cameraPos, target, vec.X, vec.Y);
             posChanged = true;
         }
@@ -215,7 +215,7 @@ internal class Program
 
     private static Vector3 CalcCameraPosition(in Vector3 cameraPos, in Vector3 center, float horizontalAngle, float verticalAngle)
     {
-        const float MaxVertical = 89.99f * MathTool.PiOver180;
+        const float MaxVertical = 89.99f * (float.Pi / 180f);
         const float MinVertical = -MaxVertical;
         var vec = cameraPos - center;
         var radius = vec.Length;

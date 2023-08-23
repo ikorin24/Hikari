@@ -285,7 +285,7 @@ namespace Elffy
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Matrix4 PerspectiveProjection(float fovy, float aspect, float depthNear, float depthFar)
         {
-            if(fovy <= 0 || fovy > MathTool.Pi) { throw new ArgumentOutOfRangeException(nameof(fovy)); }
+            if(fovy <= 0 || fovy > float.Pi) { throw new ArgumentOutOfRangeException(nameof(fovy)); }
             if(aspect <= 0) { throw new ArgumentOutOfRangeException(nameof(aspect)); }
             if(depthNear <= 0) { throw new ArgumentOutOfRangeException(nameof(depthNear)); }
             if(depthFar <= 0) { throw new ArgumentOutOfRangeException(nameof(depthFar)); }
