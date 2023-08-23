@@ -162,11 +162,12 @@ namespace Elffy
         public static void FromMatrix(in Matrix4 projection, in Matrix4 view, out Frustum frustum)
         {
             var viewProjInv = (projection * view).Inverted();
+            // This is for WebGPU, whose depth range is [0, 1].
             frustum = new(
-                nearLeftBottom: viewProjInv.Transform(-1, -1, -1),
-                nearLeftTop: viewProjInv.Transform(-1, 1, -1),
-                nearRightBottom: viewProjInv.Transform(1, -1, -1),
-                nearRightTop: viewProjInv.Transform(1, 1, -1),
+                nearLeftBottom: viewProjInv.Transform(-1, -1, 0),
+                nearLeftTop: viewProjInv.Transform(-1, 1, 0),
+                nearRightBottom: viewProjInv.Transform(1, -1, 0),
+                nearRightTop: viewProjInv.Transform(1, 1, 0),
                 farLeftBottom: viewProjInv.Transform(-1, -1, 1),
                 farLeftTop: viewProjInv.Transform(-1, 1, 1),
                 farRightBottom: viewProjInv.Transform(1, -1, 1),

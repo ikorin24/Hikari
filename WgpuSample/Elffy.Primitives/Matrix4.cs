@@ -260,10 +260,14 @@ namespace Elffy
             var invTB = 1.0f / (top - bottom);
             var invFN = 1.0f / (depthFar - depthNear);
 
-            return new Matrix4(2 * invRL, 0, 0, -(right + left) * invRL,
-                                 0, 2 * invTB, 0, -(top + bottom) * invTB,
-                                 0, 0, -2 * invFN, -(depthFar + depthNear) * invFN,
-                                 0, 0, 0, 1);
+            // This is for DirectX or WebGPU, whose clip space depth is [0, 1]
+            #pragma warning disable IDE0055 // code formatter
+            return new Matrix4(
+                2 * invRL,  0,          0,          -(right + left) * invRL,
+                0,          2 * invTB,  0,          -(top + bottom) * invTB,
+                0,          0,          -invFN,     (-(depthFar + depthNear) * invFN + 1) * 0.5f,
+                0,          0,          0,          1);
+            #pragma warning restore IDE0055 // code formatter
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -280,10 +284,14 @@ namespace Elffy
             var c = -(depthFar + depthNear) / (depthFar - depthNear);
             var d = -(2.0f * depthFar * depthNear) / (depthFar - depthNear);
 
-            return new Matrix4(x, 0, a, 0,
-                                 0, y, b, 0,
-                                 0, 0, c, d,
-                                 0, 0, -1, 0);
+            // This is for DirectX or WebGPU, whose clip space depth is [0, 1]
+            #pragma warning disable IDE0055 // code formatter
+            return new Matrix4(
+                x,      0,      a,              0,
+                0,      y,      b,              0,
+                0,      0,      (c - 1) * 0.5f, d * 0.5f,
+                0,      0,      -1,             0);
+            #pragma warning restore IDE0055 // code formatter
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
