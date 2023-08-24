@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Elffy.Effective;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Elffy.Imaging
 {
@@ -88,5 +89,27 @@ namespace Elffy.Imaging
         }
 
         public override string ToString() => DebugView;
+
+        private struct Int16TokenFactory
+        {
+            private int _tokenFactory;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public short CreateToken()
+            {
+                return (short)Interlocked.Increment(ref _tokenFactory);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public short CreateNonZeroToken()
+            {
+            CREATE:
+                var token = CreateToken();
+                if(token == 0) {
+                    goto CREATE;
+                }
+                return token;
+            }
+        }
     }
 }

@@ -12,7 +12,7 @@ namespace Elffy
 {
     internal sealed class OrderedSequentialAsyncEventPromise<T> : IUniTaskSource, IChainInstancePooled<OrderedSequentialAsyncEventPromise<T>>
     {
-        private static Int16TokenFactory _tokenFactory;
+        private static int _tokenFactory;
 
         private OrderedSequentialAsyncEventPromise<T>? _nextPooled;
         private OrderedAsyncEventPromiseCore<T> _core;
@@ -31,7 +31,7 @@ namespace Elffy
             // [NOTE]
             // I don't do defensive copy. 'funcs' must be copied before the method is called.
 
-            var token = _tokenFactory.CreateToken();
+            var token = (short)Interlocked.Increment(ref _tokenFactory);
             if(ChainInstancePool<OrderedSequentialAsyncEventPromise<T>>.TryGetInstanceFast(out var promise)) {
                 promise._core = new OrderedAsyncEventPromiseCore<T>(funcs, arg, ct, token);
                 promise._nextIndex = 0;
