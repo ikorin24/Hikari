@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="UniTask" Version="2.2.5" />
+    <PackageReference Include="UniTask" />
   </ItemGroup>
 
   <ItemGroup>
