@@ -17,17 +17,16 @@ namespace Elffy.Effective
         /// <param name="generation">target generation of GC</param>
         public static void Register(Func<bool> callback, int generation)
         {
-            if(callback is null) {
-                ThrowNullArg();
-                [DoesNotReturn] static void ThrowNullArg() => throw new ArgumentNullException(nameof(callback));
-            }
+            ArgumentNullException.ThrowIfNull(callback);
             if((uint)generation > (uint)GC.MaxGeneration) {
                 ThrowOutOfRange();
                 [DoesNotReturn] static void ThrowOutOfRange() => throw new ArgumentOutOfRangeException(nameof(generation));
             }
 
             // This is zombie object. No one can access it but it survives.
+#pragma warning disable CA1806
             new CallbackHolder(callback, generation);
+#pragma warning restore CA1806
         }
 
         /// <summary>Register callback of GC in specified generation. Callback is alive while it returns true, or argument of it is alive.</summary>
@@ -40,21 +39,17 @@ namespace Elffy.Effective
         /// <param name="generation">target generation of GC</param>
         public static void Register(Func<object, bool> callback, object callbackArg, int generation)
         {
-            if(callback is null) {
-                ThrowNullArg();
-                [DoesNotReturn] static void ThrowNullArg() => throw new ArgumentNullException(nameof(callback));
-            }
-            if(callbackArg is null) {
-                ThrowNullArg();
-                [DoesNotReturn] static void ThrowNullArg() => throw new ArgumentNullException(nameof(callbackArg));
-            }
+            ArgumentNullException.ThrowIfNull(callback);
+            ArgumentNullException.ThrowIfNull(callbackArg);
             if((uint)generation > (uint)GC.MaxGeneration) {
                 ThrowOutOfRange();
                 [DoesNotReturn] static void ThrowOutOfRange() => throw new ArgumentOutOfRangeException(nameof(generation));
             }
 
             // This is zombie object. No one can access it but it survives.
+#pragma warning disable CA1806
             new CallbackWithArgHolder(callback, callbackArg, generation);
+#pragma warning restore CA1806
         }
 
         private class CallbackHolder
@@ -100,7 +95,9 @@ namespace Elffy.Effective
                 if(_targetGen < GC.MaxGeneration) {
                     if(_generation == _targetGen) {
                         // `this` object becomes dead. Create clone as generation 0.
+#pragma warning disable CA1806
                         new CallbackHolder(_callback, _targetGen, _targetGenCount);
+#pragma warning restore CA1806
                     }
                     else {
                         _generation++;
@@ -165,7 +162,9 @@ namespace Elffy.Effective
                 if(_targetGen < GC.MaxGeneration) {
                     if(_generation == _targetGen) {
                         // `this` object becomes dead. Create clone as generation 0.
+#pragma warning disable CA1806
                         new CallbackWithArgHolder(_callback, _callbackArg, _targetGen, _targetGenCount);
+#pragma warning restore CA1806
                     }
                     else {
                         _generation++;
