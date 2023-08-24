@@ -36,7 +36,7 @@ namespace Elffy.Imaging
 
             var buf = new BufferSpanReader(stackalloc byte[8]);
             using var data = new UnsafeRawList<byte>(0);
-            UnsafeEx.SkipInitIfPossible(out Header header);
+            Unsafe.SkipInit(out Header header);
             var palette = UnsafeRawArray<PngColor>.Empty;
             try {
                 bool hasHeader = false;

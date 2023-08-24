@@ -62,7 +62,7 @@ namespace Elffy.Effective.Unsafes
         /// <param name="source">source object as <see cref="ReadOnlySpan{T}"/></param>
         /// <returns><see cref="Span{T}"/> created from <paramref name="source"/></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Span<T> AsWritable<T>(this ReadOnlySpan<T> source)
+        public static Span<T> AsWritableUnsafe<T>(this ReadOnlySpan<T> source)
             => MemoryMarshal.CreateSpan(ref MemoryMarshal.GetReference(source), source.Length);
     }
 }

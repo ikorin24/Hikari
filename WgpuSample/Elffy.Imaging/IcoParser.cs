@@ -15,7 +15,7 @@ namespace Elffy.Imaging
             if(stream is null) {
                 throw new ArgumentNullException(nameof(stream));
             }
-            UnsafeEx.SkipInitIfPossible(out ICONDIR icondir);   // 6 bytes
+            Unsafe.SkipInit(out ICONDIR icondir);   // 6 bytes
             stream.SafeRead(UnsafeEx.AsBytes(ref icondir));
 
             if(icondir.idCount < 0) {
@@ -36,7 +36,7 @@ namespace Elffy.Imaging
 
         private static Image ParseImage(Stream stream, in ICONDIRENTRY entry)
         {
-            UnsafeEx.SkipInitIfPossible(out BITMAPINFOHEADER header);
+            Unsafe.SkipInit(out BITMAPINFOHEADER header);
             stream.SafeRead(UnsafeEx.AsBytes(ref header));
 
             var isPng = (entry.bWidth == 0 && entry.bHeight == 0) ||

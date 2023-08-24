@@ -5,9 +5,6 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy.Effective.Unsafes
 {
-    // [NOTE]
-    // The following code is copied from .net
-
     internal static class HashHelpers
     {
         public const uint HashCollisionThreshold = 100;

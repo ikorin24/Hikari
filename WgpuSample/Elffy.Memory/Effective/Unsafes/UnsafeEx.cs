@@ -45,16 +45,6 @@ namespace Elffy.Effective.Unsafes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SkipInitIfPossible<T>(out T value)
-        {
-#if CAN_SKIP_LOCALS_INIT
-            Unsafe.SkipInit(out value);
-#else
-            value = default!;
-#endif
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static ref T NullRef<T>()
         {
             return ref Unsafe.AsRef<T>(null);
