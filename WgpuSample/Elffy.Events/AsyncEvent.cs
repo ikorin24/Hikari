@@ -54,11 +54,5 @@ namespace Elffy
             source.Subscribe(func);
             return new AsyncEventSubscription<T>(source, func);
         }
-
-        public override bool Equals(object? obj) => false;
-
-        [Obsolete($"GetHashCode() on {nameof(AsyncEvent<T>)} will always throw an exception.")]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override int GetHashCode() => throw new NotSupportedException($"GetHashCode() on {nameof(AsyncEvent<T>)} is not supported.");
     }
 }

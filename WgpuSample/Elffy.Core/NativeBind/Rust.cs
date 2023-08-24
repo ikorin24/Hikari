@@ -7,6 +7,8 @@ using System.Runtime.CompilerServices;
 
 namespace Elffy.NativeBind;
 
+#pragma warning disable 0649    // field never assigned
+
 /// <summary>Provides types in std of Rust</summary>
 internal static class Rust
 {

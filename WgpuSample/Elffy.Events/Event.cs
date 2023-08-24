@@ -53,11 +53,5 @@ namespace Elffy
             source.Subscribe(action);
             return new EventSubscription<T>(source, action);
         }
-
-        public override bool Equals(object? obj) => false;
-
-        [Obsolete($"GetHashCode() on {nameof(Event<T>)} will always throw an exception.")]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override int GetHashCode() => throw new NotSupportedException($"GetHashCode() on {nameof(Event<T>)} is not supported.");
     }
 }

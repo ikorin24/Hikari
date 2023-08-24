@@ -723,6 +723,7 @@ internal unsafe static partial class EngineCore
         }
     }
 
+#pragma warning disable 0649    // field never assigned
 
     private readonly struct ApiResult
     {
@@ -772,6 +773,7 @@ internal unsafe static partial class EngineCore
             return ref _value;
         }
     }
+#pragma warning restore 0649    // field never assigned
 }
 
 internal readonly struct EngineCoreConfig

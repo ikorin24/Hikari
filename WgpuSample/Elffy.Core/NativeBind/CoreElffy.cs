@@ -8,6 +8,8 @@ using System.Text;
 namespace Elffy.NativeBind;
 
 #pragma warning disable IDE1006 // naming rule
+#pragma warning disable 0649    // field never assigned
+#pragma warning disable IDE0052 // remove unread non public member
 
 /// <summary>
 /// `coreelffy` crate in Rust
@@ -258,9 +260,7 @@ internal static class CoreElffy
 
     internal readonly struct ImeInputData
     {
-#pragma warning disable CS0649 // フィールド 'CoreElffy.ImeInputData.tag' は割り当てられません。常に既定値  を使用します
         public readonly Tag tag;
-#pragma warning restore CS0649 // フィールド 'CoreElffy.ImeInputData.tag' は割り当てられません。常に既定値  を使用します
         public readonly Slice<u8> text;
         public readonly Opt<RangeValue> range;
 
@@ -697,7 +697,7 @@ internal static class CoreElffy
         public required Rust.OptionNonZeroU32 multiview { get => _multiview; init => _multiview = value; }
     }
 
-    internal struct ComputePipelineDescriptor
+    internal readonly struct ComputePipelineDescriptor
     {
         private readonly NativePointer _layout; //: &'a wgpu::PipelineLayout,
         private readonly NativePointer _module; //: &'a wgpu::ShaderModule,
