@@ -5,7 +5,7 @@ using System.IO;
 
 namespace Elffy.Imaging.Internal
 {
-    internal static class StreamExtension
+    internal static class StreamExtensions
     {
         public static UnsafeRawList<byte> ReadToEnd(this Stream stream, out int length)
         {

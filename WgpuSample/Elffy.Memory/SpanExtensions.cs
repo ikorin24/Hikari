@@ -9,7 +9,7 @@ using Elffy.Unsafes;
 
 namespace Elffy;
 
-public static partial class SpanExtension
+public static partial class SpanExtensions
 {
     /// <summary>Get reference to 0th element of span</summary>
     /// <remarks>Don't call if empty span</remarks>

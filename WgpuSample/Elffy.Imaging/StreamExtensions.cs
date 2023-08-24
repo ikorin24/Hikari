@@ -12,7 +12,7 @@ using Elffy.Collections;
 
 namespace Elffy.Imaging
 {
-    internal static class StreamExtension
+    internal static class StreamExtensions
     {
 #if CAN_SKIP_LOCALS_INIT
         [SkipLocalsInit]

@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Elffy;
 
-public static partial class SpanExtension
+public static partial class SpanExtensions
 {
     public static int Max(this Span<int> source) => Max(source.AsReadOnly());
 

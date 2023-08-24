@@ -4,7 +4,7 @@ using Elffy.Unsafes;
 
 namespace Elffy;
 
-public static class Utf8StringExtension
+public static class Utf8StringExtensions
 {
     /// <summary>Trim invisible charactors. (whitespace, '\t', '\r', and '\n')</summary>
     /// <returns>trimmed string</returns>

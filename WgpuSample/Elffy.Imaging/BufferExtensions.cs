@@ -6,7 +6,7 @@ using System.Buffers.Binary;
 
 namespace Elffy.Imaging
 {
-    internal static class BufferExtension
+    internal static class BufferExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint UInt32BigEndian(this Span<byte> buffer)

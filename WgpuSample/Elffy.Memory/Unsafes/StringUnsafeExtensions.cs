@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace Elffy.Unsafes;
 
-internal static class StringUnsafeExtension
+internal static class StringUnsafeExtensions
 {
     /// <summary>Get reference to first char of <see cref="string"/></summary>
     /// <param name="source">source <see cref="string"/></param>

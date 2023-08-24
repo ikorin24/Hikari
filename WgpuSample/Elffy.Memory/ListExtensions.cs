@@ -8,7 +8,7 @@ using Elffy.Unsafes;
 
 namespace Elffy;
 
-public static class ListExtension
+public static class ListExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void AddRange<T>(this List<T> list, ReadOnlySpan<T> span)

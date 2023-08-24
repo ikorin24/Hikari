@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace Elffy.Unsafes;
 
-public static class ArrayUnsafeExtension
+public static class ArrayUnsafeExtensions
 {
     /// <summary>Get array element at specified index without range checking.</summary>
     /// <remarks>

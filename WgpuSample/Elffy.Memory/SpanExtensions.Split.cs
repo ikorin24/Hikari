@@ -8,7 +8,7 @@ using Elffy;
 
 namespace Elffy;
 
-partial class SpanExtension
+partial class SpanExtensions
 {
     public static SplitUtf16Strings Split(this ReadOnlySpan<char> str, char separator, StringSplitOptions options = StringSplitOptions.None)
     {

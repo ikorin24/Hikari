@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace Elffy.Unsafes;
 
-public static class SpanUnsafeExtension
+public static class SpanUnsafeExtensions
 {
     /// <summary>Get reference to specified indexed element of <see cref="Span{T}"/></summary>
     /// <remarks>[CAUTION] This method DOES NOT check boundary !! Be careful !!</remarks>
