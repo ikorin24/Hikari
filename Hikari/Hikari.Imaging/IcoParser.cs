@@ -3,10 +3,10 @@ using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Linq;
-using Elffy.Imaging.Internal;
-using Elffy.Collections;
+using Hikari.Imaging.Internal;
+using Hikari.Collections;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     public static unsafe class IcoParser
     {

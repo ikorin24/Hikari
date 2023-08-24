@@ -1,10 +1,10 @@
 ﻿#nullable enable
-using Elffy.Imaging;
-using Elffy.Collections;
+using Hikari.Imaging;
+using Hikari.Collections;
 using System;
 using SkiaSharp;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 internal static class TextDrawer
 {

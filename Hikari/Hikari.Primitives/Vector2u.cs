@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy
+namespace Hikari
 {
     [StructLayout(LayoutKind.Explicit)]
     [DebuggerDisplay("{DebuggerDisplay}")]

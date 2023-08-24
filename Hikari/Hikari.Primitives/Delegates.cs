@@ -2,7 +2,7 @@
 using System;
 using Cysharp.Threading.Tasks;
 
-namespace Elffy
+namespace Hikari
 {
     public delegate void SpanAction<T>(Span<T> span);
     public delegate void SpanAction<T, in TArg>(Span<T> span, TArg arg);

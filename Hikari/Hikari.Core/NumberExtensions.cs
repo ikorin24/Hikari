@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using System.Runtime.CompilerServices;
 
-namespace Elffy;
+namespace Hikari;
 
 internal static class NumberExtensions
 {

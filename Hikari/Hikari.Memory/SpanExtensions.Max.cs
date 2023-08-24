@@ -2,7 +2,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy;
+namespace Hikari;
 
 public static partial class SpanExtensions
 {

@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.NativeBind;
+namespace Hikari.NativeBind;
 
 #pragma warning disable 0649    // field never assigned
 

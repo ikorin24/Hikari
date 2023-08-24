@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Elffy.Threading;
-using Elffy.Internal;
+using Hikari.Threading;
+using Hikari.Internal;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class Timing : IScreenManaged
 {

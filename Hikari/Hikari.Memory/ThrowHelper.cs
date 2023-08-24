@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 
-namespace Elffy;
+namespace Hikari;
 
 internal static class ThrowHelper
 {

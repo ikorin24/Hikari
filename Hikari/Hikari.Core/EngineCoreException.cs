@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using System;
 
-namespace Elffy;
+namespace Hikari;
 
 internal sealed class EngineCoreException : Exception
 {

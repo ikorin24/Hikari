@@ -1,11 +1,11 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class BindGroup : IScreenManaged
 {
@@ -91,7 +91,7 @@ public readonly struct BindGroupEntry
 
     private BindGroupEntry(u32 binding, IScreenManaged resource)
     {
-        Debug.Assert(resource is BufferBinding or Elffy.TextureView or Elffy.Sampler);
+        Debug.Assert(resource is BufferBinding or Hikari.TextureView or Hikari.Sampler);
         _binding = binding;
         _resource = resource;
     }

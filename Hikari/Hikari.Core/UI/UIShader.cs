@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using System;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 internal abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
 {

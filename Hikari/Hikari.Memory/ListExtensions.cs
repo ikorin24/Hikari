@@ -4,9 +4,9 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Elffy.Unsafes;
+using Hikari.Unsafes;
 
-namespace Elffy;
+namespace Hikari;
 
 public static class ListExtensions
 {

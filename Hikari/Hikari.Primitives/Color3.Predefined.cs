@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-namespace Elffy
+namespace Hikari
 {
     partial struct Color3
     {

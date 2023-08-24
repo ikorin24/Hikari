@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-namespace Elffy;
+namespace Hikari;
 
 public interface IGBufferProvider
 {

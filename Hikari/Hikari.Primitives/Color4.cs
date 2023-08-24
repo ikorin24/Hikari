@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using NVec4 = System.Numerics.Vector4;
 
-namespace Elffy
+namespace Hikari
 {
     [DebuggerDisplay("{DebugView}")]
     [StructLayout(LayoutKind.Explicit)]

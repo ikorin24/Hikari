@@ -1,9 +1,9 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 using System;
 using System.Text;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class Keyboard
 {

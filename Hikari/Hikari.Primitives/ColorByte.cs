@@ -5,7 +5,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
-namespace Elffy
+namespace Hikari
 {
     /// <summary>Color structure with RGBA bytes format</summary>
     [DebuggerDisplay("{DebugView,nq}")]

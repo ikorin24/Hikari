@@ -1,9 +1,9 @@
 ﻿#nullable enable
-using Elffy;
+using Hikari;
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Elffy;
+namespace Hikari;
 
 public readonly ref struct ReadOnlySpanTuple<T1, T2>
 {

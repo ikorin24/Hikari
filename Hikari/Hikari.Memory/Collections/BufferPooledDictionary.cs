@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Collections;
 
-namespace Elffy.Collections;
+namespace Hikari.Collections;
 
 [DebuggerTypeProxy(typeof(BufferPooledDebugView<,>))]
 [DebuggerDisplay("Count = {Count}")]

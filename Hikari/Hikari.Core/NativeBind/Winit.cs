@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-namespace Elffy.NativeBind;
+namespace Hikari.NativeBind;
 
 internal static class Winit
 {

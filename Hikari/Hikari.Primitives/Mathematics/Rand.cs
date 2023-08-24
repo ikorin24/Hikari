@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.Mathematics
+namespace Hikari.Mathematics
 {
     /// <summary>Random value generator class</summary>
     public static class Rand

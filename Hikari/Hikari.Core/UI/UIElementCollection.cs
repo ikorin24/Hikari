@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Threading;
-using Elffy.Collections;
+using Hikari.Collections;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 public sealed class UIElementCollection
     : IEnumerable<UIElement>,

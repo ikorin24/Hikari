@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.Mathematics
+namespace Hikari.Mathematics
 {
     /// <summary>Pseudorandom number generator based on 32 bits Xorshift algorithm.</summary>
     public struct Xorshift32

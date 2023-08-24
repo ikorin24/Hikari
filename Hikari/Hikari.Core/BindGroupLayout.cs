@@ -1,12 +1,12 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class BindGroupLayout : IScreenManaged
 {

@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Elffy;
+namespace Hikari;
 
 partial struct Matrix4
 {

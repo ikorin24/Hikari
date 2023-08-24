@@ -10,11 +10,11 @@ using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.IO.Compression;
-using Elffy.Imaging.Internal;
-using Elffy.Collections;
-using Elffy.Unsafes;
+using Hikari.Imaging.Internal;
+using Hikari.Collections;
+using Hikari.Unsafes;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     public static unsafe class PngParser
     {

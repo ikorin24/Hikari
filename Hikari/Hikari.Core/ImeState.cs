@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Elffy;
+namespace Hikari;
 
 internal unsafe sealed class ImeState : IImePreeditState
 {

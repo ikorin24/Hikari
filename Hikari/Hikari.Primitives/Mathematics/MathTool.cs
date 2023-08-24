@@ -3,7 +3,7 @@ using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.Mathematics
+namespace Hikari.Mathematics
 {
     public static class MathTool
     {

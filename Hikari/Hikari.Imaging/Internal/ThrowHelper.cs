@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy.Imaging.Internal
+namespace Hikari.Imaging.Internal
 {
     internal static class ThrowHelper
     {

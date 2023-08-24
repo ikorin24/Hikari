@@ -4,9 +4,9 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Elffy.Buffers;
+using Hikari.Buffers;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     [DebuggerDisplay("{DebugView,nq}")]
     internal unsafe sealed class DefaultImageSource : IImageSource, IChainInstancePooled<DefaultImageSource>

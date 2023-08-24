@@ -2,7 +2,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 public sealed class UITree
 {

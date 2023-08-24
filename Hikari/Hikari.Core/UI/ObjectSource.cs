@@ -1,5 +1,5 @@
 ﻿#nullable enable
-using Elffy;
+using Hikari;
 using System;
 using System.Buffers;
 using System.Collections;
@@ -11,7 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 public readonly partial struct ObjectSource : IEquatable<ObjectSource>
 {

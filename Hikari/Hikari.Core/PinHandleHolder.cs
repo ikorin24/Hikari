@@ -4,7 +4,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-namespace Elffy;
+namespace Hikari;
 
 internal readonly struct PinHandleHolder : IDisposable
 {

@@ -2,7 +2,7 @@
 using System;
 using System.Text.Json;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 public readonly struct FontSize
     : IEquatable<FontSize>,

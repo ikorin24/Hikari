@@ -1,14 +1,14 @@
 ﻿#nullable enable
-using Elffy;
-using Elffy.Mathematics;
-using Elffy.Collections;
+using Hikari;
+using Hikari.Mathematics;
+using Hikari.Collections;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 [DebuggerDisplay("{DebugView}")]
 public readonly struct Brush

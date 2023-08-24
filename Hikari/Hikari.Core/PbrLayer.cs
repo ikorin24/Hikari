@@ -1,8 +1,8 @@
 ﻿#nullable enable
 using System;
-using V = Elffy.Vertex;
+using V = Hikari.Vertex;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class PbrLayer
     : ObjectLayer<PbrLayer, V, PbrShader, PbrMaterial, PbrModel>,

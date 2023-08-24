@@ -1,12 +1,12 @@
 ﻿#nullable enable
 using Cysharp.Threading.Tasks;
-using Elffy.Imaging;
-using Elffy.NativeBind;
+using Hikari.Imaging;
+using Hikari.NativeBind;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class Texture : IScreenManaged
 {

@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using NVec3 = System.Numerics.Vector3;
 
-namespace Elffy
+namespace Hikari
 {
     /// <summary>Matrix of 3x3</summary>
     [StructLayout(LayoutKind.Explicit)]

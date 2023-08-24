@@ -1,12 +1,12 @@
 ﻿#nullable enable
-using Elffy;
-using Elffy.Collections;
-using Elffy.NativeBind;
+using Hikari;
+using Hikari.Collections;
+using Hikari.NativeBind;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class Operations
 {

@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Elffy
+namespace Hikari
 {
     /// <summary>It is similar to <see cref="Func{T, TResult}"/> which contains the state in itself.</summary>
     /// <remarks>Function delegate whose argument is strong-typed but non generic.</remarks>

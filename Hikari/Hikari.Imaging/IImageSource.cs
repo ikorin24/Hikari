@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using System;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     public interface IImageSource : IDisposable
     {

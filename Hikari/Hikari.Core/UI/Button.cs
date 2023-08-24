@@ -1,10 +1,10 @@
 ﻿#nullable enable
-using Elffy;
-using Elffy.Internal;
+using Hikari;
+using Hikari.Internal;
 using System;
 using System.Text.Json;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 public sealed class Button : UIElement, IFromJson<Button>
 {

@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     internal enum TgaDataFormat : byte
     {

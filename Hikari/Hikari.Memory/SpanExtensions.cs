@@ -4,10 +4,10 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Elffy.Collections;
-using Elffy.Unsafes;
+using Hikari.Collections;
+using Hikari.Unsafes;
 
-namespace Elffy;
+namespace Hikari;
 
 public static partial class SpanExtensions
 {

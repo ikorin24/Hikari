@@ -1,11 +1,11 @@
 ﻿#nullable enable
-using Elffy;
-using Elffy.Collections;
+using Hikari;
+using Hikari.Collections;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace Elffy;
+namespace Hikari;
 
 public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     : RenderOperation<TSelf, TShader, TMaterial>,

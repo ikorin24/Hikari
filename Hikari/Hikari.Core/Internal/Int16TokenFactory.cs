@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 
-namespace Elffy.Internal;
+namespace Hikari.Internal;
 
 internal struct Int16TokenFactory : IEquatable<Int16TokenFactory>
 {

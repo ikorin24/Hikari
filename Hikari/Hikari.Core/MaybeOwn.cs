@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Elffy;
+namespace Hikari;
 
 public readonly struct MaybeOwn<T> : IDisposable, IEquatable<MaybeOwn<T>>
     where T : notnull

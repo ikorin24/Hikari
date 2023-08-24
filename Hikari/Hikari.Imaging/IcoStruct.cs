@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
 #pragma warning disable 0649
     internal struct ICONDIR

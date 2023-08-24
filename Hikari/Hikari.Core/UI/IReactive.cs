@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 public interface IReactive
 {

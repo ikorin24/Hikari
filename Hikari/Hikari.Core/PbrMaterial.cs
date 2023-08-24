@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using System;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
 {

@@ -1,13 +1,13 @@
 ﻿#nullable enable
-using Elffy.Threading;
-using Elffy.Collections;
+using Hikari.Threading;
+using Hikari.Collections;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Elffy
+namespace Hikari
 {
     public struct EventSource<T> : IEquatable<EventSource<T>>
     {

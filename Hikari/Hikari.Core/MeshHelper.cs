@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Elffy;
+namespace Hikari;
 
 internal static class MeshHelper
 {

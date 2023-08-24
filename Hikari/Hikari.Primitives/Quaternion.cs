@@ -7,7 +7,7 @@ using NQuat = System.Numerics.Quaternion;
 using NVec3 = System.Numerics.Vector3;
 using NVec4 = System.Numerics.Vector4;
 
-namespace Elffy
+namespace Hikari
 {
     [DebuggerDisplay("{DebugView}")]
     [StructLayout(LayoutKind.Explicit)]

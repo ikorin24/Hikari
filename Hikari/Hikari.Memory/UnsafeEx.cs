@@ -3,7 +3,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Elffy;
+namespace Hikari;
 
 /// <summary>Helper class of <see cref="Unsafe"/></summary>
 public static class UnsafeEx

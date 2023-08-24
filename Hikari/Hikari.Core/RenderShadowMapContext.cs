@@ -2,7 +2,7 @@
 using System;
 using System.ComponentModel;
 
-namespace Elffy;
+namespace Hikari;
 
 public readonly ref struct RenderShadowMapContext
 {

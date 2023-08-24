@@ -3,7 +3,7 @@ using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 
-namespace Elffy.Threading;
+namespace Hikari.Threading;
 
 [DebuggerDisplay("{DebuggerView,nq}")]
 public struct FastSpinLock

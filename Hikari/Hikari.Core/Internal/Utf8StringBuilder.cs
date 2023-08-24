@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using UStr = System.ReadOnlySpan<byte>;
 
-namespace Elffy.Internal;
+namespace Hikari.Internal;
 
 internal ref struct Utf8StringBuilder
 {

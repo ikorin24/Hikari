@@ -1,9 +1,9 @@
 ﻿#nullable enable
-using V = Elffy.VertexSlim;
+using V = Hikari.VertexSlim;
 
 using System;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredProcessShader, DeferredProcessMaterial>
 {

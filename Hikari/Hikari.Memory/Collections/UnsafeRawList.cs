@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 
-namespace Elffy.Collections;
+namespace Hikari.Collections;
 
 /// <summary>Provides list which is allocated in unmanaged memory.</summary>
 /// <remarks>

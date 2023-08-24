@@ -2,7 +2,7 @@
 using System;
 using SkiaSharp;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     unsafe partial struct Image
     {

@@ -6,7 +6,7 @@ using NVec3 = System.Numerics.Vector3;
 using NMat4 = System.Numerics.Matrix4x4;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy
+namespace Hikari
 {
     /// <summary>Matrix of 4x4</summary>
     [StructLayout(LayoutKind.Explicit)]

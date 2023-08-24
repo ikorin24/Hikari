@@ -1,12 +1,12 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
 
-namespace Elffy;
+namespace Hikari;
 
 public static class Engine
 {

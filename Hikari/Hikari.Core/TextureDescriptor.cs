@@ -1,9 +1,9 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 using System;
 using System.Diagnostics;
 
-namespace Elffy;
+namespace Hikari;
 
 public readonly struct TextureDescriptor
 {

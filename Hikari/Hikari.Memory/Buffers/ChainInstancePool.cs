@@ -1,11 +1,11 @@
 ﻿#nullable enable
-using Elffy;
-using Elffy.Threading;
+using Hikari;
+using Hikari.Threading;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy.Buffers;
+namespace Hikari.Buffers;
 
 public static class ChainInstancePool<T> where T : class, IChainInstancePooled<T>
 {

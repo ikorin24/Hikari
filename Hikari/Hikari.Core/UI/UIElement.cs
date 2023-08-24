@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 public abstract class UIElement : IToJson, IReactive
 {

@@ -1,6 +1,6 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
-using Elffy.UI;
+using Hikari.NativeBind;
+using Hikari.UI;
 using System;
 using System.Buffers;
 using System.Diagnostics;
@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class Screen
 {

@@ -3,7 +3,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace Elffy
+namespace Hikari
 {
     public readonly struct EventSubscription<T> : IDisposable, IEquatable<EventSubscription<T>>
     {

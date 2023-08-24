@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 
-namespace Elffy
+namespace Hikari
 {
     internal sealed class ExceptionHolder
     {

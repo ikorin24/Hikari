@@ -4,11 +4,11 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Elffy.Buffers;
+using Hikari.Buffers;
 
 #pragma warning disable CA1068 // CancellationToken parameters must come last
 
-namespace Elffy
+namespace Hikari
 {
     internal sealed class OrderedParallelAsyncEventPromise<T> : IUniTaskSource, IChainInstancePooled<OrderedParallelAsyncEventPromise<T>>
     {

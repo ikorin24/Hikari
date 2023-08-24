@@ -1,6 +1,6 @@
 ﻿#nullable enable
 using Cysharp.Threading.Tasks;
-using Elffy.Threading;
+using Hikari.Threading;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -9,7 +9,7 @@ using System.Threading;
 
 #pragma warning disable CA1068 // CancellationToken parameters must come last
 
-namespace Elffy
+namespace Hikari
 {
     public struct AsyncEventSource<T> : IEquatable<AsyncEventSource<T>>
     {

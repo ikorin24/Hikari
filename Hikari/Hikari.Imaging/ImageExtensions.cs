@@ -2,10 +2,10 @@
 using System;
 using System.Buffers;
 using System.IO;
-using Elffy.Imaging.Internal;
+using Hikari.Imaging.Internal;
 using SkiaSharp;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     public static class ImageExtensions
     {

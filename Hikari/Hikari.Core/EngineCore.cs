@@ -5,10 +5,10 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 using System.Text;
 
-namespace Elffy;
+namespace Hikari;
 
 internal unsafe static partial class EngineCore
 {

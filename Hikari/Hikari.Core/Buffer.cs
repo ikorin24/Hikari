@@ -1,12 +1,12 @@
 ﻿#nullable enable
 using Cysharp.Threading.Tasks;
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class Buffer : IScreenManaged, IReadBuffer<Buffer>
 {

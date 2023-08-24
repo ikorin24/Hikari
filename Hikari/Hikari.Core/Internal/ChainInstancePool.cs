@@ -2,9 +2,9 @@
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using Elffy.Threading;
+using Hikari.Threading;
 
-namespace Elffy.Internal;
+namespace Hikari.Internal;
 
 internal static class ChainInstancePool<T> where T : class, IChainInstancePooled<T>
 {

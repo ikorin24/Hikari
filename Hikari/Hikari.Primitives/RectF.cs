@@ -3,7 +3,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 
-namespace Elffy
+namespace Hikari
 {
     [DebuggerDisplay("{DebugDisplay}")]
     [StructLayout(LayoutKind.Explicit)]

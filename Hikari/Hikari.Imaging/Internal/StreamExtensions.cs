@@ -1,9 +1,9 @@
 ﻿#nullable enable
-using Elffy.Collections;
+using Hikari.Collections;
 using System;
 using System.IO;
 
-namespace Elffy.Imaging.Internal
+namespace Hikari.Imaging.Internal
 {
     internal static class StreamExtensions
     {

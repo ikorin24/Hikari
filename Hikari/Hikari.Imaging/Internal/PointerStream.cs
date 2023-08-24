@@ -4,9 +4,9 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
-using Elffy.Unsafes;
+using Hikari.Unsafes;
 
-namespace Elffy.Imaging.Internal
+namespace Hikari.Imaging.Internal
 {
     internal unsafe sealed class PointerStream : Stream
     {

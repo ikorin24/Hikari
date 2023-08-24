@@ -2,7 +2,7 @@
 
 using System.Runtime.CompilerServices;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
 {

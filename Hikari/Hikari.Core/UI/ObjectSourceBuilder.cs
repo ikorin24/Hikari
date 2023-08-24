@@ -5,7 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 [InterpolatedStringHandler]
 public ref struct ObjectSourceBuilder

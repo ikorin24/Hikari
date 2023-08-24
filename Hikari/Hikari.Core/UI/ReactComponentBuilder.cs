@@ -2,7 +2,7 @@
 using System;
 using System.Diagnostics;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 internal static class ReactComponentBuilder
 {

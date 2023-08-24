@@ -7,7 +7,7 @@ using System.Diagnostics;
 using NVec2 = System.Numerics.Vector2;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy
+namespace Hikari
 {
     [StructLayout(LayoutKind.Explicit)]
     [DebuggerDisplay("{DebuggerDisplay}")]

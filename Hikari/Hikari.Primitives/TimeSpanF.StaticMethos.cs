@@ -7,7 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
-namespace Elffy
+namespace Hikari
 {
     partial struct TimeSpanF
     {

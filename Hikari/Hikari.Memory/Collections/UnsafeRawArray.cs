@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.ComponentModel;
 
-namespace Elffy.Collections;
+namespace Hikari.Collections;
 
 /// <summary>Low level wrapper of malloc, free. There are no safety checking, no zero initialized</summary>
 /// <remarks>

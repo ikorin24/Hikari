@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using System.Runtime.InteropServices;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     [StructLayout(LayoutKind.Explicit)]
     internal readonly struct TgaHeader

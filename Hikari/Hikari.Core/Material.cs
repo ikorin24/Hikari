@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using System;
 
-namespace Elffy;
+namespace Hikari;
 
 public abstract class Material<TSelf, TShader, TOperation>
     : IScreenManaged

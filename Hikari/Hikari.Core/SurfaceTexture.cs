@@ -1,8 +1,8 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 using System;
 
-namespace Elffy;
+namespace Hikari;
 
 [Obsolete("", true)]
 public sealed class SurfaceTextureView : IScreenManaged, ITextureView

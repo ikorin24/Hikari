@@ -4,10 +4,10 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Diagnostics;
-using Elffy.Imaging.Internal;
+using Hikari.Imaging.Internal;
 using System.ComponentModel;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public unsafe readonly partial struct Image : IEquatable<Image>, IDisposable

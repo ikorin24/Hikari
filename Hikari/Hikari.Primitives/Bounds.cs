@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Elffy
+namespace Hikari
 {
     public readonly struct Bounds : IEquatable<Bounds>
     {

@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace Elffy;
+namespace Hikari;
 
 [DebuggerTypeProxy(typeof(Utf8StringsDebuggerTypeProxy))]
 [DebuggerDisplay("ReadOnlySpan<byte>[{Count()}]")]

@@ -1,11 +1,11 @@
 ﻿#nullable enable
-using Elffy.Collections;
+using Hikari.Collections;
 using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.Buffers;
+namespace Hikari.Buffers;
 
 public sealed class NativeBufferWriter<T> : IBufferWriter<T>, IDisposable where T : unmanaged
 {

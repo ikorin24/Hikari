@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class Mesh<TVertex>
     : IScreenManaged

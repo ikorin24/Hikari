@@ -1,9 +1,9 @@
 ﻿#nullable enable
-using Elffy.Internal;
+using Hikari.Internal;
 using System;
 using System.Text.Json;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 public sealed class Panel : UIElement, IFromJson<Panel>
 {

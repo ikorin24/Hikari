@@ -1,9 +1,9 @@
 ﻿#nullable enable
-using Elffy.Internal;
+using Hikari.Internal;
 using System;
-using V = Elffy.Vertex;
+using V = Hikari.Vertex;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
 {

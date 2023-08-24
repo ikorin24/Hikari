@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Elffy
+namespace Hikari
 {
     [DebuggerDisplay("{DebugView}")]
     [StructLayout(LayoutKind.Explicit)]

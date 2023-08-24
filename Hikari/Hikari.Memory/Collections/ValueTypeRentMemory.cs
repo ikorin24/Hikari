@@ -1,6 +1,6 @@
 ﻿#nullable enable
-using Elffy.Buffers;
-using Elffy.Unsafes;
+using Hikari.Buffers;
+using Hikari.Unsafes;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Elffy.Collections;
+namespace Hikari.Collections;
 
 /// <summary>Shared memories from memory pool, that provides <see cref="Span{T}"/>.</summary>
 /// <remarks>

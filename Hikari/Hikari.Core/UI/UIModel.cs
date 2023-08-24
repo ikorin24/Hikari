@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 internal sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShader, UIMaterial>
 {
@@ -43,7 +43,7 @@ internal sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShad
                 new VertexSlim(1, 1, 0, 1, 0),
             };
             ReadOnlySpan<ushort> indices = stackalloc ushort[6] { 0, 1, 2, 2, 3, 0 };
-            var mesh = Elffy.Mesh.Create(screen, vertices, indices);
+            var mesh = Hikari.Mesh.Create(screen, vertices, indices);
             return new MeshCache(mesh);
         });
         return cache.Mesh;

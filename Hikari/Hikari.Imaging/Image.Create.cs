@@ -2,10 +2,10 @@
 using System;
 using System.IO;
 using System.Diagnostics;
-using Elffy.Imaging.Internal;
+using Hikari.Imaging.Internal;
 using SkiaSharp;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     partial struct Image
     {

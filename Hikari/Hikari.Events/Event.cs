@@ -5,7 +5,7 @@ using System.Threading;
 using System.Diagnostics;
 using System.ComponentModel;
 
-namespace Elffy
+namespace Hikari
 {
     [DebuggerDisplay("{DebuggerView,nq}")]
     public readonly ref struct Event<T>

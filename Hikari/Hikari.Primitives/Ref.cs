@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Elffy;
+namespace Hikari;
 
 [DebuggerTypeProxy(typeof(Ref<>.DebuggerProxy))]
 [DebuggerDisplay("{DebuggerView,nq}")]

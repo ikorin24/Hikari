@@ -6,10 +6,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Elffy.Imaging.Internal;
-using Elffy.Unsafes;
+using Hikari.Imaging.Internal;
+using Hikari.Unsafes;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     public static class TgaParser
     {

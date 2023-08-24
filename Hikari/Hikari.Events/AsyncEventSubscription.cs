@@ -4,7 +4,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace Elffy
+namespace Hikari
 {
     public readonly struct AsyncEventSubscription<T> : IDisposable, IEquatable<AsyncEventSubscription<T>>
     {

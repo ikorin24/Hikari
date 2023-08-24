@@ -1,10 +1,10 @@
 ﻿#nullable enable
-using Elffy;
+using Hikari;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.Collections;
+namespace Hikari.Collections;
 
 internal static class HashHelpers
 {

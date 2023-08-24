@@ -5,9 +5,9 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Elffy.Threading;
+using Hikari.Threading;
 
-namespace Elffy
+namespace Hikari
 {
     public sealed class SubscriptionBag : IDisposable
     {

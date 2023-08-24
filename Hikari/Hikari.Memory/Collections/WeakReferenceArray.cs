@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Elffy.Collections;
+namespace Hikari.Collections;
 
 /// <summary>Provides array type where references to the items are weak reference</summary>
 /// <typeparam name="T"></typeparam>

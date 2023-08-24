@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.Imaging.Internal
+namespace Hikari.Imaging.Internal
 {
     internal static class BitArrayOperation
     {

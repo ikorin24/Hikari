@@ -1,9 +1,9 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace Elffy;
+namespace Hikari;
 
 internal unsafe static class InterlockedEx
 {

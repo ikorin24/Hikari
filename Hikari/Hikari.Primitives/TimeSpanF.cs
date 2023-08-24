@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Elffy
+namespace Hikari
 {
     /// <summary>
     /// Represents a time interval. It is compatible with <see cref="TimeSpan"/>.

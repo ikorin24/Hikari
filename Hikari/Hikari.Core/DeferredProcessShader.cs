@@ -1,8 +1,8 @@
 ﻿#nullable enable
 using System;
-using V = Elffy.VertexSlim;
+using V = Hikari.VertexSlim;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class DeferredProcessShader : Shader<DeferredProcessShader, DeferredProcessMaterial, DeferredProcess>
 {

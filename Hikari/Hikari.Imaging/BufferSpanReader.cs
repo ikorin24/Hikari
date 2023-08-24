@@ -1,9 +1,9 @@
 ﻿#nullable enable
-using Elffy.Unsafes;
+using Hikari.Unsafes;
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     internal ref struct BufferSpanReader
     {

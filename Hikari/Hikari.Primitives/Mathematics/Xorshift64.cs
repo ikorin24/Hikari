@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
-namespace Elffy.Mathematics
+namespace Hikari.Mathematics
 {
     /// <summary>Pseudorandom number generator based on 64 bits Xorshift algorithm.</summary>
     public struct Xorshift64

@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System;
 using System.Runtime.InteropServices;
 
-namespace Elffy.Unsafes;
+namespace Hikari.Unsafes;
 
 public static class ArrayUnsafeExtensions
 {

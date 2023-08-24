@@ -1,9 +1,9 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class Sampler : IScreenManaged
 {

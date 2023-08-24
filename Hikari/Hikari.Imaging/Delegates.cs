@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using Cysharp.Threading.Tasks;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     public delegate void ImageAction(ImageRef image);
     public delegate void ImageAction<in TArg>(ImageRef image, TArg arg);

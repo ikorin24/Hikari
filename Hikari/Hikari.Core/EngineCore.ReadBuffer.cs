@@ -5,9 +5,9 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Threading;
 using System.Collections.Concurrent;
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 
-namespace Elffy;
+namespace Hikari;
 
 unsafe partial class EngineCore
 {

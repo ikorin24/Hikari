@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
-namespace Elffy;
+namespace Hikari;
 
 [StructLayout(LayoutKind.Sequential, Size = 1)]
 public readonly struct None : IEquatable<None>

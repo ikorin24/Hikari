@@ -1,8 +1,8 @@
 ﻿#nullable enable
-using Elffy.Imaging;
-using Elffy.Mathematics;
-using Elffy;
-using Elffy.UI;
+using Hikari.Imaging;
+using Hikari.Mathematics;
+using Hikari;
+using Hikari.UI;
 using System;
 using System.Diagnostics;
 using System.IO;

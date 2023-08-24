@@ -1,8 +1,8 @@
 ﻿#nullable enable
 using System;
-using Elffy.Unsafes;
+using Hikari.Unsafes;
 
-namespace Elffy;
+namespace Hikari;
 
 public static class Utf8StringExtensions
 {

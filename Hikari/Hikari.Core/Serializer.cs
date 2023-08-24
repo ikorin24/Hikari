@@ -1,6 +1,6 @@
 ﻿#nullable enable
-using Elffy.UI;
-using Elffy.Collections;
+using Hikari.UI;
+using Hikari.Collections;
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
@@ -11,7 +11,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
-namespace Elffy;
+namespace Hikari;
 
 public static class Serializer
 {

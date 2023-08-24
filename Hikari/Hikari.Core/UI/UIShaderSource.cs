@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Elffy.UI;
+namespace Hikari.UI;
 
 internal static class UIShaderSource
 {

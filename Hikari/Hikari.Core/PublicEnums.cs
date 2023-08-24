@@ -1,7 +1,7 @@
 ﻿#nullable enable
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 
-namespace Elffy;
+namespace Hikari;
 
 public enum WindowStyle : byte
 {

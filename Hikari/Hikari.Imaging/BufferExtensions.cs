@@ -4,7 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Buffers.Binary;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     internal static class BufferExtensions
     {

@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Elffy;
+namespace Hikari;
 
 internal static class WebColors
 {

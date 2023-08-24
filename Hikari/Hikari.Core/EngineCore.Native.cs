@@ -2,11 +2,11 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using Elffy.NativeBind;
+using Hikari.NativeBind;
 
 [assembly: DisableRuntimeMarshalling]
 
-namespace Elffy;
+namespace Hikari;
 
 static unsafe partial class EngineCore
 {

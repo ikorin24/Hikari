@@ -6,7 +6,7 @@ using System.Diagnostics;
 using Cysharp.Threading.Tasks;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy.Internal;
+namespace Hikari.Internal;
 
 internal sealed class TimingAwaitable : IUniTaskSource, IChainInstancePooled<TimingAwaitable>
 {

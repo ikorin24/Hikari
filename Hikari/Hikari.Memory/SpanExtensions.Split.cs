@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Elffy;
+using Hikari;
 
-namespace Elffy;
+namespace Hikari;
 
 partial class SpanExtensions
 {

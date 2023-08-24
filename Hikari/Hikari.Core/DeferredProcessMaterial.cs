@@ -2,7 +2,7 @@
 using System;
 using System.Diagnostics;
 
-namespace Elffy;
+namespace Hikari;
 
 public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, DeferredProcessShader, DeferredProcess>
 {

@@ -4,10 +4,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Elffy.Imaging.Internal;
-using Elffy.Unsafes;
+using Hikari.Imaging.Internal;
+using Hikari.Unsafes;
 
-namespace Elffy.Imaging
+namespace Hikari.Imaging
 {
     /// <summary>Provides read-only view of image-like object.</summary>
     /// <remarks>

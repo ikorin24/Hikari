@@ -4,12 +4,12 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Elffy.Buffers;
-using Elffy.Threading;
+using Hikari.Buffers;
+using Hikari.Threading;
 
 #pragma warning disable CA1068 // CancellationToken parameters must come last
 
-namespace Elffy
+namespace Hikari
 {
     internal struct OrderedAsyncEventPromiseCore<T>
     {

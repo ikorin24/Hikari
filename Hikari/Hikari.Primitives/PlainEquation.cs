@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Elffy
+namespace Hikari
 {
     public readonly struct PlainEquation : IEquatable<PlainEquation>
     {

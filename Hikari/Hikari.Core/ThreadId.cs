@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Elffy;
+namespace Hikari;
 
 internal readonly struct ThreadId : IEquatable<ThreadId>
 {
