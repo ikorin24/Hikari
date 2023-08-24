@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net7.0": {
+      "System.Threading.Tasks.Extensions": {
+        "type": "Transitive",
+        "resolved": "4.5.4",
+        "contentHash": "zteT+G8xuGu6mS+mzDzYXbzS7rd3K6Fjb9RiZlYlJPam2/hU7JCBZBVEcywNuR+oZ1ncTvc/cq0faRr3P01OVg=="
+      },
+      "elffy.primitives": {
+        "type": "Project",
+        "dependencies": {
+          "UniTask": "[2.2.5, )"
+        }
+      },
+      "UniTask": {
+        "type": "CentralTransitive",
+        "requested": "[2.2.5, )",
+        "resolved": "2.2.5",
+        "contentHash": "ZZkO05sI2UKg57/5VDQniyYK1Aas8FPTQfaqgJXed8MN53KcIW8jge0EsRcfk/3qYHdPjEaVQnI17Cq56TyF+g==",
+        "dependencies": {
+          "System.Threading.Tasks.Extensions": "4.5.4"
+        }
+      }
+    }
+  }
+}
