@@ -1,6 +1,16 @@
 <Project>
+
   <PropertyGroup>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>Nullable</WarningsAsErrors>
+    <LangVersion>11</LangVersion>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>1591;</NoWarn>
+    <Authors>ikorin24</Authors>
+    <Version>0.0.0</Version>
+  </PropertyGroup>
+
 </Project>
