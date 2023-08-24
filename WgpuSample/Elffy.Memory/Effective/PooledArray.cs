@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Elffy.AssemblyServices;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -14,7 +13,6 @@ namespace Elffy.Effective
     /// <typeparam name="T">element type</typeparam>
     [DebuggerTypeProxy(typeof(PooledArrayDebuggerTypeProxy<>))]
     [DebuggerDisplay("PooledArray<{typeof(T).Name,nq}>[{Length}]")]
-    [DontUseDefault]
     public readonly struct PooledArray<T> :
         IFromEnumerable<PooledArray<T>, T>,
         IFromReadOnlySpan<PooledArray<T>, T>,

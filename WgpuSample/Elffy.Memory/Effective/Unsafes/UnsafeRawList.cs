@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
-using Elffy.AssemblyServices;
 
 namespace Elffy.Effective.Unsafes
 {
@@ -17,7 +16,6 @@ namespace Elffy.Effective.Unsafes
     /// <typeparam name="T">element type</typeparam>
     [DebuggerTypeProxy(typeof(UnsafeRawListDebuggerTypeProxy<>))]
     [DebuggerDisplay("{DebugView,nq}")]
-    [DontUseDefault]
     public unsafe readonly struct UnsafeRawList<T> :
         IFromEnumerable<UnsafeRawList<T>, T>,
         IFromReadOnlySpan<UnsafeRawList<T>, T>,
