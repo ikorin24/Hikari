@@ -1,5 +1,6 @@
 ﻿#nullable enable
-using Elffy.Effective;
+using Elffy;
+using Elffy.Collections;
 using Elffy.NativeBind;
 using System;
 using System.Collections.Generic;

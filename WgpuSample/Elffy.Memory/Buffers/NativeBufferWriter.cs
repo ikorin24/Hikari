@@ -1,29 +1,30 @@
 ﻿#nullable enable
+using Elffy.Collections;
 using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.Effective.Unsafes;
+namespace Elffy.Buffers;
 
-public sealed class UnsafeBufferWriter<T> : IBufferWriter<T>, IDisposable where T : unmanaged
+public sealed class NativeBufferWriter<T> : IBufferWriter<T>, IDisposable where T : unmanaged
 {
     private UnsafeRawArray<T> _buffer;
     private int _count;
 
     public Span<T> WrittenSpan => _buffer.AsSpan(0, _count);
 
-    public UnsafeBufferWriter()
+    public NativeBufferWriter()
     {
         _buffer = UnsafeRawArray<T>.Empty;
     }
 
-    public UnsafeBufferWriter(int capacity)
+    public NativeBufferWriter(int capacity)
     {
         _buffer = new UnsafeRawArray<T>(capacity, false);
     }
 
-    ~UnsafeBufferWriter() => Dispose(false);
+    ~NativeBufferWriter() => Dispose(false);
 
     public void Dispose()
     {
@@ -58,7 +59,7 @@ public sealed class UnsafeBufferWriter<T> : IBufferWriter<T>, IDisposable where 
 
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        static void Resize(UnsafeBufferWriter<T> self, int requestedSize)
+        static void Resize(NativeBufferWriter<T> self, int requestedSize)
         {
             var newCapacity = Math.Max(4, Math.Max(requestedSize + self._count, self._buffer.Length * 2));
             var newBuffer = new UnsafeRawArray<T>(newCapacity, false);

@@ -3,8 +3,8 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
-using Elffy.Effective.Unsafes;
 using System.Diagnostics;
+using Elffy.Unsafes;
 
 namespace Elffy.Imaging.Internal
 {

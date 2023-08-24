@@ -8,10 +8,11 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
-using Elffy.Effective.Unsafes;
 using System.Diagnostics;
 using System.IO.Compression;
 using Elffy.Imaging.Internal;
+using Elffy.Collections;
+using Elffy.Unsafes;
 
 namespace Elffy.Imaging
 {

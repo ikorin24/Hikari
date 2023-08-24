@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using Cysharp.Threading.Tasks;
-using Elffy.Effective;
 using Elffy.Imaging;
 using Elffy.NativeBind;
 using System;

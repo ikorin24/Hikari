@@ -5,9 +5,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Collections;
-using Elffy.Effective.Unsafes;
 
-namespace Elffy.Effective;
+namespace Elffy.Collections;
 
 [DebuggerTypeProxy(typeof(BufferPooledDebugView<,>))]
 [DebuggerDisplay("Count = {Count}")]
@@ -218,7 +217,7 @@ public sealed class BufferPooledDictionary<TKey, TValue> : IEnumerable<KeyValueP
         // Assign member variables after both arrays allocated to guard against corruption from OOM if second fails
         _freeList = -1;
 
-        if(IntPtr.Size == 8) {
+        if(nint.Size == 8) {
             _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)size);
         }
         _buckets.Dispose();
@@ -277,7 +276,7 @@ public sealed class BufferPooledDictionary<TKey, TValue> : IEnumerable<KeyValueP
         int index;
         if(_freeCount > 0) {
             index = _freeList;
-            Debug.Assert((StartOfFreeList - entries[_freeList].next) >= -1, "shouldn't overflow because `next` cannot underflow");
+            Debug.Assert(StartOfFreeList - entries[_freeList].next >= -1, "shouldn't overflow because `next` cannot underflow");
             _freeList = StartOfFreeList - entries[_freeList].next;
             _freeCount--;
         }
@@ -321,7 +320,7 @@ public sealed class BufferPooledDictionary<TKey, TValue> : IEnumerable<KeyValueP
         _buckets.Dispose();
         _buckets = newBuckets;
 
-        if(IntPtr.Size == 8) {
+        if(nint.Size == 8) {
             _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)newSize);
         }
         for(int i = 0; i < count; i++) {
@@ -360,7 +359,7 @@ public sealed class BufferPooledDictionary<TKey, TValue> : IEnumerable<KeyValueP
                         entries[last].next = entry.next;
                     }
 
-                    Debug.Assert((StartOfFreeList - _freeList) < 0, "shouldn't underflow because max hashtable length is MaxPrimeArrayLength = 0x7FEFFFFD(2146435069) _freelist underflow threshold 2147483646");
+                    Debug.Assert(StartOfFreeList - _freeList < 0, "shouldn't underflow because max hashtable length is MaxPrimeArrayLength = 0x7FEFFFFD(2146435069) _freelist underflow threshold 2147483646");
                     entry.next = StartOfFreeList - _freeList;
 
                     _freeList = i;
@@ -408,7 +407,7 @@ public sealed class BufferPooledDictionary<TKey, TValue> : IEnumerable<KeyValueP
 
                     value = entry.value;
 
-                    Debug.Assert((StartOfFreeList - _freeList) < 0, "shouldn't underflow because max hashtable length is MaxPrimeArrayLength = 0x7FEFFFFD(2146435069) _freelist underflow threshold 2147483646");
+                    Debug.Assert(StartOfFreeList - _freeList < 0, "shouldn't underflow because max hashtable length is MaxPrimeArrayLength = 0x7FEFFFFD(2146435069) _freelist underflow threshold 2147483646");
                     entry.next = StartOfFreeList - _freeList;
 
                     _freeList = i;
@@ -539,8 +538,8 @@ public sealed class BufferPooledDictionary<TKey, TValue> : IEnumerable<KeyValueP
     private ref int GetBucket(uint hashCode)
     {
         var buckets = _buckets;
-        if(IntPtr.Size == 8) {
-            return ref buckets[(int)(HashHelpers.FastMod(hashCode, (uint)buckets.Length, _fastModMultiplier))];
+        if(nint.Size == 8) {
+            return ref buckets[(int)HashHelpers.FastMod(hashCode, (uint)buckets.Length, _fastModMultiplier)];
         }
         else {
             return ref buckets[(int)(hashCode % (uint)buckets.Length)];
@@ -626,7 +625,7 @@ public sealed class BufferPooledDictionary<TKey, TValue> : IEnumerable<KeyValueP
         {
             get
             {
-                if(_index == 0 || (_index == _dictionary._count + 1)) {
+                if(_index == 0 || _index == _dictionary._count + 1) {
                     ThrowHelper.InvalidOperation("");
                 }
 
@@ -747,7 +746,7 @@ public sealed class BufferPooledDictionary<TKey, TValue> : IEnumerable<KeyValueP
             {
                 get
                 {
-                    if(_index == 0 || (_index == _dictionary._count + 1)) {
+                    if(_index == 0 || _index == _dictionary._count + 1) {
                         ThrowHelper.InvalidOperation("");
                     }
 
@@ -863,7 +862,7 @@ public sealed class BufferPooledDictionary<TKey, TValue> : IEnumerable<KeyValueP
             {
                 get
                 {
-                    if(_index == 0 || (_index == _dictionary._count + 1)) {
+                    if(_index == 0 || _index == _dictionary._count + 1) {
                         ThrowHelper.InvalidOperation("");
                     }
 

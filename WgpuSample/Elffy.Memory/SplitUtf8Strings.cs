@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace Elffy.Text;
+namespace Elffy;
 
 [DebuggerTypeProxy(typeof(Utf8StringsDebuggerTypeProxy))]
 [DebuggerDisplay("ReadOnlySpan<byte>[{Count()}]")]
@@ -17,7 +17,7 @@ public readonly ref struct SplitUtf8Strings
     private readonly StringSplitOptions _options;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SplitUtf8Strings(ReadOnlySpan<byte> str, byte separator, StringSplitOptions options)
+    internal SplitUtf8Strings(ReadOnlySpan<byte> str, byte separator, StringSplitOptions options)
     {
         _str = str;
         _isSeparatorSingleByte = true;
@@ -27,7 +27,7 @@ public readonly ref struct SplitUtf8Strings
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SplitUtf8Strings(ReadOnlySpan<byte> str, ReadOnlySpan<byte> separator, StringSplitOptions options)
+    internal SplitUtf8Strings(ReadOnlySpan<byte> str, ReadOnlySpan<byte> separator, StringSplitOptions options)
     {
         _str = str;
         _isSeparatorSingleByte = false;
@@ -75,7 +75,7 @@ public readonly ref struct SplitUtf8Strings
         public ReadOnlySpan<byte> Current => _current;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Enumerator(ReadOnlySpan<byte> str, byte separator, StringSplitOptions options)
+        internal Enumerator(ReadOnlySpan<byte> str, byte separator, StringSplitOptions options)
         {
             _str = str;
             _current = ReadOnlySpan<byte>.Empty;
@@ -86,7 +86,7 @@ public readonly ref struct SplitUtf8Strings
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Enumerator(ReadOnlySpan<byte> str, ReadOnlySpan<byte> separator, StringSplitOptions options)
+        internal Enumerator(ReadOnlySpan<byte> str, ReadOnlySpan<byte> separator, StringSplitOptions options)
         {
             _str = str;
             _current = ReadOnlySpan<byte>.Empty;

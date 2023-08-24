@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 
-namespace Elffy.Effective.Unsafes;
+namespace Elffy.Collections;
 
 /// <summary>Provides list which is allocated in unmanaged memory.</summary>
 /// <remarks>
@@ -46,12 +46,12 @@ public unsafe readonly struct UnsafeRawList<T> :
     // _ptr == IntPtr.Zero
     // =============================================================
 
-    private readonly IntPtr _ptr;
+    private readonly nint _ptr;
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private string DebugView => _ptr == IntPtr.Zero ? "null" : $"UnsafeRawList<{typeof(T).Name}>[{CountRef()}]";
+    private string DebugView => _ptr == nint.Zero ? "null" : $"UnsafeRawList<{typeof(T).Name}>[{CountRef()}]";
 
-    public bool IsNull => _ptr == IntPtr.Zero;
+    public bool IsNull => _ptr == nint.Zero;
 
     public int Count
     {
@@ -88,7 +88,7 @@ public unsafe readonly struct UnsafeRawList<T> :
     }
 
     /// <summary>Get pointer to the head</summary>
-    public readonly IntPtr Ptr
+    public readonly nint Ptr
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => ArrayRef().Ptr;
@@ -254,7 +254,7 @@ public unsafe readonly struct UnsafeRawList<T> :
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Span<T> AsSpan()
     {
-        if(_ptr == IntPtr.Zero) {
+        if(_ptr == nint.Zero) {
             return Span<T>.Empty;
         }
         return ArrayRef().AsSpan(0, CountRef());
@@ -263,7 +263,7 @@ public unsafe readonly struct UnsafeRawList<T> :
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Span<T> AsSpan(int start)
     {
-        if(_ptr == IntPtr.Zero) {
+        if(_ptr == nint.Zero) {
             if(start == 0) {
                 return Span<T>.Empty;
             }
@@ -275,7 +275,7 @@ public unsafe readonly struct UnsafeRawList<T> :
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Span<T> AsSpan(int start, int length)
     {
-        if(_ptr == IntPtr.Zero) {
+        if(_ptr == nint.Zero) {
             if(start == 0 && length == 0) {
                 return Span<T>.Empty;
             }
@@ -287,7 +287,7 @@ public unsafe readonly struct UnsafeRawList<T> :
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose()
     {
-        if(_ptr == IntPtr.Zero) { return; }
+        if(_ptr == nint.Zero) { return; }
         ArrayRef().Dispose();
         Marshal.FreeHGlobal(_ptr);
         Unsafe.AsRef(_ptr) = default;
@@ -302,7 +302,7 @@ public unsafe readonly struct UnsafeRawList<T> :
     [MethodImpl(MethodImplOptions.NoInlining)]  // uncommon path
     private void ExtendCapcityToNextSize()
     {
-        Debug.Assert(_ptr != IntPtr.Zero);
+        Debug.Assert(_ptr != nint.Zero);
 
         // Double the capacity. If the current capacity is 0, set it to 4.
 
@@ -317,11 +317,11 @@ public unsafe readonly struct UnsafeRawList<T> :
     }
 
     private ref int CountRef() => ref *(int*)_ptr;
-    private ref UnsafeRawArray<T> ArrayRef() => ref *(UnsafeRawArray<T>*)(((int*)_ptr) + 1);
+    private ref UnsafeRawArray<T> ArrayRef() => ref *(UnsafeRawArray<T>*)((int*)_ptr + 1);
 
     public override string? ToString()
     {
-        if(_ptr == IntPtr.Zero) { throw new NullReferenceException(); }
+        if(_ptr == nint.Zero) { throw new NullReferenceException(); }
         return base.ToString();
     }
 

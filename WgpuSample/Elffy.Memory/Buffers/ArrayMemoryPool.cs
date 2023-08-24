@@ -5,10 +5,10 @@ using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using Elffy.Effective.Unsafes;
 using Elffy.Threading;
+using Elffy.Unsafes;
 
-namespace Elffy.Effective;
+namespace Elffy.Buffers;
 
 internal static class ArrayMemoryPool
 {

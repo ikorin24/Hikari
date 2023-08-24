@@ -1,11 +1,11 @@
 ﻿#nullable enable
-using Elffy.Effective;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Threading;
+using Elffy.Collections;
 
 namespace Elffy.UI;
 

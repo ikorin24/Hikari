@@ -3,7 +3,6 @@ using System;
 using System.IO;
 using System.Diagnostics;
 using Elffy.Imaging.Internal;
-using Elffy.Effective;
 using SkiaSharp;
 
 namespace Elffy.Imaging

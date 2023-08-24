@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Elffy.Effective;
+namespace Elffy.Collections;
 
 /// <summary>Provides array type where references to the items are weak reference</summary>
 /// <typeparam name="T"></typeparam>
@@ -164,15 +164,15 @@ public sealed class WeakReferenceArray<T> :
 
     void IList<T?>.RemoveAt(int index) => throw new NotSupportedException();
 
-    void ICollection.CopyTo(Array array, int index) => ((ICollection<T?>)this).CopyTo((T?[])array, index);
+    void ICollection.CopyTo(Array array, int index) => this.CopyTo((T?[])array, index);
 
     int IList.Add(object? value) => throw new NotSupportedException();
 
     void IList.Clear() => throw new NotSupportedException();
 
-    bool IList.Contains(object? value) => (value is T v) && ((IList<T?>)this).Contains(v);
+    bool IList.Contains(object? value) => value is T v && ((IList<T?>)this).Contains(v);
 
-    int IList.IndexOf(object? value) => (value is T v) ? ((IList<T?>)this).IndexOf(v) : -1;
+    int IList.IndexOf(object? value) => value is T v ? ((IList<T?>)this).IndexOf(v) : -1;
 
     void IList.Insert(int index, object? value) => throw new NotSupportedException();
 

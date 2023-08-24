@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Elffy;
 
-namespace Elffy.Effective;
+namespace Elffy;
 
 partial class SpanExtension
 {

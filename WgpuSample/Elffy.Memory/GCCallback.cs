@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
-namespace Elffy.Effective;
+namespace Elffy;
 
 /// <summary>GC callback class</summary>
 public static class GCCallback

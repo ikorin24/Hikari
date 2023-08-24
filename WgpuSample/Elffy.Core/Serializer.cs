@@ -1,6 +1,6 @@
 ﻿#nullable enable
-using Elffy.Effective;
 using Elffy.UI;
+using Elffy.Collections;
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;

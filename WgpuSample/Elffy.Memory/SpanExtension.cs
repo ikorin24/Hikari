@@ -4,9 +4,10 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Elffy.Effective.Unsafes;
+using Elffy.Collections;
+using Elffy.Unsafes;
 
-namespace Elffy.Effective;
+namespace Elffy;
 
 public static partial class SpanExtension
 {

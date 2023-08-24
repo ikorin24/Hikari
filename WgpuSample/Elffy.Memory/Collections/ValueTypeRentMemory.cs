@@ -1,5 +1,6 @@
 ﻿#nullable enable
-using Elffy.Effective.Unsafes;
+using Elffy.Buffers;
+using Elffy.Unsafes;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -7,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Elffy.Effective;
+namespace Elffy.Collections;
 
 /// <summary>Shared memories from memory pool, that provides <see cref="Span{T}"/>.</summary>
 /// <remarks>
@@ -35,7 +36,7 @@ public readonly struct ValueTypeRentMemory<T> :
     // _length : number of T element
 
     private readonly byte[]? _array;
-    private readonly IntPtr _start;
+    private readonly nint _start;
     private readonly int _length;
 
     public static ValueTypeRentMemory<T> Empty => default;
@@ -82,7 +83,7 @@ public readonly struct ValueTypeRentMemory<T> :
         }
         if(ArrayMemoryPool.TryRentValueTypeMemory<T>(length, out _array, out int start)) {
             Debug.Assert(_array is not null);
-            _start = new IntPtr(start);
+            _start = new nint(start);
         }
         else {
             if(length > int.MaxValue / sizeof(T)) {
@@ -149,7 +150,7 @@ public readonly struct ValueTypeRentMemory<T> :
             ArrayMemoryPool.ReturnValueTypeMemory(_array, (int)_start);
             Unsafe.AsRef<byte[]?>(_array) = null;
         }
-        Unsafe.AsRef(_start) = IntPtr.Zero;
+        Unsafe.AsRef(_start) = nint.Zero;
         Unsafe.AsRef(_length) = 0;
     }
 

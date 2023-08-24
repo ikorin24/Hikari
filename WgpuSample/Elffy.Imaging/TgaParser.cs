@@ -7,7 +7,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Elffy.Imaging.Internal;
-using Elffy.Effective.Unsafes;
+using Elffy.Unsafes;
 
 namespace Elffy.Imaging
 {

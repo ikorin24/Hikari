@@ -1,9 +1,8 @@
 ﻿#nullable enable
 using System;
-using Elffy.Effective;
-using Elffy.Effective.Unsafes;
+using Elffy.Unsafes;
 
-namespace Elffy.Text;
+namespace Elffy;
 
 public static class Utf8StringExtension
 {

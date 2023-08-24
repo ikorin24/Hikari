@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using Elffy;
-using Elffy.Effective;
 using Elffy.Internal;
 using System;
 using System.Text.Json;

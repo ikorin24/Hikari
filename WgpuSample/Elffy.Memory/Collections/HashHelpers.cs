@@ -1,9 +1,10 @@
 ﻿#nullable enable
+using Elffy;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.Effective.Unsafes;
+namespace Elffy.Collections;
 
 internal static class HashHelpers
 {
@@ -41,7 +42,7 @@ internal static class HashHelpers
         if((candidate & 1) != 0) {
             int limit = (int)Math.Sqrt(candidate);
             for(int divisor = 3; divisor <= limit; divisor += 2) {
-                if((candidate % divisor) == 0)
+                if(candidate % divisor == 0)
                     return false;
             }
             return true;
@@ -60,8 +61,8 @@ internal static class HashHelpers
         }
 
         // Outside of our predefined table. Compute the hard way.
-        for(int i = (min | 1); i < int.MaxValue; i += 2) {
-            if(IsPrime(i) && ((i - 1) % HashPrime != 0))
+        for(int i = min | 1; i < int.MaxValue; i += 2) {
+            if(IsPrime(i) && (i - 1) % HashPrime != 0)
                 return i;
         }
         return min;
@@ -98,7 +99,7 @@ internal static class HashHelpers
 
         // This is equivalent of (uint)Math.BigMul(multiplier * value, divisor, out _). This version
         // is faster than BigMul currently because we only need the high bits.
-        uint highbits = (uint)(((((multiplier * value) >> 32) + 1) * divisor) >> 32);
+        uint highbits = (uint)(((multiplier * value >> 32) + 1) * divisor >> 32);
 
         Debug.Assert(highbits == value % divisor);
         return highbits;

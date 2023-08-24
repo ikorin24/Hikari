@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Elffy.Effective;
 using Elffy.NativeBind;
 using System;
 using System.Diagnostics.CodeAnalysis;

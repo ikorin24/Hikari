@@ -2,7 +2,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Elffy.Effective;
+namespace Elffy;
 
 public static partial class SpanExtension
 {

@@ -2,9 +2,9 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
-using Elffy.Effective;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Elffy.Buffers;
 
 namespace Elffy.Imaging
 {

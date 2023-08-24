@@ -3,8 +3,8 @@ using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Linq;
-using Elffy.Effective.Unsafes;
 using Elffy.Imaging.Internal;
+using Elffy.Collections;
 
 namespace Elffy.Imaging
 {

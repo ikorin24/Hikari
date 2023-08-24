@@ -4,11 +4,11 @@
 #define CAN_SKIP_LOCALS_INIT
 #endif
 
-using Elffy.Effective.Unsafes;
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Elffy.Imaging.Internal;
+using Elffy.Collections;
 
 namespace Elffy.Imaging
 {

@@ -1,6 +1,6 @@
 ﻿#nullable enable
 using Elffy.Imaging;
-using Elffy.Effective;
+using Elffy.Collections;
 using System;
 using SkiaSharp;
 

@@ -3,9 +3,9 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Elffy.Effective.Unsafes;
+using Elffy.Unsafes;
 
-namespace Elffy.Text;
+namespace Elffy;
 
 [DebuggerTypeProxy(typeof(Utf8StringsDebuggerTypeProxy))]
 [DebuggerDisplay("ReadOnlySpan<byte>[{Count()}]")]
@@ -14,7 +14,7 @@ public readonly ref struct Utf8LineEnumerable
     private readonly ReadOnlySpan<byte> _str;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Utf8LineEnumerable(ReadOnlySpan<byte> str) => _str = str;
+    internal Utf8LineEnumerable(ReadOnlySpan<byte> str) => _str = str;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Enumerator GetEnumerator() => new Enumerator(_str);
@@ -51,7 +51,7 @@ public readonly ref struct Utf8LineEnumerable
         public ReadOnlySpan<byte> Current => _current;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Enumerator(ReadOnlySpan<byte> str)
+        internal Enumerator(ReadOnlySpan<byte> str)
         {
             _str = str;
             _current = ReadOnlySpan<byte>.Empty;

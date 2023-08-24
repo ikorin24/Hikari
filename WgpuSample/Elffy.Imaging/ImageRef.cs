@@ -4,9 +4,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Elffy.Effective;
-using Elffy.Effective.Unsafes;
 using Elffy.Imaging.Internal;
+using Elffy.Unsafes;
 
 namespace Elffy.Imaging
 {

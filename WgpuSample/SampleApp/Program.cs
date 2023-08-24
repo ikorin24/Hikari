@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Elffy.Effective;
 using Elffy.Imaging;
 using Elffy.Mathematics;
 using Elffy;

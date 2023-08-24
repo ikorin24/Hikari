@@ -1,14 +1,14 @@
 ﻿#nullable enable
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Elffy.Effective.Unsafes;
+using Elffy.Buffers;
+using Elffy.Unsafes;
 
-namespace Elffy.Effective;
+namespace Elffy.Collections;
 
 /// <summary>Shared memories from memory pool, that provides <see cref="Span{T}"/>.</summary>
 /// <remarks>

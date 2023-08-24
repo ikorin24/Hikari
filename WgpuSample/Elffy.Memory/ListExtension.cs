@@ -3,10 +3,10 @@ using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
-using Elffy.Effective.Unsafes;
 using System.Runtime.InteropServices;
+using Elffy.Unsafes;
 
-namespace Elffy.Effective;
+namespace Elffy;
 
 public static class ListExtension
 {
@@ -17,7 +17,7 @@ public static class ListExtension
 
         if(list.Capacity < list.Count + span.Length) {
             int cap = list.Capacity + span.Length;
-            if(cap > (1 << 30)) {
+            if(cap > 1 << 30) {
                 cap = Array.MaxLength;
             }
             else {
@@ -25,7 +25,7 @@ public static class ListExtension
                     cap = 4;
                 }
                 // round up to power of two
-                cap = (1 << (32 - BitOperations.LeadingZeroCount((uint)cap - 1)));
+                cap = 1 << 32 - BitOperations.LeadingZeroCount((uint)cap - 1);
             }
             list.Capacity = cap;
         }

@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System;
 using System.Runtime.InteropServices;
 
-namespace Elffy.Effective.Unsafes;
+namespace Elffy.Unsafes;
 
 public static class ArrayUnsafeExtension
 {
@@ -20,7 +20,7 @@ public static class ArrayUnsafeExtension
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ref T At<T>(this T[] source, int index)
     {
-        return ref Unsafe.Add(ref GetReference(source), index);
+        return ref Unsafe.Add(ref source.GetReference(), index);
     }
 
     /// <summary>Get reference to the 0th element without any checking.</summary>
@@ -43,7 +43,7 @@ public static class ArrayUnsafeExtension
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Span<T> AsSpanUnsafe<T>(this T[] array)
     {
-        return MemoryMarshal.CreateSpan(ref GetReference(array), array.Length);
+        return MemoryMarshal.CreateSpan(ref array.GetReference(), array.Length);
     }
 
     /// <summary>Create span without any checking.</summary>

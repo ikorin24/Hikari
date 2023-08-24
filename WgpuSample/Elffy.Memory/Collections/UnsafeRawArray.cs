@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.ComponentModel;
 
-namespace Elffy.Effective.Unsafes;
+namespace Elffy.Collections;
 
 /// <summary>Low level wrapper of malloc, free. There are no safety checking, no zero initialized</summary>
 /// <remarks>
@@ -41,7 +41,7 @@ public readonly unsafe struct UnsafeRawArray<T> :
     /// <summary>Get length of array</summary>
     public readonly int Length;
     /// <summary>Get pointer to array</summary>
-    public readonly IntPtr Ptr;
+    public readonly nint Ptr;
 
     /// <summary>Get whether the array is empty or not</summary>
     public bool IsEmpty => Length == 0;
@@ -105,7 +105,7 @@ public readonly unsafe struct UnsafeRawArray<T> :
     {
         Length = span.Length;
         if(span.IsEmpty) {
-            Ptr = IntPtr.Zero;
+            Ptr = nint.Zero;
             return;
         }
         Ptr = Marshal.AllocHGlobal(span.Length * sizeof(T));

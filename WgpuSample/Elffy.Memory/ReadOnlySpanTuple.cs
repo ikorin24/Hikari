@@ -1,8 +1,9 @@
 ﻿#nullable enable
+using Elffy;
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Elffy.Effective;
+namespace Elffy;
 
 public readonly ref struct ReadOnlySpanTuple<T1, T2>
 {
