@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Elffy.Memory\Elffy.Memory.csproj" />
-    <ProjectReference Include="..\Elffy.Primitives\Elffy.Primitives.csproj" />
+    <ProjectReference Include="..\Hikari.Memory\Hikari.Memory.csproj" />
+    <ProjectReference Include="..\Hikari.Primitives\Hikari.Primitives.csproj" />
   </ItemGroup>
 
 </Project>

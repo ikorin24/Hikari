@@ -7,7 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Elffy.Primitives\Elffy.Primitives.csproj" />
+    <PackageReference Include="UniTask" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hikari.InternalTools\Hikari.InternalTools.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

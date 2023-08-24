@@ -13,9 +13,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Elffy.Events\Elffy.Events.csproj" />
-    <ProjectReference Include="..\Elffy.Imaging\Elffy.Imaging.csproj" />
-    <ProjectReference Include="..\Elffy.InternalTools\Elffy.InternalTools.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Hikari.Events\Hikari.Events.csproj" />
+    <ProjectReference Include="..\Hikari.Imaging\Hikari.Imaging.csproj" />
+    <ProjectReference Include="..\Hikari.InternalTools\Hikari.InternalTools.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\EnumMapper\EnumMapper.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 

@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Elffy.Memory\Elffy.Memory.csproj" />
-    <ProjectReference Include="..\Elffy.InternalTools\Elffy.InternalTools.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Hikari.Memory\Hikari.Memory.csproj" />
+    <ProjectReference Include="..\Hikari.InternalTools\Hikari.InternalTools.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

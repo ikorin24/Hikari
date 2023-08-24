@@ -16,13 +16,13 @@
         "resolved": "4.5.4",
         "contentHash": "zteT+G8xuGu6mS+mzDzYXbzS7rd3K6Fjb9RiZlYlJPam2/hU7JCBZBVEcywNuR+oZ1ncTvc/cq0faRr3P01OVg=="
       },
-      "elffy.memory": {
+      "hikari.memory": {
         "type": "Project",
         "dependencies": {
-          "Elffy.Primitives": "[1.0.0, )"
+          "Hikari.Primitives": "[1.0.0, )"
         }
       },
-      "elffy.primitives": {
+      "hikari.primitives": {
         "type": "Project",
         "dependencies": {
           "UniTask": "[2.2.5, )"

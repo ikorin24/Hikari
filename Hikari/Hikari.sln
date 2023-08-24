@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33103.184
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elffy.Core", "Elffy.Core\Elffy.Core.csproj", "{2A0AD572-9BC3-4D8E-AB53-09AAABFFAE88}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikari.Core", "Hikari.Core\Hikari.Core.csproj", "{2A0AD572-9BC3-4D8E-AB53-09AAABFFAE88}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ソリューション項目", "ソリューション項目", "{6BEA2C75-7D0C-4177-B3B2-772A7132610E}"
 	ProjectSection(SolutionItems) = preProject
@@ -14,15 +14,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EnumMapper", "EnumMapper\En
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SampleApp", "SampleApp\SampleApp.csproj", "{ACB3CAE4-4F6F-49C9-BBE3-3691805C3555}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elffy.InternalTools", "Elffy.InternalTools\Elffy.InternalTools.csproj", "{6C67A899-ADED-4FBA-BCE1-36E2ADB42D6F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikari.InternalTools", "Hikari.InternalTools\Hikari.InternalTools.csproj", "{6C67A899-ADED-4FBA-BCE1-36E2ADB42D6F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elffy.Primitives", "Elffy.Primitives\Elffy.Primitives.csproj", "{BF2C0996-AD12-4191-A535-E9BDFABB7F18}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikari.Primitives", "Hikari.Primitives\Hikari.Primitives.csproj", "{BF2C0996-AD12-4191-A535-E9BDFABB7F18}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elffy.Memory", "Elffy.Memory\Elffy.Memory.csproj", "{7FDFCF03-D989-4B84-8655-256C9FA62B5E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikari.Memory", "Hikari.Memory\Hikari.Memory.csproj", "{7FDFCF03-D989-4B84-8655-256C9FA62B5E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elffy.Imaging", "Elffy.Imaging\Elffy.Imaging.csproj", "{D1B976DC-F971-474C-AD95-F323D1E7AE80}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikari.Imaging", "Hikari.Imaging\Hikari.Imaging.csproj", "{D1B976DC-F971-474C-AD95-F323D1E7AE80}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elffy.Events", "Elffy.Events\Elffy.Events.csproj", "{DC33670A-880A-4EBB-B633-DEEC9A420CD3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikari.Events", "Hikari.Events\Hikari.Events.csproj", "{DC33670A-880A-4EBB-B633-DEEC9A420CD3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -2,16 +2,6 @@
   "version": 2,
   "dependencies": {
     "net7.0": {
-      "SkiaSharp": {
-        "type": "Direct",
-        "requested": "[2.88.5, )",
-        "resolved": "2.88.5",
-        "contentHash": "43t9YEvcZtT+tuMN4hHH8rV8h7ttk1DRv5Tptxamy+bPuE8Up51+ME1Y1TXYAQf75686tHO488a0YKAnmJaSNg==",
-        "dependencies": {
-          "SkiaSharp.NativeAssets.Win32": "2.88.5",
-          "SkiaSharp.NativeAssets.macOS": "2.88.5"
-        }
-      },
       "SkiaSharp.NativeAssets.macOS": {
         "type": "Transitive",
         "resolved": "2.88.5",
@@ -27,16 +17,41 @@
         "resolved": "4.5.4",
         "contentHash": "zteT+G8xuGu6mS+mzDzYXbzS7rd3K6Fjb9RiZlYlJPam2/hU7JCBZBVEcywNuR+oZ1ncTvc/cq0faRr3P01OVg=="
       },
-      "elffy.memory": {
+      "hikari.events": {
         "type": "Project",
         "dependencies": {
-          "Elffy.Primitives": "[1.0.0, )"
+          "Hikari.Memory": "[1.0.0, )",
+          "UniTask": "[2.2.5, )"
         }
       },
-      "elffy.primitives": {
+      "hikari.imaging": {
+        "type": "Project",
+        "dependencies": {
+          "Hikari.Memory": "[1.0.0, )",
+          "Hikari.Primitives": "[1.0.0, )",
+          "SkiaSharp": "[2.88.5, )"
+        }
+      },
+      "hikari.memory": {
+        "type": "Project",
+        "dependencies": {
+          "Hikari.Primitives": "[1.0.0, )"
+        }
+      },
+      "hikari.primitives": {
         "type": "Project",
         "dependencies": {
           "UniTask": "[2.2.5, )"
+        }
+      },
+      "SkiaSharp": {
+        "type": "CentralTransitive",
+        "requested": "[2.88.5, )",
+        "resolved": "2.88.5",
+        "contentHash": "43t9YEvcZtT+tuMN4hHH8rV8h7ttk1DRv5Tptxamy+bPuE8Up51+ME1Y1TXYAQf75686tHO488a0YKAnmJaSNg==",
+        "dependencies": {
+          "SkiaSharp.NativeAssets.Win32": "2.88.5",
+          "SkiaSharp.NativeAssets.macOS": "2.88.5"
         }
       },
       "UniTask": {
