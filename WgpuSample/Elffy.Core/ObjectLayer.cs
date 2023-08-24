@@ -80,7 +80,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         RefTypeRentMemory<TObject> tmp;
         lock(_sync) {
             if(_addedList.Count == 0) { return; }
-            tmp = RefTypeRentMemory<TObject>.From(_addedList.AsReadOnlySpan());
+            tmp = new RefTypeRentMemory<TObject>(_addedList.AsReadOnlySpan());
             _addedList.Clear();
         }
         try {
@@ -113,7 +113,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         RefTypeRentMemory<TObject> tmp;
         lock(_sync) {
             if(_removedList.Count == 0) { return; }
-            tmp = RefTypeRentMemory<TObject>.From(_removedList.AsReadOnlySpan());
+            tmp = new RefTypeRentMemory<TObject>(_removedList.AsReadOnlySpan());
             _removedList.Clear();
         }
         try {

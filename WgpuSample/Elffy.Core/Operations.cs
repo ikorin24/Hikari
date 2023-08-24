@@ -116,7 +116,7 @@ public sealed class Operations
         RefTypeRentMemory<Operation> tmp;
         lock(_sync) {
             if(_addedList.Count == 0) { return; }
-            tmp = RefTypeRentMemory<Operation>.From(_addedList.AsReadOnlySpan());
+            tmp = new RefTypeRentMemory<Operation>(_addedList.AsReadOnlySpan());
             _addedList.Clear();
         }
         try {
@@ -162,7 +162,7 @@ public sealed class Operations
         RefTypeRentMemory<Operation> tmp;
         lock(_sync) {
             if(_removedList.Count == 0) { return; }
-            tmp = RefTypeRentMemory<Operation>.From(_removedList.AsReadOnlySpan());
+            tmp = new RefTypeRentMemory<Operation>(_removedList.AsReadOnlySpan());
             _removedList.Clear();
         }
         try {

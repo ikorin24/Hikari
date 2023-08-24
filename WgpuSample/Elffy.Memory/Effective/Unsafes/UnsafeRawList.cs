@@ -17,8 +17,6 @@ namespace Elffy.Effective.Unsafes
     [DebuggerTypeProxy(typeof(UnsafeRawListDebuggerTypeProxy<>))]
     [DebuggerDisplay("{DebugView,nq}")]
     public unsafe readonly struct UnsafeRawList<T> :
-        IFromEnumerable<UnsafeRawList<T>, T>,
-        IFromReadOnlySpan<UnsafeRawList<T>, T>,
         IDisposable,
         IEquatable<UnsafeRawList<T>>
         where T : unmanaged
@@ -339,39 +337,8 @@ namespace Elffy.Effective.Unsafes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator !=(UnsafeRawList<T> left, UnsafeRawList<T> right) => !(left == right);
 
-        public static UnsafeRawList<T> From(IEnumerable<T> source)
-        {
-            ArgumentNullException.ThrowIfNull(source);
-            return source switch
-            {
-                T[] array => new UnsafeRawList<T>(array.AsSpan()),
-                List<T> list => new UnsafeRawList<T>(list.AsReadOnlySpan()),
-                ICollection<T> collection => KnownCountEnumerate(collection.Count, collection),
-                IReadOnlyCollection<T> collection => KnownCountEnumerate(collection.Count, collection),
-                _ => FromEnumerableImplHelper.EnumerateCollectBlittable(source, static span => new UnsafeRawList<T>(span)),
-            };
-
-            static UnsafeRawList<T> KnownCountEnumerate(int count, IEnumerable<T> source)
-            {
-                var instance = new UnsafeRawList<T>(capacity: count);
-                var span = new Span<T>((void*)instance.Ptr, count);
-                try {
-                    foreach(var item in source) {
-                        instance.Add(item);
-                    }
-                }
-                catch {
-                    instance.Dispose();
-                    throw;
-                }
-                return instance;
-            }
-        }
-
         [DoesNotReturn]
         private static void ThrowOutOfRange(string message) => throw new ArgumentOutOfRangeException(message);
-
-        public static UnsafeRawList<T> From(ReadOnlySpan<T> span) => new UnsafeRawList<T>(span);
 
         public ReadOnlySpan<T> AsReadOnlySpan() => AsSpan();
     }

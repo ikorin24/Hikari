@@ -18,8 +18,6 @@ namespace Elffy.Effective
     [DebuggerDisplay("{DebugDisplay}")]
     [DebuggerTypeProxy(typeof(ValueTypeRentMemoryDebuggerTypeProxy<>))]
     public readonly struct ValueTypeRentMemory<T> :
-        IFromEnumerable<ValueTypeRentMemory<T>, T>,
-        IFromReadOnlySpan<ValueTypeRentMemory<T>, T>,
         IDisposable,
         IEquatable<ValueTypeRentMemory<T>>
         where T : unmanaged
@@ -169,37 +167,6 @@ namespace Elffy.Effective
         }
 
         public override string ToString() => DebugDisplay;
-
-        public static ValueTypeRentMemory<T> From(IEnumerable<T> source)
-        {
-            ArgumentNullException.ThrowIfNull(source);
-            return source switch
-            {
-                T[] array => new ValueTypeRentMemory<T>(array.AsSpan()),
-                List<T> list => new ValueTypeRentMemory<T>(list.AsReadOnlySpan()),
-                ICollection<T> collection => KnownCountEnumerate(collection.Count, collection),
-                IReadOnlyCollection<T> collection => KnownCountEnumerate(collection.Count, collection),
-                _ => FromEnumerableImplHelper.EnumerateCollectBlittable(source, static span => new ValueTypeRentMemory<T>(span)),
-            };
-
-            static ValueTypeRentMemory<T> KnownCountEnumerate(int count, IEnumerable<T> source)
-            {
-                var instance = new ValueTypeRentMemory<T>(count, false, out var span);
-                try {
-                    var i = 0;
-                    foreach(var item in source) {
-                        span[i++] = item;
-                    }
-                }
-                catch {
-                    instance.Dispose();
-                    throw;
-                }
-                return instance;
-            }
-        }
-
-        public static ValueTypeRentMemory<T> From(ReadOnlySpan<T> span) => new ValueTypeRentMemory<T>(span);
     }
 
     internal sealed class ValueTypeRentMemoryDebuggerTypeProxy<T> where T : unmanaged

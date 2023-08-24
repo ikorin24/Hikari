@@ -14,8 +14,6 @@ namespace Elffy.Effective
     [DebuggerTypeProxy(typeof(PooledArrayDebuggerTypeProxy<>))]
     [DebuggerDisplay("PooledArray<{typeof(T).Name,nq}>[{Length}]")]
     public readonly struct PooledArray<T> :
-        IFromEnumerable<PooledArray<T>, T>,
-        IFromReadOnlySpan<PooledArray<T>, T>,
         IDisposable
     {
         private readonly T[] _array;
@@ -110,48 +108,6 @@ namespace Elffy.Effective
                 Unsafe.AsRef(Length) = 0;
             }
         }
-
-        public static PooledArray<T> From(IEnumerable<T> source)
-        {
-            ArgumentNullException.ThrowIfNull(source);
-            switch(source) {
-                case T[] array: {
-                    return new PooledArray<T>(array.AsSpan());
-                }
-                case List<T> list: {
-                    return new PooledArray<T>(list.AsReadOnlySpan());
-                }
-                case ICollection<T> collection: {
-                    return KnownCountEnumerate(collection.Count, collection);
-                }
-                case IReadOnlyCollection<T> collection: {
-                    return KnownCountEnumerate(collection.Count, collection);
-                }
-                default: {
-                    var pooledArray = FromEnumerableImplHelper.EnumerateCollectToPooledArray(source, out var usedLength);
-                    return new PooledArray<T>(pooledArray, usedLength);
-                }
-            }
-
-            static PooledArray<T> KnownCountEnumerate(int count, IEnumerable<T> source)
-            {
-                var instance = new PooledArray<T>(count);
-                var span = instance.AsSpan();
-                try {
-                    var i = 0;
-                    foreach(var item in source) {
-                        span[i++] = item;
-                    }
-                }
-                catch {
-                    instance.Dispose();
-                    throw;
-                }
-                return instance;
-            }
-        }
-
-        public static PooledArray<T> From(ReadOnlySpan<T> span) => new PooledArray<T>(span);
 
         [DoesNotReturn]
         private static void ThrowDisposedException() => throw new ObjectDisposedException(nameof(PooledArray<T>), "Buffer has been returned to pool.");

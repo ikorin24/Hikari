@@ -16,8 +16,6 @@ namespace Elffy.Effective.Unsafes
     [DebuggerTypeProxy(typeof(UnsafeRawArrayDebuggerTypeProxy<>))]
     [DebuggerDisplay("UnsafeRawArray<{typeof(T).Name,nq}>[{Length}]")]
     public readonly unsafe struct UnsafeRawArray<T> :
-        IFromEnumerable<UnsafeRawArray<T>, T>,
-        IFromReadOnlySpan<UnsafeRawArray<T>, T>,
         IDisposable,
         IEquatable<UnsafeRawArray<T>>
         where T : unmanaged
@@ -204,37 +202,6 @@ namespace Elffy.Effective.Unsafes
         public bool Equals(UnsafeRawArray<T> other) => Length == other.Length && Ptr == other.Ptr;
 
         public override int GetHashCode() => HashCode.Combine(Length, Ptr);
-
-        public static UnsafeRawArray<T> From(IEnumerable<T> source)
-        {
-            ArgumentNullException.ThrowIfNull(source);
-            return source switch
-            {
-                T[] array => new UnsafeRawArray<T>(array.AsSpan()),
-                List<T> list => new UnsafeRawArray<T>(list.AsReadOnlySpan()),
-                ICollection<T> collection => KnownCountEnumerate(collection.Count, collection),
-                IReadOnlyCollection<T> collection => KnownCountEnumerate(collection.Count, collection),
-                _ => FromEnumerableImplHelper.EnumerateCollectBlittable(source, static span => new UnsafeRawArray<T>(span)),
-            };
-
-            static UnsafeRawArray<T> KnownCountEnumerate(int count, IEnumerable<T> source)
-            {
-                var instance = new UnsafeRawArray<T>(count, false, out var span);
-                try {
-                    var i = 0;
-                    foreach(var item in source) {
-                        span[i++] = item;
-                    }
-                }
-                catch {
-                    instance.Dispose();
-                    throw;
-                }
-                return instance;
-            }
-        }
-
-        public static UnsafeRawArray<T> From(ReadOnlySpan<T> span) => new UnsafeRawArray<T>(span);
 
         public ReadOnlySpan<T> AsReadOnlySpan() => AsSpan();
 
