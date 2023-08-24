@@ -1,4 +1,4 @@
-# 上位ディレクトリから .editorconfig 設定を継承する場合は、以下の行を削除します
+# Remove the following line if you want to inherit .editorconfig settings from the upper directory
 root = true
 
 [*]
@@ -43,38 +43,38 @@ insert_final_newline = true
 
 # CSharp formatting settings:
 [*.cs]
-# インデントと間隔
+# indentation
 indent_size = 4
 indent_style = space
 tab_width = 4
 
-# 改行設定
+# new line preferences
 end_of_line = crlf
 insert_final_newline = true
 
-#### .NET コーディング規則 ####
+#### .NET coding rules ####
 
-# using の整理
+# using directive settings
 dotnet_separate_import_directive_groups = false
 dotnet_sort_system_directives_first = false
 
-# this. と Me. の設定
+# 'this.' settings
 dotnet_style_qualification_for_event = false:silent
 dotnet_style_qualification_for_field = false:silent
 dotnet_style_qualification_for_method = false:silent
 dotnet_style_qualification_for_property = false:silent
 
-# 言語キーワードと BCL の種類の設定
+# language keywords
 dotnet_style_predefined_type_for_locals_parameters_members = true:silent
 dotnet_style_predefined_type_for_member_access = true:silent
 
-# かっこの設定
+# brackets settings
 dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity:silent
 dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:silent
 dotnet_style_parentheses_in_other_operators = never_if_unnecessary:silent
 dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:silent
 
-# 修飾子設定
+# modifier settings
 dotnet_style_require_accessibility_modifiers = for_non_interface_members:silent
 
 # 式レベルの設定
@@ -190,7 +190,6 @@ csharp_space_between_square_brackets = false
 csharp_preserve_single_line_blocks = true
 csharp_preserve_single_line_statements = true
 
-[*.cs]
 #### 命名スタイル ####
 
 # 名前付けルール
@@ -245,51 +244,3 @@ csharp_style_prefer_pattern_matching = true:silent
 csharp_style_prefer_not_pattern = true:suggestion
 csharp_style_prefer_extended_property_pattern = true:suggestion
 csharp_style_prefer_readonly_struct = true:suggestion
-
-[*.vb]
-#### 命名スタイル ####
-
-# 名前付けルール
-
-dotnet_naming_rule.interface_should_be_i_で始まる.severity = suggestion
-dotnet_naming_rule.interface_should_be_i_で始まる.symbols = interface
-dotnet_naming_rule.interface_should_be_i_で始まる.style = i_で始まる
-
-dotnet_naming_rule.型_should_be_パスカル_ケース.severity = suggestion
-dotnet_naming_rule.型_should_be_パスカル_ケース.symbols = 型
-dotnet_naming_rule.型_should_be_パスカル_ケース.style = パスカル_ケース
-
-dotnet_naming_rule.フィールド以外のメンバー_should_be_パスカル_ケース.severity = suggestion
-dotnet_naming_rule.フィールド以外のメンバー_should_be_パスカル_ケース.symbols = フィールド以外のメンバー
-dotnet_naming_rule.フィールド以外のメンバー_should_be_パスカル_ケース.style = パスカル_ケース
-
-# 記号の仕様
-
-dotnet_naming_symbols.interface.applicable_kinds = interface
-dotnet_naming_symbols.interface.applicable_accessibilities = public, friend, private, protected, protected_friend, private_protected
-dotnet_naming_symbols.interface.required_modifiers = 
-
-dotnet_naming_symbols.型.applicable_kinds = class, struct, interface, enum
-dotnet_naming_symbols.型.applicable_accessibilities = public, friend, private, protected, protected_friend, private_protected
-dotnet_naming_symbols.型.required_modifiers = 
-
-dotnet_naming_symbols.フィールド以外のメンバー.applicable_kinds = property, event, method
-dotnet_naming_symbols.フィールド以外のメンバー.applicable_accessibilities = public, friend, private, protected, protected_friend, private_protected
-dotnet_naming_symbols.フィールド以外のメンバー.required_modifiers = 
-
-# 命名スタイル
-
-dotnet_naming_style.i_で始まる.required_prefix = I
-dotnet_naming_style.i_で始まる.required_suffix = 
-dotnet_naming_style.i_で始まる.word_separator = 
-dotnet_naming_style.i_で始まる.capitalization = pascal_case
-
-dotnet_naming_style.パスカル_ケース.required_prefix = 
-dotnet_naming_style.パスカル_ケース.required_suffix = 
-dotnet_naming_style.パスカル_ケース.word_separator = 
-dotnet_naming_style.パスカル_ケース.capitalization = pascal_case
-
-dotnet_naming_style.パスカル_ケース.required_prefix = 
-dotnet_naming_style.パスカル_ケース.required_suffix = 
-dotnet_naming_style.パスカル_ケース.word_separator = 
-dotnet_naming_style.パスカル_ケース.capitalization = pascal_case
