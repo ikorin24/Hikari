@@ -16,7 +16,6 @@ namespace Elffy.Effective
     public readonly struct PooledArray<T> :
         IFromEnumerable<PooledArray<T>, T>,
         IFromReadOnlySpan<PooledArray<T>, T>,
-        ISpan<T>,
         IDisposable
     {
         private readonly T[] _array;

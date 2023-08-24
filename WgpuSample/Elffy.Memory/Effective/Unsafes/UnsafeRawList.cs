@@ -19,7 +19,6 @@ namespace Elffy.Effective.Unsafes
     public unsafe readonly struct UnsafeRawList<T> :
         IFromEnumerable<UnsafeRawList<T>, T>,
         IFromReadOnlySpan<UnsafeRawList<T>, T>,
-        ISpan<T>,
         IDisposable,
         IEquatable<UnsafeRawList<T>>
         where T : unmanaged

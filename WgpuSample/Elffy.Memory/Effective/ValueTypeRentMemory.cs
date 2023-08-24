@@ -20,7 +20,6 @@ namespace Elffy.Effective
     public readonly struct ValueTypeRentMemory<T> :
         IFromEnumerable<ValueTypeRentMemory<T>, T>,
         IFromReadOnlySpan<ValueTypeRentMemory<T>, T>,
-        ISpan<T>,
         IDisposable,
         IEquatable<ValueTypeRentMemory<T>>
         where T : unmanaged

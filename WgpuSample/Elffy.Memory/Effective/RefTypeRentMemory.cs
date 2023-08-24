@@ -20,7 +20,6 @@ namespace Elffy.Effective
     public readonly struct RefTypeRentMemory<T> :
         IFromEnumerable<RefTypeRentMemory<T>, T>,
         IFromReadOnlySpan<RefTypeRentMemory<T>, T>,
-        ISpan<T>,
         IDisposable,
         IEquatable<RefTypeRentMemory<T>>
         where T : class?

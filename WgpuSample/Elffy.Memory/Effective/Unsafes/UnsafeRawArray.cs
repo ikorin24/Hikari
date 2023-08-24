@@ -18,7 +18,6 @@ namespace Elffy.Effective.Unsafes
     public readonly unsafe struct UnsafeRawArray<T> :
         IFromEnumerable<UnsafeRawArray<T>, T>,
         IFromReadOnlySpan<UnsafeRawArray<T>, T>,
-        ISpan<T>,
         IDisposable,
         IEquatable<UnsafeRawArray<T>>
         where T : unmanaged
