@@ -312,6 +312,7 @@ public partial class CountButton
             "Text": "click me!",
             "FontSize": 30,
             "Color": "red",
+            "BoxShadow": "0px 0px 20px 10px red",
             "Clicked": {{props.Clicked}},
             "&:Hover": {
                 "Width": {{props.Width + 1}},

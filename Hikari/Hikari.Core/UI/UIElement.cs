@@ -159,6 +159,16 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
+    public BoxShadow BoxShadow
+    {
+        get => _info.BoxShadow;
+        set
+        {
+            if(value == _info.BoxShadow) { return; }
+            _info.BoxShadow = value;
+        }
+    }
+
     public UIElementCollection Children
     {
         get => _children;
@@ -242,6 +252,9 @@ public abstract class UIElement : IToJson, IReactive
         if(source.TryGetProperty(nameof(BorderColor), out var borderColor)) {
             _info.BorderColor = Brush.FromJson(borderColor);
         }
+        if(source.TryGetProperty(nameof(BoxShadow), out var boxShadow)) {
+            _info.BoxShadow = BoxShadow.FromJson(boxShadow);
+        }
         if(source.TryGetProperty(nameof(Clicked), out var clicked)) {
             var action = clicked.Instantiate<Action<UIElement>>();
             _clicked.Event.Subscribe(action);
@@ -285,6 +298,7 @@ public abstract class UIElement : IToJson, IReactive
         writer.Write(nameof(BorderWidth), _info.BorderWidth);
         writer.Write(nameof(BorderRadius), _info.BorderRadius);
         writer.Write(nameof(BorderColor), _info.BorderColor);
+        writer.Write(nameof(BoxShadow), _info.BoxShadow);
         writer.Write(nameof(Children), _children);
     }
 
@@ -305,6 +319,7 @@ public abstract class UIElement : IToJson, IReactive
         BorderWidth = source.ApplyProperty(nameof(BorderWidth), BorderWidth, () => UIElementInfo.DefaultBorderWidth, out _);
         BorderRadius = source.ApplyProperty(nameof(BorderRadius), BorderRadius, () => UIElementInfo.DefaultBorderRadius, out _);
         BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, () => UIElementInfo.DefaultBorderColor, out _);
+        BoxShadow = source.ApplyProperty(nameof(BoxShadow), BoxShadow, () => UIElementInfo.DefaultBoxShadow, out _);
 
         if(source.TryGetProperty(nameof(Children), out var childrenProp)) {
             childrenProp.ApplyDiff(Children);
@@ -555,30 +570,34 @@ public abstract class UIElement : IToJson, IReactive
     }
 }
 
-internal record struct UIElementInfo(
-    LayoutLength Width,
-    LayoutLength Height,
-    Thickness Margin,
-    Thickness Padding,
-    HorizontalAlignment HorizontalAlignment,
-    VerticalAlignment VerticalAlignment,
-    Brush Background,
-    Thickness BorderWidth,
-    CornerRadius BorderRadius,
-    Brush BorderColor
-)
+internal record struct UIElementInfo
 {
-    internal static UIElementInfo Default => new(
-        DefaultWidth,
-        DefaultHeight,
-        DefaultMargin,
-        DefaultPadding,
-        DefaultHorizontalAlignment,
-        DefaultVerticalAlignment,
-        DefaultBackground,
-        DefaultBorderWidth,
-        DefaultBorderRadius,
-        DefaultBorderColor);
+    public LayoutLength Width { get; set; }
+    public LayoutLength Height { get; set; }
+    public Thickness Margin { get; set; }
+    public Thickness Padding { get; set; }
+    public HorizontalAlignment HorizontalAlignment { get; set; }
+    public VerticalAlignment VerticalAlignment { get; set; }
+    public Brush Background { get; set; }
+    public Thickness BorderWidth { get; set; }
+    public CornerRadius BorderRadius { get; set; }
+    public Brush BorderColor { get; set; }
+    public BoxShadow BoxShadow { get; set; }
+
+    internal static UIElementInfo Default => new()
+    {
+        Width = DefaultWidth,
+        Height = DefaultHeight,
+        Margin = DefaultMargin,
+        Padding = DefaultPadding,
+        HorizontalAlignment = DefaultHorizontalAlignment,
+        VerticalAlignment = DefaultVerticalAlignment,
+        Background = DefaultBackground,
+        BorderWidth = DefaultBorderWidth,
+        BorderRadius = DefaultBorderRadius,
+        BorderColor = DefaultBorderColor,
+        BoxShadow = DefaultBoxShadow,
+    };
 
     internal static LayoutLength DefaultWidth => new LayoutLength(1f, LayoutLengthType.Proportion);
     internal static LayoutLength DefaultHeight => new LayoutLength(1f, LayoutLengthType.Proportion);
@@ -590,55 +609,24 @@ internal record struct UIElementInfo(
     internal static Thickness DefaultBorderWidth => new Thickness(0f);
     internal static CornerRadius DefaultBorderRadius => CornerRadius.Zero;
     internal static Brush DefaultBorderColor => Brush.Black;
+    internal static BoxShadow DefaultBoxShadow => BoxShadow.None;
 
     internal readonly UIElementInfo Merged(in PseudoInfo p)
     {
-        return new(
-            p.Width ?? Width,
-            p.Height ?? Height,
-            p.Margin ?? Margin,
-            p.Padding ?? Padding,
-            p.HorizontalAlignment ?? HorizontalAlignment,
-            p.VerticalAlignment ?? VerticalAlignment,
-            p.Background ?? Background,
-            p.BorderWidth ?? BorderWidth,
-            p.BorderRadius ?? BorderRadius,
-            p.BorderColor ?? BorderColor
-        );
-    }
-
-    internal void Merge(in PseudoInfo p)
-    {
-        if(p.Width.HasValue) {
-            Width = p.Width.Value;
-        }
-        if(p.Height.HasValue) {
-            Height = p.Height.Value;
-        }
-        if(p.Margin.HasValue) {
-            Margin = p.Margin.Value;
-        }
-        if(p.Padding.HasValue) {
-            Padding = p.Padding.Value;
-        }
-        if(p.HorizontalAlignment.HasValue) {
-            HorizontalAlignment = p.HorizontalAlignment.Value;
-        }
-        if(p.VerticalAlignment.HasValue) {
-            VerticalAlignment = p.VerticalAlignment.Value;
-        }
-        if(p.Background.HasValue) {
-            Background = p.Background.Value;
-        }
-        if(p.BorderWidth.HasValue) {
-            BorderWidth = p.BorderWidth.Value;
-        }
-        if(p.BorderRadius.HasValue) {
-            BorderRadius = p.BorderRadius.Value;
-        }
-        if(p.BorderColor.HasValue) {
-            BorderColor = p.BorderColor.Value;
-        }
+        return new()
+        {
+            Width = p.Width ?? Width,
+            Height = p.Height ?? Height,
+            Margin = p.Margin ?? Margin,
+            Padding = p.Padding ?? Padding,
+            HorizontalAlignment = p.HorizontalAlignment ?? HorizontalAlignment,
+            VerticalAlignment = p.VerticalAlignment ?? VerticalAlignment,
+            Background = p.Background ?? Background,
+            BorderWidth = p.BorderWidth ?? BorderWidth,
+            BorderRadius = p.BorderRadius ?? BorderRadius,
+            BorderColor = p.BorderColor ?? BorderColor,
+            BoxShadow = p.BoxShadow ?? BoxShadow,
+        };
     }
 }
 
@@ -662,6 +650,7 @@ public readonly record struct PseudoInfo
     public Thickness? BorderWidth { get; init; }
     public CornerRadius? BorderRadius { get; init; }
     public Brush? BorderColor { get; init; }
+    public BoxShadow? BoxShadow { get; init; }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private readonly ImmutableArray<Prop> _ex;
@@ -700,6 +689,7 @@ public readonly record struct PseudoInfo
         Thickness? borderWidth = null;
         CornerRadius? borderRadius = null;
         Brush? borderColor = null;
+        BoxShadow? boxShadow = null;
         var ex = ImmutableArray.CreateBuilder<Prop>();
 
         foreach(var (name, value) in source.EnumerateProperties()) {
@@ -744,6 +734,10 @@ public readonly record struct PseudoInfo
                     borderColor = value.Instantiate<Brush>();
                     break;
                 }
+                case nameof(BoxShadow): {
+                    boxShadow = value.Instantiate<BoxShadow>();
+                    break;
+                }
                 default: {
                     ex.Add(new(name, value));
                     break;
@@ -763,6 +757,7 @@ public readonly record struct PseudoInfo
             BorderWidth = borderWidth,
             BorderRadius = borderRadius,
             BorderColor = borderColor,
+            BoxShadow = boxShadow,
             Ex = ex.Count == 0 ? EmptyEx : ex.ToImmutable(),
         };
     }
@@ -799,6 +794,9 @@ public readonly record struct PseudoInfo
         }
         if(BorderColor.HasValue) {
             writer.Write(nameof(BorderColor), BorderColor.Value);
+        }
+        if(BoxShadow.HasValue) {
+            writer.Write(nameof(BoxShadow), BoxShadow.Value);
         }
         writer.WriteEndObject();
         return JsonValueKind.Object;
