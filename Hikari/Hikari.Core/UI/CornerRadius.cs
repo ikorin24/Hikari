@@ -93,7 +93,7 @@ public readonly struct CornerRadius
                     { Length: 2 } => new CornerRadius(ParseValue(splits[0]), ParseValue(splits[1])),
                     { Length: 3 } => new CornerRadius(ParseValue(splits[0]), ParseValue(splits[1]), ParseValue(splits[2])),
                     { Length: 4 } => new CornerRadius(ParseValue(splits[0]), ParseValue(splits[1]), ParseValue(splits[2]), ParseValue(splits[3])),
-                    _ => throw new FormatException($"cannot create {nameof(Thickness)} from string \"{str}\""),
+                    _ => throw new FormatException($"cannot create {nameof(CornerRadius)} from string \"{str}\""),
                 };
             }
             default: {
