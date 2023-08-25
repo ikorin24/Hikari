@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace Hikari.UI;
@@ -9,12 +10,67 @@ public readonly struct BoxShadow
       IFromJson<BoxShadow>,
       IToJson
 {
-    public float OffsetX { get; init; }
-    public float OffsetY { get; init; }
-    public float BlurRadius { get; init; }
-    public float SpreadRadius { get; init; }
-    public Color4 Color { get; init; }
-    public bool IsInset { get; init; }
+    private readonly float _offsetX;
+    private readonly float _offsetY;
+    private readonly float _blurRadius;
+    private readonly float _spreadRadius;
+    private readonly Color4 _color;
+    private readonly bool _isInset;
+
+    public float OffsetX
+    {
+        get => _offsetX;
+        init
+        {
+            _offsetX = value;
+        }
+    }
+    public float OffsetY
+    {
+        get => _offsetY;
+        init
+        {
+            _offsetY = value;
+        }
+    }
+    public float BlurRadius
+    {
+        get => _blurRadius;
+        init
+        {
+            if(value < 0) {
+                ThrowArgOutOfRange(nameof(value));
+            }
+            _blurRadius = value;
+        }
+    }
+    public float SpreadRadius
+    {
+        get => _spreadRadius;
+        init
+        {
+            _spreadRadius = value;
+        }
+    }
+    public Color4 Color
+    {
+        get => _color;
+        init
+        {
+            _color = value;
+        }
+    }
+    public bool IsInset
+    {
+        get => _isInset;
+        init
+        {
+            _isInset = value;
+        }
+    }
+
+    [DoesNotReturn]
+    private static void ThrowArgOutOfRange(string paramName) => throw new ArgumentOutOfRangeException(paramName);
 
     public static BoxShadow None => default;
 

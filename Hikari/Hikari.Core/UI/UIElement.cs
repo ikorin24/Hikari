@@ -564,6 +564,7 @@ public abstract class UIElement : IToJson, IReactive
             MvpMatrix = uiProjection * modelMatrix,
             Background = appliedInfo.Background,
             BorderColor = appliedInfo.BorderColor,
+            BoxShadow = appliedInfo.BoxShadow,
             IsHover = _isHover,
         };
         model.Material.UpdateMaterial(this, result);
@@ -843,5 +844,6 @@ public readonly record struct UIUpdateResult
     public required Matrix4 MvpMatrix { get; init; }
     public required Brush Background { get; init; }
     public required Brush BorderColor { get; init; }
+    public required BoxShadow BoxShadow { get; init; }
     public required bool IsHover { get; init; }
 }
