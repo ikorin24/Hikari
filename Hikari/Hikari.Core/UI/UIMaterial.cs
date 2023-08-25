@@ -86,6 +86,14 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
             BorderWidth = result.ActualBorderWidth,
             BorderRadius = result.ActualBorderRadius,
             BorderSolidColor = result.BorderColor.SolidColor,
+            BoxShadowValues = new()
+            {
+                X = result.BoxShadow.OffsetX,
+                Y = result.BoxShadow.OffsetY,
+                Z = result.BoxShadow.BlurRadius,
+                W = result.BoxShadow.IsInset ? -result.BoxShadow.SpreadRadius : result.BoxShadow.SpreadRadius,
+            },
+            BoxShadowColor = result.BoxShadow.Color,
         };
         if(_bufferData != bufferData) {
             _bufferData = bufferData;

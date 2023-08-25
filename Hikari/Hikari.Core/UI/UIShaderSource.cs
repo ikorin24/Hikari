@@ -10,11 +10,16 @@ internal static class UIShaderSource
     public readonly record struct BufferData
     {
         public required Matrix4 Mvp { get; init; }
-        //public required Color4 SolidColor { get; init; }
         public required RectF Rect { get; init; }
         public required Vector4 BorderWidth { get; init; }
         public required Vector4 BorderRadius { get; init; }
         public required Color4 BorderSolidColor { get; init; }
+
+        // (offsetX, offsetY, inset_blurRadius, spreadRadius),
+        // blurRadius = abs(inset_blurRadius)
+        // inset = inset_blurRadius < 0
+        public required Vector4 BoxShadowValues { get; init; }
+        public required Color4 BoxShadowColor { get; init; }
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_vec4_f32, Size = 32)]
@@ -39,6 +44,10 @@ internal static class UIShaderSource
             border_width: vec4<f32>,    // (top, right, bottom, left)
             border_radius: vec4<f32>,   // (top-left, top-right, bottom-right, bottom-left)
             border_solid_color: vec4<f32>,
+            box_shadow_values: vec4<f32>,   // (offsetX, offsetY, inset_blurRadius, spreadRadius),
+                                            // blurRadius = abs(inset_blurRadius)
+                                            // inset = inset_blurRadius < 0
+            box_shadow_color: vec4<f32>,
         }
 
         struct BrushBufferData
