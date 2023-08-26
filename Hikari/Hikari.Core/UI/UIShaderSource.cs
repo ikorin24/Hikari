@@ -233,9 +233,21 @@ internal static class UIShaderSource
                     center[2] + data.box_shadow_values.xy,
                     center[3] + data.box_shadow_values.xy,
                 );
+                let s_radius = array<f32, 4>(
+                    b_radius[0] + data.box_shadow_values.w,
+                    b_radius[1] + data.box_shadow_values.w,
+                    b_radius[2] + data.box_shadow_values.w,
+                    b_radius[3] + data.box_shadow_values.w,
+                );
+                let r = abs(data.box_shadow_values.z) + 0.5;
                 // shadow top-left corner
                 if(f_pos.x < s_center[0].x && f_pos.y < s_center[0].y) {
-                    s_color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
+                    let d: vec2<f32> = f_pos + vec2<f32>(0.5, 0.5) - s_center[0];
+                    let x = clamp((length(d) - 0.5) - s_radius[0], -r, r);
+                    s_color = vec4<f32>(
+                        data.box_shadow_color.rgb,
+                        data.box_shadow_color.a * (0.5 - 0.5 * sin(x * PI * 0.5 / r)),
+                    );
                 }
                 // shadow top-right corner
                 else if(f_pos.x >= s_center[1].x && f_pos.y < s_center[1].y) {
