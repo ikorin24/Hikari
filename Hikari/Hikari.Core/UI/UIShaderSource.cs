@@ -251,15 +251,30 @@ internal static class UIShaderSource
                 }
                 // shadow top-right corner
                 else if(f_pos.x >= s_center[1].x && f_pos.y < s_center[1].y) {
-                    s_color = vec4<f32>(0.0, 1.0, 0.0, 1.0);
+                    let d: vec2<f32> = f_pos + vec2<f32>(0.5, 0.5) - s_center[1];
+                    let x = clamp((length(d) - 0.5) - s_radius[1], -r, r);
+                    s_color = vec4<f32>(
+                        data.box_shadow_color.rgb,
+                        data.box_shadow_color.a * (0.5 - 0.5 * sin(x * PI * 0.5 / r)),
+                    );
                 }
                 // shadow bottom-right corner
                 else if(f_pos.x >= s_center[2].x && f_pos.y >= s_center[2].y) {
-                    s_color = vec4<f32>(0.0, 0.0, 1.0, 1.0);
+                    let d: vec2<f32> = f_pos + vec2<f32>(0.5, 0.5) - s_center[2];
+                    let x = clamp((length(d) - 0.5) - s_radius[2], -r, r);
+                    s_color = vec4<f32>(
+                        data.box_shadow_color.rgb,
+                        data.box_shadow_color.a * (0.5 - 0.5 * sin(x * PI * 0.5 / r)),
+                    );
                 }
                 // shadow bottom-left corner
                 else if(f_pos.x < s_center[3].x && f_pos.y >= s_center[3].y) {
-                    s_color = vec4<f32>(1.0, 1.0, 0.0, 1.0);
+                    let d: vec2<f32> = f_pos + vec2<f32>(0.5, 0.5) - s_center[3];
+                    let x = clamp((length(d) - 0.5) - s_radius[3], -r, r);
+                    s_color = vec4<f32>(
+                        data.box_shadow_color.rgb,
+                        data.box_shadow_color.a * (0.5 - 0.5 * sin(x * PI * 0.5 / r)),
+                    );
                 }
                 else {
                     s_color = data.box_shadow_color;
