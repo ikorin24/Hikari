@@ -540,22 +540,30 @@ public abstract class UIElement : IToJson, IReactive
 
         Debug.Assert(_layoutCache != null);
         var ((rect, borderRadius, _), appliedInfo) = _layoutCache.Value;
+        var shadowWidth = (appliedInfo.BoxShadow.BlurRadius + appliedInfo.BoxShadow.SpreadRadius);
+        var shadowRect = new RectF
+        {
+            X = rect.X - shadowWidth + appliedInfo.BoxShadow.OffsetX,
+            Y = rect.Y - shadowWidth + appliedInfo.BoxShadow.OffsetY,
+            Width = rect.Width + shadowWidth * 2f,
+            Height = rect.Height + shadowWidth * 2f,
+        };
 
+        var polygonRect = rect.GetMargedRect(shadowRect);
         // origin is bottom-left of rect because clip space is bottom-left based
         var modelOrigin = new Vector3
         {
-            X = rect.Position.X,
-            Y = screenSize.Y - rect.Position.Y - rect.Size.Y,
+            X = polygonRect.Position.X,
+            Y = screenSize.Y - polygonRect.Position.Y - polygonRect.Size.Y,
             Z = 0,
         };
         var modelMatrix =
             modelOrigin.ToTranslationMatrix4() *
             new Matrix4(
-                new Vector4(rect.Size.X, 0, 0, 0),
-                new Vector4(0, rect.Size.Y, 0, 0),
+                new Vector4(polygonRect.Size.X, 0, 0, 0),
+                new Vector4(0, polygonRect.Size.Y, 0, 0),
                 new Vector4(0, 0, 1, 0),
                 new Vector4(0, 0, 0, 1));
-
         var result = new UIUpdateResult
         {
             ActualRect = rect,

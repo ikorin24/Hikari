@@ -121,7 +121,7 @@ internal static class UIShaderSource
             let len_d = length(d);
             let a = saturate(b_radius - len_d + 0.5);
             if(a <= 0.0) {
-                discard;
+                return vec4<f32>(0.0, 0.0, 0.0, 0.0);
             }
             if(bw.x == 0.0 && bw.y == 0.0) {
                 // To avoid a slight border due to float errors, I don't draw the border color.
@@ -193,7 +193,7 @@ internal static class UIShaderSource
             let f_pos: vec2<f32> = floor(f.clip_pos.xy);
             let pos: vec2<f32> = floor(data.rect.xy);
             let size: vec2<f32> = floor(data.rect.zw);
-            var back_color: vec4<f32> = calc_back_color(f_pos, pos, size);
+            let back_color: vec4<f32> = calc_back_color(f_pos, pos, size);
             let b_color: vec4<f32> = data.border_solid_color;
             let b_radius = array<f32, 4>(
                 floor(data.border_radius.x),
@@ -213,54 +213,112 @@ internal static class UIShaderSource
                 pos + vec2<f32>(size.x - b_radius[2], size.y - b_radius[2]),
                 pos + vec2<f32>(b_radius[3], size.y - b_radius[3]),
             );
+
+            var color: vec4<f32>;
+            var s_color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+            let s_width: f32 = data.box_shadow_values.z + data.box_shadow_values.w;
+            let s_pos: vec2<f32> = pos - vec2<f32>(s_width, s_width) + data.box_shadow_values.xy;
+            let s_size: vec2<f32> = size + vec2<f32>(s_width, s_width) * 2.0;
+            // inside of the shadow rectangle
+            if(
+                f_pos.x >= s_pos.x &&
+                f_pos.x < s_pos.x + s_size.x &&
+                f_pos.y >= s_pos.y &&
+                f_pos.y < s_pos.y + s_size.y
+            ) {
+                // center of shadow corner
+                let s_center = array<vec2<f32>, 4>(
+                    center[0] + data.box_shadow_values.xy,
+                    center[1] + data.box_shadow_values.xy,
+                    center[2] + data.box_shadow_values.xy,
+                    center[3] + data.box_shadow_values.xy,
+                );
+                // shadow top-left corner
+                if(f_pos.x < s_center[0].x && f_pos.y < s_center[0].y) {
+                    s_color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
+                }
+                // shadow top-right corner
+                else if(f_pos.x >= s_center[1].x && f_pos.y < s_center[1].y) {
+                    s_color = vec4<f32>(0.0, 1.0, 0.0, 1.0);
+                }
+                // shadow bottom-right corner
+                else if(f_pos.x >= s_center[2].x && f_pos.y >= s_center[2].y) {
+                    s_color = vec4<f32>(0.0, 0.0, 1.0, 1.0);
+                }
+                // shadow bottom-left corner
+                else if(f_pos.x < s_center[3].x && f_pos.y >= s_center[3].y) {
+                    s_color = vec4<f32>(1.0, 1.0, 0.0, 1.0);
+                }
+                else {
+                    s_color = data.box_shadow_color;
+                }
+            }
+
+            // inside of the rectangle
+            if(
+                f_pos.x >= pos.x && 
+                f_pos.x < pos.x + size.x &&
+                f_pos.y >= pos.y &&
+                f_pos.y < pos.y + size.y
+            ) {
+                // top-left corner
+                if(f_pos.x < center[0].x && f_pos.y < center[0].y) {
+                    let tmp = corner_area_color(
+                        f_pos, center[0], b_radius[0],
+                        vec2<f32>(b_width[3], b_width[0]),
+                        back_color, b_color,
+                    );
+                    color = blend(tmp, s_color, 1.0);
+                }
+                // top-right corner
+                else if(f_pos.x >= center[1].x && f_pos.y < center[1].y) {
+                    let tmp = corner_area_color(
+                        f_pos, center[1], b_radius[1],
+                        vec2<f32>(b_width[1], b_width[0]),
+                        back_color, b_color,
+                    );
+                    color = blend(tmp, s_color, 1.0);
+                }
+                // bottom-right corner
+                else if(f_pos.x >= center[2].x && f_pos.y >= center[2].y) {
+                    let tmp = corner_area_color(
+                        f_pos, center[2], b_radius[2],
+                        vec2<f32>(b_width[1], b_width[2]),
+                        back_color, b_color,
+                    );
+                    color = blend(tmp, s_color, 1.0);
+                }
+                // bottom-left corner
+                else if(f_pos.x < center[3].x && f_pos.y >= center[3].y) {
+                    let tmp = corner_area_color(
+                        f_pos, center[3], b_radius[3],
+                        vec2<f32>(b_width[3], b_width[2]),
+                        back_color, b_color,
+                    );
+                    color = blend(tmp, s_color, 1.0);
+                }
+                // side border
+                else if(
+                    f_pos.y < pos.y + b_width[0] || 
+                    f_pos.x >= pos.x + size.x - b_width[1] || 
+                    f_pos.y >= pos.y + size.y - b_width[2] || 
+                    f_pos.x < pos.x + b_width[3]
+                ) {
+                    color = blend(b_color, s_color, 1.0);
+                }
+                else {
+                    color = blend(back_color, s_color, 1.0);
+                }
+            }
             // outside of the rectangle
-            if(f_pos.x < pos.x || f_pos.x >= pos.x + size.x || f_pos.y < pos.y || f_pos.y >= pos.y + size.y) {
+            else {
+                color = s_color;
+            }
+
+            if(color.a < 0.001) {
                 discard;
             }
-
-            // top-left corner
-            if(f_pos.x < center[0].x && f_pos.y < center[0].y) {
-                return corner_area_color(
-                    f_pos, center[0], b_radius[0],
-                    vec2<f32>(b_width[3], b_width[0]),
-                    back_color, b_color,
-                );
-            }
-            // top-right corner
-            else if(f_pos.x >= center[1].x && f_pos.y < center[1].y) {
-                return corner_area_color(
-                    f_pos, center[1], b_radius[1],
-                    vec2<f32>(b_width[1], b_width[0]),
-                    back_color, b_color,
-                );
-            }
-            // bottom-right corner
-            else if(f_pos.x >= center[2].x && f_pos.y >= center[2].y) {
-                return corner_area_color(
-                    f_pos, center[2], b_radius[2],
-                    vec2<f32>(b_width[1], b_width[2]),
-                    back_color, b_color,
-                );
-            }
-            // bottom-left corner
-            else if(f_pos.x < center[3].x && f_pos.y >= center[3].y) {
-                return corner_area_color(
-                    f_pos, center[3], b_radius[3],
-                    vec2<f32>(b_width[3], b_width[2]),
-                    back_color, b_color,
-                );
-            }
-            // side border
-            else if(
-                f_pos.y < pos.y + b_width[0] || 
-                f_pos.x >= pos.x + size.x - b_width[1] || 
-                f_pos.y >= pos.y + size.y - b_width[2] || 
-                f_pos.x < pos.x + b_width[3]
-            ) {
-                return b_color;
-            }
-
-            return back_color;
+            return color;
         }
         """u8;
 
