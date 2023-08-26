@@ -239,7 +239,7 @@ internal static class UIShaderSource
                     b_radius[2] + data.box_shadow_values.w,
                     b_radius[3] + data.box_shadow_values.w,
                 );
-                let r = abs(data.box_shadow_values.z) + 0.5;
+                let r = abs(data.box_shadow_values.z) + 0.001;
                 // shadow top-left corner
                 if(f_pos.x < s_center[0].x && f_pos.y < s_center[0].y) {
                     let d: vec2<f32> = f_pos + vec2<f32>(0.5, 0.5) - s_center[0];
@@ -287,14 +287,12 @@ internal static class UIShaderSource
                         s_center[3].x - s_radius[3],
                     );
                     let l = min(
-                        dot(n[0], f_pos) - dot(n[0], s_pos), min(
-                        dot(n[1], f_pos) - dot(n[1], s_pos + s_size), min(
-                        dot(n[2], f_pos) - dot(n[2], s_pos + s_size),
-                        dot(n[3], f_pos) - dot(n[3], s_pos),
-                    )));
-                    //var x = min(l, 2.0 * r) - r + 2.0;
-                    var x = min(l, 2.0 * abs(data.box_shadow_values.z)) - abs(data.box_shadow_values.z);
-                    //x = max(x, 0.5);
+                        dot(n[0], f_pos + vec2<f32>(0.5, 0.5)) - dot(n[0], s_pos), min(
+                        dot(n[1], f_pos + vec2<f32>(0.5, 0.5)) - dot(n[1], s_pos + s_size), min(
+                        dot(n[2], f_pos + vec2<f32>(0.5, 0.5)) - dot(n[2], s_pos + s_size),
+                        dot(n[3], f_pos + vec2<f32>(0.5, 0.5)) - dot(n[3], s_pos),
+                    ))) + 0.5;
+                    var x = min(l, 2.0 * r) - r;
                     s_color = vec4<f32>(
                         data.box_shadow_color.rgb,
                         data.box_shadow_color.a * (0.5 - 0.5 * sin(-x * PI * 0.5 / r)),
