@@ -277,7 +277,28 @@ internal static class UIShaderSource
                     );
                 }
                 else {
-                    s_color = data.box_shadow_color;
+                    let n = array<vec2<f32>, 4>(
+                        vec2<f32>(0.0, 1.0), vec2<f32>(-1.0, 0.0), vec2<f32>(0.0, -1.0), vec2<f32>(1.0, 0.0),
+                    );
+                    let b = array<f32, 4>(
+                        s_center[0].y - s_radius[0],
+                        s_center[1].x + s_radius[1],
+                        s_center[2].y + s_radius[2],
+                        s_center[3].x - s_radius[3],
+                    );
+                    let l = min(
+                        dot(n[0], f_pos) - dot(n[0], s_pos), min(
+                        dot(n[1], f_pos) - dot(n[1], s_pos + s_size), min(
+                        dot(n[2], f_pos) - dot(n[2], s_pos + s_size),
+                        dot(n[3], f_pos) - dot(n[3], s_pos),
+                    )));
+                    //var x = min(l, 2.0 * r) - r + 2.0;
+                    var x = min(l, 2.0 * abs(data.box_shadow_values.z)) - abs(data.box_shadow_values.z);
+                    //x = max(x, 0.5);
+                    s_color = vec4<f32>(
+                        data.box_shadow_color.rgb,
+                        data.box_shadow_color.a * (0.5 - 0.5 * sin(-x * PI * 0.5 / r)),
+                    );
                 }
             }
 
