@@ -18,11 +18,11 @@ namespace Hikari
         [FieldOffset(12)]
         public float Height;
 
-        public Vector2 Position => new Vector2(X, Y);
-        public Vector2 Size => new Vector2(Width, Height);
+        public readonly Vector2 Position => new Vector2(X, Y);
+        public readonly Vector2 Size => new Vector2(Width, Height);
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private string DebugDisplay => $"({X}, {Y}, {Width}, {Height})";
+        private readonly string DebugDisplay => $"({X}, {Y}, {Width}, {Height})";
 
         public RectF(float x, float y, float width, float height)
         {
@@ -40,19 +40,32 @@ namespace Hikari
             Height = size.Y;
         }
 
-        public bool Contains(Vector2 pos)
+        public readonly bool Contains(Vector2 pos)
         {
             return (X <= pos.X) && (pos.X < X + Width) &&
                    (Y <= pos.Y) && (pos.Y < Y + Height);
         }
 
-        public override string ToString() => DebugDisplay;
+        public readonly RectF GetMargedRect(in RectF rect)
+        {
+            var minX = float.Min(X, rect.X);
+            var minY = float.Min(Y, rect.Y);
+            var maxX = float.Max(X + Width, rect.X + rect.Width);
+            var maxY = float.Max(Y + Height, rect.Y + rect.Height);
+            return new RectF
+            {
+                X = minX,
+                Y = minY,
+                Width = maxX - minX,
+                Height = maxY - minY,
+            };
+        }
 
-        public override bool Equals(object? obj) => obj is RectF f && Equals(f);
+        public readonly override bool Equals(object? obj) => obj is RectF f && Equals(f);
 
-        public bool Equals(RectF other) => X == other.X && Y == other.Y && Width == other.Width && Height == other.Height;
+        public readonly bool Equals(RectF other) => X == other.X && Y == other.Y && Width == other.Width && Height == other.Height;
 
-        public override int GetHashCode() => HashCode.Combine(X, Y, Width, Height);
+        public readonly override int GetHashCode() => HashCode.Combine(X, Y, Width, Height);
 
         public static bool operator ==(RectF left, RectF right) => left.Equals(right);
 
