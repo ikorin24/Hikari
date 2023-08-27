@@ -49,7 +49,7 @@ internal unsafe static partial class EngineCore
 
         var screenConfigNative = screenConfig.ToCoreType();
 
-        elffy_engine_start(&engineConfigNative, &screenConfigNative).Validate();
+        hikari_engine_start(&engineConfigNative, &screenConfigNative).Validate();
         return;
 
 
@@ -158,45 +158,45 @@ internal unsafe static partial class EngineCore
     public static void CreateScreen(in ScreenConfig config)
     {
         var screenConfig = config.ToCoreType();
-        elffy_create_screen(&screenConfig).Validate();
+        hikari_create_screen(&screenConfig).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void ScreenResizeSurface(this Rust.Ref<CE.HostScreen> screen, u32 width, u32 height)
     {
-        elffy_screen_resize_surface(screen, width, height).Validate();
+        hikari_screen_resize_surface(screen, width, height).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void ScreenRequestRedraw(this Rust.Ref<CE.HostScreen> screen)
     {
-        elffy_screen_request_redraw(screen).Validate();
+        hikari_screen_request_redraw(screen).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Rust.Box<Wgpu.CommandEncoder> CreateCommandEncoder(this Rust.Ref<CE.HostScreen> screen)
     {
-        return elffy_create_command_encoder(screen).Validate();
+        return hikari_create_command_encoder(screen).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void FinishCommandEncoder(this Rust.Ref<CE.HostScreen> screen, Rust.Box<Wgpu.CommandEncoder> encoder)
     {
-        elffy_finish_command_encoder(screen, encoder);
+        hikari_finish_command_encoder(screen, encoder);
     }
 
     public static SurfaceData GetSurfaceTexture(this Rust.Ref<CE.HostScreen> screen)
     {
-        var value = elffy_get_surface_texture(screen).Validate();
+        var value = hikari_get_surface_texture(screen).Validate();
         if(value.IsSome(out var surfaceTexture)) {
-            var texture = elffy_surface_texture_to_texture(surfaceTexture);
+            var texture = hikari_surface_texture_to_texture(surfaceTexture);
             try {
                 var desc = CE.TextureViewDescriptor.Default;
-                var view = elffy_create_texture_view(texture, &desc).Validate();
+                var view = hikari_create_texture_view(texture, &desc).Validate();
                 return new SurfaceData(surfaceTexture, view);
             }
             catch {
-                elffy_destroy_surface_texture(surfaceTexture);
+                hikari_destroy_surface_texture(surfaceTexture);
                 throw;
             }
         }
@@ -208,7 +208,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void PresentSurfaceTexture(this Rust.Box<Wgpu.SurfaceTexture> surface_texture)
     {
-        elffy_present_surface_texture(surface_texture);
+        hikari_present_surface_texture(surface_texture);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -216,7 +216,7 @@ internal unsafe static partial class EngineCore
     {
         fixed(byte* p = title) {
             var titleRaw = new CE.Slice<byte>(p, title.Length);
-            elffy_screen_set_title(screen, titleRaw).Validate();
+            hikari_screen_set_title(screen, titleRaw).Validate();
         }
     }
 
@@ -224,26 +224,26 @@ internal unsafe static partial class EngineCore
     public static Rust.Box<Wgpu.RenderPass> CreateRenderPass(this Rust.MutRef<Wgpu.CommandEncoder> commandEncoder, in CE.RenderPassDescriptor desc)
     {
         fixed(CE.RenderPassDescriptor* descPtr = &desc) {
-            return elffy_create_render_pass(commandEncoder, descPtr).Validate();
+            return hikari_create_render_pass(commandEncoder, descPtr).Validate();
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void DestroyRenderPass(this Rust.Box<Wgpu.RenderPass> renderPass)
     {
-        elffy_destroy_render_pass(renderPass);
+        hikari_destroy_render_pass(renderPass);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Rust.Box<Wgpu.ComputePass> CreateComputePass(this Rust.MutRef<Wgpu.CommandEncoder> commandEncoder)
     {
-        return elffy_create_compute_pass(commandEncoder).Validate();
+        return hikari_create_compute_pass(commandEncoder).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void DestroyComputePass(this Rust.Box<Wgpu.ComputePass> computePass)
     {
-        elffy_destroy_compute_pass(computePass);
+        hikari_destroy_compute_pass(computePass);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -251,7 +251,7 @@ internal unsafe static partial class EngineCore
     public static Vector2u ScreenGetInnerSize(
         this Rust.Ref<CE.HostScreen> screen)
     {
-        var size = elffy_screen_get_inner_size(screen).Validate();
+        var size = hikari_screen_get_inner_size(screen).Validate();
         return new Vector2u(size.width, size.height);
     }
 
@@ -264,7 +264,7 @@ internal unsafe static partial class EngineCore
         MonitorId? monitorId)
     {
         var id = monitorId.HasValue ? CE.Opt<CE.MonitorId>.Some(monitorId.Value.Id) : CE.Opt<CE.MonitorId>.None;
-        elffy_screen_set_location(screen, x, y, id).Validate();
+        hikari_screen_set_location(screen, x, y, id).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -274,7 +274,7 @@ internal unsafe static partial class EngineCore
         MonitorId? monitorId)
     {
         var id = monitorId.HasValue ? CE.Opt<CE.MonitorId>.Some(monitorId.Value.Id) : CE.Opt<CE.MonitorId>.None;
-        return elffy_screen_get_location(screen, id).Validate();
+        return hikari_screen_get_location(screen, id).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -282,7 +282,7 @@ internal unsafe static partial class EngineCore
     public static usize MonitorCount(
         this Rust.Ref<CE.HostScreen> screen)
     {
-        return elffy_monitor_count(screen).Validate();
+        return hikari_monitor_count(screen).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -292,13 +292,13 @@ internal unsafe static partial class EngineCore
         Span<CE.MonitorId> buf)
     {
         fixed(CE.MonitorId* p = buf) {
-            return elffy_monitors(screen, p, (usize)buf.Length).Validate();
+            return hikari_monitors(screen, p, (usize)buf.Length).Validate();
         }
     }
 
     public static MonitorId? CurrentMonitor(this Rust.Ref<CE.HostScreen> screen)
     {
-        return elffy_current_monitor(screen)
+        return hikari_current_monitor(screen)
             .Validate()
             .TryGetValue(out var monitor) ? new MonitorId(monitor) : null;
     }
@@ -309,7 +309,7 @@ internal unsafe static partial class EngineCore
         this Rust.Ref<CE.HostScreen> screen,
         u32 width,
         u32 height)
-        => elffy_screen_set_inner_size(screen, width, height).Validate();
+        => hikari_screen_set_inner_size(screen, width, height).Validate();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
@@ -323,7 +323,7 @@ internal unsafe static partial class EngineCore
         fixed(CE.ImageCopyTexture* texturePtr = &texture)
         fixed(Wgpu.ImageDataLayout* dataLayoutPtr = &dataLayout)
         fixed(Wgpu.Extent3d* sizePtr = &size) {
-            elffy_write_texture(screen, texturePtr, data, dataLayoutPtr, sizePtr).Validate();
+            hikari_write_texture(screen, texturePtr, data, dataLayoutPtr, sizePtr).Validate();
         }
     }
 
@@ -334,7 +334,7 @@ internal unsafe static partial class EngineCore
         in CE.BindGroupLayoutDescriptor desc)
     {
         fixed(CE.BindGroupLayoutDescriptor* descPtr = &desc) {
-            return elffy_create_bind_group_layout(screen, descPtr).Validate();
+            return hikari_create_bind_group_layout(screen, descPtr).Validate();
         }
     }
 
@@ -344,7 +344,7 @@ internal unsafe static partial class EngineCore
         this Rust.Box<Wgpu.BindGroupLayout> handle)
     {
         handle.ThrowIfInvalid();
-        elffy_destroy_bind_group_layout(handle);
+        hikari_destroy_bind_group_layout(handle);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -354,7 +354,7 @@ internal unsafe static partial class EngineCore
         in CE.BindGroupDescriptor desc)
     {
         fixed(CE.BindGroupDescriptor* descPtr = &desc) {
-            return elffy_create_bind_group(screen, descPtr).Validate();
+            return hikari_create_bind_group(screen, descPtr).Validate();
         }
     }
 
@@ -364,7 +364,7 @@ internal unsafe static partial class EngineCore
         this Rust.Box<Wgpu.BindGroup> handle)
     {
         handle.ThrowIfInvalid();
-        elffy_destroy_bind_group(handle);
+        hikari_destroy_bind_group(handle);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -374,7 +374,7 @@ internal unsafe static partial class EngineCore
         in CE.PipelineLayoutDescriptor desc)
     {
         fixed(CE.PipelineLayoutDescriptor* descPtr = &desc) {
-            return elffy_create_pipeline_layout(screen, descPtr).Validate();
+            return hikari_create_pipeline_layout(screen, descPtr).Validate();
         }
     }
 
@@ -384,7 +384,7 @@ internal unsafe static partial class EngineCore
         this Rust.Box<Wgpu.PipelineLayout> handle)
     {
         handle.ThrowIfInvalid();
-        elffy_destroy_pipeline_layout(handle);
+        hikari_destroy_pipeline_layout(handle);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -394,7 +394,7 @@ internal unsafe static partial class EngineCore
         in CE.RenderPipelineDescriptor desc)
     {
         fixed(CE.RenderPipelineDescriptor* descPtr = &desc) {
-            return elffy_create_render_pipeline(screen, descPtr).Validate();
+            return hikari_create_render_pipeline(screen, descPtr).Validate();
         }
     }
 
@@ -404,7 +404,7 @@ internal unsafe static partial class EngineCore
         this Rust.Box<Wgpu.RenderPipeline> handle)
     {
         handle.ThrowIfInvalid();
-        elffy_destroy_render_pipeline(handle);
+        hikari_destroy_render_pipeline(handle);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -413,7 +413,7 @@ internal unsafe static partial class EngineCore
         this Rust.Ref<CE.HostScreen> screen,
         in CE.ComputePipelineDescriptor desc)
     {
-        return elffy_create_compute_pipeline(screen, desc).Validate();
+        return hikari_create_compute_pipeline(screen, desc).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -422,7 +422,7 @@ internal unsafe static partial class EngineCore
         this Rust.Box<Wgpu.ComputePipeline> handle)
     {
         handle.ThrowIfInvalid();
-        elffy_destroy_compute_pipeline(handle);
+        hikari_destroy_compute_pipeline(handle);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -431,7 +431,7 @@ internal unsafe static partial class EngineCore
         this Rust.Ref<CE.HostScreen> screen,
         u64 size,
         Wgpu.BufferUsages usage)
-        => elffy_create_buffer(screen, size, usage).Validate();
+        => hikari_create_buffer(screen, size, usage).Validate();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
@@ -439,7 +439,7 @@ internal unsafe static partial class EngineCore
         this Rust.Ref<CE.HostScreen> screen,
         CE.Slice<u8> contents,
         Wgpu.BufferUsages usage)
-        => elffy_create_buffer_init(screen, contents, usage).Validate();
+        => hikari_create_buffer_init(screen, contents, usage).Validate();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
@@ -447,7 +447,7 @@ internal unsafe static partial class EngineCore
         this Rust.Box<Wgpu.Buffer> handle)
     {
         handle.ThrowIfInvalid();
-        elffy_destroy_buffer(handle);
+        hikari_destroy_buffer(handle);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -459,7 +459,7 @@ internal unsafe static partial class EngineCore
         Rust.Ref<Wgpu.Buffer> buffer,
         in Wgpu.ImageDataLayout image_layout)
     {
-        elffy_copy_texture_to_buffer(screen, source, copy_size, buffer, image_layout).Validate();
+        hikari_copy_texture_to_buffer(screen, source, copy_size, buffer, image_layout).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -469,7 +469,7 @@ internal unsafe static partial class EngineCore
         in CE.SamplerDescriptor desc)
     {
         fixed(CE.SamplerDescriptor* descPtr = &desc) {
-            return elffy_create_sampler(screen, descPtr).Validate();
+            return hikari_create_sampler(screen, descPtr).Validate();
         }
     }
 
@@ -479,7 +479,7 @@ internal unsafe static partial class EngineCore
         this Rust.Box<Wgpu.Sampler> handle)
     {
         handle.ThrowIfInvalid();
-        elffy_destroy_sampler(handle);
+        hikari_destroy_sampler(handle);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -490,7 +490,7 @@ internal unsafe static partial class EngineCore
     {
         fixed(byte* shaderSourcePtr = shaderSource) {
             var slice = new CE.Slice<u8>(shaderSourcePtr, shaderSource.Length);
-            return elffy_create_shader_module(screen, slice).Validate();
+            return hikari_create_shader_module(screen, slice).Validate();
         }
     }
 
@@ -500,7 +500,7 @@ internal unsafe static partial class EngineCore
         this Rust.Box<Wgpu.ShaderModule> handle)
     {
         handle.ThrowIfInvalid();
-        elffy_destroy_shader_module(handle);
+        hikari_destroy_shader_module(handle);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -510,7 +510,7 @@ internal unsafe static partial class EngineCore
     in CE.TextureDescriptor desc)
     {
         fixed(CE.TextureDescriptor* descPtr = &desc) {
-            return elffy_create_texture(screen, descPtr).Validate();
+            return hikari_create_texture(screen, descPtr).Validate();
         }
     }
 
@@ -522,7 +522,7 @@ internal unsafe static partial class EngineCore
         CE.Slice<u8> data)
     {
         fixed(CE.TextureDescriptor* descPtr = &desc) {
-            return elffy_create_texture_with_data(screen, descPtr, data).Validate();
+            return hikari_create_texture_with_data(screen, descPtr, data).Validate();
         }
     }
 
@@ -532,7 +532,7 @@ internal unsafe static partial class EngineCore
         this Rust.Box<Wgpu.Texture> handle)
     {
         handle.ThrowIfInvalid();
-        elffy_destroy_texture(handle);
+        hikari_destroy_texture(handle);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -540,7 +540,7 @@ internal unsafe static partial class EngineCore
         this CE.TextureFormat format)
     {
         CE.TextureFormatInfo info_out = default;
-        elffy_texture_format_info(format, ref info_out).Validate();
+        hikari_texture_format_info(format, ref info_out).Validate();
         return info_out;
     }
 
@@ -551,7 +551,7 @@ internal unsafe static partial class EngineCore
         in CE.TextureViewDescriptor desc)
     {
         fixed(CE.TextureViewDescriptor* descPtr = &desc) {
-            return elffy_create_texture_view(texture, descPtr).Validate();
+            return hikari_create_texture_view(texture, descPtr).Validate();
         }
     }
 
@@ -561,7 +561,7 @@ internal unsafe static partial class EngineCore
         this Rust.Box<Wgpu.TextureView> handle)
     {
         handle.ThrowIfInvalid();
-        elffy_destroy_texture_view(handle);
+        hikari_destroy_texture_view(handle);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -574,7 +574,7 @@ internal unsafe static partial class EngineCore
     {
         screen.ThrowIfInvalid();
         buffer.ThrowIfInvalid();
-        elffy_write_buffer(screen, buffer, offset, data).Validate();
+        hikari_write_buffer(screen, buffer, offset, data).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -585,7 +585,7 @@ internal unsafe static partial class EngineCore
     {
         pass.ThrowIfInvalid();
         pipeline.ThrowIfInvalid();
-        elffy_compute_set_pipeline(pass, pipeline).Validate();
+        hikari_compute_set_pipeline(pass, pipeline).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -595,7 +595,7 @@ internal unsafe static partial class EngineCore
         u32 index,
         Rust.Ref<Wgpu.BindGroup> bindGroup)
     {
-        elffy_compute_set_bind_group(pass, index, bindGroup).Validate();
+        hikari_compute_set_bind_group(pass, index, bindGroup).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -606,7 +606,7 @@ internal unsafe static partial class EngineCore
         u32 y,
         u32 z)
     {
-        elffy_compute_dispatch_workgroups(pass, x, y, z).Validate();
+        hikari_compute_dispatch_workgroups(pass, x, y, z).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -616,7 +616,7 @@ internal unsafe static partial class EngineCore
         Rust.Ref<Wgpu.RenderPipeline> render_pipeline)
     {
         render_pipeline.ThrowIfInvalid();
-        elffy_set_pipeline(render_pass, render_pipeline).Validate();
+        hikari_set_pipeline(render_pass, render_pipeline).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -627,7 +627,7 @@ internal unsafe static partial class EngineCore
         Rust.Ref<Wgpu.BindGroup> bind_group)
     {
         bind_group.ThrowIfInvalid();
-        elffy_set_bind_group(render_pass, index, bind_group).Validate();
+        hikari_set_bind_group(render_pass, index, bind_group).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -638,7 +638,7 @@ internal unsafe static partial class EngineCore
         CE.BufferSlice buffer_slice)
     {
         buffer_slice.buffer.ThrowIfInvalid();
-        elffy_set_vertex_buffer(render_pass, slot, buffer_slice).Validate();
+        hikari_set_vertex_buffer(render_pass, slot, buffer_slice).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -649,7 +649,7 @@ internal unsafe static partial class EngineCore
         Wgpu.IndexFormat index_format)
     {
         buffer_slice.buffer.ThrowIfInvalid();
-        elffy_set_index_buffer(render_pass, buffer_slice, index_format).Validate();
+        hikari_set_index_buffer(render_pass, buffer_slice, index_format).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -663,7 +663,7 @@ internal unsafe static partial class EngineCore
         f32 minDepth,
         f32 maxDepth)
     {
-        elffy_set_viewport(render_pass, x, y, w, h, minDepth, maxDepth).Validate();
+        hikari_set_viewport(render_pass, x, y, w, h, minDepth, maxDepth).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -673,7 +673,7 @@ internal unsafe static partial class EngineCore
         CE.RangeU32 vertices,
         CE.RangeU32 instances)
     {
-        elffy_draw(render_pass, vertices, instances).Validate();
+        hikari_draw(render_pass, vertices, instances).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -684,7 +684,7 @@ internal unsafe static partial class EngineCore
         i32 base_vertex,
         CE.RangeU32 instances)
     {
-        elffy_draw_indexed(render_pass, indices, base_vertex, instances).Validate();
+        hikari_draw_indexed(render_pass, indices, base_vertex, instances).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -692,7 +692,7 @@ internal unsafe static partial class EngineCore
         this Rust.Ref<CE.HostScreen> screen,
         bool allowed)
     {
-        elffy_set_ime_allowed(screen, allowed).Validate();
+        hikari_set_ime_allowed(screen, allowed).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -701,20 +701,20 @@ internal unsafe static partial class EngineCore
         u32 x,
         u32 y)
     {
-        elffy_set_ime_position(screen, x, y).Validate();
+        hikari_set_ime_position(screen, x, y).Validate();
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static EngineCoreException GetTlsLastError()
     {
-        var len = elffy_get_tls_last_error_len();
+        var len = hikari_get_tls_last_error_len();
         if(len == 0) {
             return new EngineCoreException(null);
         }
         var pool = System.Buffers.ArrayPool<byte>.Shared;
         var buf = pool.Rent((int)len);
         try {
-            elffy_take_tls_last_error(ref MemoryMarshal.GetArrayDataReference(buf));
+            hikari_take_tls_last_error(ref MemoryMarshal.GetArrayDataReference(buf));
             var message = Encoding.UTF8.GetString(buf.AsSpan(0, (int)len));
             return new EngineCoreException(message);
         }

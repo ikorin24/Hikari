@@ -8,7 +8,6 @@ fn create_window(style: &WindowStyle) -> (window::Window, event_loop::EventLoop<
 
     // let event_loop = event_loop::EventLoop::new();
     // let window = window::WindowBuilder::new()
-    //     .with_title("Elffy")
     //     .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(1280, 720)))
     //     .build(&event_loop)
     //     .unwrap();

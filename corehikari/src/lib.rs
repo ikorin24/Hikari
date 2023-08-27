@@ -3,7 +3,7 @@ mod ffi;
 mod screen;
 
 use crate::screen::{HostScreen, ScreenId};
-use coreelffy_macros::tagged_ref_union;
+use corehikari_macros::tagged_ref_union;
 use smallvec::SmallVec;
 use static_assertions::assert_eq_size;
 use std;

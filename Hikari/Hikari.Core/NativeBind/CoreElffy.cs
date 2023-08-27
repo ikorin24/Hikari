@@ -12,9 +12,9 @@ namespace Hikari.NativeBind;
 #pragma warning disable IDE0052 // remove unread non public member
 
 /// <summary>
-/// `coreelffy` crate in Rust
+/// `corehikari` crate in Rust
 /// </summary>
-internal static class CoreElffy
+internal static class CoreHikari
 {
     internal sealed class HostScreen : INativeTypeNonReprC { private HostScreen() { } }
 

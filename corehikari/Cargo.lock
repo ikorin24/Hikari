@@ -295,10 +295,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "coreelffy"
+name = "corehikari"
 version = "0.1.0"
 dependencies = [
- "coreelffy_macros",
+ "corehikari_macros",
  "env_logger",
  "log",
  "once_cell",
@@ -312,7 +312,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "coreelffy_macros"
+name = "corehikari_macros"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",

@@ -21,7 +21,7 @@ unsafe partial class EngineCore
     {
         var token = Callback.NewToken();
         Callback.Register(token, onRead, onException);
-        elffy_read_buffer(screen, buffer_slice, token, &OnCallback).Validate();
+        hikari_read_buffer(screen, buffer_slice, token, &OnCallback).Validate();
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         static void OnCallback(usize token, ApiResult result, byte* ptr, usize length)

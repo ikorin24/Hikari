@@ -10,7 +10,7 @@ use std::num::NonZeroU32;
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_engine_start(
+extern "cdecl" fn hikari_engine_start(
     engine_config: &EngineCoreConfig,
     screen_config: &HostScreenConfig,
 ) -> ApiResult {
@@ -25,7 +25,7 @@ static_assertions::assert_impl_all!(HostScreenConfig: Send, Sync);
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_screen(config: &HostScreenConfig) -> ApiResult {
+extern "cdecl" fn hikari_create_screen(config: &HostScreenConfig) -> ApiResult {
     let result = send_proxy_message(ProxyMessage::CreateScreen(*config));
     ApiResult::ok_or_set_error(result)
 }
@@ -38,7 +38,7 @@ static_assertions::assert_impl_all!(Slice<u8>: Send, Sync);
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_screen_resize_surface(
+extern "cdecl" fn hikari_screen_resize_surface(
     screen: &HostScreen,
     width: u32,
     height: u32,
@@ -53,13 +53,13 @@ extern "cdecl" fn elffy_screen_resize_surface(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_screen_request_redraw(screen: &HostScreen) -> ApiResult {
+extern "cdecl" fn hikari_screen_request_redraw(screen: &HostScreen) -> ApiResult {
     screen.window.request_redraw();
     ApiResult::ok()
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_create_command_encoder(
+extern "cdecl" fn hikari_create_command_encoder(
     screen: &HostScreen,
 ) -> ApiBoxResult<wgpu::CommandEncoder> {
     let encoder = screen
@@ -69,7 +69,7 @@ extern "cdecl" fn elffy_create_command_encoder(
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_finish_command_encoder(
+extern "cdecl" fn hikari_finish_command_encoder(
     screen: &HostScreen,
     encoder: Box<wgpu::CommandEncoder>,
 ) {
@@ -77,7 +77,7 @@ extern "cdecl" fn elffy_finish_command_encoder(
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_get_surface_texture(
+extern "cdecl" fn hikari_get_surface_texture(
     screen: &HostScreen,
 ) -> ApiValueResult<Option<Box<wgpu::SurfaceTexture>>> {
     match screen.surface.get_current_texture() {
@@ -101,19 +101,19 @@ static_assertions::assert_impl_all!(Box<wgpu::SurfaceTexture>: Send, Sync);
 static_assertions::assert_impl_all!(wgpu::SurfaceTexture: Send, Sync);
 
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_surface_texture(surface_texture: Box<wgpu::SurfaceTexture>) {
+extern "cdecl" fn hikari_destroy_surface_texture(surface_texture: Box<wgpu::SurfaceTexture>) {
     drop(surface_texture);
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_surface_texture_to_texture(
+extern "cdecl" fn hikari_surface_texture_to_texture(
     surface_texture: &wgpu::SurfaceTexture,
 ) -> &wgpu::Texture {
     &surface_texture.texture
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_present_surface_texture(surface_texture: Box<wgpu::SurfaceTexture>) {
+extern "cdecl" fn hikari_present_surface_texture(surface_texture: Box<wgpu::SurfaceTexture>) {
     surface_texture.present()
 }
 
@@ -122,7 +122,7 @@ extern "cdecl" fn elffy_present_surface_texture(surface_texture: Box<wgpu::Surfa
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_screen_set_title(screen: &HostScreen, title: Slice<u8>) -> ApiResult {
+extern "cdecl" fn hikari_screen_set_title(screen: &HostScreen, title: Slice<u8>) -> ApiResult {
     let result = title.as_str().map(|title| {
         screen.window.set_title(title);
     });
@@ -136,7 +136,7 @@ extern "cdecl" fn elffy_screen_set_title(screen: &HostScreen, title: Slice<u8>) 
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_render_pass<'tex, 'desc, 'cmd_enc>(
+extern "cdecl" fn hikari_create_render_pass<'tex, 'desc, 'cmd_enc>(
     command_encoder: &'cmd_enc mut wgpu::CommandEncoder,
     desc: &'desc RenderPassDescriptor<'tex, 'desc>,
 ) -> ApiBoxResult<wgpu::RenderPass<'cmd_enc>>
@@ -159,7 +159,7 @@ static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_render_pass<'cmd_enc>(
+extern "cdecl" fn hikari_destroy_render_pass<'cmd_enc>(
     render_pass: Box<wgpu::RenderPass<'cmd_enc>>,
 ) {
     drop(render_pass)
@@ -176,7 +176,7 @@ extern "cdecl" fn elffy_destroy_render_pass<'cmd_enc>(
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_compute_pass(
+extern "cdecl" fn hikari_create_compute_pass(
     command_encoder: &mut wgpu::CommandEncoder,
 ) -> ApiBoxResult<wgpu::ComputePass> {
     let compute_pass =
@@ -190,7 +190,7 @@ extern "cdecl" fn elffy_create_compute_pass(
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_compute_pass(compute_pass: Box<wgpu::ComputePass>) {
+extern "cdecl" fn hikari_destroy_compute_pass(compute_pass: Box<wgpu::ComputePass>) {
     drop(compute_pass)
 }
 
@@ -202,7 +202,7 @@ static_assertions::assert_impl_all!(wgpu::ComputePass: Send, Sync);
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_screen_set_inner_size(
+extern "cdecl" fn hikari_screen_set_inner_size(
     screen: &HostScreen,
     width: u32,
     height: u32,
@@ -218,13 +218,13 @@ extern "cdecl" fn elffy_screen_set_inner_size(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_screen_get_inner_size(screen: &HostScreen) -> ApiValueResult<SizeU32> {
+extern "cdecl" fn hikari_screen_get_inner_size(screen: &HostScreen) -> ApiValueResult<SizeU32> {
     let size: (u32, u32) = screen.window.inner_size().into();
     ApiValueResult::ok(size.into())
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_screen_set_location(
+extern "cdecl" fn hikari_screen_set_location(
     screen: &HostScreen,
     x: i32,
     y: i32,
@@ -251,7 +251,7 @@ extern "cdecl" fn elffy_screen_set_location(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_screen_get_location(
+extern "cdecl" fn hikari_screen_get_location(
     screen: &HostScreen,
     monitor_id: Opt<MonitorId>,
 ) -> ApiValueResult<Tuple<i32, i32>> {
@@ -275,7 +275,7 @@ extern "cdecl" fn elffy_screen_get_location(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_current_monitor(screen: &HostScreen) -> ApiValueResult<Opt<MonitorId>> {
+extern "cdecl" fn hikari_current_monitor(screen: &HostScreen) -> ApiValueResult<Opt<MonitorId>> {
     let result = screen
         .window
         .current_monitor()
@@ -291,7 +291,7 @@ extern "cdecl" fn elffy_current_monitor(screen: &HostScreen) -> ApiValueResult<O
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_monitor_count(screen: &HostScreen) -> ApiValueResult<usize> {
+extern "cdecl" fn hikari_monitor_count(screen: &HostScreen) -> ApiValueResult<usize> {
     let count = screen.window.available_monitors().count();
     ApiValueResult::ok(count)
 }
@@ -303,7 +303,7 @@ extern "cdecl" fn elffy_monitor_count(screen: &HostScreen) -> ApiValueResult<usi
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_monitors(
+extern "cdecl" fn hikari_monitors(
     screen: &HostScreen,
     buf: *mut MonitorId,
     buflen: usize,
@@ -322,7 +322,7 @@ extern "cdecl" fn elffy_monitors(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_write_texture(
+extern "cdecl" fn hikari_write_texture(
     screen: &HostScreen,
     texture: &ImageCopyTexture,
     data: Slice<u8>,
@@ -340,7 +340,7 @@ extern "cdecl" fn elffy_write_texture(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_bind_group_layout(
+extern "cdecl" fn hikari_create_bind_group_layout(
     screen: &HostScreen,
     desc: &BindGroupLayoutDescriptor,
 ) -> ApiBoxResult<wgpu::BindGroupLayout> {
@@ -362,7 +362,7 @@ static_assertions::assert_impl_all!(wgpu::BindGroupLayout: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_bind_group_layout(layout: Box<wgpu::BindGroupLayout>) {
+extern "cdecl" fn hikari_destroy_bind_group_layout(layout: Box<wgpu::BindGroupLayout>) {
     drop(layout)
 }
 
@@ -371,7 +371,7 @@ extern "cdecl" fn elffy_destroy_bind_group_layout(layout: Box<wgpu::BindGroupLay
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_bind_group(
+extern "cdecl" fn hikari_create_bind_group(
     screen: &HostScreen,
     desc: &BindGroupDescriptor,
 ) -> ApiBoxResult<wgpu::BindGroup> {
@@ -393,7 +393,7 @@ static_assertions::assert_impl_all!(wgpu::BindGroup: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_bind_group(bind_group: Box<wgpu::BindGroup>) {
+extern "cdecl" fn hikari_destroy_bind_group(bind_group: Box<wgpu::BindGroup>) {
     drop(bind_group)
 }
 
@@ -402,7 +402,7 @@ extern "cdecl" fn elffy_destroy_bind_group(bind_group: Box<wgpu::BindGroup>) {
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_pipeline_layout(
+extern "cdecl" fn hikari_create_pipeline_layout(
     screen: &HostScreen,
     desc: &PipelineLayoutDescriptor,
 ) -> ApiBoxResult<wgpu::PipelineLayout> {
@@ -422,7 +422,7 @@ static_assertions::assert_impl_all!(wgpu::PipelineLayout: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_pipeline_layout(layout: Box<wgpu::PipelineLayout>) {
+extern "cdecl" fn hikari_destroy_pipeline_layout(layout: Box<wgpu::PipelineLayout>) {
     drop(layout)
 }
 
@@ -431,7 +431,7 @@ extern "cdecl" fn elffy_destroy_pipeline_layout(layout: Box<wgpu::PipelineLayout
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_render_pipeline(
+extern "cdecl" fn hikari_create_render_pipeline(
     screen: &HostScreen,
     desc: &RenderPipelineDescriptor,
 ) -> ApiBoxResult<wgpu::RenderPipeline> {
@@ -454,7 +454,7 @@ static_assertions::assert_impl_all!(wgpu::RenderPipeline: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_render_pipeline(pipeline: Box<wgpu::RenderPipeline>) {
+extern "cdecl" fn hikari_destroy_render_pipeline(pipeline: Box<wgpu::RenderPipeline>) {
     drop(pipeline)
 }
 
@@ -463,7 +463,7 @@ extern "cdecl" fn elffy_destroy_render_pipeline(pipeline: Box<wgpu::RenderPipeli
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_compute_pipeline(
+extern "cdecl" fn hikari_create_compute_pipeline(
     screen: &HostScreen,
     desc: &ComputePipelineDescriptor,
 ) -> ApiBoxResult<wgpu::ComputePipeline> {
@@ -483,7 +483,7 @@ static_assertions::assert_impl_all!(wgpu::ComputePipeline: Send, Sync);
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_compute_pipeline(pipeline: Box<wgpu::ComputePipeline>) {
+extern "cdecl" fn hikari_destroy_compute_pipeline(pipeline: Box<wgpu::ComputePipeline>) {
     drop(pipeline)
 }
 
@@ -492,7 +492,7 @@ extern "cdecl" fn elffy_destroy_compute_pipeline(pipeline: Box<wgpu::ComputePipe
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_buffer(
+extern "cdecl" fn hikari_create_buffer(
     screen: &HostScreen,
     size: u64,
     usage: wgpu::BufferUsages,
@@ -512,7 +512,7 @@ extern "cdecl" fn elffy_create_buffer(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_buffer_init(
+extern "cdecl" fn hikari_create_buffer_init(
     screen: &HostScreen,
     contents: Slice<u8>,
     usage: wgpu::BufferUsages,
@@ -541,12 +541,12 @@ static_assertions::assert_impl_all!(wgpu::Buffer: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_buffer(buffer: Box<wgpu::Buffer>) {
+extern "cdecl" fn hikari_destroy_buffer(buffer: Box<wgpu::Buffer>) {
     drop(buffer)
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_copy_texture_to_buffer(
+extern "cdecl" fn hikari_copy_texture_to_buffer(
     screen: &HostScreen,
     source: &ImageCopyTexture,
     copy_size: &wgpu::Extent3d,
@@ -595,7 +595,7 @@ extern "cdecl" fn elffy_copy_texture_to_buffer(
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_read_buffer(
+extern "cdecl" fn hikari_read_buffer(
     screen: &HostScreen,
     buffer_slice: BufferSlice,
     token: usize,
@@ -626,7 +626,7 @@ static_assertions::assert_impl_all!(SamplerDescriptor: Send, Sync);
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_sampler(
+extern "cdecl" fn hikari_create_sampler(
     screen: &HostScreen,
     desc: &SamplerDescriptor,
 ) -> ApiBoxResult<wgpu::Sampler> {
@@ -646,7 +646,7 @@ static_assertions::assert_impl_all!(wgpu::Sampler: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_sampler(sampler: Box<wgpu::Sampler>) {
+extern "cdecl" fn hikari_destroy_sampler(sampler: Box<wgpu::Sampler>) {
     drop(sampler)
 }
 
@@ -655,7 +655,7 @@ extern "cdecl" fn elffy_destroy_sampler(sampler: Box<wgpu::Sampler>) {
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_shader_module(
+extern "cdecl" fn hikari_create_shader_module(
     screen: &HostScreen,
     shader_source: Slice<u8>,
 ) -> ApiBoxResult<wgpu::ShaderModule> {
@@ -682,7 +682,7 @@ static_assertions::assert_impl_all!(wgpu::ShaderModule: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_shader_module(shader: Box<wgpu::ShaderModule>) {
+extern "cdecl" fn hikari_destroy_shader_module(shader: Box<wgpu::ShaderModule>) {
     drop(shader)
 }
 
@@ -691,7 +691,7 @@ extern "cdecl" fn elffy_destroy_shader_module(shader: Box<wgpu::ShaderModule>) {
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_texture(
+extern "cdecl" fn hikari_create_texture(
     screen: &HostScreen,
     desc: &TextureDescriptor,
 ) -> ApiBoxResult<wgpu::Texture> {
@@ -704,7 +704,7 @@ extern "cdecl" fn elffy_create_texture(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_texture_with_data(
+extern "cdecl" fn hikari_create_texture_with_data(
     screen: &HostScreen,
     desc: &TextureDescriptor,
     data: Slice<u8>,
@@ -730,7 +730,7 @@ static_assertions::assert_impl_all!(wgpu::Texture: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_texture(texture: Box<wgpu::Texture>) {
+extern "cdecl" fn hikari_destroy_texture(texture: Box<wgpu::Texture>) {
     drop(texture)
 }
 
@@ -741,7 +741,7 @@ extern "cdecl" fn elffy_destroy_texture(texture: Box<wgpu::Texture>) {
 /// - called from multiple threads simultaneously with same args with same args
 /// (`info_out` is mutable reference)
 #[no_mangle]
-extern "cdecl" fn elffy_texture_format_info(
+extern "cdecl" fn hikari_texture_format_info(
     format: TextureFormat,
     info_out: &mut TextureFormatInfo,
 ) -> ApiResult {
@@ -754,7 +754,7 @@ extern "cdecl" fn elffy_texture_format_info(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_create_texture_view(
+extern "cdecl" fn hikari_create_texture_view(
     texture: &wgpu::Texture,
     desc: &TextureViewDescriptor,
 ) -> ApiBoxResult<wgpu::TextureView> {
@@ -774,7 +774,7 @@ static_assertions::assert_impl_all!(wgpu::TextureView: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args with same args
 #[no_mangle]
-extern "cdecl" fn elffy_destroy_texture_view(texture_view: Box<wgpu::TextureView>) {
+extern "cdecl" fn hikari_destroy_texture_view(texture_view: Box<wgpu::TextureView>) {
     drop(texture_view)
 }
 
@@ -783,7 +783,7 @@ extern "cdecl" fn elffy_destroy_texture_view(texture_view: Box<wgpu::TextureView
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_write_buffer(
+extern "cdecl" fn hikari_write_buffer(
     screen: &HostScreen,
     buffer: &wgpu::Buffer,
     offset: u64,
@@ -797,7 +797,7 @@ static_assertions::assert_impl_all!(wgpu::RenderPass: Send, Sync);
 static_assertions::assert_impl_all!(wgpu::RenderPipeline: Send, Sync);
 
 #[no_mangle]
-extern "cdecl" fn elffy_compute_set_pipeline<'a>(
+extern "cdecl" fn hikari_compute_set_pipeline<'a>(
     pass: &'a mut wgpu::ComputePass<'a>,
     pipeline: &'a wgpu::ComputePipeline,
 ) -> ApiResult {
@@ -806,7 +806,7 @@ extern "cdecl" fn elffy_compute_set_pipeline<'a>(
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_compute_set_bind_group<'a>(
+extern "cdecl" fn hikari_compute_set_bind_group<'a>(
     pass: &'a mut wgpu::ComputePass<'a>,
     index: u32,
     bind_group: &'a wgpu::BindGroup,
@@ -816,7 +816,7 @@ extern "cdecl" fn elffy_compute_set_bind_group<'a>(
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_compute_dispatch_workgroups<'a>(
+extern "cdecl" fn hikari_compute_dispatch_workgroups<'a>(
     pass: &'a mut wgpu::ComputePass<'a>,
     x: u32,
     y: u32,
@@ -834,7 +834,7 @@ extern "cdecl" fn elffy_compute_dispatch_workgroups<'a>(
 /// ## NG
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_set_pipeline<'a>(
+extern "cdecl" fn hikari_set_pipeline<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
     render_pipeline: &'a wgpu::RenderPipeline,
 ) -> ApiResult {
@@ -850,7 +850,7 @@ extern "cdecl" fn elffy_set_pipeline<'a>(
 /// ## NG
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_set_viewport<'a>(
+extern "cdecl" fn hikari_set_viewport<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
     x: f32,
     y: f32,
@@ -874,7 +874,7 @@ static_assertions::assert_impl_all!(wgpu::BindGroup: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_set_bind_group<'a>(
+extern "cdecl" fn hikari_set_bind_group<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
     index: u32,
     bind_group: &'a wgpu::BindGroup,
@@ -894,7 +894,7 @@ static_assertions::assert_impl_all!(BufferSlice: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_set_vertex_buffer<'a>(
+extern "cdecl" fn hikari_set_vertex_buffer<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
     slot: u32,
     buffer_slice: BufferSlice<'a>,
@@ -915,7 +915,7 @@ static_assertions::assert_impl_all!(wgpu::IndexFormat: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn elffy_set_index_buffer<'a>(
+extern "cdecl" fn hikari_set_index_buffer<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
     buffer_slice: BufferSlice<'a>,
     index_format: wgpu::IndexFormat,
@@ -935,7 +935,7 @@ static_assertions::assert_impl_all!(RangeU32: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same argss
 #[no_mangle]
-extern "cdecl" fn elffy_draw<'a>(
+extern "cdecl" fn hikari_draw<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
     vertices: RangeU32,
     instances: RangeU32,
@@ -956,7 +956,7 @@ static_assertions::assert_impl_all!(i32: Send, Sync);
 /// ## NG
 /// - called from multiple threads simultaneously with same argss
 #[no_mangle]
-extern "cdecl" fn elffy_draw_indexed<'a>(
+extern "cdecl" fn hikari_draw_indexed<'a>(
     render_pass: &mut wgpu::RenderPass<'a>,
     indices: RangeU32,
     base_vertex: i32,
@@ -969,25 +969,25 @@ extern "cdecl" fn elffy_draw_indexed<'a>(
 static_assertions::assert_impl_all!(winit::window::Window: Send, Sync);
 
 #[no_mangle]
-extern "cdecl" fn elffy_set_ime_allowed(screen: &HostScreen, allowed: bool) -> ApiResult {
+extern "cdecl" fn hikari_set_ime_allowed(screen: &HostScreen, allowed: bool) -> ApiResult {
     screen.window.set_ime_allowed(allowed);
     ApiResult::ok()
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_set_ime_position(screen: &HostScreen, x: u32, y: u32) -> ApiResult {
+extern "cdecl" fn hikari_set_ime_position(screen: &HostScreen, x: u32, y: u32) -> ApiResult {
     let pos = winit::dpi::PhysicalPosition::new(x, y);
     screen.window.set_ime_position(pos);
     ApiResult::ok()
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_get_tls_last_error_len() -> usize {
+extern "cdecl" fn hikari_get_tls_last_error_len() -> usize {
     engine::get_tls_last_error_len()
 }
 
 #[no_mangle]
-extern "cdecl" fn elffy_take_tls_last_error(buf: *mut u8) {
+extern "cdecl" fn hikari_take_tls_last_error(buf: *mut u8) {
     let error = engine::take_tls_last_error();
     let bytes = error.as_bytes();
     let slice = unsafe { std::slice::from_raw_parts_mut(buf, bytes.len()) };

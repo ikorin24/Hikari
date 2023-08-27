@@ -62,7 +62,7 @@ internal unsafe sealed class ImeState : IImePreeditState
 
         var textUtf8 = new ReadOnlySpan<byte>(input.text.data, input.text.len.ToInt32());
 
-        if(input.tag != NativeBind.CoreElffy.ImeInputData.Tag.Disabled) {
+        if(input.tag != CE.ImeInputData.Tag.Disabled) {
             EngineCore.SetImePosition(_screen.AsRefChecked(), 10, 10);
         }
 

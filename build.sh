@@ -1,5 +1,5 @@
 #!/bin/sh
-bin_name="coreelffy"
+bin_name="corehikari"
 proj_dir="${bin_name}/"
 out_dir="${proj_dir}output/"
 declare -A bins
