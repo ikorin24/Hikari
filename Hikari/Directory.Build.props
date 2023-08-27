@@ -15,9 +15,4 @@
     <Version>0.1.0</Version>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageVersion Include="UniTask" Version="2.2.5" />
-    <PackageVersion Include="SkiaSharp" Version="2.88.5" />
-  </ItemGroup>
-
 </Project>
