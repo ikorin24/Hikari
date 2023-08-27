@@ -133,26 +133,27 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 
         var rootElement = _rootElement;
         var screenSize = Screen.ClientSize;
-        var uiProjection = Matrix4.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, -1f, 1f);
+        var uiProjection = Matrix4.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
+        uint i = 0;
         if(rootElement != null) {
-            RenderElementRecursively(pass, rootElement, render, screenSize, uiProjection);
+            RenderElementRecursively(pass, ref i, rootElement, render, screenSize, uiProjection);
         }
 
-        static void RenderElementRecursively(in RenderPass pass, UIElement element, RenderObjectAction render, in Vector2u screenSize, in Matrix4 uiProjection)
+        static void RenderElementRecursively(in RenderPass pass, ref uint i, UIElement element, RenderObjectAction render, in Vector2u screenSize, in Matrix4 uiProjection)
         {
             var model = element.Model;
             Debug.Assert(model != null);
-            element.UpdateMaterial(screenSize, uiProjection);
+            element.UpdateMaterial(screenSize, uiProjection, i++);
             render(in pass, model);
             foreach(var child in element.Children) {
-                RenderElementRecursively(pass, child, render, screenSize, uiProjection);
+                RenderElementRecursively(pass, ref i, child, render, screenSize, uiProjection);
             }
         }
     }
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
-        return context.CreateSurfaceRenderPass(colorClear: null, depthStencil: null);
+        return context.CreateSurfaceRenderPass(colorClear: (0, 0, 0, 0), depthStencil: (1f, null));
     }
 
     private static Own<PipelineLayout> CreatePipelineLayout(

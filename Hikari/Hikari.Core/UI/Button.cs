@@ -166,7 +166,14 @@ file sealed class ButtonShader : UIShader
                 PolygonMode = PolygonMode.Fill,
                 StripIndexFormat = null,
             },
-            DepthStencil = null,
+            DepthStencil = new DepthStencilState
+            {
+                Format = screen.DepthTexture.Format,
+                DepthWriteEnabled = true,
+                DepthCompare = CompareFunction.LessEqual,
+                Stencil = StencilState.Default,
+                Bias = DepthBiasState.Default,
+            },
             Multisample = MultisampleState.Default,
             Multiview = 0,
         };

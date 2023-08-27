@@ -532,7 +532,7 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    internal void UpdateMaterial(in Vector2u screenSize, in Matrix4 uiProjection)
+    internal void UpdateMaterial(in Vector2u screenSize, in Matrix4 uiProjection, uint index)
     {
         var model = _model;
         Debug.Assert(model != null);
@@ -550,12 +550,13 @@ public abstract class UIElement : IToJson, IReactive
         };
 
         var polygonRect = rect.GetMargedRect(shadowRect);
-        // origin is bottom-left of rect because clip space is bottom-left based
+        var depth = float.Max(0, 1f - (float)index / 100000f);
         var modelOrigin = new Vector3
         {
+            // origin is bottom-left of rect because clip space is bottom-left based
             X = polygonRect.Position.X,
             Y = screenSize.Y - polygonRect.Position.Y - polygonRect.Size.Y,
-            Z = 0,
+            Z = -depth,
         };
         var modelMatrix =
             modelOrigin.ToTranslationMatrix4() *
