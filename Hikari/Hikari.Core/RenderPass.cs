@@ -41,32 +41,62 @@ public readonly ref struct RenderPass
     internal static unsafe OwnRenderPass SurfaceRenderPass(
         Screen screen,
         Rust.Ref<Wgpu.TextureView> surfaceTextureView,
-        Rust.Ref<Wgpu.TextureView> depthTextureView,
-        (f64 R, f64 G, f64 B, f64 A)? colorClear,
-        (f32? DepthClear, u32? StencilClear)? depthStencil)
+        Rust.Ref<Wgpu.TextureView> depthStencilTextureView,
+        scoped in ColorBufferInit colorInit,
+        scoped in DepthStencilBufferInit depthStencilInit)
     {
-        var colorAttachment = new CE.Opt<CE.RenderPassColorAttachment>(new()
+        var color = new CE.Opt<CE.RenderPassColorAttachment>(new()
         {
             view = surfaceTextureView,
-            clear = colorClear != null ?
-                new(new Wgpu.Color(colorClear.Value.R, colorClear.Value.G, colorClear.Value.B, colorClear.Value.A)) :
-                CE.Opt<Wgpu.Color>.None,
+            init = new CE.RenderPassColorBufferInit
+            {
+                mode = colorInit.Mode switch
+                {
+                    RenderPassInitMode.Clear => CE.RenderPassBufferInitMode.Clear,
+                    RenderPassInitMode.Load or _ => CE.RenderPassBufferInitMode.Load,
+                },
+                value = new Wgpu.Color
+                {
+                    R = colorInit.ClearValue.R,
+                    G = colorInit.ClearValue.G,
+                    B = colorInit.ClearValue.B,
+                    A = colorInit.ClearValue.A,
+                },
+            }
         });
         var desc = new CE.RenderPassDescriptor
         {
-            color_attachments_clear = new() { data = &colorAttachment, len = 1 },
-            depth_stencil_attachment_clear = depthStencil != null ?
-                new(new()
+            color_attachments = new() { data = &color, len = 1 },
+            depth_stencil_attachment = new(new()
+            {
+                view = depthStencilTextureView,
+                depth = depthStencilInit.Depth switch
                 {
-                    view = depthTextureView,
-                    depth_clear = depthStencil.Value.DepthClear != null ?
-                        new(depthStencil.Value.DepthClear.Value) :
-                        CE.Opt<float>.None,
-                    stencil_clear = depthStencil.Value.StencilClear != null ?
-                        new(depthStencil.Value.StencilClear.Value) :
-                        CE.Opt<uint>.None,
-                }) :
-                CE.Opt<CE.RenderPassDepthStencilAttachment>.None,
+                    null => CE.Opt<CE.RenderPassDepthBufferInit>.None,
+                    DepthBufferInit depthInit => new(new()
+                    {
+                        mode = depthInit.Mode switch
+                        {
+                            RenderPassInitMode.Clear => CE.RenderPassBufferInitMode.Clear,
+                            RenderPassInitMode.Load or _ => CE.RenderPassBufferInitMode.Load,
+                        },
+                        value = depthInit.ClearValue,
+                    }),
+                },
+                stencil = depthStencilInit.Stencil switch
+                {
+                    null => CE.Opt<CE.RenderPassStencilBufferInit>.None,
+                    StencilBufferInit stencilInit => new(new()
+                    {
+                        mode = stencilInit.Mode switch
+                        {
+                            RenderPassInitMode.Clear => CE.RenderPassBufferInitMode.Clear,
+                            RenderPassInitMode.Load or _ => CE.RenderPassBufferInitMode.Load,
+                        },
+                        value = stencilInit.ClearValue,
+                    }),
+                },
+            }),
         };
         return Create(screen, desc);
     }
@@ -189,6 +219,84 @@ public readonly ref struct OwnRenderPass
     private static void ThrowNoValue() => throw new InvalidOperationException("no value exists");
 
     public static explicit operator RenderPass(OwnRenderPass own) => own.AsValue();
+}
+
+public readonly record struct ColorBufferInit
+{
+    public required RenderPassInitMode Mode { get; init; }
+    public (f64 R, f64 G, f64 B, f64 A) ClearValue { get; init; }
+
+    public static ColorBufferInit Clear()
+    {
+        return new ColorBufferInit
+        {
+            Mode = RenderPassInitMode.Clear,
+            ClearValue = (0, 0, 0, 0),
+        };
+    }
+
+    public static ColorBufferInit Clear(f64 r, f64 g, f64 b, f64 a)
+    {
+        return new ColorBufferInit
+        {
+            Mode = RenderPassInitMode.Clear,
+            ClearValue = (r, g, b, a),
+        };
+    }
+
+    public static ColorBufferInit Load()
+    {
+        return new ColorBufferInit
+        {
+            Mode = RenderPassInitMode.Load,
+        };
+    }
+}
+
+public readonly record struct DepthBufferInit
+{
+    public required RenderPassInitMode Mode { get; init; }
+    public f32 ClearValue { get; init; }
+
+    public static DepthBufferInit Clear(f32 clearValue) => new DepthBufferInit
+    {
+        Mode = RenderPassInitMode.Clear,
+        ClearValue = clearValue,
+    };
+
+    public static DepthBufferInit Load() => new DepthBufferInit
+    {
+        Mode = RenderPassInitMode.Load,
+    };
+}
+
+public readonly record struct StencilBufferInit
+{
+    public required RenderPassInitMode Mode { get; init; }
+    public u32 ClearValue { get; init; }
+
+    public static StencilBufferInit Clear(u32 clearValue) => new StencilBufferInit
+    {
+        Mode = RenderPassInitMode.Clear,
+        ClearValue = clearValue,
+    };
+
+    public static StencilBufferInit Load() => new StencilBufferInit
+    {
+        Mode = RenderPassInitMode.Load,
+    };
+}
+
+public readonly record struct DepthStencilBufferInit
+{
+    public required DepthBufferInit? Depth { get; init; }
+    public required StencilBufferInit? Stencil { get; init; }
+}
+
+public enum RenderPassInitMode : u32
+{
+    Clear = 0,
+    Load = 1,
 }
 
 internal delegate void ReleaseRenderPass(RenderPass renderPass);

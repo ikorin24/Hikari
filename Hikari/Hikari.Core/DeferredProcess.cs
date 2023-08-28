@@ -59,7 +59,13 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
-        return context.CreateSurfaceRenderPass((0, 0, 0, 0), (1f, null));
+        return context.CreateSurfaceRenderPass(
+            ColorBufferInit.Clear(),
+            new DepthStencilBufferInit
+            {
+                Depth = DepthBufferInit.Clear(1f),
+                Stencil = null,
+            });
     }
 
     private static readonly BindGroupLayoutDescriptor _bindGroupLayoutDesc0 = new BindGroupLayoutDescriptor

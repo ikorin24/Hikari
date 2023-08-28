@@ -77,7 +77,11 @@ public sealed class GBuffer : IScreenManaged
             colorsNative[i] = new(new()
             {
                 view = colors[i].AsValue().View.NativeRef,
-                clear = CE.Opt<Wgpu.Color>.Some(new Wgpu.Color(0, 0, 0, 0)),
+                init = new CE.RenderPassColorBufferInit
+                {
+                    mode = CE.RenderPassBufferInitMode.Clear,
+                    value = new Wgpu.Color(0, 0, 0, 0),
+                },
             });
         }
     }
@@ -86,16 +90,22 @@ public sealed class GBuffer : IScreenManaged
     {
         this.ThrowIfNotScreenManaged();
         var screen = Screen;
+        var depthStencil = screen.DepthTexture.View.NativeRef;
+
         var attachmentsNative = _colorsNative;
         fixed(CE.Opt<CE.RenderPassColorAttachment>* p = attachmentsNative) {
             var desc = new CE.RenderPassDescriptor
             {
-                color_attachments_clear = new(p, attachmentsNative.Length),
-                depth_stencil_attachment_clear = new(new()
+                color_attachments = new(p, attachmentsNative.Length),
+                depth_stencil_attachment = new(new()
                 {
-                    view = screen.DepthTexture.View.NativeRef,
-                    depth_clear = CE.Opt<float>.Some(1f),
-                    stencil_clear = CE.Opt<uint>.None,
+                    view = depthStencil,
+                    depth = new(new()
+                    {
+                        mode = CE.RenderPassBufferInitMode.Clear,
+                        value = 1f,
+                    }),
+                    stencil = CE.Opt<CE.RenderPassStencilBufferInit>.None,
                 }),
             };
             return RenderPass.Create(screen, in desc);

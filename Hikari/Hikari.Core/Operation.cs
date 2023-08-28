@@ -135,14 +135,14 @@ public readonly ref struct OperationContext
     }
 
     public OwnRenderPass CreateSurfaceRenderPass(
-        (f64 R, f64 G, f64 B, f64 A)? colorClear,
-        (f32? DepthClear, u32? StencilClear)? depthStencil)
+        scoped in ColorBufferInit colorInit,
+        scoped in DepthStencilBufferInit depthStencilInit)
     {
         return RenderPass.SurfaceRenderPass(
             _screen,
             _surfaceView,
             _screen.DepthTexture.View.NativeRef,
-            colorClear,
-            depthStencil);
+            colorInit,
+            depthStencilInit);
     }
 }

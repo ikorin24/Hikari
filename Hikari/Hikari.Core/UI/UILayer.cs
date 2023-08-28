@@ -153,7 +153,13 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
-        return context.CreateSurfaceRenderPass(colorClear: (0, 0, 0, 0), depthStencil: (1f, null));
+        return context.CreateSurfaceRenderPass(
+            ColorBufferInit.Load(),
+            new DepthStencilBufferInit
+            {
+                Depth = DepthBufferInit.Clear(1f),
+                Stencil = null,
+            });
     }
 
     private static Own<PipelineLayout> CreatePipelineLayout(

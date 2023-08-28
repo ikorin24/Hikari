@@ -468,8 +468,8 @@ internal static class CoreHikari
     internal readonly struct RenderPassDepthStencilAttachment
     {
         private readonly NativePointer _view;
-        private readonly Opt<f32> _depth_clear;
-        private readonly Opt<u32> _stencil_clear;
+        private readonly Opt<RenderPassDepthBufferInit> _depth;
+        private readonly Opt<RenderPassStencilBufferInit> _stencil;
 
         public unsafe required Rust.Ref<Wgpu.TextureView> view
         {
@@ -480,8 +480,32 @@ internal static class CoreHikari
             }
             init => _view = value.AsPtr();
         }
-        public required Opt<f32> depth_clear { get => _depth_clear; init => _depth_clear = value; }
-        public required Opt<u32> stencil_clear { get => _stencil_clear; init => _stencil_clear = value; }
+        public required Opt<RenderPassDepthBufferInit> depth { get => _depth; init => _depth = value; }
+        public required Opt<RenderPassStencilBufferInit> stencil { get => _stencil; init => _stencil = value; }
+    }
+
+    internal enum RenderPassBufferInitMode : u32
+    {
+        Clear = 0,
+        Load = 1,
+    }
+
+    internal struct RenderPassColorBufferInit
+    {
+        public RenderPassBufferInitMode mode;
+        public Wgpu.Color value;
+    }
+
+    internal struct RenderPassDepthBufferInit
+    {
+        public RenderPassBufferInitMode mode;
+        public f32 value;
+    }
+
+    internal struct RenderPassStencilBufferInit
+    {
+        public RenderPassBufferInitMode mode;
+        public u32 value;
     }
 
     internal struct BindGroupLayoutDescriptor
@@ -544,23 +568,23 @@ internal static class CoreHikari
 
     internal readonly struct RenderPassDescriptor
     {
-        private readonly Slice<Opt<RenderPassColorAttachment>> _color_attachments_clear;
-        private readonly Opt<RenderPassDepthStencilAttachment> _depth_stencil_attachment_clear;
+        private readonly Slice<Opt<RenderPassColorAttachment>> _color_attachments;
+        private readonly Opt<RenderPassDepthStencilAttachment> _depth_stencil_attachment;
 
-        public required Slice<Opt<RenderPassColorAttachment>> color_attachments_clear
+        public required Slice<Opt<RenderPassColorAttachment>> color_attachments
         {
-            get => _color_attachments_clear; init => _color_attachments_clear = value;
+            get => _color_attachments; init => _color_attachments = value;
         }
-        public required Opt<RenderPassDepthStencilAttachment> depth_stencil_attachment_clear
+        public required Opt<RenderPassDepthStencilAttachment> depth_stencil_attachment
         {
-            get => _depth_stencil_attachment_clear; init => _depth_stencil_attachment_clear = value;
+            get => _depth_stencil_attachment; init => _depth_stencil_attachment = value;
         }
     }
 
     internal readonly struct RenderPassColorAttachment
     {
         private readonly NativePointer _view;   // Rust.Ref<Wgpu.TextureView>
-        private readonly Opt<Wgpu.Color> _clear;
+        private readonly RenderPassColorBufferInit _init;
 
         public unsafe required Rust.Ref<Wgpu.TextureView> view
         {
@@ -572,7 +596,7 @@ internal static class CoreHikari
             init => _view = value.AsPtr();
         }
 
-        public required Opt<Wgpu.Color> clear { get => _clear; init => _clear = value; }
+        public required RenderPassColorBufferInit init { get => _init; init => _init = value; }
     }
 
     internal readonly struct BindGroupDescriptor

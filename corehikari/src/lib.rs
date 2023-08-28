@@ -77,17 +77,8 @@ pub(crate) enum WindowStyle {
 
 #[repr(C)]
 pub(crate) struct RenderPassDescriptor<'tex, 'desc> {
-    pub color_attachments_clear: Slice<'desc, Opt<RenderPassColorAttachment<'tex>>>,
-    pub depth_stencil_attachment_clear: Opt<RenderPassDepthStencilAttachment<'tex>>,
-}
-
-impl<'tex, 'desc> Default for RenderPassDescriptor<'tex, 'desc> {
-    fn default() -> Self {
-        Self {
-            color_attachments_clear: Default::default(),
-            depth_stencil_attachment_clear: Opt::none(),
-        }
-    }
+    pub color_attachments: Slice<'desc, Opt<RenderPassColorAttachment<'tex>>>,
+    pub depth_stencil_attachment: Opt<RenderPassDepthStencilAttachment<'tex>>,
 }
 
 impl<'tex, 'desc> RenderPassDescriptor<'tex, 'desc> {
@@ -99,7 +90,7 @@ impl<'tex, 'desc> RenderPassDescriptor<'tex, 'desc> {
         'tex: 'enc,
     {
         let color_attachments: Vec<_> = self
-            .color_attachments_clear
+            .color_attachments
             .iter()
             .map(|opt| opt.map_to_option(|value| value.to_wgpu_type()))
             .collect();
@@ -107,7 +98,7 @@ impl<'tex, 'desc> RenderPassDescriptor<'tex, 'desc> {
             label: None,
             color_attachments: &color_attachments,
             depth_stencil_attachment: self
-                .depth_stencil_attachment_clear
+                .depth_stencil_attachment
                 .map_to_option(|x| x.to_wgpu_type()),
         };
         command_encoder.begin_render_pass(&desc)
@@ -118,52 +109,97 @@ impl<'tex, 'desc> RenderPassDescriptor<'tex, 'desc> {
 #[derive(Debug)]
 pub(crate) struct RenderPassColorAttachment<'tex> {
     pub view: &'tex wgpu::TextureView,
-    pub clear: Opt<wgpu::Color>,
+    pub init: RenderPassColorBufferInit,
 }
 
 impl<'tex> RenderPassColorAttachment<'tex> {
     pub fn to_wgpu_type(&self) -> wgpu::RenderPassColorAttachment<'tex> {
-        let load = match self.clear.map_to_option(|c| *c) {
-            Some(color) => wgpu::LoadOp::Clear(color),
-            None => wgpu::LoadOp::Load,
-        };
         wgpu::RenderPassColorAttachment {
             view: self.view,
             resolve_target: None,
-            ops: wgpu::Operations { load, store: true },
+            ops: wgpu::Operations {
+                load: self.init.to_wgpu_type(),
+                store: true,
+            },
         }
     }
 }
 
 #[repr(C)]
 pub(crate) struct RenderPassDepthStencilAttachment<'tex> {
-    pub view: Option<&'tex wgpu::TextureView>,
-    pub depth_clear: Opt<f32>,
-    pub stencil_clear: Opt<u32>,
-}
-
-impl<'tex> Default for RenderPassDepthStencilAttachment<'tex> {
-    fn default() -> Self {
-        Self {
-            view: None,
-            depth_clear: Opt::none(),
-            stencil_clear: Opt::none(),
-        }
-    }
+    pub view: &'tex wgpu::TextureView,
+    pub depth: Opt<RenderPassDepthBufferInit>,
+    pub stencil: Opt<RenderPassStencilBufferInit>,
 }
 
 impl<'tex> RenderPassDepthStencilAttachment<'tex> {
     pub fn to_wgpu_type(&self) -> wgpu::RenderPassDepthStencilAttachment<'tex> {
         wgpu::RenderPassDepthStencilAttachment {
-            view: self.view.unwrap(),
-            depth_ops: self.depth_clear.map_to_option(|c| wgpu::Operations {
-                load: wgpu::LoadOp::Clear(*c),
+            view: self.view,
+            depth_ops: self.depth.map_to_option(|x| wgpu::Operations {
+                load: x.to_wgpu_type(),
                 store: true,
             }),
-            stencil_ops: self.stencil_clear.map_to_option(|c| wgpu::Operations {
-                load: wgpu::LoadOp::Clear(*c),
+            stencil_ops: self.stencil.map_to_option(|x| wgpu::Operations {
+                load: x.to_wgpu_type(),
                 store: true,
             }),
+        }
+    }
+}
+
+#[repr(u32)]
+#[derive(Debug)]
+#[allow(dead_code)] // because values are from FFI
+pub(crate) enum RenderPassBufferInitMode {
+    Clear = 0,
+    Load = 1,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct RenderPassColorBufferInit {
+    pub mode: RenderPassBufferInitMode,
+    pub value: wgpu::Color,
+}
+
+impl RenderPassColorBufferInit {
+    pub fn to_wgpu_type(&self) -> wgpu::LoadOp<wgpu::Color> {
+        match self.mode {
+            RenderPassBufferInitMode::Clear => wgpu::LoadOp::Clear(self.value),
+            RenderPassBufferInitMode::Load => wgpu::LoadOp::Load,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct RenderPassDepthBufferInit {
+    pub mode: RenderPassBufferInitMode,
+    pub value: f32,
+}
+
+impl RenderPassDepthBufferInit {
+    pub fn to_wgpu_type(&self) -> wgpu::LoadOp<f32> {
+        match self.mode {
+            RenderPassBufferInitMode::Clear => wgpu::LoadOp::Clear(self.value),
+            RenderPassBufferInitMode::Load => wgpu::LoadOp::Load,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct RenderPassStencilBufferInit {
+    pub mode: RenderPassBufferInitMode,
+    pub value: u32,
+}
+
+impl RenderPassStencilBufferInit {
+    pub fn to_wgpu_type(&self) -> wgpu::LoadOp<u32> {
+        match self.mode {
+            RenderPassBufferInitMode::Clear => wgpu::LoadOp::Clear(self.value),
+            RenderPassBufferInitMode::Load => wgpu::LoadOp::Load,
         }
     }
 }

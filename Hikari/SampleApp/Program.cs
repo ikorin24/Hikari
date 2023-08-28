@@ -27,11 +27,18 @@ internal class Program
             Style = WindowStyle.Default,
             PresentMode = SurfacePresentMode.VsyncOn,
         };
-        Engine.Run(screenConfig, OnInitialized);
+        Engine.Run(screenConfig, OnInitialized_);
     }
 
     private static void OnInitialized_(Screen screen)
     {
+        screen.UITree.RenderRoot($$"""
+        {
+            "@type": {{typeof(Counter)}},
+            "Width": "80%",
+            "Height": "80%"
+        }
+        """);
         //var panel = Serializer.Deserialize<Panel>("""
         //{
         //    "@type": "panel",
