@@ -91,7 +91,7 @@ public sealed class Buffer : IScreenManaged, IReadBuffer<Buffer>
     private unsafe static Own<Buffer> CreateFromPtr(Screen screen, byte* ptr, usize byteLength, BufferUsages usage)
     {
         var screenRef = screen.AsRefChecked();
-        var data = new CE.Slice<u8>(ptr, byteLength);
+        var data = new CH.Slice<u8>(ptr, byteLength);
         var bufferNative = screenRef.CreateBufferInit(data, usage.FlagsMap());
         var buffer = new Buffer(screen, bufferNative, usage, byteLength);
         return Own.New(buffer, static x => SafeCast.As<Buffer>(x).Release());
@@ -133,7 +133,7 @@ public sealed class Buffer : IScreenManaged, IReadBuffer<Buffer>
         if(dataLen == 0) {
             return;
         }
-        var slice = new CE.Slice<byte>(data, dataLen);
+        var slice = new CH.Slice<byte>(data, dataLen);
         screen.AsRefChecked().WriteBuffer(native, offset, slice);
     }
 
@@ -251,12 +251,12 @@ public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer<Buffer
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal CE.BufferSlice Native()
+    internal CH.BufferSlice Native()
     {
         ArgumentNullException.ThrowIfNull(_buffer);
         var start = _offset;
         var end = start + Length;
-        return new CE.BufferSlice
+        return new CH.BufferSlice
         {
             buffer = _buffer.NativeRef,
             range = new()

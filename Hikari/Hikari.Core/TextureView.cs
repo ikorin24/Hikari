@@ -55,7 +55,7 @@ public sealed class TextureView : IScreenManaged, ITextureView
         ArgumentNullException.ThrowIfNull(texture);
         texture.ThrowIfNotScreenManaged();
         var screen = texture.Screen;
-        var textureViewNative = texture.NativeRef.CreateTextureView(CE.TextureViewDescriptor.Default);
+        var textureViewNative = texture.NativeRef.CreateTextureView(CH.TextureViewDescriptor.Default);
         var textureView = new TextureView(screen, textureViewNative, texture);
         return Own.New(textureView, static x => SafeCast.As<TextureView>(x).Release());
     }

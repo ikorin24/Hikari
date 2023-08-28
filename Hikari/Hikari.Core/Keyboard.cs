@@ -26,7 +26,7 @@ public sealed class Keyboard
         _currentState = new bool[N];
     }
 
-    internal void OnImeInput(in CE.ImeInputData input)
+    internal void OnImeInput(in CH.ImeInputData input)
     {
         _imeState.OnInput(input);
     }

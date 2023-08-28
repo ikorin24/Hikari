@@ -58,9 +58,9 @@ public readonly struct BindGroupLayoutDescriptor
 {
     public required ReadOnlyMemory<BindGroupLayoutEntry> Entries { get; init; }
 
-    internal unsafe CE.BindGroupLayoutDescriptor ToNative(PinHandleHolder pins)
+    internal unsafe CH.BindGroupLayoutDescriptor ToNative(PinHandleHolder pins)
     {
-        return new CE.BindGroupLayoutDescriptor
+        return new CH.BindGroupLayoutDescriptor
         {
             entries = Entries.SelectToArray(pins, static (entry, pins) => entry.ToNative(pins)).AsFixedSlice(pins),
         };
@@ -69,7 +69,7 @@ public readonly struct BindGroupLayoutDescriptor
 
 internal interface IBindingTypeData
 {
-    CE.BindingType ToNative(PinHandleHolder holder);
+    CH.BindingType ToNative(PinHandleHolder holder);
 }
 
 public readonly struct BindGroupLayoutEntry
@@ -118,24 +118,24 @@ public readonly struct BindGroupLayoutEntry
 
     private sealed class SamplerBindingTypeWrap : IBindingTypeData
     {
-        private CE.SamplerBindingType _ty;
+        private CH.SamplerBindingType _ty;
 
         public SamplerBindingTypeWrap(SamplerBindingType ty)
         {
             _ty = ty.MapOrThrow();
         }
 
-        unsafe CE.BindingType IBindingTypeData.ToNative(PinHandleHolder holder)
+        unsafe CH.BindingType IBindingTypeData.ToNative(PinHandleHolder holder)
         {
             holder.Add(GCHandle.Alloc(this, GCHandleType.Pinned));
-            var payload = (CE.SamplerBindingType*)Unsafe.AsPointer(ref _ty);
-            return CE.BindingType.Sampler(payload);
+            var payload = (CH.SamplerBindingType*)Unsafe.AsPointer(ref _ty);
+            return CH.BindingType.Sampler(payload);
         }
     }
 
-    internal CE.BindGroupLayoutEntry ToNative(PinHandleHolder holder)
+    internal CH.BindGroupLayoutEntry ToNative(PinHandleHolder holder)
     {
-        return new CE.BindGroupLayoutEntry
+        return new CH.BindGroupLayoutEntry
         {
             binding = _binding,
             visibility = _visibility.FlagsMap(),
@@ -147,7 +147,7 @@ public readonly struct BindGroupLayoutEntry
 
 public sealed class BufferBindingData : IBindingTypeData
 {
-    private CE.BufferBindingData _nativePayload;
+    private CH.BufferBindingData _nativePayload;
     private BufferBindingType _type;
 
     public required BufferBindingType Type
@@ -181,17 +181,17 @@ public sealed class BufferBindingData : IBindingTypeData
         }
     }
 
-    unsafe CE.BindingType IBindingTypeData.ToNative(PinHandleHolder holder)
+    unsafe CH.BindingType IBindingTypeData.ToNative(PinHandleHolder holder)
     {
         holder.Add(GCHandle.Alloc(this, GCHandleType.Pinned));
-        var payload = (CE.BufferBindingData*)Unsafe.AsPointer(ref _nativePayload);
-        return CE.BindingType.Buffer(payload);
+        var payload = (CH.BufferBindingData*)Unsafe.AsPointer(ref _nativePayload);
+        return CH.BindingType.Buffer(payload);
     }
 }
 
 public sealed class TextureBindingData : IBindingTypeData
 {
-    private CE.TextureBindingData _native;
+    private CH.TextureBindingData _native;
 
     private readonly TextureSampleType _sampleType;
     private readonly TextureViewDimension _viewDimension;
@@ -225,17 +225,17 @@ public sealed class TextureBindingData : IBindingTypeData
         }
     }
 
-    unsafe CE.BindingType IBindingTypeData.ToNative(PinHandleHolder holder)
+    unsafe CH.BindingType IBindingTypeData.ToNative(PinHandleHolder holder)
     {
         holder.Add(GCHandle.Alloc(this, GCHandleType.Pinned));
-        var payload = (CE.TextureBindingData*)Unsafe.AsPointer(ref _native);
-        return CE.BindingType.Texture(payload);
+        var payload = (CH.TextureBindingData*)Unsafe.AsPointer(ref _native);
+        return CH.BindingType.Texture(payload);
     }
 }
 
 public sealed class StorageTextureBindingData : IBindingTypeData
 {
-    private CE.StorageTextureBindingData _payload;
+    private CH.StorageTextureBindingData _payload;
     private StorageTextureAccess _access;
     private TextureFormat _format;
     private TextureViewDimension _viewDimension;
@@ -270,17 +270,17 @@ public sealed class StorageTextureBindingData : IBindingTypeData
         }
     }
 
-    unsafe CE.BindingType IBindingTypeData.ToNative(PinHandleHolder holder)
+    unsafe CH.BindingType IBindingTypeData.ToNative(PinHandleHolder holder)
     {
         holder.Add(GCHandle.Alloc(this, GCHandleType.Pinned));
-        var payload = (CE.StorageTextureBindingData*)Unsafe.AsPointer(ref _payload);
-        return CE.BindingType.StorageTexture(payload);
+        var payload = (CH.StorageTextureBindingData*)Unsafe.AsPointer(ref _payload);
+        return CH.BindingType.StorageTexture(payload);
     }
 }
 
 public enum StorageTextureAccess
 {
-    [EnumMapTo(CE.StorageTextureAccess.WriteOnly)] WriteOnly,
-    [EnumMapTo(CE.StorageTextureAccess.ReadOnly)] ReadOnly,
-    [EnumMapTo(CE.StorageTextureAccess.ReadWrite)] ReadWrite,
+    [EnumMapTo(CH.StorageTextureAccess.WriteOnly)] WriteOnly,
+    [EnumMapTo(CH.StorageTextureAccess.ReadOnly)] ReadOnly,
+    [EnumMapTo(CH.StorageTextureAccess.ReadWrite)] ReadWrite,
 }

@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.ComponentModel;
+using Hikari.NativeBind;
 
 namespace Hikari;
 
@@ -25,7 +26,7 @@ public readonly ref struct RenderShadowMapContext
     public OwnRenderPass CreateRenderPass(bool clear = true)
     {
         var screen = _lights.Screen;
-        return RenderPass.Create(screen, new CE.RenderPassDescriptor()
+        return RenderPass.Create(screen, new CH.RenderPassDescriptor()
         {
             color_attachments = new() { data = null, len = 0 },
             depth_stencil_attachment = new(new()
@@ -35,16 +36,16 @@ public readonly ref struct RenderShadowMapContext
                 {
                     true => new()
                     {
-                        mode = CE.RenderPassBufferInitMode.Clear,
+                        mode = CH.RenderPassBufferInitMode.Clear,
                         value = 1f,
                     },
                     false => new()
                     {
-                        mode = CE.RenderPassBufferInitMode.Load,
+                        mode = CH.RenderPassBufferInitMode.Load,
                         value = default,
                     },
                 }),
-                stencil = CE.Opt<CE.RenderPassStencilBufferInit>.None,
+                stencil = CH.Opt<CH.RenderPassStencilBufferInit>.None,
             }),
         });
     }

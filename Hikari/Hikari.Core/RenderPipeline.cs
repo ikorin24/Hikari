@@ -76,9 +76,9 @@ public readonly struct RenderPipelineDescriptor
     public required MultisampleState Multisample { get; init; }
     public required u32 Multiview { get; init; }
 
-    internal CE.RenderPipelineDescriptor ToNative(PinHandleHolder pins)
+    internal CH.RenderPipelineDescriptor ToNative(PinHandleHolder pins)
     {
-        return new CE.RenderPipelineDescriptor
+        return new CH.RenderPipelineDescriptor
         {
             layout = Layout.NativeRef,
             vertex = Vertex.ToNative(pins),
@@ -97,9 +97,9 @@ public readonly struct VertexState
     public required ReadOnlyMemory<byte> EntryPoint { get; init; }
     public required ReadOnlyMemory<VertexBufferLayout> Buffers { get; init; }
 
-    internal CE.VertexState ToNative(PinHandleHolder pins)
+    internal CH.VertexState ToNative(PinHandleHolder pins)
     {
-        return new CE.VertexState
+        return new CH.VertexState
         {
             module = Module.NativeRef,
             entry_point = EntryPoint.AsFixedSlice(pins),
@@ -114,9 +114,9 @@ public readonly struct FragmentState
     public required ReadOnlyMemory<byte> EntryPoint { get; init; }
     public required ReadOnlyMemory<ColorTargetState?> Targets { get; init; }
 
-    internal CE.FragmentState ToNative(PinHandleHolder pins)
+    internal CH.FragmentState ToNative(PinHandleHolder pins)
     {
-        return new CE.FragmentState
+        return new CH.FragmentState
         {
             module = Module.NativeRef,
             entry_point = EntryPoint.AsFixedSlice(pins),
@@ -133,9 +133,9 @@ public readonly struct PrimitiveState
     public required Face? CullMode { get; init; }
     public required PolygonMode PolygonMode { get; init; }
 
-    internal CE.PrimitiveState ToNative()
+    internal CH.PrimitiveState ToNative()
     {
-        return new CE.PrimitiveState
+        return new CH.PrimitiveState
         {
             topology = Topology.MapOrThrow(),
             strip_index_format = StripIndexFormat.ToNative(x => x.MapOrThrow()),
@@ -154,9 +154,9 @@ public readonly struct DepthStencilState
     public required StencilState Stencil { get; init; }
     public required DepthBiasState Bias { get; init; }
 
-    internal CE.DepthStencilState ToNative()
+    internal CH.DepthStencilState ToNative()
     {
-        return new CE.DepthStencilState
+        return new CH.DepthStencilState
         {
             format = Format.MapOrThrow(),
             depth_write_enabled = DepthWriteEnabled,
@@ -335,9 +335,9 @@ public readonly struct ColorTargetState
     public required BlendState? Blend { get; init; }
     public required ColorWrites WriteMask { get; init; }
 
-    internal CE.ColorTargetState ToNative()
+    internal CH.ColorTargetState ToNative()
     {
-        return new CE.ColorTargetState
+        return new CH.ColorTargetState
         {
             format = Format.MapOrThrow(),
             blend = Blend.ToNative(blend => blend.ToNative()),
@@ -352,9 +352,9 @@ public readonly struct VertexBufferLayout
     public required VertexStepMode StepMode { get; init; }
     public required ReadOnlyMemory<VertexAttr> Attributes { get; init; }
 
-    internal CE.VertexBufferLayout ToNative(PinHandleHolder pins)
+    internal CH.VertexBufferLayout ToNative(PinHandleHolder pins)
     {
-        return new CE.VertexBufferLayout
+        return new CH.VertexBufferLayout
         {
             array_stride = ArrayStride,
             step_mode = StepMode.MapOrThrow(),

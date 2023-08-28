@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System.Runtime.CompilerServices;
+using Hikari.NativeBind;
 
 namespace Hikari;
 
@@ -96,7 +97,7 @@ public sealed class Mouse
         }
     }
 
-    internal void OnMouseButton(CE.MouseButton button, bool pressed)
+    internal void OnMouseButton(CH.MouseButton button, bool pressed)
     {
         if(button.is_named_buton) {
             lock(_sync) {

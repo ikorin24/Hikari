@@ -58,9 +58,9 @@ public readonly struct ComputePipelineDescriptor
     public required ReadOnlyMemory<byte> EntryPoint { get; init; }
 
 
-    internal CE.ComputePipelineDescriptor ToNative(PinHandleHolder pins)
+    internal CH.ComputePipelineDescriptor ToNative(PinHandleHolder pins)
     {
-        return new CE.ComputePipelineDescriptor
+        return new CH.ComputePipelineDescriptor
         {
             layout = Layout.NativeRef,
             module = Module.NativeRef,

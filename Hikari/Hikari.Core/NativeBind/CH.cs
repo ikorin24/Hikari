@@ -14,7 +14,7 @@ namespace Hikari.NativeBind;
 /// <summary>
 /// `corehikari` crate in Rust
 /// </summary>
-internal static class CoreHikari
+internal static class CH
 {
     internal sealed class HostScreen : INativeTypeNonReprC { private HostScreen() { } }
 
@@ -316,7 +316,7 @@ internal static class CoreHikari
         public required u32 width;
         public required u32 height;
         public required Wgpu.Backends backend;
-        public required CE.PresentMode present_mode;
+        public required CH.PresentMode present_mode;
     }
 
     internal struct HostScreenInfo

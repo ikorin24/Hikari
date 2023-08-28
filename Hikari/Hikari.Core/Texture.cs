@@ -101,7 +101,7 @@ public sealed class Texture : IScreenManaged
                 .AsRefChecked()
                 .CreateTextureWithData(
                     descNative,
-                    new CE.Slice<byte>(p, data.Length)
+                    new CH.Slice<byte>(p, data.Length)
                 );
         }
         var texture = new Texture(screen, textureNative, desc);
@@ -146,7 +146,7 @@ public sealed class Texture : IScreenManaged
                 Rust.Box<Wgpu.Texture> textureNative;
                 var pixelBytes = image.GetPixels().MarshalCast<ColorByte, u8>();
                 fixed(u8* p = pixelBytes) {
-                    var data = new CE.Slice<u8>(p, (usize)pixelBytes.Length);
+                    var data = new CH.Slice<u8>(p, (usize)pixelBytes.Length);
                     textureNative = screen.AsRefChecked().CreateTextureWithData(descNative, data);
                 }
                 texture = new Texture(screen, textureNative, desc);
@@ -172,7 +172,7 @@ public sealed class Texture : IScreenManaged
                         byteOffset += mipBytelen;
                         mipmapBefore = mipmap;
                     }
-                    var data = new CE.Slice<u8>(p, totalByteSize);
+                    var data = new CH.Slice<u8>(p, totalByteSize);
                     var descNative = desc.ToNative();
                     var textureNative = screen.AsRefChecked().CreateTextureWithData(descNative, data);
                     texture = new Texture(screen, textureNative, desc);
@@ -215,16 +215,16 @@ public sealed class Texture : IScreenManaged
 
         fixed(TPixel* p = pixelData) {
             screenRef.WriteTexture(
-                new CE.ImageCopyTexture
+                new CH.ImageCopyTexture
                 {
                     texture = texture,
                     mip_level = mipLevel,
-                    aspect = CE.TextureAspect.All,
+                    aspect = CH.TextureAspect.All,
                     origin_x = 0,
                     origin_y = 0,
                     origin_z = 0,
                 },
-                new CE.Slice<byte>((byte*)p, pixelData.Length * sizeof(TPixel)),
+                new CH.Slice<byte>((byte*)p, pixelData.Length * sizeof(TPixel)),
                 new Wgpu.ImageDataLayout
                 {
                     offset = 0,
@@ -252,9 +252,9 @@ public sealed class Texture : IScreenManaged
         var mipSize = MipLevelSize(mip);
         var mipInfo = formatInfo.MipInfo(mipSize);
         var screen = Screen;
-        var source = new CE.ImageCopyTexture
+        var source = new CH.ImageCopyTexture
         {
-            aspect = CE.TextureAspect.All,
+            aspect = CH.TextureAspect.All,
             mip_level = mip,
             origin_x = 0,
             origin_y = 0,

@@ -66,13 +66,13 @@ public readonly struct TextureDescriptor
         };
     }
 
-    internal CE.TextureDescriptor ToNative()
+    internal CH.TextureDescriptor ToNative()
     {
         if(Size.X == 0) { ThrowSize("Size.X"); }
         if(Size.Y == 0) { ThrowSize("Size.Y"); }
         if(Size.Z == 0) { ThrowSize("Size.Z"); }
         if(MipLevelCount == 0) { ThrowMipLevelCount(); }
-        return new CE.TextureDescriptor
+        return new CH.TextureDescriptor
         {
             size = new Wgpu.Extent3d
             {
@@ -106,9 +106,9 @@ public enum TextureUsages : u32
 
 public enum TextureDimension
 {
-    [EnumMapTo(CE.TextureDimension.D1)] D1 = 0,
-    [EnumMapTo(CE.TextureDimension.D2)] D2 = 1,
-    [EnumMapTo(CE.TextureDimension.D3)] D3 = 2,
+    [EnumMapTo(CH.TextureDimension.D1)] D1 = 0,
+    [EnumMapTo(CH.TextureDimension.D2)] D2 = 1,
+    [EnumMapTo(CH.TextureDimension.D3)] D3 = 2,
 }
 
 [Flags]
@@ -136,33 +136,33 @@ public enum ShaderStages : u32
 
 public enum TextureSampleType
 {
-    [EnumMapTo(CE.TextureSampleType.FloatFilterable)] FloatFilterable = 0,
-    [EnumMapTo(CE.TextureSampleType.FloatNotFilterable)] FloatNotFilterable = 1,
-    [EnumMapTo(CE.TextureSampleType.Depth)] Depth = 2,
-    [EnumMapTo(CE.TextureSampleType.Sint)] Sint = 3,
-    [EnumMapTo(CE.TextureSampleType.Uint)] Uint = 4,
+    [EnumMapTo(CH.TextureSampleType.FloatFilterable)] FloatFilterable = 0,
+    [EnumMapTo(CH.TextureSampleType.FloatNotFilterable)] FloatNotFilterable = 1,
+    [EnumMapTo(CH.TextureSampleType.Depth)] Depth = 2,
+    [EnumMapTo(CH.TextureSampleType.Sint)] Sint = 3,
+    [EnumMapTo(CH.TextureSampleType.Uint)] Uint = 4,
 }
 
 public enum TextureViewDimension
 {
-    [EnumMapTo(CE.TextureViewDimension.D1)] D1 = 0,
-    [EnumMapTo(CE.TextureViewDimension.D2)] D2 = 1,
-    [EnumMapTo(CE.TextureViewDimension.D2Array)] D2Array = 2,
-    [EnumMapTo(CE.TextureViewDimension.Cube)] Cube = 3,
-    [EnumMapTo(CE.TextureViewDimension.CubeArray)] CubeArray = 4,
-    [EnumMapTo(CE.TextureViewDimension.D3)] D3 = 5,
+    [EnumMapTo(CH.TextureViewDimension.D1)] D1 = 0,
+    [EnumMapTo(CH.TextureViewDimension.D2)] D2 = 1,
+    [EnumMapTo(CH.TextureViewDimension.D2Array)] D2Array = 2,
+    [EnumMapTo(CH.TextureViewDimension.Cube)] Cube = 3,
+    [EnumMapTo(CH.TextureViewDimension.CubeArray)] CubeArray = 4,
+    [EnumMapTo(CH.TextureViewDimension.D3)] D3 = 5,
 }
 
 public enum SamplerBindingType
 {
-    [EnumMapTo(CE.SamplerBindingType.Filtering)] Filtering = 0,
-    [EnumMapTo(CE.SamplerBindingType.NonFiltering)] NonFiltering = 1,
-    [EnumMapTo(CE.SamplerBindingType.Comparison)] Comparison = 2,
+    [EnumMapTo(CH.SamplerBindingType.Filtering)] Filtering = 0,
+    [EnumMapTo(CH.SamplerBindingType.NonFiltering)] NonFiltering = 1,
+    [EnumMapTo(CH.SamplerBindingType.Comparison)] Comparison = 2,
 }
 
 public enum BufferBindingType
 {
-    [EnumMapTo(CE.BufferBindingType.Uniform)] Uniform = 0,
-    [EnumMapTo(CE.BufferBindingType.Storate)] Storate = 1,
-    [EnumMapTo(CE.BufferBindingType.StorateReadOnly)] StorateReadOnly = 2,
+    [EnumMapTo(CH.BufferBindingType.Uniform)] Uniform = 0,
+    [EnumMapTo(CH.BufferBindingType.Storate)] Storate = 1,
+    [EnumMapTo(CH.BufferBindingType.StorateReadOnly)] StorateReadOnly = 2,
 }

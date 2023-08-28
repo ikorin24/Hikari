@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Hikari.NativeBind;
 
 namespace Hikari;
 
@@ -56,22 +57,22 @@ internal unsafe sealed class ImeState : IImePreeditState
         }
     }
 
-    public void OnInput(in CE.ImeInputData input)
+    public void OnInput(in CH.ImeInputData input)
     {
         Range? range = input.range.TryGetValue(out var r) ? new Range(r.Start.ToInt32(), r.End.ToInt32()) : null;
 
         var textUtf8 = new ReadOnlySpan<byte>(input.text.data, input.text.len.ToInt32());
 
-        if(input.tag != CE.ImeInputData.Tag.Disabled) {
+        if(input.tag != CH.ImeInputData.Tag.Disabled) {
             EngineCore.SetImePosition(_screen.AsRefChecked(), 10, 10);
         }
 
         switch(input.tag) {
-            case CE.ImeInputData.Tag.Enabled: {
+            case CH.ImeInputData.Tag.Enabled: {
                 Start?.Invoke(_screen);
                 break;
             }
-            case CE.ImeInputData.Tag.Preedit: {
+            case CH.ImeInputData.Tag.Preedit: {
                 EnsureBufSize(textUtf8.Length, false);
                 Debug.Assert(_bufCapacity >= textUtf8.Length);
                 textUtf8.CopyTo(BufferSpan);
@@ -88,11 +89,11 @@ internal unsafe sealed class ImeState : IImePreeditState
                 Preedit?.Invoke(this, _screen);
                 break;
             }
-            case CE.ImeInputData.Tag.Commit: {
+            case CH.ImeInputData.Tag.Commit: {
                 Commit?.Invoke(textUtf8, _screen);
                 break;
             }
-            case CE.ImeInputData.Tag.Disabled:
+            case CH.ImeInputData.Tag.Disabled:
                 End?.Invoke(_screen);
                 break;
             default:

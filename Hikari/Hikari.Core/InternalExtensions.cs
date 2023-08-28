@@ -9,17 +9,17 @@ namespace Hikari;
 internal static class InternalExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public unsafe static CE.Slice<T> AsFixedSlice<T>(this T[] array, PinHandleHolder pins) where T : unmanaged
+    public unsafe static CH.Slice<T> AsFixedSlice<T>(this T[] array, PinHandleHolder pins) where T : unmanaged
     {
         return ((ReadOnlyMemory<T>)array).AsFixedSlice(pins);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public unsafe static CE.Slice<T> AsFixedSlice<T>(this ReadOnlyMemory<T> memory, PinHandleHolder pins) where T : unmanaged
+    public unsafe static CH.Slice<T> AsFixedSlice<T>(this ReadOnlyMemory<T> memory, PinHandleHolder pins) where T : unmanaged
     {
         var handle = memory.Pin();
         pins.Add(handle);
-        return new CE.Slice<T>((T*)handle.Pointer, memory.Length);
+        return new CH.Slice<T>((T*)handle.Pointer, memory.Length);
     }
 
     public static TResult[] SelectToArray<T, TResult>(this ReadOnlyMemory<T> self, Func<T, TResult> selector)
@@ -43,9 +43,9 @@ internal static class InternalExtensions
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static CE.Opt<TResult> ToNative<T, TResult>(this T? self, Func<T, TResult> mapper) where T : struct where TResult : unmanaged
+    public static CH.Opt<TResult> ToNative<T, TResult>(this T? self, Func<T, TResult> mapper) where T : struct where TResult : unmanaged
     {
-        return self == null ? CE.Opt<TResult>.None : CE.Opt<TResult>.Some(mapper(self.Value));
+        return self == null ? CH.Opt<TResult>.None : CH.Opt<TResult>.Some(mapper(self.Value));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

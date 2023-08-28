@@ -12,7 +12,7 @@ namespace Hikari;
 
 public sealed class Screen
 {
-    private Rust.OptionBox<CE.HostScreen> _native;
+    private Rust.OptionBox<CH.HostScreen> _native;
     private readonly ThreadId _mainThread;
     private readonly SubscriptionBag _subscriptions;
     private readonly Camera _camera;
@@ -59,7 +59,7 @@ public sealed class Screen
     public Event<Screen> Closed => _closed.Event;
     public Event<(Screen Screen, Vector2u Size)> Resized => _resized.Event;
 
-    internal CE.ScreenId ScreenId => new CE.ScreenId(_native.Unwrap());
+    internal CH.ScreenId ScreenId => new CH.ScreenId(_native.Unwrap());
     internal ThreadId MainThread => _mainThread;
 
     internal BufferSlice InfoBuffer => _info.AsValue().Slice();
@@ -148,7 +148,7 @@ public sealed class Screen
     public Camera Camera => _camera;
     public Lights Lights => _lights;
 
-    internal Screen(Rust.Box<CE.HostScreen> screen, ThreadId mainThread)
+    internal Screen(Rust.Box<CH.HostScreen> screen, ThreadId mainThread)
     {
         _native = screen;
         _mainThread = mainThread;
@@ -213,7 +213,7 @@ public sealed class Screen
         if(count == 0) {
             return Array.Empty<MonitorId>();
         }
-        Span<CE.MonitorId> buf = stackalloc CE.MonitorId[(int)count];
+        Span<CH.MonitorId> buf = stackalloc CH.MonitorId[(int)count];
         native.Monitors(buf);
         var monitors = new MonitorId[count];
         for(int i = 0; i < monitors.Length; i++) {
@@ -238,7 +238,7 @@ public sealed class Screen
         _depthTexture = depth;
     }
 
-    internal void OnInitialize(in CE.HostScreenInfo info)
+    internal void OnInitialize(in CH.HostScreenInfo info)
     {
         _surfaceFormat = info.surface_format.Unwrap().MapOrThrow();
         _backend = info.backend.MapOrThrow();
@@ -354,12 +354,12 @@ public sealed class Screen
         }
     }
 
-    internal Rust.OptionBox<CE.HostScreen> OnClosed()
+    internal Rust.OptionBox<CH.HostScreen> OnClosed()
     {
         _operations.OnClosed();
         _closed.Invoke(this);
 
-        var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CE.HostScreen>.None);
+        var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CH.HostScreen>.None);
         _closed.Clear();
         _camera.DisposeInternal();
         _depthTexture.Dispose();
@@ -372,7 +372,7 @@ public sealed class Screen
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal Rust.Ref<CE.HostScreen> AsRefChecked()
+    internal Rust.Ref<CH.HostScreen> AsRefChecked()
     {
         return _native.Unwrap().AsRef();
     }
@@ -420,9 +420,9 @@ public readonly struct ScreenConfig
     public required GraphicsBackend Backend { get; init; }
     public required SurfacePresentMode PresentMode { get; init; }
 
-    internal CE.HostScreenConfig ToCoreType()
+    internal CH.HostScreenConfig ToCoreType()
     {
-        return new CE.HostScreenConfig
+        return new CH.HostScreenConfig
         {
             style = Style.MapOrThrow(),
             width = Width,
@@ -435,10 +435,10 @@ public readonly struct ScreenConfig
 
 public readonly struct MonitorId : IEquatable<MonitorId>
 {
-    private readonly CE.MonitorId _id;
-    internal CE.MonitorId Id => _id;
+    private readonly CH.MonitorId _id;
+    internal CH.MonitorId Id => _id;
 
-    internal MonitorId(CE.MonitorId id)
+    internal MonitorId(CH.MonitorId id)
     {
         _id = id;
     }

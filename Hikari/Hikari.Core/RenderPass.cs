@@ -31,7 +31,7 @@ public readonly ref struct RenderPass
         self._screen.AsRefChecked().FinishCommandEncoder(self._encoder);
     };
 
-    internal static OwnRenderPass Create(Screen screen, scoped in CE.RenderPassDescriptor desc)
+    internal static OwnRenderPass Create(Screen screen, scoped in CH.RenderPassDescriptor desc)
     {
         var encoder = screen.AsRefChecked().CreateCommandEncoder();
         var native = encoder.AsMut().CreateRenderPass(desc);
@@ -45,15 +45,15 @@ public readonly ref struct RenderPass
         scoped in ColorBufferInit colorInit,
         scoped in DepthStencilBufferInit depthStencilInit)
     {
-        var color = new CE.Opt<CE.RenderPassColorAttachment>(new()
+        var color = new CH.Opt<CH.RenderPassColorAttachment>(new()
         {
             view = surfaceTextureView,
-            init = new CE.RenderPassColorBufferInit
+            init = new CH.RenderPassColorBufferInit
             {
                 mode = colorInit.Mode switch
                 {
-                    RenderPassInitMode.Clear => CE.RenderPassBufferInitMode.Clear,
-                    RenderPassInitMode.Load or _ => CE.RenderPassBufferInitMode.Load,
+                    RenderPassInitMode.Clear => CH.RenderPassBufferInitMode.Clear,
+                    RenderPassInitMode.Load or _ => CH.RenderPassBufferInitMode.Load,
                 },
                 value = new Wgpu.Color
                 {
@@ -64,7 +64,7 @@ public readonly ref struct RenderPass
                 },
             }
         });
-        var desc = new CE.RenderPassDescriptor
+        var desc = new CH.RenderPassDescriptor
         {
             color_attachments = new() { data = &color, len = 1 },
             depth_stencil_attachment = new(new()
@@ -72,26 +72,26 @@ public readonly ref struct RenderPass
                 view = depthStencilTextureView,
                 depth = depthStencilInit.Depth switch
                 {
-                    null => CE.Opt<CE.RenderPassDepthBufferInit>.None,
+                    null => CH.Opt<CH.RenderPassDepthBufferInit>.None,
                     DepthBufferInit depthInit => new(new()
                     {
                         mode = depthInit.Mode switch
                         {
-                            RenderPassInitMode.Clear => CE.RenderPassBufferInitMode.Clear,
-                            RenderPassInitMode.Load or _ => CE.RenderPassBufferInitMode.Load,
+                            RenderPassInitMode.Clear => CH.RenderPassBufferInitMode.Clear,
+                            RenderPassInitMode.Load or _ => CH.RenderPassBufferInitMode.Load,
                         },
                         value = depthInit.ClearValue,
                     }),
                 },
                 stencil = depthStencilInit.Stencil switch
                 {
-                    null => CE.Opt<CE.RenderPassStencilBufferInit>.None,
+                    null => CH.Opt<CH.RenderPassStencilBufferInit>.None,
                     StencilBufferInit stencilInit => new(new()
                     {
                         mode = stencilInit.Mode switch
                         {
-                            RenderPassInitMode.Clear => CE.RenderPassBufferInitMode.Clear,
-                            RenderPassInitMode.Load or _ => CE.RenderPassBufferInitMode.Load,
+                            RenderPassInitMode.Clear => CH.RenderPassBufferInitMode.Clear,
+                            RenderPassInitMode.Load or _ => CH.RenderPassBufferInitMode.Load,
                         },
                         value = stencilInit.ClearValue,
                     }),
@@ -120,7 +120,7 @@ public readonly ref struct RenderPass
 
     public void SetVertexBuffer(u32 slot, Buffer buffer)
     {
-        var bufferSlice = new CE.BufferSlice(buffer.NativeRef, CE.RangeBoundsU64.RangeFull);
+        var bufferSlice = new CH.BufferSlice(buffer.NativeRef, CH.RangeBoundsU64.RangeFull);
         _native.AsMut().SetVertexBuffer(slot, bufferSlice);
     }
     public void SetVertexBuffer(u32 slot, in BufferSlice bufferSlice)
@@ -130,7 +130,7 @@ public readonly ref struct RenderPass
 
     public void SetIndexBuffer(Buffer buffer, IndexFormat indexFormat)
     {
-        var bufferSlice = new CE.BufferSlice(buffer.NativeRef, CE.RangeBoundsU64.RangeFull);
+        var bufferSlice = new CH.BufferSlice(buffer.NativeRef, CH.RangeBoundsU64.RangeFull);
         _native.AsMut().SetIndexBuffer(bufferSlice, indexFormat.MapOrThrow());
     }
 
@@ -157,8 +157,8 @@ public readonly ref struct RenderPass
 
     public void DrawIndexed(u32 indexStart, u32 indexCount, i32 baseVertex, u32 instanceStart, u32 instanceCount)
     {
-        var indexRange = new CE.RangeU32(indexStart, checked(indexStart + indexCount));
-        var instanceRange = new CE.RangeU32(instanceStart, checked(instanceStart + instanceCount));
+        var indexRange = new CH.RangeU32(indexStart, checked(indexStart + indexCount));
+        var instanceRange = new CH.RangeU32(instanceStart, checked(instanceStart + instanceCount));
         _native.AsMut().DrawIndexed(indexRange, baseVertex, instanceRange);
     }
 }

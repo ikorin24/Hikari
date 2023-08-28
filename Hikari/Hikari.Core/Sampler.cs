@@ -103,9 +103,9 @@ public readonly struct SamplerDescriptor
         Compare = null;
     }
 
-    internal CE.SamplerDescriptor ToNative()
+    internal CH.SamplerDescriptor ToNative()
     {
-        return new CE.SamplerDescriptor
+        return new CH.SamplerDescriptor
         {
             address_mode_u = AddressModeU.MapOrThrow(),
             address_mode_v = AddressModeV.MapOrThrow(),
@@ -138,8 +138,8 @@ public enum FilterMode
 
 public enum SamplerBorderColor
 {
-    [EnumMapTo(CE.SamplerBorderColor.TransparentBlack)] TransparentBlack = 0,
-    [EnumMapTo(CE.SamplerBorderColor.OpaqueBlack)] OpaqueBlack = 1,
-    [EnumMapTo(CE.SamplerBorderColor.OpaqueWhite)] OpaqueWhite = 2,
-    [EnumMapTo(CE.SamplerBorderColor.Zero)] Zero = 3,
+    [EnumMapTo(CH.SamplerBorderColor.TransparentBlack)] TransparentBlack = 0,
+    [EnumMapTo(CH.SamplerBorderColor.OpaqueBlack)] OpaqueBlack = 1,
+    [EnumMapTo(CH.SamplerBorderColor.OpaqueWhite)] OpaqueWhite = 2,
+    [EnumMapTo(CH.SamplerBorderColor.Zero)] Zero = 3,
 }

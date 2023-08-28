@@ -70,9 +70,9 @@ public readonly struct BindGroupDescriptor
     public required BindGroupLayout Layout { get; init; }
     public required ReadOnlyMemory<BindGroupEntry> Entries { get; init; }
 
-    internal CE.BindGroupDescriptor ToNative(PinHandleHolder pins)
+    internal CH.BindGroupDescriptor ToNative(PinHandleHolder pins)
     {
-        return new CE.BindGroupDescriptor
+        return new CH.BindGroupDescriptor
         {
             layout = Layout.NativeRef,
             entries = Entries.SelectToArray(pins, static (x, pins) => x.ToNative(pins)).AsFixedSlice(pins),
@@ -96,16 +96,16 @@ public readonly struct BindGroupEntry
         _resource = resource;
     }
 
-    internal CE.BindGroupEntry ToNative(PinHandleHolder pins)
+    internal CH.BindGroupEntry ToNative(PinHandleHolder pins)
     {
-        return new CE.BindGroupEntry
+        return new CH.BindGroupEntry
         {
             binding = _binding,
             resource = _resource switch
             {
                 BufferBinding bufferBinding => bufferBinding.ToNative(pins),
-                TextureView textureView => CE.BindingResource.TextureView(textureView.NativeRef),
-                Sampler sampler => CE.BindingResource.Sampler(sampler.NativeRef),
+                TextureView textureView => CH.BindingResource.TextureView(textureView.NativeRef),
+                Sampler sampler => CH.BindingResource.Sampler(sampler.NativeRef),
                 _ => throw new UnreachableException(),
             },
         };
@@ -164,17 +164,17 @@ public readonly struct BindGroupEntry
 
         public void Validate() => IScreenManaged.DefaultValidate(this);
 
-        internal unsafe CE.BindingResource ToNative(PinHandleHolder pins)
+        internal unsafe CH.BindingResource ToNative(PinHandleHolder pins)
         {
             pins.Add(GCHandle.Alloc(_wrap, GCHandleType.Pinned));
-            var payload = (CE.BufferBinding*)Unsafe.AsPointer(ref Unsafe.AsRef(in _wrap.Native));
-            return CE.BindingResource.Buffer(payload);
+            var payload = (CH.BufferBinding*)Unsafe.AsPointer(ref Unsafe.AsRef(in _wrap.Native));
+            return CH.BindingResource.Buffer(payload);
         }
 
         private sealed class Wrap
         {
-            public readonly CE.BufferBinding Native;
-            public Wrap(CE.BufferBinding native)
+            public readonly CH.BufferBinding Native;
+            public Wrap(CH.BufferBinding native)
             {
                 Native = native;
             }

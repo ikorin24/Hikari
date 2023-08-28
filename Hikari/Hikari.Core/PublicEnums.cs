@@ -5,11 +5,11 @@ namespace Hikari;
 
 public enum WindowStyle : byte
 {
-    [EnumMapTo(CE.WindowStyle.Default)]
+    [EnumMapTo(CH.WindowStyle.Default)]
     Default = 0,
-    [EnumMapTo(CE.WindowStyle.Fixed)]
+    [EnumMapTo(CH.WindowStyle.Fixed)]
     Fixed = 1,
-    [EnumMapTo(CE.WindowStyle.Fullscreen)]
+    [EnumMapTo(CH.WindowStyle.Fullscreen)]
     Fullscreen = 2,
 }
 
@@ -61,12 +61,12 @@ public enum GraphicsBackend : byte
 
 public enum SurfacePresentMode
 {
-    [EnumMapTo(CE.PresentMode.Fifo)]
+    [EnumMapTo(CH.PresentMode.Fifo)]
     VsyncOn = 0,
-    [EnumMapTo(CE.PresentMode.Immediate)]
+    [EnumMapTo(CH.PresentMode.Immediate)]
     VsyncOff = 1,
-    [EnumMapTo(CE.PresentMode.FifoRelaxed)]
+    [EnumMapTo(CH.PresentMode.FifoRelaxed)]
     AdaptiveVsync = 2,
-    [EnumMapTo(CE.PresentMode.Mailbox)]
+    [EnumMapTo(CH.PresentMode.Mailbox)]
     FastVsync = 3,
 }

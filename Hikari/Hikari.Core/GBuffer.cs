@@ -10,7 +10,7 @@ public sealed class GBuffer : IScreenManaged
     private readonly Screen _screen;
     private readonly Vector2u _size;
     private Own<Texture>[] _colors;
-    private readonly CE.Opt<CE.RenderPassColorAttachment>[] _colorsNative;
+    private readonly CH.Opt<CH.RenderPassColorAttachment>[] _colorsNative;
     private readonly int _colorAttachmentCount;
 
     public int ColorAttachmentCount => _colorAttachmentCount;
@@ -21,7 +21,7 @@ public sealed class GBuffer : IScreenManaged
     private GBuffer(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
         var colors = new Own<Texture>[formats.Length];
-        var colorsNative = new CE.Opt<CE.RenderPassColorAttachment>[formats.Length];
+        var colorsNative = new CH.Opt<CH.RenderPassColorAttachment>[formats.Length];
         Prepare(screen, size, formats, colors, colorsNative);
         _size = size;
         _colorAttachmentCount = formats.Length;
@@ -62,7 +62,7 @@ public sealed class GBuffer : IScreenManaged
         return _colors[index].AsValue();
     }
 
-    private static void Prepare(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats, Span<Own<Texture>> colors, Span<CE.Opt<CE.RenderPassColorAttachment>> colorsNative)
+    private static void Prepare(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats, Span<Own<Texture>> colors, Span<CH.Opt<CH.RenderPassColorAttachment>> colorsNative)
     {
         for(int i = 0; i < formats.Length; i++) {
             colors[i] = Texture.Create(screen, new()
@@ -77,9 +77,9 @@ public sealed class GBuffer : IScreenManaged
             colorsNative[i] = new(new()
             {
                 view = colors[i].AsValue().View.NativeRef,
-                init = new CE.RenderPassColorBufferInit
+                init = new CH.RenderPassColorBufferInit
                 {
-                    mode = CE.RenderPassBufferInitMode.Clear,
+                    mode = CH.RenderPassBufferInitMode.Clear,
                     value = new Wgpu.Color(0, 0, 0, 0),
                 },
             });
@@ -93,8 +93,8 @@ public sealed class GBuffer : IScreenManaged
         var depthStencil = screen.DepthTexture.View.NativeRef;
 
         var attachmentsNative = _colorsNative;
-        fixed(CE.Opt<CE.RenderPassColorAttachment>* p = attachmentsNative) {
-            var desc = new CE.RenderPassDescriptor
+        fixed(CH.Opt<CH.RenderPassColorAttachment>* p = attachmentsNative) {
+            var desc = new CH.RenderPassDescriptor
             {
                 color_attachments = new(p, attachmentsNative.Length),
                 depth_stencil_attachment = new(new()
@@ -102,10 +102,10 @@ public sealed class GBuffer : IScreenManaged
                     view = depthStencil,
                     depth = new(new()
                     {
-                        mode = CE.RenderPassBufferInitMode.Clear,
+                        mode = CH.RenderPassBufferInitMode.Clear,
                         value = 1f,
                     }),
-                    stencil = CE.Opt<CE.RenderPassStencilBufferInit>.None,
+                    stencil = CH.Opt<CH.RenderPassStencilBufferInit>.None,
                 }),
             };
             return RenderPass.Create(screen, in desc);
