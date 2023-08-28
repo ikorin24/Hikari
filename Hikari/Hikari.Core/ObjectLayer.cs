@@ -120,7 +120,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         try {
             var removedList = tmp.AsReadOnlySpan();
             foreach(var removedItem in removedList) {
-                if(_list.RemoveFastUnordered(removedItem)) {
+                if(_list.SwapRemove(removedItem)) {
                     removedItem.SetLifeStateDead();
                     removedItem.OnDead();
                 }

@@ -169,7 +169,7 @@ public sealed class Operations
         try {
             var removedList = tmp.AsReadOnlySpan();
             foreach(var removed in removedList) {
-                if(_list.RemoveFastUnordered(removed)) {
+                if(_list.SwapRemove(removed)) {
                     removed.SetLifeStateDead();
                     removed.InvokeRelease();
                 }

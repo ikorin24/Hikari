@@ -44,7 +44,7 @@ public static class ListExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<T> AsReadOnlySpan<T>(this List<T>? list) => list.AsSpan();
 
-    public static bool RemoveFastUnordered<T>(this List<T> list, T item)
+    public static bool SwapRemove<T>(this List<T> list, T item)
     {
         var index = list.IndexOf(item);
         if(index < 0) {

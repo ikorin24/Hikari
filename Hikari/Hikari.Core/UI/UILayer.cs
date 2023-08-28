@@ -127,10 +127,6 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 
     protected override void Render(in RenderPass pass, ReadOnlySpan<UIModel> objects, RenderObjectAction render)
     {
-        // TODO: Use depth to performance optimization.
-        // UI rendering disables depth buffer.
-        // Render in the order of UIElement tree so that child elements are rendered in front.
-
         var rootElement = _rootElement;
         var screenSize = Screen.ClientSize;
         var uiProjection = Matrix4.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
