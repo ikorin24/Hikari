@@ -138,11 +138,20 @@ public sealed class Operations
             addedList = _addedList.AsReadOnlySpan().ToArray();
             _addedList.Clear();
         }
-        _list.AddRange(addedList);
+
+        foreach(var item in addedList) {
+            if(item.Operation.LifeState == LifeState.New) {
+                _list.Add(item);
+            }
+        }
+
         _list.Sort((x, y) => x.SortOrder - y.SortOrder);
+
         foreach(var (added, _) in addedList) {
-            added.SetLifeStateAlive();
-            added.InvokeAlive();
+            if(added.LifeState == LifeState.New) {
+                added.SetLifeStateAlive();
+                added.InvokeAlive();
+            }
         }
 
         foreach(var (op, _) in _list.AsSpan()) {

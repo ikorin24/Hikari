@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Hikari;
 using Hikari.Collections;
 using System;
 using System.Collections.Generic;
@@ -20,7 +19,6 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     private readonly List<TObject> _addedList;
     private readonly List<TObject> _removedList;
     private readonly object _sync = new object();
-    private ThreadId _threadId;
 
     private protected ObjectLayer(Screen screen, Own<PipelineLayout> pipelineLayout)
         : base(screen, pipelineLayout)
@@ -29,7 +27,6 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         _addedList = new();
         _removedList = new();
 
-        Alive.Subscribe(static self => ((TSelf)self).OnAlive());
         EarlyUpdate.Subscribe(static self => ((TSelf)self).OnEarlyUpdate());
         Update.Subscribe(static self => ((TSelf)self).OnUpdate());
         LateUpdate.Subscribe(static self => ((TSelf)self).OnLateUpdate());
@@ -42,15 +39,9 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         });
     }
 
-    private void OnAlive()
-    {
-        Debug.Assert(_threadId.IsNone);
-        _threadId = ThreadId.CurrentThread();
-    }
-
     private void OnTerminated()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
         foreach(var obj in _list.AsSpan()) {
             obj.Terminate();
         }
@@ -58,7 +49,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
 
     protected sealed override void RenderShadowMap(in RenderShadowMapContext context)
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
         RenderShadowMap(context, _list.AsSpan());
     }
 
@@ -74,7 +65,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
 
     internal void ApplyAdd()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
 
         // To avoid deadlock, copy the added list to a local variable and add it to the '_list'.
         // This is because the user can call the 'Add' method during the Alive event of the added object.
@@ -107,7 +98,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
 
     internal void ApplyRemove()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
 
         // To avoid deadlock, copy the removed list to a local variable and remove it from the '_list'.
         // This is because the user can call the 'Remove' method during the Dead event of the removed object.
@@ -133,7 +124,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
 
     protected sealed override void Render(in RenderPass pass)
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
         ReadOnlySpan<TObject> objects = _list.AsSpan();
         Render(
             pass,
@@ -152,13 +143,13 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
 
     private void OnFrameInit()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
         ApplyAdd();
     }
 
     private void OnEarlyUpdate()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
         foreach(var obj in _list.AsSpan()) {
             if(obj.IsFrozen) { continue; }
             obj.InvokeEarlyUpdate();
@@ -167,7 +158,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
 
     private void OnLateUpdate()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
         foreach(var obj in _list.AsSpan()) {
             if(obj.IsFrozen) { continue; }
             obj.InvokeLateUpdate();
@@ -176,7 +167,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
 
     private void OnUpdate()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
         foreach(var obj in _list.AsSpan()) {
             if(obj.IsFrozen) { continue; }
             obj.InvokeUpdate();
@@ -185,7 +176,7 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
 
     private void OnFrameEnd()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
         ApplyRemove();
     }
 

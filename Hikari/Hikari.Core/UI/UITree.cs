@@ -53,8 +53,8 @@ public sealed class UITree
         }
     }
 
-    public bool Terminate()
+    public void Terminate()
     {
-        return _uiLayer.Terminate();
+        _uiLayer.Terminate();
     }
 }

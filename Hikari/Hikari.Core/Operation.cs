@@ -11,7 +11,6 @@ public abstract class Operation
 {
     private readonly Screen _screen;
     private LifeState _lifeState;
-    private ThreadId _threadId;
     private readonly SubscriptionBag _subscriptions = new();
     private EventSource<Operation> _frameInit = new();
     private EventSource<Operation> _frameEnd = new();
@@ -54,13 +53,9 @@ public abstract class Operation
     internal void InvokeUpdate() => _update.Invoke(this);
     internal void InvokeLateUpdate() => _lateUpdate.Invoke(this);
 
-    public bool Terminate()
+    public void Terminate()
     {
-        var currentState = InterlockedEx.CompareExchange(ref _lifeState, LifeState.Terminating, LifeState.Alive);
-        if(currentState != LifeState.Alive) {
-            return false;
-        }
-        if(_threadId.IsCurrentThread) {
+        if(_screen.MainThread.IsCurrentThread) {
             Terminate(this);
         }
         else {
@@ -70,13 +65,16 @@ public abstract class Operation
                 Terminate(self);
             }, this);
         }
-        return true;
+        return;
 
         static void Terminate(Operation self)
         {
-            Debug.Assert(self._threadId.IsCurrentThread);
-            self.Screen.Operations.Remove(self);
-            self._terminated.Invoke(self);
+            Debug.Assert(self._screen.MainThread.IsCurrentThread);
+            if(self._lifeState == LifeState.Alive || self._lifeState == LifeState.New) {
+                self._lifeState = LifeState.Terminating;
+                self.Screen.Operations.Remove(self);
+                self._terminated.Invoke(self);
+            }
         }
     }
 
@@ -84,14 +82,15 @@ public abstract class Operation
     internal void SetLifeStateAlive()
     {
         Debug.Assert(_lifeState == LifeState.New);
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
         _lifeState = LifeState.Alive;
-        _threadId = ThreadId.CurrentThread();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetLifeStateDead()
     {
         Debug.Assert(_lifeState == LifeState.Terminating);
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
         _lifeState = LifeState.Dead;
     }
 
