@@ -76,7 +76,7 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     }
 
     /// <summary>Strong typed `this`</summary>
-    protected TSelf Self => SafeCast.As<TSelf>(this);
+    protected TSelf This => SafeCast.As<TSelf>(this);
 
     protected FrameObject(
         MaybeOwn<Mesh<TVertex>> mesh,
@@ -103,14 +103,14 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     public void Terminate()
     {
         if(Screen.MainThread.IsCurrentThread) {
-            Terminate(Self);
+            Terminate(This);
         }
         else {
             Screen.Update.Post(static x =>
             {
                 var self = SafeCast.NotNullAs<TSelf>(x);
                 Terminate(self);
-            }, Self);
+            }, This);
         }
         return;
 
@@ -131,9 +131,9 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
         Render(pass, _material.AsValue(), _mesh.AsValue());
     }
 
-    public virtual void InvokeEarlyUpdate() => _earlyUpdate.Invoke(Self);
-    public virtual void InvokeUpdate() => _update.Invoke(Self);
-    public virtual void InvokeLateUpdate() => _lateUpdate.Invoke(Self);
+    public virtual void InvokeEarlyUpdate() => _earlyUpdate.Invoke(This);
+    public virtual void InvokeUpdate() => _update.Invoke(This);
+    public virtual void InvokeLateUpdate() => _lateUpdate.Invoke(This);
 
     internal void SetLifeStateAlive()
     {
@@ -144,7 +144,7 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     internal void OnAlive()
     {
         Debug.Assert(_state == LifeState.Alive);
-        _alive.Invoke(Self);
+        _alive.Invoke(This);
     }
 
     internal void SetLifeStateDead()
@@ -155,7 +155,7 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
 
     internal void OnDead()
     {
-        _dead.Invoke(Self);
+        _dead.Invoke(This);
         _material.Dispose();
         _mesh.Dispose();
         _subscriptions.Dispose();
