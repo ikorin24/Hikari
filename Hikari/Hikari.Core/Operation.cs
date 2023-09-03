@@ -123,6 +123,11 @@ public abstract class Operation<TSelf>
 
     private protected Operation(Screen screen) : base(screen)
     {
+        // `this` must be of type `TSelf`.
+        // This is true as long as a derived class is implemented correctly.
+        if(this is not TSelf) {
+            ThrowHelper.ThrowInvalidOperation("Invalid self type.");
+        }
     }
 
     protected override void Release()

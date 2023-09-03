@@ -12,18 +12,9 @@ public abstract class RenderOperation<TSelf, TShader, TMaterial>
 
     public PipelineLayout PipelineLayout => _pipelineLayout.AsValue();
 
-    /// <summary>Strong typed `this`</summary>
-    protected TSelf This => SafeCast.As<TSelf>(this);
-
     private protected RenderOperation(Screen screen, Own<PipelineLayout> pipelineLayout)
         : base(screen)
     {
-        // `this` must be of type `TSelf`.
-        // This is true as long as a derived class is implemented correctly.
-        if(this is not TSelf) {
-            ThrowHelper.ThrowInvalidOperation("Invalid self type.");
-        }
-
         pipelineLayout.ThrowArgumentExceptionIfNone();
         _pipelineLayout = pipelineLayout;
     }
