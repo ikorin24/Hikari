@@ -5,8 +5,7 @@ using V = Hikari.Vertex;
 namespace Hikari;
 
 public sealed class PbrLayer
-    : ObjectLayer<PbrLayer, V, PbrShader, PbrMaterial, PbrModel>,
-    IGBufferProvider
+    : ObjectLayer<PbrLayer, V, PbrShader, PbrMaterial, PbrModel>
 {
     private static readonly TextureFormat[] _formats = new TextureFormat[4]
     {
@@ -16,7 +15,7 @@ public sealed class PbrLayer
         TextureFormat.Rgba32Float,
     };
 
-    private Own<GBuffer> _gBuffer;
+    private readonly GBufferProvider _gBufferProvider;
     private EventSource<GBuffer> _gBufferChanged = new();
     private readonly Own<PipelineLayout> _shadowPipelineLayout;
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
@@ -32,31 +31,32 @@ public sealed class PbrLayer
 
     public PipelineLayout ShadowPipelineLayout => _shadowPipelineLayout.AsValue();
 
-
-    public GBuffer CurrentGBuffer => _gBuffer.AsValue();
-
     public Event<GBuffer> GBufferChanged => _gBufferChanged.Event;
 
-    internal PbrLayer(Screen screen)
+    internal PbrLayer(Screen screen, GBufferProvider gBufferProvider)
         : base(
             screen,
             BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0, out var bindGroupLayout1))
     {
+        ArgumentNullException.ThrowIfNull(gBufferProvider);
+
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout1 = bindGroupLayout1;
         _shadowPipelineLayout = BuildShadowPipeline(screen, out var shadowBgl0);
         _shadowBindGroupLayout0 = shadowBgl0;
         _bindGroupLayout1 = bindGroupLayout1;
 
-        RecreateGBuffer(screen, screen.ClientSize);
+        _gBufferProvider = gBufferProvider;
 
         screen.Resized.Subscribe(x =>
         {
-            RecreateGBuffer(x.Screen, x.Size);
+            if(x.Size.X == 0 || x.Size.Y == 0) {
+                return;
+            }
+            _gBufferProvider.Resize(x.Size);
         }).AddTo(Subscriptions);
         Dead.Subscribe(static self =>
         {
-            self._gBuffer.Dispose();
             self._bindGroupLayout0.Dispose();
             self._shadowBindGroupLayout0.Dispose();
             self._shadowPipelineLayout.Dispose();
@@ -83,19 +83,10 @@ public sealed class PbrLayer
         });
     }
 
-    private void RecreateGBuffer(Screen screen, Vector2u newSize)
-    {
-        if(_gBuffer.TryAsValue(out var gBuffer) && gBuffer.Size == newSize) {
-            return;
-        }
-        _gBuffer.Dispose();
-        _gBuffer = GBuffer.Create(screen, newSize, _formats);
-        _gBufferChanged.Invoke(_gBuffer.AsValue());
-    }
-
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
-        return _gBuffer.AsValue().CreateRenderPass();
+        var gBuffer = _gBufferProvider.GetCurrentGBuffer();
+        return gBuffer.CreateRenderPass();
     }
 
     private static Own<PipelineLayout> BuildPipelineLayoutDescriptor(

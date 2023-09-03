@@ -66,9 +66,9 @@ public static class Engine
     private static readonly Action<CH.ScreenId, uint, uint> _onResized =
         (CH.ScreenId id, uint width, uint height) =>
         {
-            // TODO: width == 0 && height == 0 when window is minimized
-            Debug.Assert(width != 0);
-            Debug.Assert(height != 0);
+            if(width == 0 || height == 0) {
+                return;
+            }
             _screens[id].OnResized(width, height);
         };
 

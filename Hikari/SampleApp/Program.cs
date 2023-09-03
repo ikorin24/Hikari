@@ -24,7 +24,7 @@ internal class Program
             Style = WindowStyle.Default,
             PresentMode = SurfacePresentMode.VsyncOn,
         };
-        Engine.Run(screenConfig, OnInitialized);
+        Engine.Run(screenConfig, OnInitialized_);
     }
 
     private static void OnInitialized_(Screen screen)
@@ -32,8 +32,16 @@ internal class Program
         screen.Title = "sample";
 
         var ops = screen.Operations;
-        var layer = ops.AddPbrLayer(0);
-        var deferredProcess = ops.AddDeferredProcess(1, layer);
+        var gBufferProvider = GBufferProvider.Create(screen, screen.ClientSize, stackalloc TextureFormat[4]
+        {
+            TextureFormat.Rgba32Float,
+            TextureFormat.Rgba32Float,
+            TextureFormat.Rgba32Float,
+            TextureFormat.Rgba32Float,
+        }).AsValue(out var gBufferProviderOwn);
+        screen.Closed.Subscribe(_ => gBufferProviderOwn.Dispose());
+        var layer = ops.AddPbrLayer(0, gBufferProvider);
+        var deferredProcess = ops.AddDeferredProcess(1, gBufferProvider);
         var ui = ops.AddUI(2);
 
         ui.RenderRoot($$"""

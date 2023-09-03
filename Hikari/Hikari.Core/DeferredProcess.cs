@@ -40,7 +40,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
         Dead.Subscribe(static self => self.OnDead()).AddTo(Subscriptions);
 
         _shader = DeferredProcessShader.Create(this);
-        RecreateMaterial(gBufferProvider.CurrentGBuffer);
+        RecreateMaterial(gBufferProvider.GetCurrentGBuffer());
         gBufferProvider.GBufferChanged.Subscribe(RecreateMaterial).AddTo(Subscriptions);
     }
 

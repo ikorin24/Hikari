@@ -95,16 +95,16 @@ public sealed class Operations
         }
     }
 
-    public PbrLayer AddPbrLayer(int sortOrder)
+    public PbrLayer AddPbrLayer(int sortOrder, GBufferProvider renderTarget)
     {
-        var op = new PbrLayer(_screen);
+        var op = new PbrLayer(_screen, renderTarget);
         Add(op, sortOrder);
         return op;
     }
 
-    public DeferredProcess AddDeferredProcess(int sortOrder, IGBufferProvider gBufferProvider)
+    public DeferredProcess AddDeferredProcess(int sortOrder, IGBufferProvider inputGBuffer)
     {
-        var op = new DeferredProcess(_screen, gBufferProvider);
+        var op = new DeferredProcess(_screen, inputGBuffer);
         Add(op, sortOrder);
         return op;
     }
