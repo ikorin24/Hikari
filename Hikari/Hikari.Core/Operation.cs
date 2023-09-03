@@ -11,7 +11,6 @@ public abstract class Operation
 {
     private readonly Screen _screen;
     private LifeState _lifeState;
-    private readonly int _sortOrder;
     private ThreadId _threadId;
     private readonly SubscriptionBag _subscriptions = new();
     private EventSource<Operation> _frameInit = new();
@@ -26,7 +25,6 @@ public abstract class Operation
     public Screen Screen => _screen;
     public LifeState LifeState => _lifeState;
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
-    public int SortOrder => _sortOrder;
     public Event<Operation> FrameInit => _frameInit.Event;
     public Event<Operation> EarlyUpdate => _earlyUpdate.Event;
     public Event<Operation> Update => _update.Event;
@@ -36,13 +34,11 @@ public abstract class Operation
     public Event<Operation> Alive => _alive.Event;
     public Event<Operation> Dead => _dead.Event;
 
-    protected Operation(Screen screen, int sortOrder)
+    private protected Operation(Screen screen)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _screen = screen;
         _lifeState = LifeState.New;
-        _sortOrder = sortOrder;
-        screen.Operations.Add(this);
     }
 
     protected abstract void RenderShadowMap(in RenderShadowMapContext context);

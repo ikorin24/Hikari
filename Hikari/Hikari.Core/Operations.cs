@@ -1,8 +1,6 @@
 ﻿#nullable enable
-using Hikari;
-using Hikari.Collections;
 using Hikari.NativeBind;
-using System;
+using Hikari.UI;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -10,12 +8,11 @@ namespace Hikari;
 
 public sealed class Operations
 {
-    // [NOTE]
-    // The order of the elements in the list is not guaranteed.
+    private readonly record struct OrderedOperation(Operation Operation, int SortOrder);
 
     private readonly Screen _screen;
-    private readonly List<Operation> _list;
-    private readonly List<Operation> _addedList;
+    private readonly List<OrderedOperation> _list;
+    private readonly List<OrderedOperation> _addedList;
     private readonly List<Operation> _removedList;
     private readonly ThreadId _threadId;
     private readonly object _sync = new object();
@@ -34,7 +31,7 @@ public sealed class Operations
     internal void OnClosed()
     {
         Debug.Assert(_threadId.IsCurrentThread);
-        foreach(var op in _list.AsSpan()) {
+        foreach(var (op, _) in _list.AsSpan()) {
             op.Terminate();
         }
         ApplyRemove();
@@ -43,15 +40,15 @@ public sealed class Operations
     internal void FrameInit()
     {
         Debug.Assert(_threadId.IsCurrentThread);
-        foreach(var operation in _list.AsSpan()) {
-            operation.InvokeFrameInit();
+        foreach(var (op, _) in _list.AsSpan()) {
+            op.InvokeFrameInit();
         }
     }
 
     internal void EarlyUpdate()
     {
         Debug.Assert(_threadId.IsCurrentThread);
-        foreach(var op in _list.AsSpan()) {
+        foreach(var (op, _) in _list.AsSpan()) {
             op.InvokeEarlyUpdate();
         }
     }
@@ -59,7 +56,7 @@ public sealed class Operations
     internal void Update()
     {
         Debug.Assert(_threadId.IsCurrentThread);
-        foreach(var op in _list.AsSpan()) {
+        foreach(var (op, _) in _list.AsSpan()) {
             op.InvokeUpdate();
         }
     }
@@ -67,7 +64,7 @@ public sealed class Operations
     internal void LateUpdate()
     {
         Debug.Assert(_threadId.IsCurrentThread);
-        foreach(var op in _list.AsSpan()) {
+        foreach(var (op, _) in _list.AsSpan()) {
             op.InvokeLateUpdate();
         }
     }
@@ -75,8 +72,8 @@ public sealed class Operations
     internal void FrameEnd()
     {
         Debug.Assert(_threadId.IsCurrentThread);
-        foreach(var operation in _list.AsSpan()) {
-            operation.InvokeFrameEnd();
+        foreach(var (op, _) in _list.AsSpan()) {
+            op.InvokeFrameEnd();
         }
     }
 
@@ -87,24 +84,45 @@ public sealed class Operations
         var lights = screen.Lights;
         {
             var context = new RenderShadowMapContext(lights);
-            foreach(var op in _list.AsSpan()) {
+            foreach(var (op, _) in _list.AsSpan()) {
                 op.InvokeRenderShadowMap(in context);
             }
         }
 
         {
             var context = new OperationContext(screen, surfaceView);
-            foreach(var op in _list.AsSpan()) {
+            foreach(var (op, _) in _list.AsSpan()) {
                 op.InvokeExecute(in context);
             }
         }
     }
 
-    internal void Add(Operation operation)
+    public PbrLayer AddPbrLayer(int sortOrder)
+    {
+        var op = new PbrLayer(_screen);
+        Add(op, sortOrder);
+        return op;
+    }
+
+    public DeferredProcess AddDeferredProcess(int sortOrder, IGBufferProvider gBufferProvider)
+    {
+        var op = new DeferredProcess(_screen, gBufferProvider);
+        Add(op, sortOrder);
+        return op;
+    }
+
+    public UITree AddUI(int sortOrder)
+    {
+        var op = new UILayer(_screen);
+        Add(op, sortOrder);
+        return new UITree(op);
+    }
+
+    private void Add(Operation operation, int sortOrder)
     {
         Debug.Assert(operation.LifeState == LifeState.New);
         lock(_sync) {
-            _addedList.Add(operation);
+            _addedList.Add(new(operation, sortOrder));
         }
     }
 
@@ -114,26 +132,20 @@ public sealed class Operations
 
         // To avoid deadlock, copy the added list to a local variable and add it to the '_list'.
         // This is because the user can call the 'Add' method during the Alive event of the added object.
-        RefTypeRentMemory<Operation> tmp;
+        OrderedOperation[] addedList;
         lock(_sync) {
             if(_addedList.Count == 0) { return; }
-            tmp = new RefTypeRentMemory<Operation>(_addedList.AsReadOnlySpan());
+            addedList = _addedList.AsReadOnlySpan().ToArray();
             _addedList.Clear();
         }
-        try {
-            var addedList = tmp.AsReadOnlySpan();
-            _list.AddRange(addedList);
-            _list.Sort((x, y) => x.SortOrder - y.SortOrder);
-            foreach(var added in addedList) {
-                added.SetLifeStateAlive();
-                added.InvokeAlive();
-            }
-        }
-        finally {
-            tmp.Dispose();
+        _list.AddRange(addedList);
+        _list.Sort((x, y) => x.SortOrder - y.SortOrder);
+        foreach(var (added, _) in addedList) {
+            added.SetLifeStateAlive();
+            added.InvokeAlive();
         }
 
-        foreach(var op in _list.AsSpan()) {
+        foreach(var (op, _) in _list.AsSpan()) {
             if(op is ILazyApplyList laop) {
                 laop.ApplyAdd();
             }
@@ -152,7 +164,7 @@ public sealed class Operations
     {
         Debug.Assert(_threadId.IsCurrentThread);
 
-        foreach(var op in _list.AsSpan()) {
+        foreach(var (op, _) in _list.AsSpan()) {
             if(op is ILazyApplyList laop) {
                 laop.ApplyRemove();
             }
@@ -160,23 +172,29 @@ public sealed class Operations
 
         // To avoid deadlock, copy the removed list to a local variable and remove it from the '_list'.
         // This is because the user can call the 'Remove' method during the Dead event of the removed object.
-        RefTypeRentMemory<Operation> tmp;
+        Operation[] removedList;
         lock(_sync) {
             if(_removedList.Count == 0) { return; }
-            tmp = new RefTypeRentMemory<Operation>(_removedList.AsReadOnlySpan());
+            removedList = _removedList.AsReadOnlySpan().ToArray();
             _removedList.Clear();
         }
-        try {
-            var removedList = tmp.AsReadOnlySpan();
-            foreach(var removed in removedList) {
-                if(_list.SwapRemove(removed)) {
-                    removed.SetLifeStateDead();
-                    removed.InvokeRelease();
+        foreach(var removed in removedList) {
+            var index = -1;
+            {
+                var list = _list.AsSpan();
+                for(var i = 0; i < list.Length; ++i) {
+                    if(list[i].Operation == removed) {
+                        index = i;
+                        break;
+                    }
                 }
             }
-        }
-        finally {
-            tmp.Dispose();
+
+            if(index >= 0) {
+                _list.RemoveAt(index);
+                removed.SetLifeStateDead();
+                removed.InvokeRelease();
+            }
         }
     }
 }

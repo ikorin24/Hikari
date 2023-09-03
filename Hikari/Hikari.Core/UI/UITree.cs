@@ -6,28 +6,24 @@ namespace Hikari.UI;
 
 public sealed class UITree
 {
-    private readonly Screen _screen;
-    private UILayer? _uiLayer;
+    private readonly UILayer _uiLayer;
     private IReactive? _root;
 
-    public Screen Screen => _screen;
+    public Screen Screen => _uiLayer.Screen;
 
-    internal UITree(Screen screen)
+    internal UITree(UILayer uiLayer)
     {
-        _screen = screen;
+        _uiLayer = uiLayer;
     }
 
     public void SetRoot(UIElement element)
     {
         ArgumentNullException.ThrowIfNull(element);
-        _uiLayer ??= new UILayer(_screen, 100); // TODO: sort order
         _uiLayer.SetRoot(element);
     }
 
     public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] ObjectSourceBuilder builder)
     {
-        _uiLayer ??= new UILayer(_screen, 100); // TODO: sort order
-
         var source = builder.ToSourceClear();
         var root = source.Apply(_root, out var applied);
         switch(applied.Result) {
@@ -55,5 +51,10 @@ public sealed class UITree
                 break;
             }
         }
+    }
+
+    public bool Terminate()
+    {
+        return _uiLayer.Terminate();
     }
 }

@@ -6,7 +6,7 @@ public abstract class ComputeOperation : Operation
 {
     private readonly Own<ComputePipeline> _pipeline;
 
-    protected ComputeOperation(Screen screen, int sortOrder, in ComputePipelineDescriptor desc) : base(screen, sortOrder)
+    private protected ComputeOperation(Screen screen, in ComputePipelineDescriptor desc) : base(screen)
     {
         _pipeline = ComputePipeline.Create(screen, desc);
     }

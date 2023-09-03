@@ -17,11 +17,11 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
     public BindGroupLayout BindGroupLayout3 => _bindGroupLayout3.AsValue();
 
-    public DeferredProcess(IGBufferProvider gBufferProvider, int sortOrder)
-        : base(gBufferProvider.CurrentGBuffer.Screen,
-            BuildPipelineLayout(gBufferProvider.CurrentGBuffer.Screen, out var bindGroupLayout0, out var bindGroupLayout3),
-            sortOrder)
+    internal DeferredProcess(Screen screen, IGBufferProvider gBufferProvider)
+        : base(screen,
+            BuildPipelineLayout(screen, out var bindGroupLayout0, out var bindGroupLayout3))
     {
+        ArgumentNullException.ThrowIfNull(gBufferProvider);
         _gBufferProvider = gBufferProvider;
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout3 = bindGroupLayout3;

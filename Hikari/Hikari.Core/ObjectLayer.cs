@@ -22,8 +22,8 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
     private readonly object _sync = new object();
     private ThreadId _threadId;
 
-    protected ObjectLayer(Screen screen, Own<PipelineLayout> pipelineLayout, int sortOrder)
-        : base(screen, pipelineLayout, sortOrder)
+    private protected ObjectLayer(Screen screen, Own<PipelineLayout> pipelineLayout)
+        : base(screen, pipelineLayout)
     {
         _list = new();
         _addedList = new();

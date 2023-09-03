@@ -30,7 +30,6 @@ public sealed class Screen
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
     private readonly Operations _operations;
-    private readonly UITree _uiTree;
     private RunningState _state;
     private EventSource<ScreenClosingState> _closing;
     private EventSource<Screen> _closed;
@@ -68,7 +67,6 @@ public sealed class Screen
     public Keyboard Keyboard => _keyboard;
     public ulong FrameNum => _frameNum;
     public Operations Operations => _operations;
-    public UITree UITree => _uiTree;
 
     public Timing EarlyUpdate => _earlyUpdate;
     public Timing Update => _update;
@@ -155,7 +153,6 @@ public sealed class Screen
         _state = RunningState.Running;
         _subscriptions = new SubscriptionBag();
         _operations = new Operations(this);
-        _uiTree = new UITree(this);
         _camera = new Camera(this);
         _lights = new Lights(this);
         _earlyUpdate = new Timing(this);

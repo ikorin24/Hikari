@@ -44,9 +44,8 @@ public static class ListExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<T> AsReadOnlySpan<T>(this List<T>? list) => list.AsSpan();
 
-    public static bool SwapRemove<T>(this List<T> list, T item)
+    public static bool SwapRemoveAt<T>(this List<T> list, int index)
     {
-        var index = list.IndexOf(item);
         if(index < 0) {
             return false;
         }
@@ -55,6 +54,12 @@ public static class ListExtensions
         innerSpan.At(index) = innerSpan.At(last);
         list.RemoveAt(last);
         return true;
+    }
+
+    public static bool SwapRemove<T>(this List<T> list, T item)
+    {
+        var index = list.IndexOf(item);
+        return list.SwapRemoveAt(index);
     }
 
     private abstract class ListDummy<T>

@@ -12,8 +12,8 @@ public abstract class RenderOperation<TSelf, TShader, TMaterial>
 
     public PipelineLayout PipelineLayout => _pipelineLayout.AsValue();
 
-    protected RenderOperation(Screen screen, Own<PipelineLayout> pipelineLayout, int sortOrder)
-        : base(screen, sortOrder)
+    private protected RenderOperation(Screen screen, Own<PipelineLayout> pipelineLayout)
+        : base(screen)
     {
         pipelineLayout.ThrowArgumentExceptionIfNone();
         _pipelineLayout = pipelineLayout;

@@ -6,9 +6,6 @@ using Hikari.UI;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Text.Json;
-using Cysharp.Threading.Tasks;
-using System.Threading.Tasks;
 
 namespace SampleApp;
 
@@ -27,71 +24,25 @@ internal class Program
             Style = WindowStyle.Default,
             PresentMode = SurfacePresentMode.VsyncOn,
         };
-        Engine.Run(screenConfig, OnInitialized_);
+        Engine.Run(screenConfig, OnInitialized);
     }
 
     private static void OnInitialized_(Screen screen)
     {
-        screen.UITree.RenderRoot($$"""
+        screen.Title = "sample";
+
+        var ops = screen.Operations;
+        var layer = ops.AddPbrLayer(0);
+        var deferredProcess = ops.AddDeferredProcess(1, layer);
+        var ui = ops.AddUI(2);
+
+        ui.RenderRoot($$"""
         {
             "@type": {{typeof(Counter)}},
             "Width": "80%",
             "Height": "80%"
         }
         """);
-        //var panel = Serializer.Deserialize<Panel>("""
-        //{
-        //    "@type": "panel",
-        //    "width": "80%",
-        //    "height": "80%",
-        //    "horizontalAlignment": "Center",
-        //    "padding": "10px 80px",
-        //    "backgroundColor": "#003388",
-        //    "borderWidth": "1px",
-        //    "borderColor": "#fff",
-        //    "borderRadius": 120,
-        //    "children":
-        //    [{
-        //        "@type": "button",
-        //        "horizontalAlignment": "Center",
-        //        "backgroundColor": "#FF7044",
-        //        "width": 250,
-        //        "height": 70,
-        //        "borderWidth": 0,
-        //        //"borderColor": "#0000",
-        //        "borderRadius": 35,
-        //        "fontSize": "35px",
-        //        "text": "click me!"
-        //    }
-        //    //,
-        //    //{
-        //    //    "@type": "button",
-        //    //    "width": 80,
-        //    //    "height": 100,
-        //    //    "borderWidth": 1,
-        //    //    "backgroundColor": "#9622FF"
-        //    //}
-        //    ]
-        //}
-        //""");
-        //screen.UIDocument.SetRoot(panel);
-
-        //screen.Update.Subscribe(screen =>
-        //{
-        //    if(screen.FrameNum % 60 == 0) {
-        //        var button = panel.Children[1];
-        //        if(button.HorizontalAlignment == HorizontalAlignment.Left) {
-        //            button.HorizontalAlignment = HorizontalAlignment.Right;
-        //        }
-        //        else {
-        //            button.HorizontalAlignment = HorizontalAlignment.Left;
-        //        }
-        //    }
-        //});
-
-        screen.Title = "sample";
-        var layer = new PbrLayer(screen, 0);
-        var deferredProcess = new DeferredProcess(layer, 1);
 
         var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
         var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
@@ -238,7 +189,9 @@ internal class Program
 
     private static void OnInitialized(Screen screen)
     {
-        screen.UITree.RenderRoot($$"""
+        screen.Title = "New Window";
+        var ui = screen.Operations.AddUI(0);
+        ui.RenderRoot($$"""
         {
             "@type": {{typeof(Counter)}},
             "Width": "80%",
@@ -319,7 +272,7 @@ public partial class CountButton
             "Text": "click me!",
             "FontSize": 30,
             "Color": "red",
-            "BoxShadow": "0px 0px 20px 10px red",
+            "BoxShadow": "0px 2px 10px 4px gray",
             "Clicked": {{props.Clicked}},
             "&:Hover": {
                 "Width": {{props.Width + 1}},
@@ -329,6 +282,7 @@ public partial class CountButton
             "&:Active": {
                 "Width": {{props.Width - 4}},
                 "Height": {{props.Height - 4}},
+                "BoxShadow": "0px 0px 6px 1px gray",
                 "Background": "#1089d9",
                 "BorderColor": "#1089d9",
             }

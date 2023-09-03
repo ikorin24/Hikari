@@ -56,11 +56,10 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
     public BindGroupLayout BindGroupLayout1 => _bindGroupLayout1.AsValue();
     public BindGroupLayout BindGroupLayout2 => _bindGroupLayout2.AsValue();
 
-    public UILayer(Screen screen, int sortOrder)
+    internal UILayer(Screen screen)
         : base(
             screen,
-            CreatePipelineLayout(screen, out var bindGroupLayout0, out var bindGroupLayout1, out var bindGroupLayout2),
-            sortOrder)
+            CreatePipelineLayout(screen, out var bindGroupLayout0, out var bindGroupLayout1, out var bindGroupLayout2))
     {
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout1 = bindGroupLayout1;

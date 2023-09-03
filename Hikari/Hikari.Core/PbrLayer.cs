@@ -37,11 +37,10 @@ public sealed class PbrLayer
 
     public Event<GBuffer> GBufferChanged => _gBufferChanged.Event;
 
-    public PbrLayer(Screen screen, int sortOrder)
+    internal PbrLayer(Screen screen)
         : base(
             screen,
-            BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0, out var bindGroupLayout1),
-            sortOrder)
+            BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0, out var bindGroupLayout1))
     {
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout1 = bindGroupLayout1;
