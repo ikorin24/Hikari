@@ -100,13 +100,8 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
         }
     }
 
-    public bool Terminate()
+    public void Terminate()
     {
-        var currentState = InterlockedEx.CompareExchange(ref _state, LifeState.Terminating, LifeState.Alive);
-        if(currentState != LifeState.Alive) {
-            return false;
-        }
-
         if(Screen.MainThread.IsCurrentThread) {
             Terminate(Self);
         }
@@ -117,13 +112,16 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
                 Terminate(self);
             }, Self);
         }
-        return true;
+        return;
 
         static void Terminate(TSelf self)
         {
             Debug.Assert(self.Screen.MainThread.IsCurrentThread);
-            self._layer.Remove(self);
-            self._terminated.Invoke(self);
+            if(self._state == LifeState.Alive || self._state == LifeState.New) {
+                self._state = LifeState.Terminating;
+                self._layer.Remove(self);
+                self._terminated.Invoke(self);
+            }
         }
     }
 

@@ -77,8 +77,12 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         }
         try {
             var addedList = tmp.AsReadOnlySpan();
-            _list.AddRange(addedList);
             foreach(var addedObject in addedList) {
+                if(addedObject.LifeState != LifeState.New) { continue; }
+                _list.Add(addedObject);
+            }
+            foreach(var addedObject in addedList) {
+                if(addedObject.LifeState != LifeState.New) { continue; }
                 addedObject.SetLifeStateAlive();
                 addedObject.OnAlive();
             }
