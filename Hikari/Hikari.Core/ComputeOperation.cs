@@ -2,7 +2,7 @@
 
 namespace Hikari;
 
-public abstract class ComputeOperation : Operation
+public abstract class ComputeOperation : Operation<ComputeOperation>
 {
     private readonly Own<ComputePipeline> _pipeline;
 

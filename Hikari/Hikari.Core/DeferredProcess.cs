@@ -37,7 +37,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
         _rectMesh = Mesh.Create(Screen, vertices, indices);
-        Dead.Subscribe(static x => ((DeferredProcess)x).OnDead()).AddTo(Subscriptions);
+        Dead.Subscribe(static self => self.OnDead()).AddTo(Subscriptions);
 
         _shader = DeferredProcessShader.Create(this);
         RecreateMaterial(gBufferProvider.CurrentGBuffer);

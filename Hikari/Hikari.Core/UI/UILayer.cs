@@ -70,13 +70,13 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         }).AddTo(Subscriptions);
         FrameInit.Subscribe(self =>
         {
-            ((UILayer)self).UpdateLayout();
+            self.UpdateLayout();
         }).AddTo(Subscriptions);
-        Dead.Subscribe(_ =>
+        Dead.Subscribe(static self =>
         {
-            lock(_shaderCacheLock) {
-                _isShaderCacheAvailable = false;
-                _shaderCache.Clear();
+            lock(self._shaderCacheLock) {
+                self._isShaderCacheAvailable = false;
+                self._shaderCache.Clear();
             }
         }).AddTo(Subscriptions);
     }

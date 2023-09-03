@@ -54,9 +54,8 @@ public sealed class PbrLayer
         {
             RecreateGBuffer(x.Screen, x.Size);
         }).AddTo(Subscriptions);
-        Dead.Subscribe(static x =>
+        Dead.Subscribe(static self =>
         {
-            var self = SafeCast.As<PbrLayer>(x);
             self._gBuffer.Dispose();
             self._bindGroupLayout0.Dispose();
             self._shadowBindGroupLayout0.Dispose();

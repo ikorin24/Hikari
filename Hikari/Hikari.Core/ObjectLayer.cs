@@ -27,15 +27,15 @@ public abstract class ObjectLayer<TSelf, TVertex, TShader, TMaterial, TObject>
         _addedList = new();
         _removedList = new();
 
-        EarlyUpdate.Subscribe(static self => ((TSelf)self).OnEarlyUpdate());
-        Update.Subscribe(static self => ((TSelf)self).OnUpdate());
-        LateUpdate.Subscribe(static self => ((TSelf)self).OnLateUpdate());
-        FrameInit.Subscribe(static self => ((TSelf)self).OnFrameInit());
-        FrameEnd.Subscribe(static self => ((TSelf)self).OnFrameEnd());
+        EarlyUpdate.Subscribe(static self => self.OnEarlyUpdate());
+        Update.Subscribe(static self => self.OnUpdate());
+        LateUpdate.Subscribe(static self => self.OnLateUpdate());
+        FrameInit.Subscribe(static self => self.OnFrameInit());
+        FrameEnd.Subscribe(static self => self.OnFrameEnd());
 
         Terminated.Subscribe(static self =>
         {
-            ((TSelf)self).OnTerminated();
+            self.OnTerminated();
         });
     }
 

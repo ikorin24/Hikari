@@ -12,26 +12,10 @@ public abstract class Operation
     private readonly Screen _screen;
     private LifeState _lifeState;
     private readonly SubscriptionBag _subscriptions = new();
-    private EventSource<Operation> _frameInit = new();
-    private EventSource<Operation> _frameEnd = new();
-    private EventSource<Operation> _earlyUpdate = new();
-    private EventSource<Operation> _update = new();
-    private EventSource<Operation> _lateUpdate = new();
-    private EventSource<Operation> _terminated = new();
-    private EventSource<Operation> _alive = new();
-    private EventSource<Operation> _dead = new();
 
     public Screen Screen => _screen;
     public LifeState LifeState => _lifeState;
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
-    public Event<Operation> FrameInit => _frameInit.Event;
-    public Event<Operation> EarlyUpdate => _earlyUpdate.Event;
-    public Event<Operation> Update => _update.Event;
-    public Event<Operation> LateUpdate => _lateUpdate.Event;
-    public Event<Operation> FrameEnd => _frameEnd.Event;
-    public Event<Operation> Terminated => _terminated.Event;
-    public Event<Operation> Alive => _alive.Event;
-    public Event<Operation> Dead => _dead.Event;
 
     private protected Operation(Screen screen)
     {
@@ -44,14 +28,16 @@ public abstract class Operation
 
     protected abstract void Execute(in OperationContext context);
 
-    internal void InvokeAlive() => _alive.Invoke(this);
-    internal void InvokeFrameInit() => _frameInit.Invoke(this);
-    internal void InvokeFrameEnd() => _frameEnd.Invoke(this);
+    internal abstract void InvokeAlive();
+    internal abstract void InvokeTerminated();
+    internal abstract void InvokeFrameInit();
+    internal abstract void InvokeFrameEnd();
+    internal abstract void InvokeEarlyUpdate();
+    internal abstract void InvokeUpdate();
+    internal abstract void InvokeLateUpdate();
+
     internal void InvokeRenderShadowMap(in RenderShadowMapContext context) => RenderShadowMap(in context);
     internal void InvokeExecute(in OperationContext context) => Execute(in context);
-    internal void InvokeEarlyUpdate() => _earlyUpdate.Invoke(this);
-    internal void InvokeUpdate() => _update.Invoke(this);
-    internal void InvokeLateUpdate() => _lateUpdate.Invoke(this);
 
     public void Terminate()
     {
@@ -73,7 +59,7 @@ public abstract class Operation
             if(self._lifeState == LifeState.Alive || self._lifeState == LifeState.New) {
                 self._lifeState = LifeState.Terminating;
                 self.Screen.Operations.Remove(self);
-                self._terminated.Invoke(self);
+                self.InvokeTerminated();
             }
         }
     }
@@ -98,8 +84,51 @@ public abstract class Operation
 
     protected virtual void Release()
     {
-        _dead.Invoke(this);
         _subscriptions.Dispose();
+    }
+}
+
+public abstract class Operation<TSelf>
+    : Operation
+    where TSelf : Operation<TSelf>
+{
+    private EventSource<TSelf> _frameInit = new();
+    private EventSource<TSelf> _frameEnd = new();
+    private EventSource<TSelf> _earlyUpdate = new();
+    private EventSource<TSelf> _update = new();
+    private EventSource<TSelf> _lateUpdate = new();
+    private EventSource<TSelf> _terminated = new();
+    private EventSource<TSelf> _alive = new();
+    private EventSource<TSelf> _dead = new();
+
+    public Event<TSelf> FrameInit => _frameInit.Event;
+    public Event<TSelf> EarlyUpdate => _earlyUpdate.Event;
+    public Event<TSelf> Update => _update.Event;
+    public Event<TSelf> LateUpdate => _lateUpdate.Event;
+    public Event<TSelf> FrameEnd => _frameEnd.Event;
+    public Event<TSelf> Terminated => _terminated.Event;
+    public Event<TSelf> Alive => _alive.Event;
+    public Event<TSelf> Dead => _dead.Event;
+
+    /// <summary>Strong typed `this`</summary>
+    protected TSelf This => SafeCast.As<TSelf>(this);
+
+    internal sealed override void InvokeAlive() => _alive.Invoke(This);
+    internal sealed override void InvokeTerminated() => _terminated.Invoke(This);
+    internal sealed override void InvokeFrameInit() => _frameInit.Invoke(This);
+    internal sealed override void InvokeFrameEnd() => _frameEnd.Invoke(This);
+    internal sealed override void InvokeEarlyUpdate() => _earlyUpdate.Invoke(This);
+    internal sealed override void InvokeUpdate() => _update.Invoke(This);
+    internal sealed override void InvokeLateUpdate() => _lateUpdate.Invoke(This);
+
+    private protected Operation(Screen screen) : base(screen)
+    {
+    }
+
+    protected override void Release()
+    {
+        base.Release();
+        _dead.Invoke(This);
         _frameInit.Clear();
         _earlyUpdate.Clear();
         _update.Clear();
