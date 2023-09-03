@@ -14,7 +14,6 @@ public sealed class Operations
     private readonly List<OrderedOperation> _list;
     private readonly List<OrderedOperation> _addedList;
     private readonly List<Operation> _removedList;
-    private readonly ThreadId _threadId;
     private readonly object _sync = new object();
 
     public Screen Screen => _screen;
@@ -25,12 +24,11 @@ public sealed class Operations
         _list = new();
         _addedList = new();
         _removedList = new();
-        _threadId = ThreadId.CurrentThread();
     }
 
     internal void OnClosed()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
         foreach(var (op, _) in _list.AsSpan()) {
             op.Terminate();
         }
@@ -39,7 +37,7 @@ public sealed class Operations
 
     internal void FrameInit()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
         foreach(var (op, _) in _list.AsSpan()) {
             op.InvokeFrameInit();
         }
@@ -47,7 +45,7 @@ public sealed class Operations
 
     internal void EarlyUpdate()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
         foreach(var (op, _) in _list.AsSpan()) {
             op.InvokeEarlyUpdate();
         }
@@ -55,7 +53,7 @@ public sealed class Operations
 
     internal void Update()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
         foreach(var (op, _) in _list.AsSpan()) {
             op.InvokeUpdate();
         }
@@ -63,7 +61,7 @@ public sealed class Operations
 
     internal void LateUpdate()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
         foreach(var (op, _) in _list.AsSpan()) {
             op.InvokeLateUpdate();
         }
@@ -71,7 +69,7 @@ public sealed class Operations
 
     internal void FrameEnd()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
         foreach(var (op, _) in _list.AsSpan()) {
             op.InvokeFrameEnd();
         }
@@ -79,7 +77,7 @@ public sealed class Operations
 
     internal void Execute(Rust.Ref<Wgpu.TextureView> surfaceView)
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
         var screen = _screen;
         var lights = screen.Lights;
         {
@@ -128,7 +126,7 @@ public sealed class Operations
 
     internal void ApplyAdd()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
 
         // To avoid deadlock, copy the added list to a local variable and add it to the '_list'.
         // This is because the user can call the 'Add' method during the Alive event of the added object.
@@ -171,7 +169,7 @@ public sealed class Operations
 
     internal void ApplyRemove()
     {
-        Debug.Assert(_threadId.IsCurrentThread);
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
 
         foreach(var (op, _) in _list.AsSpan()) {
             if(op is ILazyApplyList laop) {

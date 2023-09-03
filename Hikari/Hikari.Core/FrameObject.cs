@@ -43,7 +43,6 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     private readonly Own<TMaterial> _material;
     private readonly MaybeOwn<Mesh<TVertex>> _mesh;
     private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
-    private ThreadId _threadId;
 
     private EventSource<TSelf> _update;
     private EventSource<TSelf> _lateUpdate;
@@ -108,7 +107,7 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
             return false;
         }
 
-        if(_threadId.IsCurrentThread) {
+        if(Screen.MainThread.IsCurrentThread) {
             Terminate(Self);
         }
         else {
@@ -122,7 +121,7 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
 
         static void Terminate(TSelf self)
         {
-            Debug.Assert(self._threadId.IsCurrentThread);
+            Debug.Assert(self.Screen.MainThread.IsCurrentThread);
             self._layer.Remove(self);
             self._terminated.Invoke(self);
         }
@@ -142,8 +141,6 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     {
         Debug.Assert(_state == LifeState.New);
         _state = LifeState.Alive;
-        Debug.Assert(_threadId.IsNone);
-        _threadId = ThreadId.CurrentThread();
     }
 
     internal void OnAlive()
