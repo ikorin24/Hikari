@@ -90,7 +90,7 @@ public sealed class GBuffer : IScreenManaged
         this.ThrowIfNotScreenManaged();
         var screen = Screen;
         var depthTex = screen.Depth.GetCurrent();
-        var depthStencil = depthTex.View.NativeRef;
+        var depthStencil = depthTex.ViewNativeRef;
 
         var attachmentsNative = _colorsNative;
         fixed(CH.Opt<CH.RenderPassColorAttachment>* p = attachmentsNative) {

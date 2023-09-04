@@ -172,7 +172,7 @@ public readonly ref struct OperationContext
         return RenderPass.Create(
             _screen,
             _surfaceView,
-            depthTex.View.NativeRef,
+            depthTex.ViewNativeRef,
             colorInit,
             depthStencilInit);
     }

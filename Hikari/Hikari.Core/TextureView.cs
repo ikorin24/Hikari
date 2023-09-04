@@ -4,7 +4,7 @@ using System;
 
 namespace Hikari;
 
-public sealed class TextureView : IScreenManaged, ITextureView
+public sealed class TextureView : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.TextureView> _native;
@@ -17,8 +17,6 @@ public sealed class TextureView : IScreenManaged, ITextureView
     public Texture2D Texture => _texture;
 
     internal Rust.Ref<Wgpu.TextureView> NativeRef => _native.Unwrap();
-
-    public TextureViewHandle Handle => new TextureViewHandle(_native.Unwrap());
 
     private TextureView(Screen screen, Rust.Box<Wgpu.TextureView> native, Texture2D texture)
     {

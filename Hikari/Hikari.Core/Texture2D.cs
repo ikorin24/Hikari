@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed class Texture2D : IScreenManaged
+public sealed class Texture2D : IScreenManaged, ITexture2D
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Texture> _native;
@@ -20,6 +20,9 @@ public sealed class Texture2D : IScreenManaged
 
     internal Rust.Ref<Wgpu.Texture> NativeRef => _native.Unwrap();
     internal Rust.MutRef<Wgpu.Texture> NativeMut => _native.Unwrap();
+
+    Rust.Ref<Wgpu.Texture> ITexture.NativeRef => NativeRef;
+    Rust.Ref<Wgpu.TextureView> ITexture.ViewNativeRef => View.NativeRef;
 
     public uint Width => _desc.Size.X;
     public uint Height => _desc.Size.Y;

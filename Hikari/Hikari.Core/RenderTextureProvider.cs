@@ -9,9 +9,9 @@ public sealed class RenderTextureProvider : IRenderTextureProvider, IDisposable
 {
     private Own<Texture2D> _currentOwn;
     private Texture2D? _current;
-    private EventSource<Texture2D> _changed;
+    private EventSource<ITexture2D> _changed;
 
-    public Event<Texture2D> Changed => _changed.Event;
+    public Event<ITexture2D> Changed => _changed.Event;
 
     public uint MipLevelCount => _current?.MipLevelCount ?? ThrowAlreadyDisposed<uint>();
     public uint SampleCount => _current?.SampleCount ?? ThrowAlreadyDisposed<uint>();
@@ -25,7 +25,7 @@ public sealed class RenderTextureProvider : IRenderTextureProvider, IDisposable
         _current = _currentOwn.AsValue();
     }
 
-    public Texture2D GetCurrent()
+    public ITexture2D GetCurrent()
     {
         var current = _current;
         if(current == null) {

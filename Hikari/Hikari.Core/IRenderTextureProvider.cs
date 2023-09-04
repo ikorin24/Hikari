@@ -4,8 +4,8 @@ namespace Hikari;
 
 public interface IRenderTextureProvider
 {
-    Texture2D GetCurrent();
-    Event<Texture2D> Changed { get; }
+    ITexture2D GetCurrent();
+    Event<ITexture2D> Changed { get; }
     uint MipLevelCount { get; }
     uint SampleCount { get; }
     TextureFormat Format { get; }
