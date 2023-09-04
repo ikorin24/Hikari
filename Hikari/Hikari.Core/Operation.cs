@@ -167,11 +167,27 @@ public readonly ref struct OperationContext
         scoped in ColorBufferInit colorInit,
         scoped in DepthStencilBufferInit depthStencilInit)
     {
-        return RenderPass.SurfaceRenderPass(
+        return RenderPass.Create(
             _screen,
             _surfaceView,
             _screen.DepthTexture.View.NativeRef,
             colorInit,
             depthStencilInit);
+    }
+
+    public OwnRenderPass CreateRenderPass(
+        TextureView color,
+        TextureView depthStencil,
+        scoped in ColorBufferInit colorInit,
+        scoped in DepthStencilBufferInit depthStencilInit)
+    {
+        return RenderPass.Create(_screen, color.NativeRef, depthStencil.NativeRef, colorInit, depthStencilInit);
+    }
+
+    public OwnRenderPass CreateRenderPass(
+        TextureView color,
+        scoped in ColorBufferInit colorInit)
+    {
+        return RenderPass.Create(_screen, color.NativeRef, colorInit);
     }
 }
