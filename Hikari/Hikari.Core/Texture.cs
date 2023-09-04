@@ -71,6 +71,8 @@ public sealed class Texture : IScreenManaged
         }
     }
 
+    public TextureDescriptor GetDescriptor() => _desc;
+
     public static Own<Texture> Create(Screen screen, in TextureDescriptor desc)
     {
         ArgumentNullException.ThrowIfNull(screen);

@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace Hikari;
 
-public readonly struct TextureDescriptor
+public readonly record struct TextureDescriptor
 {
     private readonly Vector3u _size;
     private readonly u32 _mipLevelCount;
