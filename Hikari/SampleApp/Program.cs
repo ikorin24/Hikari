@@ -124,11 +124,11 @@ internal class Program
         });
     }
 
-    private static Own<Texture> LoadTexture(Screen screen, string filepath, bool isSrgb)
+    private static Own<Texture2D> LoadTexture(Screen screen, string filepath, bool isSrgb)
     {
         var format = isSrgb ? TextureFormat.Rgba8UnormSrgb : TextureFormat.Rgba8Unorm;
         using var image = LoadImage(filepath);
-        return Texture.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding | TextureUsages.CopySrc);
+        return Texture2D.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding | TextureUsages.CopySrc);
 
         static Image LoadImage(string filepath)
         {
@@ -137,7 +137,7 @@ internal class Program
         }
     }
 
-    private static Own<Texture> LoadRoughnessAOTexture(Screen screen, string filepath, string aoFilePath)
+    private static Own<Texture2D> LoadRoughnessAOTexture(Screen screen, string filepath, string aoFilePath)
     {
         var format = TextureFormat.Rgba8Unorm;
         using var image = LoadImage(filepath);
@@ -148,7 +148,7 @@ internal class Program
         for(int i = 0; i < pixels.Length; i++) {
             pixels[i] = new ColorByte(0x00, pixels[i].G, aoPixels[i].R, 0x00);
         }
-        return Texture.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding | TextureUsages.CopySrc);
+        return Texture2D.CreateWithAutoMipmap(screen, image, format, TextureUsages.TextureBinding | TextureUsages.CopySrc);
 
         static Image LoadImage(string filepath)
         {

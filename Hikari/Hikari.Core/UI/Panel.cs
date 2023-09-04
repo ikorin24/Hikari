@@ -39,19 +39,18 @@ public sealed class Panel : UIElement, IFromJson<Panel>
 
 file sealed class PanelShader : UIShader
 {
-    private readonly Own<Texture> _emptyTexture;
+    private readonly Own<Texture2D> _emptyTexture;
     private readonly Own<Sampler> _emptyTextureSampler;
 
     private PanelShader(UILayer operation, ReadOnlySpan<byte> shaderSource)
         : base(shaderSource, operation, Desc)
     {
-        _emptyTexture = Texture.Create(operation.Screen, new TextureDescriptor
+        _emptyTexture = Texture2D.Create(operation.Screen, new()
         {
-            Dimension = TextureDimension.D2,
             Format = TextureFormat.Rgba8Unorm,
             MipLevelCount = 1,
             SampleCount = 1,
-            Size = new Vector3u(1, 1, 1),
+            Size = new Vector2u(1, 1),
             Usage = TextureUsages.TextureBinding,
         });
         _emptyTextureSampler = Sampler.Create(operation.Screen, new SamplerDescriptor
@@ -173,13 +172,13 @@ file sealed class PanelShader : UIShader
     {
         private Material(
             UIShader shader,
-            Texture texture,
+            Texture2D texture,
             Sampler sampler)
             : base(shader, texture, sampler)
         {
         }
 
-        internal static Own<Material> Create(UIShader shader, Texture texture, Sampler sampler)
+        internal static Own<Material> Create(UIShader shader, Texture2D texture, Sampler sampler)
         {
             var self = new Material(shader, texture, sampler);
             return CreateOwn(self);

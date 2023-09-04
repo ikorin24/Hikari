@@ -224,12 +224,11 @@ public sealed class Screen
         _backend = info.backend.MapOrThrow();
 
         var size = ClientSize;
-        _depth = new RenderTextureProvider(this, new TextureDescriptor
+        _depth = new RenderTextureProvider(this, new()
         {
-            Size = new Vector3u(size.X, size.Y, 1),
+            Size = size,
             MipLevelCount = 1,
             SampleCount = 1,
-            Dimension = TextureDimension.D2,
             Format = TextureFormat.Depth32Float,
             Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding | TextureUsages.CopySrc,
         });
@@ -310,7 +309,7 @@ public sealed class Screen
         Debug.Assert(height != 0);
         var size = new Vector2u(width, height);
         _native.Unwrap().AsRef().ScreenResizeSurface(size.X, size.Y);
-        _depth?.Resize2D(size);
+        _depth?.Resize(size);
         _camera.ChangeScreenSize(size);
         _info.AsValue().WriteData(0, new ScreenInfo
         {

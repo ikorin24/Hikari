@@ -8,11 +8,11 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed class Texture : IScreenManaged
+public sealed class Texture2D : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Texture> _native;
-    private readonly TextureDescriptor _desc;
+    private readonly Texture2DDescriptor _desc;
     private readonly Own<TextureView> _defaultView;
 
     public Screen Screen => _screen;
@@ -23,7 +23,7 @@ public sealed class Texture : IScreenManaged
 
     public uint Width => _desc.Size.X;
     public uint Height => _desc.Size.Y;
-    public uint Depth => _desc.Size.Z;
+    //public uint Depth => _desc.Size.Z;
     public u32 MipLevelCount => _desc.MipLevelCount;
     public u32 SampleCount => _desc.SampleCount;
     public TextureFormat Format => _desc.Format;
@@ -32,18 +32,9 @@ public sealed class Texture : IScreenManaged
 
     public TextureView View => _defaultView.AsValue();
 
-    public Vector2u Size
-    {
-        get
-        {
-            var size3d = _desc.Size;
-            return new Vector2u(size3d.X, size3d.Y);
-        }
-    }
+    public Vector2u Size => _desc.Size;
 
-    public Vector3u Extent => _desc.Size;
-
-    private Texture(Screen screen, Rust.Box<Wgpu.Texture> native, in TextureDescriptor desc)
+    private Texture2D(Screen screen, Rust.Box<Wgpu.Texture> native, in Texture2DDescriptor desc)
     {
         _screen = screen;
         _native = native;
@@ -51,7 +42,7 @@ public sealed class Texture : IScreenManaged
         _defaultView = TextureView.Create(this);
     }
 
-    ~Texture() => Release(false);
+    ~Texture2D() => Release(false);
 
     public void Validate() => IScreenManaged.DefaultValidate(this);
 
@@ -71,55 +62,40 @@ public sealed class Texture : IScreenManaged
         }
     }
 
-    public TextureDescriptor GetDescriptor() => _desc;
+    public Texture2DDescriptor GetDescriptor() => _desc;
 
-    public static Own<Texture> Create(Screen screen, in TextureDescriptor desc)
+    public static Own<Texture2D> Create(Screen screen, in Texture2DDescriptor desc)
     {
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
         var textureNative = screen.AsRefChecked().CreateTexture(descNative);
-        var texture = new Texture(screen, textureNative, desc);
-        return Own.New(texture, static x => SafeCast.As<Texture>(x).Release());
+        var texture = new Texture2D(screen, textureNative, desc);
+        return Own.New(texture, static x => SafeCast.As<Texture2D>(x).Release());
     }
 
-    public unsafe static Own<Texture> CreateFromRawData(Screen screen, in TextureDescriptor desc, ReadOnlySpan<u8> data)
+    public unsafe static Own<Texture2D> CreateFromRawData(Screen screen, in Texture2DDescriptor desc, ReadOnlySpan<u8> data)
     {
-        // data is a raw data of texture in the current format.
-        // data = [ mipmap0, mipmap1, mipmap2, ... ]
-        //
-        // If texture is texture array,
-        // data =
-        // [
-        //     [ mipmap0, mipmap1, mipmap2, ... ],  // layer 0
-        //     [ mipmap0, mipmap1, mipmap2, ... ],  // layer 1
-        //     ...
-        // ]
+        return TextureHelper.CreateFromRawData(screen, desc, data, &Callback);
 
-        ArgumentNullException.ThrowIfNull(screen);
-        var descNative = desc.ToNative();
-        Rust.Box<Wgpu.Texture> textureNative;
-        fixed(u8* p = data) {
-            textureNative = screen
-                .AsRefChecked()
-                .CreateTextureWithData(
-                    descNative,
-                    new CH.Slice<byte>(p, data.Length)
-                );
-        }
-        var texture = new Texture(screen, textureNative, desc);
-        return Own.New(texture, static x => SafeCast.As<Texture>(x).Release());
-    }
-
-    public unsafe static Own<Texture> CreateWithAutoMipmap(Screen screen, ReadOnlyImageRef image, TextureFormat format, TextureUsages usage, uint? mipLevelCount = null)
-    {
-        var desc = new TextureDescriptor
+        static Own<Texture2D> Callback(
+            Screen screen,
+            Rust.Box<Wgpu.Texture> textureNative,
+            in Texture2DDescriptor desc)
         {
-            Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
+            var texture = new Texture2D(screen, textureNative, desc);
+            return Own.New(texture, static x => SafeCast.As<Texture2D>(x).Release());
+        }
+    }
+
+    public unsafe static Own<Texture2D> CreateWithAutoMipmap(Screen screen, ReadOnlyImageRef image, TextureFormat format, TextureUsages usage, uint? mipLevelCount = null)
+    {
+        var desc = new Texture2DDescriptor
+        {
+            Size = new Vector2u((uint)image.Width, (uint)image.Height),
             MipLevelCount = mipLevelCount.GetValueOrDefault(
                 uint.Log2(uint.Min((uint)image.Width, (uint)image.Height))
             ),
             SampleCount = 1,
-            Dimension = TextureDimension.D2,
             Format = format,
             Usage = usage,
         };
@@ -138,10 +114,10 @@ public sealed class Texture : IScreenManaged
             throw new ArgumentException("2D texture is only supported.");
         }
 
-        Texture texture;
+        Texture2D texture;
         switch(desc.MipLevelCount) {
             case 0: {
-                throw new ArgumentException($"{nameof(TextureDescriptor.MipLevelCount)} should be 1 or larger");
+                throw new ArgumentException($"{nameof(Texture2DDescriptor.MipLevelCount)} should be 1 or larger");
             }
             case 1: {
                 var descNative = desc.ToNative();
@@ -151,12 +127,12 @@ public sealed class Texture : IScreenManaged
                     var data = new CH.Slice<u8>(p, (usize)pixelBytes.Length);
                     textureNative = screen.AsRefChecked().CreateTextureWithData(descNative, data);
                 }
-                texture = new Texture(screen, textureNative, desc);
+                texture = new Texture2D(screen, textureNative, desc);
                 break;
             }
             default: {
                 Span<(Vector3u MipSize, u32 ByteLength)> mipData = stackalloc (Vector3u, u32)[(int)desc.MipLevelCount];
-                CalcMipDataSize(desc, mipData, out var totalByteSize);
+                TextureHelper.CalcMipDataSize(desc, mipData, out var totalByteSize);
                 u8* p = (u8*)NativeMemory.Alloc(totalByteSize);
                 try {
                     var ((width0, height0, _), mip0Bytelen) = mipData[0];
@@ -177,7 +153,7 @@ public sealed class Texture : IScreenManaged
                     var data = new CH.Slice<u8>(p, totalByteSize);
                     var descNative = desc.ToNative();
                     var textureNative = screen.AsRefChecked().CreateTextureWithData(descNative, data);
-                    texture = new Texture(screen, textureNative, desc);
+                    texture = new Texture2D(screen, textureNative, desc);
                 }
                 finally {
                     NativeMemory.Free(p);
@@ -185,30 +161,14 @@ public sealed class Texture : IScreenManaged
                 break;
             }
         }
-        return Own.New(texture, static x => SafeCast.As<Texture>(x).Release());
-    }
-
-    private static void CalcMipDataSize(in TextureDescriptor desc, Span<(Vector3u MipSize, u32 ByteLength)> mipData, out usize totalByteSize)
-    {
-        totalByteSize = 0;
-        var formatInfo = desc.Format.TextureFormatInfo();
-        var arrayLayerCount = desc.ArrayLayerCount();
-        for(uint layer = 0; layer < arrayLayerCount; layer++) {
-            for(uint mip = 0; mip < desc.MipLevelCount; mip++) {
-                var mipSize = desc.MipLevelSize(mip).GetOrThrow();
-                var info = formatInfo.MipInfo(mipSize);
-                u32 dataSize = info.BytesPerRow * info.RowCount;
-                mipData[(int)mip] = (MipSize: mipSize, ByteLength: dataSize);
-                totalByteSize += dataSize;
-            }
-        }
+        return Own.New(texture, static x => SafeCast.As<Texture2D>(x).Release());
     }
 
     public unsafe void Write<TPixel>(u32 mipLevel, ReadOnlySpan<TPixel> pixelData) where TPixel : unmanaged
     {
         var screenRef = _screen.AsRefChecked();
         var texture = NativeRef;
-        var size = new Wgpu.Extent3d((Width >> (int)mipLevel), (Height >> (int)mipLevel), Depth);
+        var size = new Wgpu.Extent3d((Width >> (int)mipLevel), (Height >> (int)mipLevel), 1);
         u32 bytesPerPixel = (u32)sizeof(TPixel);
 
         if((ulong)size.width * (ulong)size.height != (ulong)pixelData.Length) {
@@ -237,13 +197,13 @@ public sealed class Texture : IScreenManaged
         }
     }
 
-    public Vector3u MipLevelSize(u32 mip)
+    public Vector2u MipLevelSize(u32 mip)
     {
         return _desc.MipLevelSize(mip).GetOrThrow();
     }
 
     public void ReadCallback(
-        ReadOnlySpanAction<byte, Texture> onRead,
+        ReadOnlySpanAction<byte, Texture2D> onRead,
         Action<Exception>? onException = null)
     {
         CheckUsageFlag(TextureUsages.CopySrc, Usage);
@@ -251,7 +211,7 @@ public sealed class Texture : IScreenManaged
         var mip = 0u;
 
         var formatInfo = Format.TextureFormatInfo();
-        var mipSize = MipLevelSize(mip);
+        var mipSize = _desc.MipLevelSizeRaw(mip).GetOrThrow();
         var mipInfo = formatInfo.MipInfo(mipSize);
         var screen = Screen;
         var source = new CH.ImageCopyTexture
@@ -267,7 +227,7 @@ public sealed class Texture : IScreenManaged
         {
             width = Width,
             height = Height,
-            depth_or_array_layers = Depth,
+            depth_or_array_layers = 1,
         };
         var layout = new Wgpu.ImageDataLayout
         {

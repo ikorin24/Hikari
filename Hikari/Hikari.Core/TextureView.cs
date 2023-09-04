@@ -8,19 +8,19 @@ public sealed class TextureView : IScreenManaged, ITextureView
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.TextureView> _native;
-    private readonly Texture _texture;
+    private readonly Texture2D _texture;
 
     public Screen Screen => _screen;
 
     public bool IsManaged => _native.IsNone == false;
 
-    public Texture Texture => _texture;
+    public Texture2D Texture => _texture;
 
     internal Rust.Ref<Wgpu.TextureView> NativeRef => _native.Unwrap();
 
     public TextureViewHandle Handle => new TextureViewHandle(_native.Unwrap());
 
-    private TextureView(Screen screen, Rust.Box<Wgpu.TextureView> native, Texture texture)
+    private TextureView(Screen screen, Rust.Box<Wgpu.TextureView> native, Texture2D texture)
     {
         _screen = screen;
         _native = native;
@@ -50,7 +50,7 @@ public sealed class TextureView : IScreenManaged, ITextureView
         }
     }
 
-    public static Own<TextureView> Create(Texture texture)
+    public static Own<TextureView> Create(Texture2D texture)
     {
         ArgumentNullException.ThrowIfNull(texture);
         texture.ThrowIfNotScreenManaged();

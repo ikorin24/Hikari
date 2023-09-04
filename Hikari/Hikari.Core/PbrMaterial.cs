@@ -6,17 +6,17 @@ namespace Hikari;
 public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
 {
     private readonly Own<Sampler> _sampler;
-    private readonly MaybeOwn<Texture> _albedo;
-    private readonly MaybeOwn<Texture> _metallicRoughness;
-    private readonly MaybeOwn<Texture> _normal;
+    private readonly MaybeOwn<Texture2D> _albedo;
+    private readonly MaybeOwn<Texture2D> _metallicRoughness;
+    private readonly MaybeOwn<Texture2D> _normal;
     private readonly Own<Buffer> _modelUniform;
     private readonly Own<BindGroup> _bindGroup0;
     private readonly BindGroup _bindGroup1;
     private readonly Own<BindGroup> _shadowBindGroup0;
 
-    public Texture Albedo => _albedo.AsValue();
-    public Texture MetallicRoughness => _metallicRoughness.AsValue();
-    public Texture Normal => _normal.AsValue();
+    public Texture2D Albedo => _albedo.AsValue();
+    public Texture2D MetallicRoughness => _metallicRoughness.AsValue();
+    public Texture2D Normal => _normal.AsValue();
 
     internal BufferSlice ModelUniform => _modelUniform.AsValue().Slice();
 
@@ -29,9 +29,9 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
         PbrShader shader,
         Own<Buffer> modelUniform,
         Own<Sampler> sampler,
-        MaybeOwn<Texture> albedo,
-        MaybeOwn<Texture> metallicRoughness,
-        MaybeOwn<Texture> normal,
+        MaybeOwn<Texture2D> albedo,
+        MaybeOwn<Texture2D> metallicRoughness,
+        MaybeOwn<Texture2D> normal,
         Own<BindGroup> bindGroup0,
         Own<BindGroup> shadowBindGroup0)
         : base(shader)
@@ -71,9 +71,9 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
 
     public static Own<PbrMaterial> Create(
         PbrShader shader,
-        MaybeOwn<Texture> albedo,
-        MaybeOwn<Texture> metallicRoughness,
-        MaybeOwn<Texture> normal)
+        MaybeOwn<Texture2D> albedo,
+        MaybeOwn<Texture2D> metallicRoughness,
+        MaybeOwn<Texture2D> normal)
     {
         ArgumentNullException.ThrowIfNull(shader);
         albedo.ThrowArgumentExceptionIfNone();

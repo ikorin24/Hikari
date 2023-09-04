@@ -32,9 +32,9 @@ public sealed class PbrModel
     public PbrModel(
         PbrShader shader,
         MaybeOwn<Mesh<V>> mesh,
-        MaybeOwn<Texture> albedo,
-        MaybeOwn<Texture> metallicRoughness,
-        MaybeOwn<Texture> normal)
+        MaybeOwn<Texture2D> albedo,
+        MaybeOwn<Texture2D> metallicRoughness,
+        MaybeOwn<Texture2D> normal)
         : base(
             mesh, PbrMaterial.Create(shader, albedo, metallicRoughness, normal))
     {

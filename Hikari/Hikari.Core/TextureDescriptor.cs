@@ -5,7 +5,197 @@ using System.Diagnostics;
 
 namespace Hikari;
 
-public readonly record struct TextureDescriptor
+public readonly record struct Texture1DDescriptor : ITextureDescriptor<u32>
+{
+    private readonly u32 _size;
+    private readonly u32 _mipLevelCount;
+
+    public required u32 Size
+    {
+        get => _size;
+        init
+        {
+            if(value == 0) { ThrowSize("Size"); }
+            _size = value;
+        }
+    }
+
+    Vector3u ITextureDescriptor.SizeRaw => new Vector3u
+    {
+        X = Size,
+        Y = 1,
+        Z = 1,
+    };
+
+    public required u32 MipLevelCount
+    {
+        get => _mipLevelCount;
+        init
+        {
+            if(value == 0) { ThrowMipLevelCount(); }
+            _mipLevelCount = value;
+        }
+    }
+    public required u32 SampleCount { get; init; }
+    public TextureDimension Dimension => TextureDimension.D1;
+    public required TextureFormat Format { get; init; }
+    public required TextureUsages Usage { get; init; }
+
+    public u32? MipLevelSize(u32 level)
+    {
+        if(level >= MipLevelCount) {
+            return null;
+        }
+        return u32.Max(1, Size >> (int)level);
+    }
+
+    public Vector3u? MipLevelSizeRaw(u32 level)
+    {
+        if(level >= MipLevelCount) {
+            return null;
+        }
+        return new Vector3u
+        {
+            X = u32.Max(1, Size >> (int)level),
+            Y = 1,
+            Z = 1,
+        };
+    }
+
+    internal CH.TextureDescriptor ToNative()
+    {
+        if(Size == 0) { ThrowSize("Size"); }
+        if(MipLevelCount == 0) { ThrowMipLevelCount(); }
+        return new CH.TextureDescriptor
+        {
+            size = new Wgpu.Extent3d
+            {
+                width = Size,
+                height = 1,
+                depth_or_array_layers = 1,
+            },
+            mip_level_count = MipLevelCount,
+            sample_count = SampleCount,
+            dimension = Dimension.MapOrThrow(),
+            format = Format.MapOrThrow(),
+            usage = Usage.FlagsMap(),
+        };
+    }
+
+    CH.TextureDescriptor ITextureDescriptor.ToNative() => ToNative();
+
+    [DebuggerHidden]
+    private static void ThrowMipLevelCount() => throw new ArgumentOutOfRangeException(nameof(MipLevelCount), $"The value should not be 0");
+
+    [DebuggerHidden]
+    private static void ThrowSize(string name) => throw new ArgumentOutOfRangeException(name, "The value should not be 0");
+}
+
+public readonly record struct Texture2DDescriptor : ITextureDescriptor<Vector2u>
+{
+    private readonly Vector2u _size;
+    private readonly uint? _arrayCount;
+    private readonly u32 _mipLevelCount;
+
+    public required Vector2u Size
+    {
+        get => _size;
+        init
+        {
+            if(value.X == 0) { ThrowSize("Size.X"); }
+            if(value.Y == 0) { ThrowSize("Size.Y"); }
+            _size = value;
+        }
+    }
+
+    public uint ArrayCount
+    {
+        get => _arrayCount ?? 1;
+        init
+        {
+            if(value == 0) { ThrowSize(nameof(ArrayCount)); }
+            _arrayCount = value;
+        }
+    }
+
+    Vector3u ITextureDescriptor.SizeRaw => new Vector3u
+    {
+        X = Size.X,
+        Y = Size.Y,
+        Z = ArrayCount,
+    };
+
+    public required u32 MipLevelCount
+    {
+        get => _mipLevelCount;
+        init
+        {
+            if(value == 0) { ThrowMipLevelCount(); }
+            _mipLevelCount = value;
+        }
+    }
+    public required u32 SampleCount { get; init; }
+    public TextureDimension Dimension => TextureDimension.D2;
+    public required TextureFormat Format { get; init; }
+    public required TextureUsages Usage { get; init; }
+
+    public Vector2u? MipLevelSize(u32 level)
+    {
+        if(level >= MipLevelCount) {
+            return null;
+        }
+        return new Vector2u
+        {
+            X = u32.Max(1, Size.X >> (int)level),
+            Y = u32.Max(1, Size.Y >> (int)level),
+        };
+    }
+
+    public Vector3u? MipLevelSizeRaw(u32 level)
+    {
+        if(level >= MipLevelCount) {
+            return null;
+        }
+        return new Vector3u
+        {
+            X = u32.Max(1, Size.X >> (int)level),
+            Y = u32.Max(1, Size.Y >> (int)level),
+            Z = 1,
+        };
+    }
+
+    internal CH.TextureDescriptor ToNative()
+    {
+        if(Size.X == 0) { ThrowSize("Size.X"); }
+        if(Size.Y == 0) { ThrowSize("Size.Y"); }
+        if(ArrayCount == 0) { ThrowSize(nameof(ArrayCount)); }
+        if(MipLevelCount == 0) { ThrowMipLevelCount(); }
+        return new CH.TextureDescriptor
+        {
+            size = new Wgpu.Extent3d
+            {
+                width = Size.X,
+                height = Size.Y,
+                depth_or_array_layers = ArrayCount,
+            },
+            mip_level_count = MipLevelCount,
+            sample_count = SampleCount,
+            dimension = Dimension.MapOrThrow(),
+            format = Format.MapOrThrow(),
+            usage = Usage.FlagsMap(),
+        };
+    }
+
+    CH.TextureDescriptor ITextureDescriptor.ToNative() => ToNative();
+
+    [DebuggerHidden]
+    private static void ThrowMipLevelCount() => throw new ArgumentOutOfRangeException(nameof(MipLevelCount), $"The value should not be 0");
+
+    [DebuggerHidden]
+    private static void ThrowSize(string name) => throw new ArgumentOutOfRangeException(name, "The value should not be 0");
+}
+
+public readonly record struct Texture3DDescriptor : ITextureDescriptor<Vector3u>
 {
     private readonly Vector3u _size;
     private readonly u32 _mipLevelCount;
@@ -21,6 +211,9 @@ public readonly record struct TextureDescriptor
             _size = value;
         }
     }
+
+    Vector3u ITextureDescriptor.SizeRaw => Size;
+
     public required u32 MipLevelCount
     {
         get => _mipLevelCount;
@@ -31,7 +224,7 @@ public readonly record struct TextureDescriptor
         }
     }
     public required u32 SampleCount { get; init; }
-    public required TextureDimension Dimension { get; init; }
+    public TextureDimension Dimension => TextureDimension.D3;
     public required TextureFormat Format { get; init; }
     public required TextureUsages Usage { get; init; }
 
@@ -43,27 +236,14 @@ public readonly record struct TextureDescriptor
         return new Vector3u
         {
             X = u32.Max(1, Size.X >> (int)level),
-            Y = Dimension switch
-            {
-                TextureDimension.D1 => 1,
-                _ => u32.Max(1, Size.Y >> (int)level),
-            },
-            Z = Dimension switch
-            {
-                TextureDimension.D3 => u32.Max(1, Size.Z >> (int)level),
-                _ => Size.Z,
-            },
+            Y = u32.Max(1, Size.Y >> (int)level),
+            Z = u32.Max(1, Size.Z >> (int)level),
         };
     }
 
-    public u32 ArrayLayerCount()
+    public Vector3u? MipLevelSizeRaw(u32 level)
     {
-        return Dimension switch
-        {
-            TextureDimension.D1 or TextureDimension.D3 => 1,
-            TextureDimension.D2 => Size.Z,
-            _ => 0,
-        };
+        return MipLevelSize(level);
     }
 
     internal CH.TextureDescriptor ToNative()
@@ -88,12 +268,15 @@ public readonly record struct TextureDescriptor
         };
     }
 
+    CH.TextureDescriptor ITextureDescriptor.ToNative() => ToNative();
+
     [DebuggerHidden]
     private static void ThrowMipLevelCount() => throw new ArgumentOutOfRangeException(nameof(MipLevelCount), $"The value should not be 0");
 
     [DebuggerHidden]
     private static void ThrowSize(string name) => throw new ArgumentOutOfRangeException(name, "The value should not be 0");
 }
+
 [Flags]
 public enum TextureUsages : u32
 {

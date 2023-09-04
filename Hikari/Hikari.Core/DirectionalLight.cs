@@ -12,7 +12,7 @@ public sealed class DirectionalLight : IScreenManaged
     private readonly Screen _screen;
     private readonly Own<Buffer> _buffer;       // DirectionalLightData
     private DirectionalLightData _data;
-    private readonly Own<Texture> _shadowMap;
+    private readonly Own<Texture2D> _shadowMap;
     private readonly Own<Buffer> _lightMatricesBuffer;   // Matrix4[CascadeCount]
     private readonly Own<Buffer> _cascadeFarsBuffer;     // float[CascadeCount]
     private readonly SubscriptionBag _subscriptionBag = new();
@@ -24,7 +24,7 @@ public sealed class DirectionalLight : IScreenManaged
 
     public void Validate() => IScreenManaged.DefaultValidate(this);
 
-    public Texture ShadowMap => _shadowMap.AsValue();
+    public Texture2D ShadowMap => _shadowMap.AsValue();
 
     public BufferSlice LightMatricesBuffer => _lightMatricesBuffer.AsValue().Slice();
     public BufferSlice CascadeFarsBuffer => _cascadeFarsBuffer.AsValue().Slice();
@@ -84,14 +84,13 @@ public sealed class DirectionalLight : IScreenManaged
         UpdateLightMatrix();
     }
 
-    private static Own<Texture> CreateShadowMap(Screen screen)
+    private static Own<Texture2D> CreateShadowMap(Screen screen)
     {
         const u32 Width = 1024 * CascadeCountConst;
         const u32 Height = 1024;
-        return Texture.Create(screen, new()
+        return Texture2D.Create(screen, new()
         {
-            Dimension = TextureDimension.D2,
-            Size = new Vector3u(Width, Height, 1u),
+            Size = new Vector2u(Width, Height),
             Format = TextureFormat.Depth32Float,
             MipLevelCount = 1,
             SampleCount = 1,

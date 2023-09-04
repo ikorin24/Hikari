@@ -92,19 +92,18 @@ internal record struct ButtonInfo
 
 file sealed class ButtonShader : UIShader
 {
-    private readonly Own<Texture> _emptyTexture;
+    private readonly Own<Texture2D> _emptyTexture;
     private readonly Own<Sampler> _emptyTextureSampler;
 
     private ButtonShader(UILayer operation, ReadOnlySpan<byte> shaderSource)
         : base(shaderSource, operation, Desc)
     {
-        _emptyTexture = Texture.Create(operation.Screen, new TextureDescriptor
+        _emptyTexture = Texture2D.Create(operation.Screen, new()
         {
-            Dimension = TextureDimension.D2,
             Format = TextureFormat.Rgba8UnormSrgb,
             MipLevelCount = 1,
             SampleCount = 1,
-            Size = new Vector3u(1, 1, 1),
+            Size = new Vector2u(1, 1),
             Usage = TextureUsages.TextureBinding,
         });
         _emptyTextureSampler = Sampler.Create(operation.Screen, new SamplerDescriptor
@@ -228,13 +227,13 @@ file sealed class ButtonShader : UIShader
 
         private Material(
             UIShader shader,
-            MaybeOwn<Texture> texture,
+            MaybeOwn<Texture2D> texture,
             MaybeOwn<Sampler> sampler)
             : base(shader, texture, sampler)
         {
         }
 
-        internal static Own<Material> Create(UIShader shader, MaybeOwn<Texture> texture, MaybeOwn<Sampler> sampler)
+        internal static Own<Material> Create(UIShader shader, MaybeOwn<Texture2D> texture, MaybeOwn<Sampler> sampler)
         {
             var self = new Material(shader, texture, sampler);
             return CreateOwn(self);
@@ -265,13 +264,12 @@ file sealed class ButtonShader : UIShader
                 TextDrawer.Draw(text, options, this, static (image, x) =>
                 {
                     var (self, metrics) = x;
-                    var texture = Texture.CreateFromRawData(self.Shader.Screen, new TextureDescriptor
+                    var texture = Texture2D.CreateFromRawData(self.Shader.Screen, new()
                     {
-                        Dimension = TextureDimension.D2,
                         Format = TextureFormat.Rgba8UnormSrgb,
                         MipLevelCount = 1,
                         SampleCount = 1,
-                        Size = new Vector3u((uint)image.Width, (uint)image.Height, 1),
+                        Size = new Vector2u((uint)image.Width, (uint)image.Height),
                         Usage = TextureUsages.TextureBinding,
                     }, image.GetPixels().AsBytes());
                     self.UpdateTexture(texture);

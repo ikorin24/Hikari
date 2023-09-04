@@ -9,7 +9,7 @@ public sealed class GBuffer : IScreenManaged
 {
     private readonly Screen _screen;
     private readonly Vector2u _size;
-    private Own<Texture>[] _colors;
+    private Own<Texture2D>[] _colors;
     private readonly CH.Opt<CH.RenderPassColorAttachment>[] _colorsNative;
     private readonly int _colorAttachmentCount;
 
@@ -20,7 +20,7 @@ public sealed class GBuffer : IScreenManaged
 
     private GBuffer(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
-        var colors = new Own<Texture>[formats.Length];
+        var colors = new Own<Texture2D>[formats.Length];
         var colorsNative = new CH.Opt<CH.RenderPassColorAttachment>[formats.Length];
         Prepare(screen, size, formats, colors, colorsNative);
         _size = size;
@@ -32,7 +32,7 @@ public sealed class GBuffer : IScreenManaged
 
     private void Release()
     {
-        var colors = Interlocked.Exchange(ref _colors, Array.Empty<Own<Texture>>());
+        var colors = Interlocked.Exchange(ref _colors, Array.Empty<Own<Texture2D>>());
         if(colors.Length == 0) {
             return;
         }
@@ -56,21 +56,20 @@ public sealed class GBuffer : IScreenManaged
         return Own.New(gbuffer, static x => SafeCast.As<GBuffer>(x).Release());
     }
 
-    public Texture ColorAttachment(int index)
+    public Texture2D ColorAttachment(int index)
     {
         this.ThrowIfNotScreenManaged();
         return _colors[index].AsValue();
     }
 
-    private static void Prepare(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats, Span<Own<Texture>> colors, Span<CH.Opt<CH.RenderPassColorAttachment>> colorsNative)
+    private static void Prepare(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats, Span<Own<Texture2D>> colors, Span<CH.Opt<CH.RenderPassColorAttachment>> colorsNative)
     {
         for(int i = 0; i < formats.Length; i++) {
-            colors[i] = Texture.Create(screen, new()
+            colors[i] = Texture2D.Create(screen, new()
             {
-                Size = new Vector3u(size.X, size.Y, 1),
+                Size = size,
                 MipLevelCount = 1,
                 SampleCount = 1,
-                Dimension = TextureDimension.D2,
                 Format = formats[i],
                 Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding | TextureUsages.CopySrc,
             });

@@ -13,7 +13,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
     private UIShaderSource.BufferData? _bufferData;
     private Own<Buffer> _backgroundBuffer;
     private Brush? _background;
-    private MaybeOwn<Texture> _texture;
+    private MaybeOwn<Texture2D> _texture;
     private readonly MaybeOwn<Sampler> _sampler;
 
     public BindGroup BindGroup0 => _bindGroup0.AsValue();
@@ -25,7 +25,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
 
     protected UIMaterial(
         UIShader shader,
-        MaybeOwn<Texture> texture,
+        MaybeOwn<Texture2D> texture,
         MaybeOwn<Sampler> sampler) : base(shader)
     {
         texture.ThrowArgumentExceptionIfNone(nameof(texture));
@@ -102,7 +102,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         UpdateBackground(result.Background);
     }
 
-    protected void UpdateTexture(MaybeOwn<Texture> texture)
+    protected void UpdateTexture(MaybeOwn<Texture2D> texture)
     {
         var textureValue = texture.AsValue();
         _texture.Dispose();
