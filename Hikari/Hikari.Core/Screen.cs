@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using Hikari.NativeBind;
-using Hikari.UI;
 using System;
 using System.Buffers;
 using System.Diagnostics;
@@ -25,7 +24,7 @@ public sealed class Screen
     private bool _initialized;
     private string _title = "";
     private readonly Mouse _mouse;
-    private Own<Texture> _depthTexture;
+    private RenderTextureProvider? _depth;
     private readonly Own<Buffer> _info;
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
@@ -72,12 +71,12 @@ public sealed class Screen
     public Timing Update => _update;
     public Timing LateUpdate => _lateUpdate;
 
-    public Texture DepthTexture
+    public IRenderTextureProvider Depth
     {
         get
         {
             ThrowIfNotInit();
-            return _depthTexture.AsValue();
+            return _depth;
         }
     }
 
@@ -219,11 +218,13 @@ public sealed class Screen
         return monitors;
     }
 
-    private void UpdateDepthTexture(Vector2u size)
+    internal void OnInitialize(in CH.HostScreenInfo info)
     {
-        _depthTexture.Dispose();
-        _depthTexture = Own<Texture>.None;
-        var depth = Texture.Create(this, new TextureDescriptor
+        _surfaceFormat = info.surface_format.Unwrap().MapOrThrow();
+        _backend = info.backend.MapOrThrow();
+
+        var size = ClientSize;
+        _depth = new RenderTextureProvider(this, new TextureDescriptor
         {
             Size = new Vector3u(size.X, size.Y, 1),
             MipLevelCount = 1,
@@ -232,16 +233,6 @@ public sealed class Screen
             Format = TextureFormat.Depth32Float,
             Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding | TextureUsages.CopySrc,
         });
-        _depthTexture = depth;
-    }
-
-    internal void OnInitialize(in CH.HostScreenInfo info)
-    {
-        _surfaceFormat = info.surface_format.Unwrap().MapOrThrow();
-        _backend = info.backend.MapOrThrow();
-
-        var size = ClientSize;
-        UpdateDepthTexture(size);
         _initialized = true;
     }
 
@@ -319,7 +310,7 @@ public sealed class Screen
         Debug.Assert(height != 0);
         var size = new Vector2u(width, height);
         _native.Unwrap().AsRef().ScreenResizeSurface(size.X, size.Y);
-        UpdateDepthTexture(size);
+        _depth?.Resize2D(size);
         _camera.ChangeScreenSize(size);
         _info.AsValue().WriteData(0, new ScreenInfo
         {
@@ -359,8 +350,7 @@ public sealed class Screen
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CH.HostScreen>.None);
         _closed.Clear();
         _camera.DisposeInternal();
-        _depthTexture.Dispose();
-        _depthTexture = Own<Texture>.None;
+        _depth?.Dispose();
         _lights.DisposeInternal();
         _resized.Clear();
         _subscriptions.Dispose();
@@ -375,12 +365,14 @@ public sealed class Screen
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MemberNotNull(nameof(_depth))]
     private void ThrowIfNotInit()
     {
         if(_initialized == false) {
             Throw();
             static void Throw() => throw new InvalidOperationException("not initialized");
         }
+        Debug.Assert(_depth != null);
     }
 
     private struct ScreenInfo

@@ -174,7 +174,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
             },
             DepthStencil = new DepthStencilState
             {
-                Format = screen.DepthTexture.Format,
+                Format = screen.Depth.Format,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Less,
                 Stencil = StencilState.Default,
@@ -261,7 +261,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
             },
             DepthStencil = new DepthStencilState
             {
-                Format = screen.DepthTexture.Format,
+                Format = screen.Depth.Format,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Less,
                 Stencil = StencilState.Default,

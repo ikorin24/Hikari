@@ -168,7 +168,7 @@ file sealed class ButtonShader : UIShader
             },
             DepthStencil = new DepthStencilState
             {
-                Format = screen.DepthTexture.Format,
+                Format = screen.Depth.Format,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.LessEqual,
                 Stencil = StencilState.Default,

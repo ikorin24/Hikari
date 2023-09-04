@@ -355,7 +355,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             },
             DepthStencil = new DepthStencilState
             {
-                Format = screen.DepthTexture.Format,
+                Format = screen.Depth.Format,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Less,
                 Stencil = StencilState.Default,

@@ -167,10 +167,12 @@ public readonly ref struct OperationContext
         scoped in ColorBufferInit colorInit,
         scoped in DepthStencilBufferInit depthStencilInit)
     {
+        var depthTex = _screen.Depth.GetCurrent();
+
         return RenderPass.Create(
             _screen,
             _surfaceView,
-            _screen.DepthTexture.View.NativeRef,
+            depthTex.View.NativeRef,
             colorInit,
             depthStencilInit);
     }
