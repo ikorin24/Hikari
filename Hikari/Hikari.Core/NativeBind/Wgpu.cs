@@ -233,11 +233,11 @@ internal static class Wgpu
     [Flags]
     internal enum TextureUsages : u32
     {
-        COPY_SRC = 1 << 0,
-        COPY_DST = 1 << 1,
-        TEXTURE_BINDING = 1 << 2,
-        STORAGE_BINDING = 1 << 3,
-        RENDER_ATTACHMENT = 1 << 4,
+        [EnumMapTo(Hikari.TextureUsages.CopySrc)] COPY_SRC = 1 << 0,
+        [EnumMapTo(Hikari.TextureUsages.CopyDst)] COPY_DST = 1 << 1,
+        [EnumMapTo(Hikari.TextureUsages.TextureBinding)] TEXTURE_BINDING = 1 << 2,
+        [EnumMapTo(Hikari.TextureUsages.StorageBinding)] STORAGE_BINDING = 1 << 3,
+        [EnumMapTo(Hikari.TextureUsages.RenderAttachment)] RENDER_ATTACHMENT = 1 << 4,
     }
 
     [Flags]

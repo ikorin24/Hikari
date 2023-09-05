@@ -50,8 +50,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial Rust.Ref<Wgpu.Texture> hikari_surface_texture_to_texture(
-        Rust.Ref<Wgpu.SurfaceTexture> surface_texture,
-        out Wgpu.Extent3d size);
+        Rust.Ref<Wgpu.SurfaceTexture> surface_texture);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void hikari_present_surface_texture(
@@ -221,6 +220,11 @@ static unsafe partial class EngineCore
     private static partial ApiBoxResult<Wgpu.Texture> hikari_create_texture(
         Rust.Ref<CH.HostScreen> screen,
         CH.TextureDescriptor* desc);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiResult hikari_get_texture_descriptor(
+        Rust.Ref<Wgpu.Texture> texture,
+        out CH.TextureDescriptor desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Texture> hikari_create_texture_with_data(

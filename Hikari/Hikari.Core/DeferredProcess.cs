@@ -63,7 +63,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
         return RenderPass.Create(
             screen,
             screen.Surface,
-            screen.Depth.GetCurrent(),
+            screen.Depth,
             ColorBufferInit.Clear(),
             new DepthStencilBufferInit
             {

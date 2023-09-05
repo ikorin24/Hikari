@@ -9,17 +9,84 @@ internal sealed class SurfaceTexture : ITexture2D, ITextureView, IScreenManaged
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.SurfaceTexture> _native;
     private Rust.OptionBox<Wgpu.TextureView> _viewNative;
-    private Vector2u _size;
+    private bool _hasDesc;
+    private CH.TextureDescriptor _desc;
+
+    private const string Message = "cannot use the SurfaceTexture now";
 
     public Screen Screen => _screen;
-    public Vector2u Size => _size;
+    public Vector2u Size
+    {
+        get
+        {
+            if(_hasDesc == false) {
+                ThrowHelper.ThrowInvalidOperation(Message);
+            }
+            return new Vector2u(_desc.size.width, _desc.size.height);
+        }
+    }
+
+    public uint MipLevelCount
+    {
+        get
+        {
+            if(_hasDesc == false) {
+                ThrowHelper.ThrowInvalidOperation(Message);
+            }
+            return _desc.mip_level_count;
+        }
+    }
+
+    public uint SampleCount
+    {
+        get
+        {
+            if(_hasDesc == false) {
+                ThrowHelper.ThrowInvalidOperation(Message);
+            }
+            return _desc.sample_count;
+        }
+    }
+
+    public TextureFormat Format
+    {
+        get
+        {
+            if(_hasDesc == false) {
+                ThrowHelper.ThrowInvalidOperation(Message);
+            }
+            return _desc.format.MapOrThrow();
+        }
+    }
+
+    public TextureUsages Usage
+    {
+        get
+        {
+            if(_hasDesc == false) {
+                ThrowHelper.ThrowInvalidOperation(Message);
+            }
+            return _desc.usage.FlagsMap();
+        }
+    }
+
+    public TextureDimension Dimension
+    {
+        get
+        {
+            if(_hasDesc == false) {
+                ThrowHelper.ThrowInvalidOperation(Message);
+            }
+            return _desc.dimension.MapOrThrow();
+        }
+    }
 
     internal Rust.Ref<Wgpu.Texture> NativeRef
     {
         get
         {
             _screen.MainThread.ThrowIfNotMatched();
-            return _native.Unwrap().AsRef().SurfaceTextureToTexture(out _);
+            return _native.Unwrap().AsRef().SurfaceTextureToTexture();
         }
     }
 
@@ -47,7 +114,7 @@ internal sealed class SurfaceTexture : ITexture2D, ITextureView, IScreenManaged
     public void Validate()
     {
         if(_native.IsNone) {
-            ThrowHelper.ThrowInvalidOperation("");
+            ThrowHelper.ThrowInvalidOperation(Message);
         }
         IScreenManaged.DefaultValidate(this);
     }
@@ -59,12 +126,12 @@ internal sealed class SurfaceTexture : ITexture2D, ITextureView, IScreenManaged
         Debug.Assert(_viewNative.IsNone);
 
         Rust.Box<Wgpu.TextureView> view;
-        Wgpu.Extent3d size;
         try {
-            view = native
-                .AsRef()
-                .SurfaceTextureToTexture(out size)
-                .CreateTextureView(CH.TextureViewDescriptor.Default);
+            Rust.Ref<Wgpu.Texture> texture = native.AsRef().SurfaceTextureToTexture();
+            texture.GetTextureDescriptor(out _desc);
+            Debug.Assert(_desc.dimension == CH.TextureDimension.D2);
+            _hasDesc = true;
+            view = texture.CreateTextureView(CH.TextureViewDescriptor.Default);
         }
         catch {
             native.DestroySurfaceTexture();
@@ -72,7 +139,6 @@ internal sealed class SurfaceTexture : ITexture2D, ITextureView, IScreenManaged
         }
         _native = native;
         _viewNative = view;
-        _size = new Vector2u(size.width, size.height);
     }
 
     internal Rust.Box<Wgpu.SurfaceTexture> Remove()
@@ -85,27 +151,7 @@ internal sealed class SurfaceTexture : ITexture2D, ITextureView, IScreenManaged
         _native = Rust.OptionBox<Wgpu.SurfaceTexture>.None;
         _viewNative.Unwrap().DestroyTextureView();
         _viewNative = Rust.OptionBox<Wgpu.TextureView>.None;
-        _size = Vector2u.Zero;
+        _hasDesc = false;
         return native;
-    }
-}
-
-internal sealed class SurfaceTextureProvider : IRenderTextureProvider
-{
-    public Event<ITexture2D> Changed => throw new System.NotImplementedException();
-
-    public uint MipLevelCount => throw new System.NotImplementedException();
-
-    public uint SampleCount => throw new System.NotImplementedException();
-
-    public TextureFormat Format => throw new System.NotImplementedException();
-
-    public TextureUsages Usage => throw new System.NotImplementedException();
-
-    public TextureDimension Dimension => throw new System.NotImplementedException();
-
-    public ITexture2D GetCurrent()
-    {
-        throw new System.NotImplementedException();
     }
 }

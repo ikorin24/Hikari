@@ -106,11 +106,9 @@ extern "cdecl" fn hikari_destroy_surface_texture(surface_texture: Box<wgpu::Surf
 }
 
 #[no_mangle]
-extern "cdecl" fn hikari_surface_texture_to_texture<'a>(
-    surface_texture: &'a wgpu::SurfaceTexture,
-    size: &mut wgpu::Extent3d,
-) -> &'a wgpu::Texture {
-    *size = surface_texture.texture.size();
+extern "cdecl" fn hikari_surface_texture_to_texture(
+    surface_texture: &wgpu::SurfaceTexture,
+) -> &wgpu::Texture {
     &surface_texture.texture
 }
 
@@ -699,6 +697,30 @@ extern "cdecl" fn hikari_create_texture(
 ) -> ApiBoxResult<wgpu::Texture> {
     let value = Box::new(screen.device.create_texture(&desc.to_wgpu_type()));
     ApiBoxResult::ok(value)
+}
+
+#[no_mangle]
+extern "cdecl" fn hikari_get_texture_descriptor(
+    texture: &wgpu::Texture,
+    desc: &mut TextureDescriptor,
+) -> ApiResult {
+    match texture.format().try_into() {
+        Ok(format) => {
+            *desc = TextureDescriptor {
+                size: texture.size(),
+                mip_level_count: texture.mip_level_count(),
+                sample_count: texture.sample_count(),
+                dimension: texture.dimension().into(),
+                format,
+                usage: texture.usage(),
+            };
+            ApiResult::ok()
+        }
+        Err(err) => {
+            set_tls_last_error(err);
+            ApiResult::err()
+        }
+    }
 }
 
 /// # Thread Safety

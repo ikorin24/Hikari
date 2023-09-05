@@ -1460,6 +1460,21 @@ pub(crate) struct TextureDescriptor {
     pub usage: wgpu::TextureUsages,
 }
 
+impl TryFrom<wgpu::TextureDescriptor<'_>> for TextureDescriptor {
+    type Error = &'static str;
+
+    fn try_from(value: wgpu::TextureDescriptor<'_>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            size: value.size,
+            mip_level_count: value.mip_level_count,
+            sample_count: value.sample_count,
+            dimension: value.dimension.into(),
+            format: value.format.try_into()?,
+            usage: value.usage,
+        })
+    }
+}
+
 impl TextureDescriptor {
     pub const fn to_wgpu_type(&self) -> wgpu::TextureDescriptor<'static> {
         assert!(self.size.width > 0);
@@ -1486,6 +1501,16 @@ pub(crate) enum TextureDimension {
     D1 = 0,
     D2 = 1,
     D3 = 2,
+}
+
+impl From<wgpu::TextureDimension> for TextureDimension {
+    fn from(value: wgpu::TextureDimension) -> Self {
+        match value {
+            wgpu::TextureDimension::D1 => Self::D1,
+            wgpu::TextureDimension::D2 => Self::D2,
+            wgpu::TextureDimension::D3 => Self::D3,
+        }
+    }
 }
 
 impl TextureDimension {

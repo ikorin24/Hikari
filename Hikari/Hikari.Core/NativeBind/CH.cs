@@ -924,9 +924,9 @@ internal static class CH
 
     internal enum TextureDimension : u32
     {
-        D1 = 0,
-        D2 = 1,
-        D3 = 2,
+        [EnumMapTo(Hikari.TextureDimension.D1)] D1 = 0,
+        [EnumMapTo(Hikari.TextureDimension.D2)] D2 = 1,
+        [EnumMapTo(Hikari.TextureDimension.D3)] D3 = 2,
     }
 
     internal struct VertexBufferLayout

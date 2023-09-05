@@ -1,17 +1,15 @@
 ﻿#nullable enable
+using Hikari.NativeBind;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Hikari;
 
-public sealed class RenderTextureProvider : IRenderTextureProvider, IDisposable
+public sealed class RenderTextureProvider : ITexture2D, IDisposable
 {
     private Own<Texture2D> _currentOwn;
     private Texture2D? _current;
-    private EventSource<ITexture2D> _changed;
-
-    public Event<ITexture2D> Changed => _changed.Event;
 
     public uint MipLevelCount => _current?.MipLevelCount ?? ThrowAlreadyDisposed<uint>();
     public uint SampleCount => _current?.SampleCount ?? ThrowAlreadyDisposed<uint>();
@@ -19,31 +17,43 @@ public sealed class RenderTextureProvider : IRenderTextureProvider, IDisposable
     public TextureUsages Usage => _current?.Usage ?? ThrowAlreadyDisposed<TextureUsages>();
     public TextureDimension Dimension => _current?.Dimension ?? ThrowAlreadyDisposed<TextureDimension>();
 
+    public Vector2u Size => _current?.Size ?? ThrowAlreadyDisposed<Vector2u>();
+
+    internal Rust.Ref<Wgpu.Texture> NativeRef
+    {
+        get
+        {
+            var current = _current;
+            if(current == null) {
+                ThrowHelper.ThrowInvalidOperation("already disposed");
+            }
+            return current.NativeRef;
+        }
+    }
+
+    internal Rust.Ref<Wgpu.TextureView> ViewNativeRef
+    {
+        get
+        {
+            var current = _current;
+            if(current == null) {
+                ThrowHelper.ThrowInvalidOperation("already disposed");
+            }
+            return current.View.NativeRef;
+        }
+    }
+
+    Rust.Ref<Wgpu.Texture> ITexture.NativeRef => NativeRef;
+
+    Rust.Ref<Wgpu.TextureView> ITextureView.ViewNativeRef => ViewNativeRef;
+
     public RenderTextureProvider(Screen screen, in Texture2DDescriptor desc)
     {
         _currentOwn = Texture2D.Create(screen, desc);
         _current = _currentOwn.AsValue();
     }
 
-    public ITexture2D GetCurrent()
-    {
-        var current = _current;
-        if(current == null) {
-            ThrowHelper.ThrowInvalidOperation("already disposed");
-        }
-        return current;
-    }
-
     public bool Resize(Vector2u size)
-    {
-        var texture = _currentOwn.AsValue();
-        if(texture.Dimension != TextureDimension.D2) {
-            ThrowHelper.ThrowInvalidOperation("invalid texture dimension");
-        }
-        return ResizePrivate(size);
-    }
-
-    private bool ResizePrivate(Vector2u size)
     {
         var texture = _currentOwn.AsValue();
         if(texture.Size == size) {
@@ -57,7 +67,6 @@ public sealed class RenderTextureProvider : IRenderTextureProvider, IDisposable
         _currentOwn.Dispose();
         _currentOwn = newTextureOwn;
         _current = newTexture;
-        _changed.Invoke(newTexture);
         return true;
     }
 

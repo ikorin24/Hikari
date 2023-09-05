@@ -89,9 +89,6 @@ public sealed class GBuffer : IScreenManaged
     {
         this.ThrowIfNotScreenManaged();
         var screen = Screen;
-        var depthTex = screen.Depth.GetCurrent();
-        var depthStencil = depthTex.ViewNativeRef;
-
         var attachmentsNative = _colorsNative;
         fixed(CH.Opt<CH.RenderPassColorAttachment>* p = attachmentsNative) {
             var desc = new CH.RenderPassDescriptor
@@ -99,7 +96,7 @@ public sealed class GBuffer : IScreenManaged
                 color_attachments = new(p, attachmentsNative.Length),
                 depth_stencil_attachment = new(new()
                 {
-                    view = depthStencil,
+                    view = screen.Depth.ViewNativeRef,
                     depth = new(new()
                     {
                         mode = CH.RenderPassBufferInitMode.Clear,

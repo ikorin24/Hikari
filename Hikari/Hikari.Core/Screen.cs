@@ -72,7 +72,7 @@ public sealed class Screen
     public Timing Update => _update;
     public Timing LateUpdate => _lateUpdate;
 
-    public IRenderTextureProvider Depth
+    public ITexture2D Depth
     {
         get
         {

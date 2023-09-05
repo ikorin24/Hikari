@@ -152,7 +152,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         return RenderPass.Create(
             screen,
             screen.Surface,
-            screen.Depth.GetCurrent(),
+            screen.Depth,
             ColorBufferInit.Load(),
             new DepthStencilBufferInit
             {

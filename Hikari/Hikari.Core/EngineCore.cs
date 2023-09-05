@@ -201,10 +201,9 @@ internal unsafe static partial class EngineCore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Rust.Ref<Wgpu.Texture> SurfaceTextureToTexture(
-        this Rust.Ref<Wgpu.SurfaceTexture> surface_texture,
-        out Wgpu.Extent3d size)
+        this Rust.Ref<Wgpu.SurfaceTexture> surface_texture)
     {
-        return hikari_surface_texture_to_texture(surface_texture, out size);
+        return hikari_surface_texture_to_texture(surface_texture);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -514,6 +513,14 @@ internal unsafe static partial class EngineCore
         fixed(CH.TextureDescriptor* descPtr = &desc) {
             return hikari_create_texture(screen, descPtr).Validate();
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void GetTextureDescriptor(
+        this Rust.Ref<Wgpu.Texture> texture,
+        out CH.TextureDescriptor desc)
+    {
+        hikari_get_texture_descriptor(texture, out desc).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
