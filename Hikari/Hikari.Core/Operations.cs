@@ -88,9 +88,15 @@ public sealed class Operations
         }
 
         {
-            var context = new OperationContext(screen);
-            foreach(var (op, _) in _list.AsSpan()) {
-                op.InvokeExecute(in context);
+            var list = _list.AsSpan();
+            if(list.IsEmpty) {
+                RenderPass.ClearSurface(screen);
+            }
+            else {
+                var context = new OperationContext(screen);
+                foreach(var (op, _) in list) {
+                    op.InvokeExecute(in context);
+                }
             }
         }
     }

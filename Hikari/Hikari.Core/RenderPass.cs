@@ -31,6 +31,14 @@ public readonly ref struct RenderPass
         self._screen.AsRefChecked().FinishCommandEncoder(self._encoder);
     };
 
+    internal static void ClearSurface(Screen screen)
+    {
+        using var pass = Create(screen, screen.Surface, new()
+        {
+            Mode = RenderPassInitMode.Clear
+        });
+    }
+
     internal static OwnRenderPass Create(Screen screen, scoped in CH.RenderPassDescriptor desc)
     {
         var encoder = screen.AsRefChecked().CreateCommandEncoder();
