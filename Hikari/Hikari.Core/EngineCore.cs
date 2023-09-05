@@ -201,9 +201,10 @@ internal unsafe static partial class EngineCore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Rust.Ref<Wgpu.Texture> SurfaceTextureToTexture(
-        this Rust.Ref<Wgpu.SurfaceTexture> surface_texture)
+        this Rust.Ref<Wgpu.SurfaceTexture> surface_texture,
+        out Wgpu.Extent3d size)
     {
-        return hikari_surface_texture_to_texture(surface_texture);
+        return hikari_surface_texture_to_texture(surface_texture, out size);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -81,6 +81,8 @@ public sealed class Screen
         }
     }
 
+    public ITexture2D Surface => _surface;
+
     public TextureFormat SurfaceFormat
     {
         get
@@ -159,7 +161,7 @@ public sealed class Screen
         _update = new Timing(this);
         _lateUpdate = new Timing(this);
         _mouse = new Mouse(this);
-        _surface = new SurfaceTexture();
+        _surface = new SurfaceTexture(this);
         _keyboard = new Keyboard(this);
         _info = Buffer.CreateInitData(this, new ScreenInfo
         {
@@ -250,8 +252,7 @@ public sealed class Screen
         }
 
         try {
-            var size = ClientSize;  // TODO:
-            _surface.Set(surfaceTexture, size);
+            _surface.Set(surfaceTexture);
             Render(_surface.ViewNativeRef);
             Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
             return _state switch

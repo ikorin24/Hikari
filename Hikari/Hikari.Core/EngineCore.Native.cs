@@ -50,7 +50,8 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial Rust.Ref<Wgpu.Texture> hikari_surface_texture_to_texture(
-        Rust.Ref<Wgpu.SurfaceTexture> surface_texture);
+        Rust.Ref<Wgpu.SurfaceTexture> surface_texture,
+        out Wgpu.Extent3d size);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void hikari_present_surface_texture(

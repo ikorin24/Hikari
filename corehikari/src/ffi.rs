@@ -106,9 +106,11 @@ extern "cdecl" fn hikari_destroy_surface_texture(surface_texture: Box<wgpu::Surf
 }
 
 #[no_mangle]
-extern "cdecl" fn hikari_surface_texture_to_texture(
-    surface_texture: &wgpu::SurfaceTexture,
-) -> &wgpu::Texture {
+extern "cdecl" fn hikari_surface_texture_to_texture<'a>(
+    surface_texture: &'a wgpu::SurfaceTexture,
+    size: &mut wgpu::Extent3d,
+) -> &'a wgpu::Texture {
+    *size = surface_texture.texture.size();
     &surface_texture.texture
 }
 
