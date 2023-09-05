@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace Hikari;
 
-internal sealed class SurfaceTexture : ITexture2D, IScreenManaged
+internal sealed class SurfaceTexture : ITexture2D, ITextureView, IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.SurfaceTexture> _native;
@@ -34,7 +34,7 @@ internal sealed class SurfaceTexture : ITexture2D, IScreenManaged
 
     Rust.Ref<Wgpu.Texture> ITexture.NativeRef => NativeRef;
 
-    Rust.Ref<Wgpu.TextureView> ITexture.ViewNativeRef => ViewNativeRef;
+    Rust.Ref<Wgpu.TextureView> ITextureView.ViewNativeRef => ViewNativeRef;
 
     public bool IsManaged => _native.IsNone == false;
 
