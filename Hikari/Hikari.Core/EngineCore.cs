@@ -185,24 +185,25 @@ internal unsafe static partial class EngineCore
         hikari_finish_command_encoder(screen, encoder);
     }
 
-    public static SurfaceData GetSurfaceTexture(this Rust.Ref<CH.HostScreen> screen)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Rust.OptionBox<Wgpu.SurfaceTexture> GetSurfaceTexture(
+        this Rust.Ref<CH.HostScreen> screen)
     {
-        var value = hikari_get_surface_texture(screen).Validate();
-        if(value.IsSome(out var surfaceTexture)) {
-            var texture = hikari_surface_texture_to_texture(surfaceTexture);
-            try {
-                var desc = CH.TextureViewDescriptor.Default;
-                var view = hikari_create_texture_view(texture, &desc).Validate();
-                return new SurfaceData(surfaceTexture, view);
-            }
-            catch {
-                hikari_destroy_surface_texture(surfaceTexture);
-                throw;
-            }
-        }
-        else {
-            return SurfaceData.None;
-        }
+        return hikari_get_surface_texture(screen).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void DestroySurfaceTexture(
+        this Rust.Box<Wgpu.SurfaceTexture> surface_texture)
+    {
+        hikari_destroy_surface_texture(surface_texture);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Rust.Ref<Wgpu.Texture> SurfaceTextureToTexture(
+        this Rust.Ref<Wgpu.SurfaceTexture> surface_texture)
+    {
+        return hikari_surface_texture_to_texture(surface_texture);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -25,6 +25,7 @@ public sealed class Screen
     private string _title = "";
     private readonly Mouse _mouse;
     private RenderTextureProvider? _depth;
+    private readonly SurfaceTexture _surface;
     private readonly Own<Buffer> _info;
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
@@ -158,6 +159,7 @@ public sealed class Screen
         _update = new Timing(this);
         _lateUpdate = new Timing(this);
         _mouse = new Mouse(this);
+        _surface = new SurfaceTexture();
         _keyboard = new Keyboard(this);
         _info = Buffer.CreateInitData(this, new ScreenInfo
         {
@@ -243,26 +245,25 @@ public sealed class Screen
     internal bool OnRedrawRequested()
     {
         Debug.Assert(_mainThread.IsCurrentThread);
-        var surfaceData = AsRefChecked().GetSurfaceTexture();
-        if(surfaceData.IsSome(out var surface, out var surfaceView)) {
-            try {
-                Render(surfaceView);
-                var state = _state;
-                Debug.Assert(state is RunningState.Running or RunningState.CloseRequested);
-                return state switch
-                {
-                    RunningState.Running => true,
-                    RunningState.CloseRequested => false,
-                    _ => throw new UnreachableException($"current state: {state}"),
-                };
-            }
-            finally {
-                surface.PresentSurfaceTexture();
-                _frameNum++;
-            }
-        }
-        else {
+        if(AsRefChecked().GetSurfaceTexture().IsSome(out var surfaceTexture) == false) {
             return false;
+        }
+
+        try {
+            var size = ClientSize;  // TODO:
+            _surface.Set(surfaceTexture, size);
+            Render(_surface.ViewNativeRef);
+            Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
+            return _state switch
+            {
+                RunningState.Running => true,
+                RunningState.CloseRequested => false,
+                _ => throw new UnreachableException($"current state: {_state}"),
+            };
+        }
+        finally {
+            _surface.Remove().PresentSurfaceTexture();
+            _frameNum++;
         }
     }
 

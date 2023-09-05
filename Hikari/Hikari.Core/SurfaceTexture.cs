@@ -5,15 +5,15 @@ namespace Hikari;
 
 internal sealed class SurfaceTexture : ITexture2D
 {
-    private Rust.OptionBox<Wgpu.Texture> _native;
+    private Rust.OptionBox<Wgpu.SurfaceTexture> _native;
     private Rust.OptionBox<Wgpu.TextureView> _viewNative;
     private Vector2u _size;
 
-    public bool HasInnerNative => _native.IsSome(out _);
+    internal bool HasInnerNative => _native.IsSome(out _);
 
     public Vector2u Size => _size;
 
-    internal Rust.Ref<Wgpu.Texture> NativeRef => _native.Unwrap();
+    internal Rust.Ref<Wgpu.Texture> NativeRef => _native.Unwrap().AsRef().SurfaceTextureToTexture();
     internal Rust.Ref<Wgpu.TextureView> ViewNativeRef => _viewNative.Unwrap();
 
     Rust.Ref<Wgpu.Texture> ITexture.NativeRef => NativeRef;
@@ -22,21 +22,35 @@ internal sealed class SurfaceTexture : ITexture2D
 
     internal SurfaceTexture()
     {
-        _native = Rust.OptionBox<Wgpu.Texture>.None;
+        _native = Rust.OptionBox<Wgpu.SurfaceTexture>.None;
     }
 
-    public void SetTexture(Rust.Box<Wgpu.Texture> native, Rust.Box<Wgpu.TextureView> viewNative, Vector2u size)
+    internal void Set(Rust.Box<Wgpu.SurfaceTexture> native, Vector2u size)
     {
+        Rust.Box<Wgpu.TextureView> view;
+        try {
+            view = native
+                .AsRef()
+                .SurfaceTextureToTexture()
+                .CreateTextureView(CH.TextureViewDescriptor.Default);
+        }
+        catch {
+            native.DestroySurfaceTexture();
+            throw;
+        }
         _native = native;
-        _viewNative = viewNative;
+        _viewNative = view;
         _size = size;
     }
 
-    public void ClearTexture()
+    internal Rust.Box<Wgpu.SurfaceTexture> Remove()
     {
-        _native = Rust.OptionBox<Wgpu.Texture>.None;
+        var native = _native.Unwrap();
+        _native = Rust.OptionBox<Wgpu.SurfaceTexture>.None;
+        _viewNative.Unwrap().DestroyTextureView();
         _viewNative = Rust.OptionBox<Wgpu.TextureView>.None;
         _size = Vector2u.Zero;
+        return native;
     }
 }
 
