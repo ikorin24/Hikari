@@ -148,48 +148,15 @@ public abstract class Operation<TSelf>
 public readonly ref struct OperationContext
 {
     private readonly Screen _screen;
-    private readonly Rust.Ref<Wgpu.TextureView> _surfaceView;
 
     public Screen Screen => _screen;
-    internal readonly Rust.Ref<Wgpu.TextureView> SurfaceView => _surfaceView;
 
     [Obsolete("Don't use default constructor.", true)]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public OperationContext() => throw new NotSupportedException("Don't use default constructor.");
 
-    internal OperationContext(Screen screen, Rust.Ref<Wgpu.TextureView> surfaceView)
+    internal OperationContext(Screen screen)
     {
         _screen = screen;
-        _surfaceView = surfaceView;
-    }
-
-    public OwnRenderPass CreateSurfaceRenderPass(
-        scoped in ColorBufferInit colorInit,
-        scoped in DepthStencilBufferInit depthStencilInit)
-    {
-        var depthTex = _screen.Depth.GetCurrent();
-
-        return RenderPass.Create(
-            _screen,
-            _surfaceView,
-            depthTex.ViewNativeRef,
-            colorInit,
-            depthStencilInit);
-    }
-
-    public OwnRenderPass CreateRenderPass(
-        TextureView color,
-        TextureView depthStencil,
-        scoped in ColorBufferInit colorInit,
-        scoped in DepthStencilBufferInit depthStencilInit)
-    {
-        return RenderPass.Create(_screen, color.NativeRef, depthStencil.NativeRef, colorInit, depthStencilInit);
-    }
-
-    public OwnRenderPass CreateRenderPass(
-        TextureView color,
-        scoped in ColorBufferInit colorInit)
-    {
-        return RenderPass.Create(_screen, color.NativeRef, colorInit);
     }
 }

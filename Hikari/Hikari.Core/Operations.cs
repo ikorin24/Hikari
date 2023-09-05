@@ -75,7 +75,7 @@ public sealed class Operations
         }
     }
 
-    internal void Execute(Rust.Ref<Wgpu.TextureView> surfaceView)
+    internal void Execute()
     {
         Debug.Assert(_screen.MainThread.IsCurrentThread);
         var screen = _screen;
@@ -88,7 +88,7 @@ public sealed class Operations
         }
 
         {
-            var context = new OperationContext(screen, surfaceView);
+            var context = new OperationContext(screen);
             foreach(var (op, _) in _list.AsSpan()) {
                 op.InvokeExecute(in context);
             }

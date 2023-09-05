@@ -253,7 +253,7 @@ public sealed class Screen
 
         try {
             _surface.Set(surfaceTexture);
-            Render(_surface.ViewNativeRef);
+            Render();
             Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
             return _state switch
             {
@@ -268,7 +268,7 @@ public sealed class Screen
         }
     }
 
-    private void Render(Rust.Ref<Wgpu.TextureView> surfaceView)
+    private void Render()
     {
         Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
         var operations = _operations;
@@ -293,7 +293,7 @@ public sealed class Screen
 
         // render
         _camera.UpdateUniformBuffer();
-        operations.Execute(surfaceView);
+        operations.Execute();
 
         // frame end
         operations.FrameEnd();

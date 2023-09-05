@@ -38,12 +38,12 @@ public readonly ref struct RenderPass
         return new OwnRenderPass(new(screen, native, encoder), _release);
     }
 
-    internal static unsafe OwnRenderPass Create(
+    public static unsafe OwnRenderPass Create(
         Screen screen,
-        Rust.Ref<Wgpu.TextureView> surfaceTextureView,
+        ITextureView surfaceTextureView,
         scoped in ColorBufferInit colorInit)
     {
-        var color = new CH.Opt<CH.RenderPassColorAttachment>(colorInit.ToNative(surfaceTextureView));
+        var color = new CH.Opt<CH.RenderPassColorAttachment>(colorInit.ToNative(surfaceTextureView.ViewNativeRef));
         var desc = new CH.RenderPassDescriptor
         {
             color_attachments = new() { data = &color, len = 1 },
@@ -52,37 +52,21 @@ public readonly ref struct RenderPass
         return Create(screen, desc);
     }
 
-    internal static unsafe OwnRenderPass Create(
+    public static unsafe OwnRenderPass Create(
         Screen screen,
-        Rust.Ref<Wgpu.TextureView> surfaceTextureView,
-        Rust.Ref<Wgpu.TextureView> depthStencilTextureView,
+        ITextureView surfaceTextureView,
+        ITextureView depthStencilTextureView,
         scoped in ColorBufferInit colorInit,
         scoped in DepthStencilBufferInit depthStencilInit)
     {
-        var color = new CH.Opt<CH.RenderPassColorAttachment>(colorInit.ToNative(surfaceTextureView));
+        var color = new CH.Opt<CH.RenderPassColorAttachment>(colorInit.ToNative(surfaceTextureView.ViewNativeRef));
         var desc = new CH.RenderPassDescriptor
         {
             color_attachments = new() { data = &color, len = 1 },
-            depth_stencil_attachment = new(depthStencilInit.ToNative(depthStencilTextureView)),
+            depth_stencil_attachment = new(depthStencilInit.ToNative(depthStencilTextureView.ViewNativeRef)),
         };
         return Create(screen, desc);
     }
-
-    //public static unsafe OwnRenderPass Create(
-    //    Screen screen,
-    //    Rust.Ref<Wgpu.TextureView> surfaceTextureView,
-    //    Rust.Ref<Wgpu.TextureView> depthStencilTextureView,
-    //    scoped in ColorBufferInit colorInit,
-    //    scoped in DepthStencilBufferInit depthStencilInit)
-    //{
-    //    var color = new CH.Opt<CH.RenderPassColorAttachment>(colorInit.ToNative(surfaceTextureView));
-    //    var desc = new CH.RenderPassDescriptor
-    //    {
-    //        color_attachments = new() { data = &color, len = 1 },
-    //        depth_stencil_attachment = new(depthStencilInit.ToNative(depthStencilTextureView)),
-    //    };
-    //    return Create(screen, desc);
-    //}
 
     public void SetPipeline(RenderPipeline renderPipeline)
     {

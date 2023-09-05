@@ -148,7 +148,11 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
-        return context.CreateSurfaceRenderPass(
+        var screen = context.Screen;
+        return RenderPass.Create(
+            screen,
+            screen.Surface,
+            screen.Depth.GetCurrent(),
             ColorBufferInit.Load(),
             new DepthStencilBufferInit
             {

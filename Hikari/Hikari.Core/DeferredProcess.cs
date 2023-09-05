@@ -59,7 +59,11 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
-        return context.CreateSurfaceRenderPass(
+        var screen = context.Screen;
+        return RenderPass.Create(
+            screen,
+            screen.Surface,
+            screen.Depth.GetCurrent(),
             ColorBufferInit.Clear(),
             new DepthStencilBufferInit
             {
