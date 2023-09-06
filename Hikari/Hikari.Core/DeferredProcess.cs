@@ -9,9 +9,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
 {
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly Own<BindGroupLayout> _bindGroupLayout3;
-    private readonly IGBufferProvider _gBufferProvider;
-    private readonly ITexture2D _renderTarget;
-    private readonly ITexture2D _depth;
+    private readonly DeferredProcessDescriptor _desc;
     private Own<DeferredProcessMaterial> _material;
     private readonly Own<Mesh<V>> _rectMesh;
     private readonly Own<DeferredProcessShader> _shader;
@@ -19,16 +17,12 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
     public BindGroupLayout BindGroupLayout3 => _bindGroupLayout3.AsValue();
 
-    internal DeferredProcess(Screen screen, IGBufferProvider gBufferProvider, ITexture2D renderTarget, ITexture2D depth)
+    internal DeferredProcess(Screen screen, in DeferredProcessDescriptor desc)
         : base(screen,
             BuildPipelineLayout(screen, out var bindGroupLayout0, out var bindGroupLayout3))
     {
-        ArgumentNullException.ThrowIfNull(gBufferProvider);
-        ArgumentNullException.ThrowIfNull(renderTarget);
-        ArgumentNullException.ThrowIfNull(depth);
-        _renderTarget = renderTarget;
-        _depth = depth;
-        _gBufferProvider = gBufferProvider;
+        desc.ThrowIfInvalid();
+        _desc = desc;
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout3 = bindGroupLayout3;
 
@@ -46,8 +40,8 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
         Dead.Subscribe(static self => self.OnDead()).AddTo(Subscriptions);
 
         _shader = DeferredProcessShader.Create(this);
-        RecreateMaterial(gBufferProvider.GetCurrentGBuffer());
-        gBufferProvider.GBufferChanged.Subscribe(RecreateMaterial).AddTo(Subscriptions);
+        RecreateMaterial(_desc.InputGBuffer.GetCurrentGBuffer());
+        _desc.InputGBuffer.GBufferChanged.Subscribe(RecreateMaterial).AddTo(Subscriptions);
     }
 
     private void OnDead()
@@ -65,22 +59,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
-        return RenderPass.Create(
-            context.Screen,
-            new ColorAttachment
-            {
-                Target = _renderTarget,
-                LoadOp = ColorBufferInit.Clear(),
-            },
-            new DepthStencilAttachment
-            {
-                Target = _depth,
-                LoadOp = new DepthStencilBufferInit
-                {
-                    Depth = DepthBufferInit.Clear(1f),
-                    Stencil = null,
-                },
-            });
+        return _desc.OnRenderPass(this);
     }
 
     private static readonly BindGroupLayoutDescriptor _bindGroupLayoutDesc0 = new BindGroupLayoutDescriptor
@@ -198,5 +177,17 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
         pass.SetBindGroup(2, material.BindGroup2);
         pass.SetBindGroup(3, material.BindGroup3);
         pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
+    }
+}
+
+public readonly record struct DeferredProcessDescriptor
+{
+    public required IGBufferProvider InputGBuffer { get; init; }
+    public required RenderPassFunc<DeferredProcess> OnRenderPass { get; init; }
+
+    internal void ThrowIfInvalid()
+    {
+        ArgumentNullException.ThrowIfNull(InputGBuffer);
+        ArgumentNullException.ThrowIfNull(OnRenderPass);
     }
 }

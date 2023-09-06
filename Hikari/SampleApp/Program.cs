@@ -42,8 +42,49 @@ internal class Program
         screen.Resized.Subscribe(x => gBufferProvider.Resize(x.Size));
         screen.Closed.Subscribe(_ => gBufferProviderOwn.Dispose());
         var layer = ops.AddPbrLayer(0, gBufferProvider);
-        var deferredProcess = ops.AddDeferredProcess(1, gBufferProvider, screen.Surface, screen.Depth);
-        var ui = ops.AddUI(2, screen.Surface, screen.Depth);
+        var deferredProcess = ops.AddDeferredProcess(
+            1,
+            new DeferredProcessDescriptor
+            {
+                InputGBuffer = gBufferProvider,
+                OnRenderPass = static self => RenderPass.Create(
+                    self.Screen,
+                    new ColorAttachment
+                    {
+                        Target = self.Screen.Surface,
+                        LoadOp = ColorBufferInit.Clear(),
+                    },
+                    new DepthStencilAttachment
+                    {
+                        Target = self.Screen.Depth,
+                        LoadOp = new DepthStencilBufferInit
+                        {
+                            Depth = DepthBufferInit.Clear(1f),
+                            Stencil = null,
+                        },
+                    }),
+            });
+        var ui = ops.AddUI(
+            2,
+            new UIDescriptor
+            {
+                OnRenderPass = static screen => RenderPass.Create(
+                    screen,
+                    new ColorAttachment
+                    {
+                        Target = screen.Surface,
+                        LoadOp = ColorBufferInit.Load(),
+                    },
+                    new DepthStencilAttachment
+                    {
+                        Target = screen.Depth,
+                        LoadOp = new DepthStencilBufferInit
+                        {
+                            Depth = DepthBufferInit.Clear(1f),
+                            Stencil = null,
+                        },
+                    }),
+            });
 
         ui.RenderRoot($$"""
         {
@@ -199,7 +240,29 @@ internal class Program
     private static void OnInitialized(Screen screen)
     {
         screen.Title = "New Window";
-        var ui = screen.Operations.AddUI(0, screen.Surface, screen.Depth);
+        var ui = screen.Operations.AddUI(
+            0,
+            new UIDescriptor
+            {
+                OnRenderPass = static screen => RenderPass.Create(
+                    screen,
+                    new ColorAttachment
+                    {
+                        Target = screen.Surface,
+                        LoadOp = ColorBufferInit.Load(),
+                    },
+                    new DepthStencilAttachment
+                    {
+                        Target = screen.Depth,
+                        LoadOp = new DepthStencilBufferInit
+                        {
+                            Depth = DepthBufferInit.Clear(1f),
+                            Stencil = null,
+                        },
+                    }),
+            });
+
+
         ui.RenderRoot($$"""
         {
             "@type": {{typeof(Counter)}},

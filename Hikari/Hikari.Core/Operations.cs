@@ -108,16 +108,16 @@ public sealed class Operations
         return op;
     }
 
-    public DeferredProcess AddDeferredProcess(int sortOrder, IGBufferProvider inputGBuffer, ITexture2D renderTarget, ITexture2D depth)
+    public DeferredProcess AddDeferredProcess(int sortOrder, in DeferredProcessDescriptor desc)
     {
-        var op = new DeferredProcess(_screen, inputGBuffer, renderTarget, depth);
+        var op = new DeferredProcess(_screen, desc);
         Add(op, sortOrder);
         return op;
     }
 
-    public UITree AddUI(int sortOrder, ITexture2D renderTarget, ITexture2D depth)
+    public UITree AddUI(int sortOrder, in UIDescriptor desc)
     {
-        var op = new UILayer(_screen, renderTarget, depth);
+        var op = new UILayer(_screen, desc);
         Add(op, sortOrder);
         return new UITree(op);
     }

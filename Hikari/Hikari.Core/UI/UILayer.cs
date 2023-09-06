@@ -12,8 +12,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly Own<BindGroupLayout> _bindGroupLayout1;
     private readonly Own<BindGroupLayout> _bindGroupLayout2;
-    private readonly ITexture2D _renderTarget;
-    private readonly ITexture2D _depth;
+    private readonly UIDescriptor _desc;
     private UIElement? _rootElement;
     private bool _isLayoutDirty = false;
 
@@ -58,15 +57,13 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
     public BindGroupLayout BindGroupLayout1 => _bindGroupLayout1.AsValue();
     public BindGroupLayout BindGroupLayout2 => _bindGroupLayout2.AsValue();
 
-    internal UILayer(Screen screen, ITexture2D renderTarget, ITexture2D depth)
+    internal UILayer(Screen screen, in UIDescriptor desc)
         : base(
             screen,
             CreatePipelineLayout(screen, out var bindGroupLayout0, out var bindGroupLayout1, out var bindGroupLayout2))
     {
-        ArgumentNullException.ThrowIfNull(renderTarget);
-        ArgumentNullException.ThrowIfNull(depth);
-        _renderTarget = renderTarget;
-        _depth = depth;
+        desc.ThrowIfInvalid();
+        _desc = desc;
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout1 = bindGroupLayout1;
         _bindGroupLayout2 = bindGroupLayout2;
@@ -154,22 +151,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
-        return RenderPass.Create(
-            context.Screen,
-            new ColorAttachment
-            {
-                Target = _renderTarget,
-                LoadOp = ColorBufferInit.Load(),
-            },
-            new DepthStencilAttachment
-            {
-                Target = _depth,
-                LoadOp = new DepthStencilBufferInit
-                {
-                    Depth = DepthBufferInit.Clear(1f),
-                    Stencil = null,
-                },
-            });
+        return _desc.OnRenderPass(context.Screen);
     }
 
     private static Own<PipelineLayout> CreatePipelineLayout(
@@ -217,5 +199,15 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
                 }).AsValue(out layout2),
             },
         });
+    }
+}
+
+public readonly record struct UIDescriptor
+{
+    public required RenderPassFunc<Screen> OnRenderPass { get; init; }
+
+    internal void ThrowIfInvalid()
+    {
+        ArgumentNullException.ThrowIfNull(OnRenderPass);
     }
 }

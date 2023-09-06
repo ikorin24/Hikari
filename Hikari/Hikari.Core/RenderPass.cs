@@ -154,6 +154,8 @@ public readonly ref struct RenderPass
     }
 }
 
+public delegate OwnRenderPass RenderPassFunc<T>(T arg);
+
 public readonly ref struct OwnRenderPass
 {
     private readonly RenderPass _value;
