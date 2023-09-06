@@ -5,5 +5,5 @@ namespace Hikari;
 public interface IGBufferProvider
 {
     GBuffer GetCurrentGBuffer();
-    Event<GBuffer> GBufferChanged { get; }
+    Event<IGBufferProvider> GBufferChanged { get; }
 }

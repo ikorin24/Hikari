@@ -8,7 +8,7 @@ public sealed class GBufferProvider : IScreenManaged, IGBufferProvider
     private readonly Screen _screen;
     private readonly TextureFormat[] _formats;
     private Own<GBuffer> _gBuffer;
-    private EventSource<GBuffer> _gBufferChanged = new();
+    private EventSource<IGBufferProvider> _gBufferChanged = new();
     private bool _isReleased;
 
     public Screen Screen => _screen;
@@ -23,7 +23,7 @@ public sealed class GBufferProvider : IScreenManaged, IGBufferProvider
         }
     }
 
-    public Event<GBuffer> GBufferChanged => _gBufferChanged.Event;
+    public Event<IGBufferProvider> GBufferChanged => _gBufferChanged.Event;
 
     private GBufferProvider(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
@@ -82,6 +82,6 @@ public sealed class GBufferProvider : IScreenManaged, IGBufferProvider
             _gBuffer = GBuffer.Create(_screen, size, _formats);
             newGBuffer = _gBuffer.AsValue();
         }
-        _gBufferChanged.Invoke(newGBuffer);
+        _gBufferChanged.Invoke(this);
     }
 }

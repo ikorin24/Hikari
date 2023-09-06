@@ -40,7 +40,7 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
         Dead.Subscribe(static self => self.OnDead()).AddTo(Subscriptions);
 
         _shader = DeferredProcessShader.Create(this);
-        RecreateMaterial(_desc.InputGBuffer.GetCurrentGBuffer());
+        RecreateMaterial(_desc.InputGBuffer);
         _desc.InputGBuffer.GBufferChanged.Subscribe(RecreateMaterial).AddTo(Subscriptions);
     }
 
@@ -51,10 +51,10 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
         _rectMesh.Dispose();
     }
 
-    private void RecreateMaterial(GBuffer gBuffer)
+    private void RecreateMaterial(IGBufferProvider provider)
     {
         _material.Dispose();
-        _material = DeferredProcessMaterial.Create(_shader.AsValue(), gBuffer);
+        _material = DeferredProcessMaterial.Create(_shader.AsValue(), provider.GetCurrentGBuffer());
     }
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
