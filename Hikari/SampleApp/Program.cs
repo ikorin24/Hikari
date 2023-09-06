@@ -39,10 +39,11 @@ internal class Program
             TextureFormat.Rgba32Float,
             TextureFormat.Rgba32Float,
         }).AsValue(out var gBufferProviderOwn);
+        screen.Resized.Subscribe(x => gBufferProvider.Resize(x.Size));
         screen.Closed.Subscribe(_ => gBufferProviderOwn.Dispose());
         var layer = ops.AddPbrLayer(0, gBufferProvider);
-        var deferredProcess = ops.AddDeferredProcess(1, gBufferProvider);
-        var ui = ops.AddUI(2);
+        var deferredProcess = ops.AddDeferredProcess(1, gBufferProvider, screen.Surface, screen.Depth);
+        var ui = ops.AddUI(2, screen.Surface, screen.Depth);
 
         ui.RenderRoot($$"""
         {
@@ -198,7 +199,7 @@ internal class Program
     private static void OnInitialized(Screen screen)
     {
         screen.Title = "New Window";
-        var ui = screen.Operations.AddUI(0);
+        var ui = screen.Operations.AddUI(0, screen.Surface, screen.Depth);
         ui.RenderRoot($$"""
         {
             "@type": {{typeof(Counter)}},

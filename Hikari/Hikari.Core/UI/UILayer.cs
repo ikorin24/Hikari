@@ -12,6 +12,8 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly Own<BindGroupLayout> _bindGroupLayout1;
     private readonly Own<BindGroupLayout> _bindGroupLayout2;
+    private readonly ITexture2D _renderTarget;
+    private readonly ITexture2D _depth;
     private UIElement? _rootElement;
     private bool _isLayoutDirty = false;
 
@@ -56,11 +58,15 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
     public BindGroupLayout BindGroupLayout1 => _bindGroupLayout1.AsValue();
     public BindGroupLayout BindGroupLayout2 => _bindGroupLayout2.AsValue();
 
-    internal UILayer(Screen screen)
+    internal UILayer(Screen screen, ITexture2D renderTarget, ITexture2D depth)
         : base(
             screen,
             CreatePipelineLayout(screen, out var bindGroupLayout0, out var bindGroupLayout1, out var bindGroupLayout2))
     {
+        ArgumentNullException.ThrowIfNull(renderTarget);
+        ArgumentNullException.ThrowIfNull(depth);
+        _renderTarget = renderTarget;
+        _depth = depth;
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout1 = bindGroupLayout1;
         _bindGroupLayout2 = bindGroupLayout2;
@@ -148,16 +154,21 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
-        var screen = context.Screen;
         return RenderPass.Create(
-            screen,
-            screen.Surface,
-            screen.Depth,
-            ColorBufferInit.Load(),
-            new DepthStencilBufferInit
+            context.Screen,
+            new ColorAttachment
             {
-                Depth = DepthBufferInit.Clear(1f),
-                Stencil = null,
+                Target = _renderTarget,
+                LoadOp = ColorBufferInit.Load(),
+            },
+            new DepthStencilAttachment
+            {
+                Target = _depth,
+                LoadOp = new DepthStencilBufferInit
+                {
+                    Depth = DepthBufferInit.Clear(1f),
+                    Stencil = null,
+                },
             });
     }
 

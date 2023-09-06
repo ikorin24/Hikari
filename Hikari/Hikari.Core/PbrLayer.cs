@@ -47,14 +47,6 @@ public sealed class PbrLayer
         _bindGroupLayout1 = bindGroupLayout1;
 
         _gBufferProvider = gBufferProvider;
-
-        screen.Resized.Subscribe(x =>
-        {
-            if(x.Size.X == 0 || x.Size.Y == 0) {
-                return;
-            }
-            _gBufferProvider.Resize(x.Size);
-        }).AddTo(Subscriptions);
         Dead.Subscribe(static self =>
         {
             self._bindGroupLayout0.Dispose();

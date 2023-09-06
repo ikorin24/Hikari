@@ -31,12 +31,16 @@ public readonly ref struct RenderPass
         self._screen.AsRefChecked().FinishCommandEncoder(self._encoder);
     };
 
-    internal static void ClearSurface(Screen screen)
+    internal static void ClearSurface(Screen screen, (f64 R, f64 G, f64 B, f64 A) clearColor)
     {
-        using var pass = Create(screen, screen.Surface, new()
-        {
-            Mode = RenderPassInitMode.Clear
-        });
+        using var pass = Create(
+            screen,
+            new ColorAttachment
+            {
+                Target = screen.Surface,
+                LoadOp = ColorBufferInit.Clear(clearColor),
+            },
+            null);
     }
 
     internal static OwnRenderPass Create(Screen screen, scoped in CH.RenderPassDescriptor desc)
@@ -46,32 +50,44 @@ public readonly ref struct RenderPass
         return new OwnRenderPass(new(screen, native, encoder), _release);
     }
 
-    public static unsafe OwnRenderPass Create(
-        Screen screen,
-        ITextureView surfaceTextureView,
-        scoped in ColorBufferInit colorInit)
+    public static unsafe OwnRenderPass Create(Screen screen, scoped in ColorAttachment? color, scoped in DepthStencilAttachment? depthStencil)
     {
-        var color = new CH.Opt<CH.RenderPassColorAttachment>(colorInit.ToNative(surfaceTextureView.ViewNativeRef));
+        var colorsNative = color switch
+        {
+            ColorAttachment c => new(c.ToNative()),
+            null => CH.Opt<CH.RenderPassColorAttachment>.None,
+        };
         var desc = new CH.RenderPassDescriptor
         {
-            color_attachments = new() { data = &color, len = 1 },
-            depth_stencil_attachment = CH.Opt<CH.RenderPassDepthStencilAttachment>.None,
+            color_attachments = new() { data = &colorsNative, len = 1 },
+            depth_stencil_attachment = depthStencil switch
+            {
+                DepthStencilAttachment ds => new(ds.ToNative()),
+                null => CH.Opt<CH.RenderPassDepthStencilAttachment>.None,
+            },
         };
         return Create(screen, desc);
     }
 
-    public static unsafe OwnRenderPass Create(
-        Screen screen,
-        ITextureView surfaceTextureView,
-        ITextureView depthStencilTextureView,
-        scoped in ColorBufferInit colorInit,
-        scoped in DepthStencilBufferInit depthStencilInit)
+    public static unsafe OwnRenderPass Create(Screen screen, scoped ReadOnlySpan<ColorAttachment?> colors, scoped in DepthStencilAttachment? depthStencil)
     {
-        var color = new CH.Opt<CH.RenderPassColorAttachment>(colorInit.ToNative(surfaceTextureView.ViewNativeRef));
+        var colorsNative = stackalloc CH.Opt<CH.RenderPassColorAttachment>[colors.Length];
+        for(int i = 0; i < colors.Length; i++) {
+            colorsNative[i] = colors[i] switch
+            {
+                ColorAttachment color => new(color.ToNative()),
+                null => CH.Opt<CH.RenderPassColorAttachment>.None,
+            };
+        }
+
         var desc = new CH.RenderPassDescriptor
         {
-            color_attachments = new() { data = &color, len = 1 },
-            depth_stencil_attachment = new(depthStencilInit.ToNative(depthStencilTextureView.ViewNativeRef)),
+            color_attachments = new() { data = colorsNative, len = (u32)colors.Length },
+            depth_stencil_attachment = depthStencil switch
+            {
+                DepthStencilAttachment ds => new(ds.ToNative()),
+                null => CH.Opt<CH.RenderPassDepthStencilAttachment>.None,
+            },
         };
         return Create(screen, desc);
     }
@@ -196,6 +212,47 @@ public readonly ref struct OwnRenderPass
     public static explicit operator RenderPass(OwnRenderPass own) => own.AsValue();
 }
 
+public readonly record struct ColorAttachment
+{
+    public required ITextureView Target { get; init; }
+    public required ColorBufferInit LoadOp { get; init; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal CH.RenderPassColorAttachment ToNative()
+    {
+        return new()
+        {
+            view = Target.ViewNativeRef,
+            init = LoadOp.ToNative(),
+        };
+    }
+}
+
+public readonly record struct DepthStencilAttachment
+{
+    public required ITextureView Target { get; init; }
+    public required DepthStencilBufferInit LoadOp { get; init; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal CH.RenderPassDepthStencilAttachment ToNative()
+    {
+        return new()
+        {
+            view = Target.ViewNativeRef,
+            depth = LoadOp.Depth switch
+            {
+                DepthBufferInit depth => new(depth.ToNative()),
+                null => CH.Opt<CH.RenderPassDepthBufferInit>.None,
+            },
+            stencil = LoadOp.Stencil switch
+            {
+                StencilBufferInit stencil => new(stencil.ToNative()),
+                null => CH.Opt<CH.RenderPassStencilBufferInit>.None,
+            },
+        };
+    }
+}
+
 public readonly record struct ColorBufferInit
 {
     public required RenderPassInitMode Mode { get; init; }
@@ -219,6 +276,15 @@ public readonly record struct ColorBufferInit
         };
     }
 
+    public static ColorBufferInit Clear((f64 R, f64 G, f64 B, f64 A) clearValue)
+    {
+        return new ColorBufferInit
+        {
+            Mode = RenderPassInitMode.Clear,
+            ClearValue = clearValue,
+        };
+    }
+
     public static ColorBufferInit Load()
     {
         return new ColorBufferInit
@@ -227,25 +293,22 @@ public readonly record struct ColorBufferInit
         };
     }
 
-    internal CH.RenderPassColorAttachment ToNative(Rust.Ref<Wgpu.TextureView> view)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal CH.RenderPassColorBufferInit ToNative()
     {
         return new()
         {
-            view = view,
-            init = new()
+            mode = Mode switch
             {
-                mode = Mode switch
-                {
-                    RenderPassInitMode.Clear => CH.RenderPassBufferInitMode.Clear,
-                    RenderPassInitMode.Load or _ => CH.RenderPassBufferInitMode.Load,
-                },
-                value = new Wgpu.Color
-                {
-                    R = ClearValue.R,
-                    G = ClearValue.G,
-                    B = ClearValue.B,
-                    A = ClearValue.A,
-                },
+                RenderPassInitMode.Clear => CH.RenderPassBufferInitMode.Clear,
+                RenderPassInitMode.Load or _ => CH.RenderPassBufferInitMode.Load,
+            },
+            value = new Wgpu.Color
+            {
+                R = ClearValue.R,
+                G = ClearValue.G,
+                B = ClearValue.B,
+                A = ClearValue.A,
             },
         };
     }
@@ -267,6 +330,7 @@ public readonly record struct DepthBufferInit
         Mode = RenderPassInitMode.Load,
     };
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal CH.RenderPassDepthBufferInit ToNative()
     {
         return new()
@@ -297,6 +361,7 @@ public readonly record struct StencilBufferInit
         Mode = RenderPassInitMode.Load,
     };
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal CH.RenderPassStencilBufferInit ToNative()
     {
         return new()
@@ -315,24 +380,6 @@ public readonly record struct DepthStencilBufferInit
 {
     public required DepthBufferInit? Depth { get; init; }
     public required StencilBufferInit? Stencil { get; init; }
-
-    internal CH.RenderPassDepthStencilAttachment ToNative(Rust.Ref<Wgpu.TextureView> view)
-    {
-        return new()
-        {
-            view = view,
-            depth = Depth switch
-            {
-                null => CH.Opt<CH.RenderPassDepthBufferInit>.None,
-                DepthBufferInit depthInit => new(depthInit.ToNative()),
-            },
-            stencil = Stencil switch
-            {
-                null => CH.Opt<CH.RenderPassStencilBufferInit>.None,
-                StencilBufferInit stencilInit => new(stencilInit.ToNative()),
-            },
-        };
-    }
 }
 
 public enum RenderPassInitMode : u32

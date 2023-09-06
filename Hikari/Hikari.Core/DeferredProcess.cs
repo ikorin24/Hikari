@@ -10,6 +10,8 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly Own<BindGroupLayout> _bindGroupLayout3;
     private readonly IGBufferProvider _gBufferProvider;
+    private readonly ITexture2D _renderTarget;
+    private readonly ITexture2D _depth;
     private Own<DeferredProcessMaterial> _material;
     private readonly Own<Mesh<V>> _rectMesh;
     private readonly Own<DeferredProcessShader> _shader;
@@ -17,11 +19,15 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
     public BindGroupLayout BindGroupLayout3 => _bindGroupLayout3.AsValue();
 
-    internal DeferredProcess(Screen screen, IGBufferProvider gBufferProvider)
+    internal DeferredProcess(Screen screen, IGBufferProvider gBufferProvider, ITexture2D renderTarget, ITexture2D depth)
         : base(screen,
             BuildPipelineLayout(screen, out var bindGroupLayout0, out var bindGroupLayout3))
     {
         ArgumentNullException.ThrowIfNull(gBufferProvider);
+        ArgumentNullException.ThrowIfNull(renderTarget);
+        ArgumentNullException.ThrowIfNull(depth);
+        _renderTarget = renderTarget;
+        _depth = depth;
         _gBufferProvider = gBufferProvider;
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout3 = bindGroupLayout3;
@@ -59,16 +65,21 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
-        var screen = context.Screen;
         return RenderPass.Create(
-            screen,
-            screen.Surface,
-            screen.Depth,
-            ColorBufferInit.Clear(),
-            new DepthStencilBufferInit
+            context.Screen,
+            new ColorAttachment
             {
-                Depth = DepthBufferInit.Clear(1f),
-                Stencil = null,
+                Target = _renderTarget,
+                LoadOp = ColorBufferInit.Clear(),
+            },
+            new DepthStencilAttachment
+            {
+                Target = _depth,
+                LoadOp = new DepthStencilBufferInit
+                {
+                    Depth = DepthBufferInit.Clear(1f),
+                    Stencil = null,
+                },
             });
     }
 

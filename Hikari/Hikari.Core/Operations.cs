@@ -90,7 +90,7 @@ public sealed class Operations
         {
             var list = _list.AsSpan();
             if(list.IsEmpty) {
-                RenderPass.ClearSurface(screen);
+                RenderPass.ClearSurface(screen, (0, 0, 0, 0));
             }
             else {
                 var context = new OperationContext(screen);
@@ -108,16 +108,16 @@ public sealed class Operations
         return op;
     }
 
-    public DeferredProcess AddDeferredProcess(int sortOrder, IGBufferProvider inputGBuffer)
+    public DeferredProcess AddDeferredProcess(int sortOrder, IGBufferProvider inputGBuffer, ITexture2D renderTarget, ITexture2D depth)
     {
-        var op = new DeferredProcess(_screen, inputGBuffer);
+        var op = new DeferredProcess(_screen, inputGBuffer, renderTarget, depth);
         Add(op, sortOrder);
         return op;
     }
 
-    public UITree AddUI(int sortOrder)
+    public UITree AddUI(int sortOrder, ITexture2D renderTarget, ITexture2D depth)
     {
-        var op = new UILayer(_screen);
+        var op = new UILayer(_screen, renderTarget, depth);
         Add(op, sortOrder);
         return new UITree(op);
     }

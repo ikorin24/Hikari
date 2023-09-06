@@ -1,7 +1,6 @@
 ﻿#nullable enable
 using System;
 using System.ComponentModel;
-using Hikari.NativeBind;
 
 namespace Hikari;
 
@@ -23,30 +22,20 @@ public readonly ref struct RenderShadowMapContext
         _shadowMap = lights.DirectionalLight.ShadowMap.View;
     }
 
-    public OwnRenderPass CreateRenderPass(bool clear = true)
+    public OwnRenderPass CreateRenderPass()
     {
         var screen = _lights.Screen;
-        return RenderPass.Create(screen, new CH.RenderPassDescriptor()
-        {
-            color_attachments = new() { data = null, len = 0 },
-            depth_stencil_attachment = new(new()
+        return RenderPass.Create(
+            screen,
+            null,
+            new DepthStencilAttachment
             {
-                view = _shadowMap.NativeRef,
-                depth = new(clear switch
+                Target = _shadowMap,
+                LoadOp = new DepthStencilBufferInit
                 {
-                    true => new()
-                    {
-                        mode = CH.RenderPassBufferInitMode.Clear,
-                        value = 1f,
-                    },
-                    false => new()
-                    {
-                        mode = CH.RenderPassBufferInitMode.Load,
-                        value = default,
-                    },
-                }),
-                stencil = CH.Opt<CH.RenderPassStencilBufferInit>.None,
-            }),
-        });
+                    Depth = DepthBufferInit.Clear(1f),
+                    Stencil = null,
+                }
+            });
     }
 }
