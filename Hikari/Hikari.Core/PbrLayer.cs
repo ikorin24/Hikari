@@ -15,13 +15,16 @@ public sealed class PbrLayer
         TextureFormat.Rgba32Float,
     };
 
-    private readonly GBufferProvider _gBufferProvider;
-    private EventSource<GBuffer> _gBufferChanged = new();
+    private readonly IGBufferProvider _gBufferProvider;
     private readonly Own<PipelineLayout> _shadowPipelineLayout;
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly BindGroupLayout _bindGroupLayout1;
-
+    private readonly TextureFormat _depthStencilFormat;
+    private readonly TextureFormat _shadowMapFormat;
     private readonly Own<BindGroupLayout> _shadowBindGroupLayout0;
+
+    public TextureFormat DepthStencilFormat => _depthStencilFormat;
+    public TextureFormat ShadowMapFormat => _shadowMapFormat;
 
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
 
@@ -31,15 +34,14 @@ public sealed class PbrLayer
 
     public PipelineLayout ShadowPipelineLayout => _shadowPipelineLayout.AsValue();
 
-    public Event<GBuffer> GBufferChanged => _gBufferChanged.Event;
-
-    internal PbrLayer(Screen screen, GBufferProvider gBufferProvider)
+    internal PbrLayer(Screen screen, IGBufferProvider gBufferProvider, TextureFormat depthStencilFormat, TextureFormat shadowMapFormat)
         : base(
             screen,
             BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0, out var bindGroupLayout1))
     {
         ArgumentNullException.ThrowIfNull(gBufferProvider);
-
+        _depthStencilFormat = depthStencilFormat;
+        _shadowMapFormat = shadowMapFormat;
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout1 = bindGroupLayout1;
         _shadowPipelineLayout = BuildShadowPipeline(screen, out var shadowBgl0);

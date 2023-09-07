@@ -41,12 +41,14 @@ internal class Program
         }).AsValue(out var gBufferProviderOwn);
         screen.Resized.Subscribe(x => gBufferProvider.Resize(x.Size));
         screen.Closed.Subscribe(_ => gBufferProviderOwn.Dispose());
-        var layer = ops.AddPbrLayer(0, gBufferProvider);
+        var layer = ops.AddPbrLayer(0, gBufferProvider, screen.Depth.GetCurrentFormat());
         var deferredProcess = ops.AddDeferredProcess(
             1,
             new DeferredProcessDescriptor
             {
                 InputGBuffer = gBufferProvider,
+                ColorFormat = screen.Surface.Format,
+                DepthStencilFormat = screen.Depth.GetCurrentFormat(),
                 OnRenderPass = static self => RenderPass.Create(
                     self.Screen,
                     new ColorAttachment
@@ -68,6 +70,8 @@ internal class Program
             2,
             new UIDescriptor
             {
+                ColorFormat = screen.Surface.Format,
+                DepthStencilFormat = screen.Depth.GetCurrentFormat(),
                 OnRenderPass = static screen => RenderPass.Create(
                     screen,
                     new ColorAttachment
@@ -244,6 +248,8 @@ internal class Program
             0,
             new UIDescriptor
             {
+                ColorFormat = screen.Surface.Format,
+                DepthStencilFormat = screen.Depth.GetCurrentFormat(),
                 OnRenderPass = static screen => RenderPass.Create(
                     screen,
                     new ColorAttachment

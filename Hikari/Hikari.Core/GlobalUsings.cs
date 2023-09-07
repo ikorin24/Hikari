@@ -17,8 +17,8 @@ global using f64 = System.Double;
 global using usize = System.UIntPtr;
 #pragma warning restore CS8981 // lowercase ASCII-only aliases may conflict with reserved names in the future.
 
-global using ITexture1D = Hikari.ITexture<uint>;
-global using ITexture2D = Hikari.ITexture<Hikari.Vector2u>;
-global using ITexture3D = Hikari.ITexture<Hikari.Vector3u>;
+global using ITexture1DProvider = Hikari.ITextureProvider<uint>;
+global using ITexture2DProvider = Hikari.ITextureProvider<Hikari.Vector2u>;
+global using ITexture3DProvider = Hikari.ITextureProvider<Hikari.Vector3u>;
 
 global using EnumMapping;

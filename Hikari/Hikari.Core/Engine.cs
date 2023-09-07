@@ -43,11 +43,10 @@ public static class Engine
         (Rust.Box<CH.HostScreen> screenHandle, CH.HostScreenInfo info) =>
         {
             var mainThread = ThreadId.CurrentThread();
-            var screen = new Screen(screenHandle, mainThread);
+            var screen = new Screen(screenHandle, mainThread, _onInitialized);
             var id = screen.ScreenId;
             _screens.Add(id, screen);
             screen.OnInitialize(info);
-            _onInitialized?.Invoke(screen);
             return id;
         };
 

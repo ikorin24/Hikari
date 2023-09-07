@@ -124,12 +124,11 @@ file sealed class ButtonShader : UIShader
         _emptyTextureSampler.Dispose();
     }
 
-    private static RenderPipelineDescriptor Desc(PipelineLayout layout, ShaderModule module)
+    private static RenderPipelineDescriptor Desc(UILayer layer, ShaderModule module)
     {
-        var screen = layout.Screen;
         return new RenderPipelineDescriptor
         {
-            Layout = layout,
+            Layout = layer.PipelineLayout,
             Vertex = new VertexState()
             {
                 Module = module,
@@ -151,7 +150,7 @@ file sealed class ButtonShader : UIShader
                 {
                     new ColorTargetState
                     {
-                        Format = screen.SurfaceFormat,
+                        Format = layer.ColorFormat,
                         Blend = BlendState.AlphaBlending,
                         WriteMask = ColorWrites.All,
                     },
@@ -167,7 +166,7 @@ file sealed class ButtonShader : UIShader
             },
             DepthStencil = new DepthStencilState
             {
-                Format = screen.Depth.Format,
+                Format = layer.DepthStencilFormat,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.LessEqual,
                 Stencil = StencilState.Default,

@@ -38,13 +38,13 @@ public abstract class Shader<TSelf, TMaterial, TOperation>
     protected Shader(
         ReadOnlySpan<byte> shaderSource,
         TOperation operation,
-        Func<PipelineLayout, ShaderModule, RenderPipelineDescriptor> getPipelineDesc)
+        Func<TOperation, ShaderModule, RenderPipelineDescriptor> getPipelineDesc)
     {
         ArgumentNullException.ThrowIfNull(getPipelineDesc);
         ArgumentNullException.ThrowIfNull(operation);
         _screen = operation.Screen;
         _module = ShaderModule.Create(_screen, shaderSource);
-        var desc = getPipelineDesc.Invoke(operation.PipelineLayout, _module.AsValue());
+        var desc = getPipelineDesc.Invoke(operation, _module.AsValue());
         _pipeline = RenderPipeline.Create(_screen, desc);
         _operation = operation;
     }

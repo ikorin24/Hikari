@@ -216,7 +216,7 @@ public readonly ref struct OwnRenderPass
 
 public readonly record struct ColorAttachment
 {
-    public required ITextureView Target { get; init; }
+    public required ITextureViewProvider Target { get; init; }
     public required ColorBufferInit LoadOp { get; init; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -224,7 +224,7 @@ public readonly record struct ColorAttachment
     {
         return new()
         {
-            view = Target.ViewNativeRef,
+            view = Target.GetCurrentTextureView(),
             init = LoadOp.ToNative(),
         };
     }
@@ -232,7 +232,7 @@ public readonly record struct ColorAttachment
 
 public readonly record struct DepthStencilAttachment
 {
-    public required ITextureView Target { get; init; }
+    public required ITextureViewProvider Target { get; init; }
     public required DepthStencilBufferInit LoadOp { get; init; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -240,7 +240,7 @@ public readonly record struct DepthStencilAttachment
     {
         return new()
         {
-            view = Target.ViewNativeRef,
+            view = Target.GetCurrentTextureView(),
             depth = LoadOp.Depth switch
             {
                 DepthBufferInit depth => new(depth.ToNative()),

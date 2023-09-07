@@ -6,10 +6,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Hikari;
 
-public sealed class RenderTextureProvider : ITexture2D, IDisposable
+public sealed class RenderTextureProvider : ITexture2DProvider, IDisposable
 {
     private Own<Texture2D> _currentOwn;
     private Texture2D? _current;
+    private EventSource<ITexture2DProvider> _textureChanged;
+    private EventSource<ITextureViewProvider> _textureViewChanged;
 
     public uint MipLevelCount => _current?.MipLevelCount ?? ThrowAlreadyDisposed<uint>();
     public uint SampleCount => _current?.SampleCount ?? ThrowAlreadyDisposed<uint>();
@@ -17,35 +19,30 @@ public sealed class RenderTextureProvider : ITexture2D, IDisposable
     public TextureUsages Usage => _current?.Usage ?? ThrowAlreadyDisposed<TextureUsages>();
     public TextureDimension Dimension => _current?.Dimension ?? ThrowAlreadyDisposed<TextureDimension>();
 
-    public Vector2u Size => _current?.Size ?? ThrowAlreadyDisposed<Vector2u>();
+    public Event<ITexture2DProvider> TextureChanged => _textureChanged.Event;
+    public Event<ITextureViewProvider> TextureViewChanged => _textureViewChanged.Event;
 
-    internal Rust.Ref<Wgpu.Texture> NativeRef
+    internal Rust.Ref<Wgpu.Texture> GetCurrentTexture()
     {
-        get
-        {
-            var current = _current;
-            if(current == null) {
-                ThrowHelper.ThrowInvalidOperation("already disposed");
-            }
-            return current.NativeRef;
+        var current = _current;
+        if(current == null) {
+            ThrowHelper.ThrowInvalidOperation("already disposed");
         }
+        return current.NativeRef;
     }
 
-    internal Rust.Ref<Wgpu.TextureView> ViewNativeRef
+    internal Rust.Ref<Wgpu.TextureView> GetCurrentTextureView()
     {
-        get
-        {
-            var current = _current;
-            if(current == null) {
-                ThrowHelper.ThrowInvalidOperation("already disposed");
-            }
-            return current.View.NativeRef;
+        var current = _current;
+        if(current == null) {
+            ThrowHelper.ThrowInvalidOperation("already disposed");
         }
+        return current.View.NativeRef;
     }
 
-    Rust.Ref<Wgpu.Texture> ITexture.NativeRef => NativeRef;
+    Rust.Ref<Wgpu.Texture> ITextureProvider.GetCurrentTexture() => GetCurrentTexture();
 
-    Rust.Ref<Wgpu.TextureView> ITextureView.ViewNativeRef => ViewNativeRef;
+    Rust.Ref<Wgpu.TextureView> ITextureViewProvider.GetCurrentTextureView() => GetCurrentTextureView();
 
     public RenderTextureProvider(Screen screen, in Texture2DDescriptor desc)
     {
@@ -67,6 +64,8 @@ public sealed class RenderTextureProvider : ITexture2D, IDisposable
         _currentOwn.Dispose();
         _currentOwn = newTextureOwn;
         _current = newTexture;
+        _textureChanged.Invoke(this);
+        _textureViewChanged.Invoke(this);
         return true;
     }
 
@@ -83,4 +82,19 @@ public sealed class RenderTextureProvider : ITexture2D, IDisposable
         ThrowHelper.ThrowInvalidOperation("already disposed");
         return default!;
     }
+
+    public Vector2u GetCurrentSize()
+    {
+        return _current?.Size ?? ThrowAlreadyDisposed<Vector2u>();
+    }
+
+    uint ITexture2DProvider.GetCurrentMipLevelCount() => MipLevelCount;
+
+    uint ITexture2DProvider.GetCurrentSampleCount() => SampleCount;
+
+    TextureFormat ITexture2DProvider.GetCurrentFormat() => Format;
+
+    TextureUsages ITexture2DProvider.GetCurrentUsage() => Usage;
+
+    TextureDimension ITexture2DProvider.GetCurrentDimension() => Dimension;
 }

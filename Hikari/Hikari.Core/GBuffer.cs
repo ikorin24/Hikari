@@ -96,7 +96,7 @@ public sealed class GBuffer : IScreenManaged
                 color_attachments = new(p, attachmentsNative.Length),
                 depth_stencil_attachment = new(new()
                 {
-                    view = screen.Depth.ViewNativeRef,
+                    view = screen.Depth.GetCurrentTextureView(),
                     depth = new(new()
                     {
                         mode = CH.RenderPassBufferInitMode.Clear,

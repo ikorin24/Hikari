@@ -53,6 +53,9 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         [DoesNotReturn] static void Throw(Type type) => throw new ArgumentException($"shader for {type} is not found");
     }
 
+    public TextureFormat ColorFormat => _desc.ColorFormat;
+    public TextureFormat DepthStencilFormat => _desc.DepthStencilFormat;
+
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
     public BindGroupLayout BindGroupLayout1 => _bindGroupLayout1.AsValue();
     public BindGroupLayout BindGroupLayout2 => _bindGroupLayout2.AsValue();
@@ -204,6 +207,8 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
 
 public readonly record struct UIDescriptor
 {
+    public required TextureFormat ColorFormat { get; init; }
+    public required TextureFormat DepthStencilFormat { get; init; }
     public required RenderPassFunc<Screen> OnRenderPass { get; init; }
 
     internal void ThrowIfInvalid()

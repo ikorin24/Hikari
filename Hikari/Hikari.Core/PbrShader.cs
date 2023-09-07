@@ -108,7 +108,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
         : base(
             ShaderSource,
             operation,
-            BuildPipeline)
+            Desc)
     {
         var cascadeCount = screen.Lights.DirectionalLight.CascadeCount;
         var shadowModules = new Own<ShaderModule>[cascadeCount];
@@ -147,8 +147,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
 
     private static Own<RenderPipeline> CreateShadowPipeline(PbrLayer operation, ShaderModule module)
     {
-        var screen = operation.Screen;
-        return RenderPipeline.Create(screen, new()
+        return RenderPipeline.Create(operation.Screen, new()
         {
             Layout = operation.ShadowPipelineLayout,
             Vertex = new VertexState
@@ -174,7 +173,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
             },
             DepthStencil = new DepthStencilState
             {
-                Format = screen.Depth.Format,
+                Format = operation.ShadowMapFormat,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Less,
                 Stencil = StencilState.Default,
@@ -185,12 +184,11 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
         });
     }
 
-    private static RenderPipelineDescriptor BuildPipeline(PipelineLayout pipelineLayout, ShaderModule module)
+    private static RenderPipelineDescriptor Desc(PbrLayer layer, ShaderModule module)
     {
-        var screen = pipelineLayout.Screen;
         return new RenderPipelineDescriptor
         {
-            Layout = pipelineLayout,
+            Layout = layer.PipelineLayout,
             Vertex = new VertexState
             {
                 Module = module,
@@ -261,7 +259,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
             },
             DepthStencil = new DepthStencilState
             {
-                Format = screen.Depth.Format,
+                Format = layer.DepthStencilFormat,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Less,
                 Stencil = StencilState.Default,

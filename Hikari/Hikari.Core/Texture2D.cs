@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed class Texture2D : IScreenManaged, ITexture2D, ITextureView
+public sealed class Texture2D : ITexture2DProvider, IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Texture> _native;
@@ -19,14 +19,9 @@ public sealed class Texture2D : IScreenManaged, ITexture2D, ITextureView
     public bool IsManaged => _native.IsNone == false;
 
     internal Rust.Ref<Wgpu.Texture> NativeRef => _native.Unwrap();
-    internal Rust.MutRef<Wgpu.Texture> NativeMut => _native.Unwrap();
-
-    Rust.Ref<Wgpu.Texture> ITexture.NativeRef => NativeRef;
-    Rust.Ref<Wgpu.TextureView> ITextureView.ViewNativeRef => View.NativeRef;
 
     public uint Width => _desc.Size.X;
     public uint Height => _desc.Size.Y;
-    //public uint Depth => _desc.Size.Z;
     public u32 MipLevelCount => _desc.MipLevelCount;
     public u32 SampleCount => _desc.SampleCount;
     public TextureFormat Format => _desc.Format;
@@ -36,6 +31,10 @@ public sealed class Texture2D : IScreenManaged, ITexture2D, ITextureView
     public TextureView View => _defaultView.AsValue();
 
     public Vector2u Size => _desc.Size;
+
+    Event<ITexture2DProvider> ITextureProvider.TextureChanged => Event<ITexture2DProvider>.Never;
+
+    Event<ITextureViewProvider> ITextureViewProvider.TextureViewChanged => Event<ITextureViewProvider>.Never;
 
     private Texture2D(Screen screen, Rust.Box<Wgpu.Texture> native, in Texture2DDescriptor desc)
     {
@@ -284,4 +283,20 @@ public sealed class Texture2D : IScreenManaged, ITexture2D, ITextureView
             throw new InvalidOperationException($"'{needed}' flag is needed, but the flag the texture has is '{actual}'.");
         }
     }
+
+    Vector2u ITexture2DProvider.GetCurrentSize() => Size;
+
+    uint ITexture2DProvider.GetCurrentMipLevelCount() => MipLevelCount;
+
+    uint ITexture2DProvider.GetCurrentSampleCount() => SampleCount;
+
+    TextureFormat ITexture2DProvider.GetCurrentFormat() => Format;
+
+    TextureUsages ITexture2DProvider.GetCurrentUsage() => Usage;
+
+    TextureDimension ITexture2DProvider.GetCurrentDimension() => Dimension;
+
+    Rust.Ref<Wgpu.Texture> ITextureProvider.GetCurrentTexture() => NativeRef;
+
+    Rust.Ref<Wgpu.TextureView> ITextureViewProvider.GetCurrentTextureView() => View.NativeRef;
 }

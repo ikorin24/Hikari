@@ -7,10 +7,10 @@ namespace Hikari;
 public readonly ref struct RenderShadowMapContext
 {
     private readonly Lights _lights;
-    private readonly TextureView _shadowMap;
+    private readonly Texture2D _shadowMap;
 
     public Lights Lights => _lights;
-    public TextureView ShadowMap => _shadowMap;
+    public Texture2D ShadowMap => _shadowMap;
 
     [Obsolete("Don't use default constructor.", true)]
     [EditorBrowsable(EditorBrowsableState.Never)]
@@ -19,7 +19,7 @@ public readonly ref struct RenderShadowMapContext
     internal RenderShadowMapContext(Lights lights)
     {
         _lights = lights;
-        _shadowMap = lights.DirectionalLight.ShadowMap.View;
+        _shadowMap = lights.DirectionalLight.ShadowMap;
     }
 
     public OwnRenderPass CreateRenderPass()
@@ -30,7 +30,7 @@ public readonly ref struct RenderShadowMapContext
             null,
             new DepthStencilAttachment
             {
-                Target = _shadowMap,
+                Target = _shadowMap.View,
                 LoadOp = new DepthStencilBufferInit
                 {
                     Depth = DepthBufferInit.Clear(1f),

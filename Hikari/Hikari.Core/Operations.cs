@@ -101,9 +101,10 @@ public sealed class Operations
         }
     }
 
-    public PbrLayer AddPbrLayer(int sortOrder, GBufferProvider renderTarget)
+    public PbrLayer AddPbrLayer(int sortOrder, IGBufferProvider renderTarget, TextureFormat depthStencilFormat)
     {
-        var op = new PbrLayer(_screen, renderTarget);
+        var ligth = _screen.Lights.DirectionalLight;
+        var op = new PbrLayer(_screen, renderTarget, depthStencilFormat, ligth.ShadowMap.Format);
         Add(op, sortOrder);
         return op;
     }

@@ -17,6 +17,9 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
     public BindGroupLayout BindGroupLayout3 => _bindGroupLayout3.AsValue();
 
+    public TextureFormat ColorFormat => _desc.ColorFormat;
+    public TextureFormat DepthStencilFormat => _desc.DepthStencilFormat;
+
     internal DeferredProcess(Screen screen, in DeferredProcessDescriptor desc)
         : base(screen,
             BuildPipelineLayout(screen, out var bindGroupLayout0, out var bindGroupLayout3))
@@ -183,6 +186,8 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
 public readonly record struct DeferredProcessDescriptor
 {
     public required IGBufferProvider InputGBuffer { get; init; }
+    public required TextureFormat ColorFormat { get; init; }
+    public required TextureFormat DepthStencilFormat { get; init; }
     public required RenderPassFunc<DeferredProcess> OnRenderPass { get; init; }
 
     internal void ThrowIfInvalid()

@@ -19,17 +19,17 @@ public sealed class Screen
     private readonly Timing _earlyUpdate;
     private readonly Timing _update;
     private readonly Timing _lateUpdate;
-    private TextureFormat _surfaceFormat;
     private GraphicsBackend _backend;
     private bool _initialized;
     private string _title = "";
     private readonly Mouse _mouse;
     private RenderTextureProvider? _depth;
-    private readonly SurfaceTexture _surface;
+    private readonly Surface _surface;
     private readonly Own<Buffer> _info;
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
     private readonly Operations _operations;
+    private readonly Action<Screen>? _onPrepare;
     private RunningState _state;
     private EventSource<ScreenClosingState> _closing;
     private EventSource<Screen> _closed;
@@ -72,7 +72,7 @@ public sealed class Screen
     public Timing Update => _update;
     public Timing LateUpdate => _lateUpdate;
 
-    public ITexture2D Depth
+    public ITexture2DProvider Depth
     {
         get
         {
@@ -81,16 +81,7 @@ public sealed class Screen
         }
     }
 
-    public ITexture2D Surface => _surface;
-
-    public TextureFormat SurfaceFormat
-    {
-        get
-        {
-            ThrowIfNotInit();
-            return _surfaceFormat;
-        }
-    }
+    public Surface Surface => _surface;
 
     public GraphicsBackend Backend
     {
@@ -148,10 +139,11 @@ public sealed class Screen
     public Camera Camera => _camera;
     public Lights Lights => _lights;
 
-    internal Screen(Rust.Box<CH.HostScreen> screen, ThreadId mainThread)
+    internal Screen(Rust.Box<CH.HostScreen> screen, ThreadId mainThread, Action<Screen>? onPrepare)
     {
         _native = screen;
         _mainThread = mainThread;
+        _onPrepare = onPrepare;
         _state = RunningState.Running;
         _subscriptions = new SubscriptionBag();
         _operations = new Operations(this);
@@ -161,7 +153,7 @@ public sealed class Screen
         _update = new Timing(this);
         _lateUpdate = new Timing(this);
         _mouse = new Mouse(this);
-        _surface = new SurfaceTexture(this);
+        _surface = new Surface(this);
         _keyboard = new Keyboard(this);
         _info = Buffer.CreateInitData(this, new ScreenInfo
         {
@@ -224,7 +216,6 @@ public sealed class Screen
 
     internal void OnInitialize(in CH.HostScreenInfo info)
     {
-        _surfaceFormat = info.surface_format.Unwrap().MapOrThrow();
         _backend = info.backend.MapOrThrow();
 
         var size = ClientSize;
@@ -273,6 +264,10 @@ public sealed class Screen
         Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
         var operations = _operations;
         _mouse.InitFrame();
+
+        if(_frameNum == 0) {
+            _onPrepare?.Invoke(this);
+        }
 
         operations.ApplyAdd();
 

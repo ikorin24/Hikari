@@ -8,7 +8,7 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
     protected UIShader(
         ReadOnlySpan<byte> shaderSource,
         UILayer operation,
-        Func<PipelineLayout, ShaderModule, RenderPipelineDescriptor> getPipelineDesc)
+        Func<UILayer, ShaderModule, RenderPipelineDescriptor> getPipelineDesc)
         : base(shaderSource, operation, getPipelineDesc)
     {
     }

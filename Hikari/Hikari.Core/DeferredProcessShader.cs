@@ -312,12 +312,11 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         return bindGroups;
     }
 
-    private static RenderPipelineDescriptor Desc(PipelineLayout pipelineLayout, ShaderModule module)
+    private static RenderPipelineDescriptor Desc(DeferredProcess operation, ShaderModule module)
     {
-        var screen = pipelineLayout.Screen;
         return new RenderPipelineDescriptor
         {
-            Layout = pipelineLayout,
+            Layout = operation.PipelineLayout,
             Vertex = new VertexState
             {
                 Module = module,
@@ -339,7 +338,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                 {
                     new ColorTargetState
                     {
-                        Format = screen.SurfaceFormat,
+                        Format = operation.ColorFormat,
                         Blend = null,
                         WriteMask = ColorWrites.All,
                     }
@@ -355,7 +354,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             },
             DepthStencil = new DepthStencilState
             {
-                Format = screen.Depth.Format,
+                Format = operation.DepthStencilFormat,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Less,
                 Stencil = StencilState.Default,
