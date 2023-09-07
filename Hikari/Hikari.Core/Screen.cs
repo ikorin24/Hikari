@@ -23,7 +23,7 @@ public sealed class Screen
     private bool _initialized;
     private string _title = "";
     private readonly Mouse _mouse;
-    private RenderTextureProvider? _depth;
+    private Own<RenderTextureProvider> _depthStencil;
     private readonly Surface _surface;
     private readonly Own<Buffer> _info;
     private readonly Keyboard _keyboard;
@@ -72,14 +72,7 @@ public sealed class Screen
     public Timing Update => _update;
     public Timing LateUpdate => _lateUpdate;
 
-    public ITexture2DProvider Depth
-    {
-        get
-        {
-            ThrowIfNotInit();
-            return _depth;
-        }
-    }
+    public RenderTextureProvider DepthStencil => _depthStencil.AsValue();
 
     public Surface Surface => _surface;
 
@@ -219,7 +212,7 @@ public sealed class Screen
         _backend = info.backend.MapOrThrow();
 
         var size = ClientSize;
-        _depth = new RenderTextureProvider(this, new()
+        _depthStencil = RenderTextureProvider.Create(this, new()
         {
             Size = size,
             MipLevelCount = 1,
@@ -306,7 +299,9 @@ public sealed class Screen
         Debug.Assert(height != 0);
         var size = new Vector2u(width, height);
         _native.Unwrap().AsRef().ScreenResizeSurface(size.X, size.Y);
-        _depth?.Resize(size);
+        if(_depthStencil.TryAsValue(out var depthStencil)) {
+            depthStencil.Resize(size);
+        }
         _camera.ChangeScreenSize(size);
         _info.AsValue().WriteData(0, new ScreenInfo
         {
@@ -346,7 +341,8 @@ public sealed class Screen
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CH.HostScreen>.None);
         _closed.Clear();
         _camera.DisposeInternal();
-        _depth?.Dispose();
+        _depthStencil.Dispose();
+        _depthStencil = Own<RenderTextureProvider>.None;
         _lights.DisposeInternal();
         _resized.Clear();
         _subscriptions.Dispose();
@@ -361,14 +357,12 @@ public sealed class Screen
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [MemberNotNull(nameof(_depth))]
     private void ThrowIfNotInit()
     {
         if(_initialized == false) {
             Throw();
             static void Throw() => throw new InvalidOperationException("not initialized");
         }
-        Debug.Assert(_depth != null);
     }
 
     private struct ScreenInfo

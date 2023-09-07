@@ -41,14 +41,14 @@ internal class Program
         }).AsValue(out var gBufferProviderOwn);
         screen.Resized.Subscribe(x => gBufferProvider.Resize(x.Size));
         screen.Closed.Subscribe(_ => gBufferProviderOwn.Dispose());
-        var layer = ops.AddPbrLayer(0, gBufferProvider, screen.Depth.GetCurrentFormat());
+        var layer = ops.AddPbrLayer(0, gBufferProvider, screen.DepthStencil.Format);
         var deferredProcess = ops.AddDeferredProcess(
             1,
             new DeferredProcessDescriptor
             {
                 InputGBuffer = gBufferProvider,
                 ColorFormat = screen.Surface.Format,
-                DepthStencilFormat = screen.Depth.GetCurrentFormat(),
+                DepthStencilFormat = screen.DepthStencil.Format,
                 OnRenderPass = static self => RenderPass.Create(
                     self.Screen,
                     new ColorAttachment
@@ -58,7 +58,7 @@ internal class Program
                     },
                     new DepthStencilAttachment
                     {
-                        Target = self.Screen.Depth,
+                        Target = self.Screen.DepthStencil,
                         LoadOp = new DepthStencilBufferInit
                         {
                             Depth = DepthBufferInit.Clear(1f),
@@ -71,7 +71,7 @@ internal class Program
             new UIDescriptor
             {
                 ColorFormat = screen.Surface.Format,
-                DepthStencilFormat = screen.Depth.GetCurrentFormat(),
+                DepthStencilFormat = screen.DepthStencil.Format,
                 OnRenderPass = static screen => RenderPass.Create(
                     screen,
                     new ColorAttachment
@@ -81,7 +81,7 @@ internal class Program
                     },
                     new DepthStencilAttachment
                     {
-                        Target = screen.Depth,
+                        Target = screen.DepthStencil,
                         LoadOp = new DepthStencilBufferInit
                         {
                             Depth = DepthBufferInit.Clear(1f),
@@ -249,7 +249,7 @@ internal class Program
             new UIDescriptor
             {
                 ColorFormat = screen.Surface.Format,
-                DepthStencilFormat = screen.Depth.GetCurrentFormat(),
+                DepthStencilFormat = screen.DepthStencil.Format,
                 OnRenderPass = static screen => RenderPass.Create(
                     screen,
                     new ColorAttachment
@@ -259,7 +259,7 @@ internal class Program
                     },
                     new DepthStencilAttachment
                     {
-                        Target = screen.Depth,
+                        Target = screen.DepthStencil,
                         LoadOp = new DepthStencilBufferInit
                         {
                             Depth = DepthBufferInit.Clear(1f),

@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Hikari;
 
-public sealed class RenderTextureProvider : ITexture2DProvider, IDisposable
+public sealed class RenderTextureProvider : ITexture2DProvider
 {
     private Own<Texture2D> _currentOwn;
     private Texture2D? _current;
@@ -44,10 +44,18 @@ public sealed class RenderTextureProvider : ITexture2DProvider, IDisposable
 
     Rust.Ref<Wgpu.TextureView> ITextureViewProvider.GetCurrentTextureView() => GetCurrentTextureView();
 
-    public RenderTextureProvider(Screen screen, in Texture2DDescriptor desc)
+    private RenderTextureProvider(Screen screen, in Texture2DDescriptor desc)
     {
         _currentOwn = Texture2D.Create(screen, desc);
         _current = _currentOwn.AsValue();
+    }
+
+    public static Own<RenderTextureProvider> Create(Screen screen, in Texture2DDescriptor desc)
+    {
+        return Own.New(new RenderTextureProvider(screen, desc), x =>
+        {
+            SafeCast.As<RenderTextureProvider>(x).Release();
+        });
     }
 
     public bool Resize(Vector2u size)
@@ -69,7 +77,7 @@ public sealed class RenderTextureProvider : ITexture2DProvider, IDisposable
         return true;
     }
 
-    public void Dispose()
+    public void Release()
     {
         _currentOwn.Dispose();
         _current = null;
