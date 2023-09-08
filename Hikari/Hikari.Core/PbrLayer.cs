@@ -15,15 +15,15 @@ public sealed class PbrLayer
         TextureFormat.Rgba32Float,
     };
 
-    private readonly IGBufferProvider _gBufferProvider;
     private readonly Own<PipelineLayout> _shadowPipelineLayout;
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly BindGroupLayout _bindGroupLayout1;
-    private readonly TextureFormat _depthStencilFormat;
+    private readonly PbrLayerDescriptor _desc;
     private readonly TextureFormat _shadowMapFormat;
     private readonly Own<BindGroupLayout> _shadowBindGroupLayout0;
 
-    public TextureFormat DepthStencilFormat => _depthStencilFormat;
+    public IGBufferProvider InputGBuffer => _desc.InputGBuffer;
+    public TextureFormat DepthStencilFormat => _desc.DepthStencilFormat;
     public TextureFormat ShadowMapFormat => _shadowMapFormat;
 
     public BindGroupLayout BindGroupLayout0 => _bindGroupLayout0.AsValue();
@@ -34,21 +34,20 @@ public sealed class PbrLayer
 
     public PipelineLayout ShadowPipelineLayout => _shadowPipelineLayout.AsValue();
 
-    internal PbrLayer(Screen screen, IGBufferProvider gBufferProvider, TextureFormat depthStencilFormat, TextureFormat shadowMapFormat)
+    internal PbrLayer(Screen screen, in PbrLayerDescriptor desc)
         : base(
             screen,
             BuildPipelineLayoutDescriptor(screen, out var bindGroupLayout0, out var bindGroupLayout1))
     {
-        ArgumentNullException.ThrowIfNull(gBufferProvider);
-        _depthStencilFormat = depthStencilFormat;
-        _shadowMapFormat = shadowMapFormat;
+        desc.Validate();
+        _desc = desc;
+        _shadowMapFormat = screen.Lights.DirectionalLight.ShadowMap.Format;
         _bindGroupLayout0 = bindGroupLayout0;
         _bindGroupLayout1 = bindGroupLayout1;
         _shadowPipelineLayout = BuildShadowPipeline(screen, out var shadowBgl0);
         _shadowBindGroupLayout0 = shadowBgl0;
         _bindGroupLayout1 = bindGroupLayout1;
 
-        _gBufferProvider = gBufferProvider;
         Dead.Subscribe(static self =>
         {
             self._bindGroupLayout0.Dispose();
@@ -79,8 +78,7 @@ public sealed class PbrLayer
 
     protected override OwnRenderPass CreateRenderPass(in OperationContext context)
     {
-        var gBuffer = _gBufferProvider.GetCurrentGBuffer();
-        return gBuffer.CreateRenderPass();
+        return _desc.OnRenderPass(this);
     }
 
     private static Own<PipelineLayout> BuildPipelineLayoutDescriptor(
@@ -138,5 +136,20 @@ public sealed class PbrLayer
                 obj.RenderShadowMap(in p, i, context.Lights, obj.Material, obj.Mesh);
             }
         }
+    }
+}
+
+public readonly record struct PbrLayerDescriptor
+{
+    public required IGBufferProvider InputGBuffer { get; init; }
+
+    public required TextureFormat DepthStencilFormat { get; init; }
+
+    public required RenderPassFunc<PbrLayer> OnRenderPass { get; init; }
+
+    public void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(InputGBuffer);
+        ArgumentNullException.ThrowIfNull(OnRenderPass);
     }
 }

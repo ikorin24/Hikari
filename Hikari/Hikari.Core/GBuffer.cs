@@ -56,10 +56,13 @@ public sealed class GBuffer : IScreenManaged
         return Own.New(gbuffer, static x => SafeCast.As<GBuffer>(x).Release());
     }
 
-    public Texture2D ColorAttachment(int index)
+    public Texture2D this[int index]
     {
-        this.ThrowIfNotScreenManaged();
-        return _colors[index].AsValue();
+        get
+        {
+            this.ThrowIfNotScreenManaged();
+            return _colors[index].AsValue();
+        }
     }
 
     private static void Prepare(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats, Span<Own<Texture2D>> colors, Span<CH.Opt<CH.RenderPassColorAttachment>> colorsNative)
@@ -82,30 +85,6 @@ public sealed class GBuffer : IScreenManaged
                     value = new Wgpu.Color(0, 0, 0, 0),
                 },
             });
-        }
-    }
-
-    public unsafe OwnRenderPass CreateRenderPass()
-    {
-        this.ThrowIfNotScreenManaged();
-        var screen = Screen;
-        var attachmentsNative = _colorsNative;
-        fixed(CH.Opt<CH.RenderPassColorAttachment>* p = attachmentsNative) {
-            var desc = new CH.RenderPassDescriptor
-            {
-                color_attachments = new(p, attachmentsNative.Length),
-                depth_stencil_attachment = new(new()
-                {
-                    view = screen.DepthStencil.GetCurrentTextureView(),
-                    depth = new(new()
-                    {
-                        mode = CH.RenderPassBufferInitMode.Clear,
-                        value = 1f,
-                    }),
-                    stencil = CH.Opt<CH.RenderPassStencilBufferInit>.None,
-                }),
-            };
-            return RenderPass.Create(screen, in desc);
         }
     }
 }

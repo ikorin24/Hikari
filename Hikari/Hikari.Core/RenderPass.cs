@@ -69,6 +69,31 @@ public readonly ref struct RenderPass
         return Create(screen, desc);
     }
 
+    public static unsafe OwnRenderPass Create(
+        Screen screen,
+        IGBufferProvider gBufferProvider,
+        SpanAction<ColorAttachment?, GBuffer> action,
+        scoped in DepthStencilAttachment? depthStencil)
+    {
+        var gBuffer = gBufferProvider.GetCurrentGBuffer();
+        Span<ColorAttachment?> colors = stackalloc ColorAttachment?[gBuffer.ColorAttachmentCount];
+        action.Invoke(colors, gBuffer);
+        return Create(screen, colors, depthStencil);
+    }
+
+    public static unsafe OwnRenderPass Create(
+        Screen screen,
+        IGBufferProvider gBufferProvider,
+        int colorAttachmentCount,
+        SpanAction<ColorAttachment?, GBuffer> action,
+        scoped in DepthStencilAttachment? depthStencil)
+    {
+        var gBuffer = gBufferProvider.GetCurrentGBuffer();
+        Span<ColorAttachment?> colors = stackalloc ColorAttachment?[colorAttachmentCount];
+        action.Invoke(colors, gBuffer);
+        return Create(screen, colors, depthStencil);
+    }
+
     public static unsafe OwnRenderPass Create(Screen screen, scoped ReadOnlySpan<ColorAttachment?> colors, scoped in DepthStencilAttachment? depthStencil)
     {
         var colorsNative = stackalloc CH.Opt<CH.RenderPassColorAttachment>[colors.Length];
@@ -216,17 +241,22 @@ public readonly ref struct OwnRenderPass
 
 public readonly record struct ColorAttachment
 {
-    public required ITextureViewProvider Target { get; init; }
-    public required ColorBufferLoadOp LoadOp { get; init; }
+    private readonly NativePointer _nativeView;
+    private readonly CH.RenderPassColorBufferInit _nativeInit;
+
+    public required ITextureViewProvider Target
+    {
+        init => _nativeView = value.GetCurrentTextureView().AsPtr();
+    }
+    public required ColorBufferLoadOp LoadOp
+    {
+        init => _nativeInit = value.ToNative();
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal CH.RenderPassColorAttachment ToNative()
     {
-        return new()
-        {
-            view = Target.GetCurrentTextureView(),
-            init = LoadOp.ToNative(),
-        };
+        return new(_nativeView, _nativeInit);
     }
 }
 

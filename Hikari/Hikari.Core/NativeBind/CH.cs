@@ -597,6 +597,13 @@ internal static class CH
         }
 
         public required RenderPassColorBufferInit init { get => _init; init => _init = value; }
+
+        [SetsRequiredMembers]
+        public RenderPassColorAttachment(NativePointer view, RenderPassColorBufferInit init)
+        {
+            _view = view;
+            _init = init;
+        }
     }
 
     internal readonly struct BindGroupDescriptor

@@ -31,72 +31,9 @@ internal class Program
     {
         screen.Title = "sample";
 
-        var ops = screen.Operations;
-        var gBufferProvider = GBufferProvider.Create(screen, screen.ClientSize, stackalloc TextureFormat[4]
-        {
-            TextureFormat.Rgba32Float,
-            TextureFormat.Rgba32Float,
-            TextureFormat.Rgba32Float,
-            TextureFormat.Rgba32Float,
-        }).AsValue(out var gBufferProviderOwn);
-        screen.Resized.Subscribe(x => gBufferProvider.Resize(x.Size));
-        screen.Closed.Subscribe(_ => gBufferProviderOwn.Dispose());
-        var layer = ops.AddPbrLayer(0, gBufferProvider, screen.DepthStencil.Format);
-        var deferredProcess = ops.AddDeferredProcess(
-            1,
-            new DeferredProcessDescriptor
-            {
-                InputGBuffer = gBufferProvider,
-                ColorFormat = screen.Surface.Format,
-                DepthStencilFormat = screen.DepthStencil.Format,
-                OnRenderPass = static self =>
-                {
-                    return RenderPass.Create(
-                        self.Screen,
-                        new ColorAttachment
-                        {
-                            Target = self.Screen.Surface,
-                            LoadOp = ColorBufferLoadOp.Clear(),
-                        },
-                        new DepthStencilAttachment
-                        {
-                            Target = self.Screen.DepthStencil,
-                            LoadOp = new DepthStencilBufferLoadOp
-                            {
-                                Depth = DepthBufferLoadOp.Clear(1f),
-                                Stencil = null,
-                            },
-                        });
-                },
-            });
-        var ui = ops.AddUI(
-            2,
-            new UIDescriptor
-            {
-                ColorFormat = screen.Surface.Format,
-                DepthStencilFormat = screen.DepthStencil.Format,
-                OnRenderPass = static screen =>
-                {
-                    return RenderPass.Create(
-                        screen,
-                        new ColorAttachment
-                        {
-                            Target = screen.Surface,
-                            LoadOp = ColorBufferLoadOp.Load(),
-                        },
-                        new DepthStencilAttachment
-                        {
-                            Target = screen.DepthStencil,
-                            LoadOp = new DepthStencilBufferLoadOp
-                            {
-                                Depth = DepthBufferLoadOp.Clear(1f),
-                                Stencil = null,
-                            },
-                        });
-                },
-            });
+        var app = AppRenderer.Build(screen);
 
-        ui.RenderRoot($$"""
+        app.UI.RenderRoot($$"""
         {
             "@type": {{typeof(Counter)}},
             "Width": "80%",
@@ -108,13 +45,11 @@ internal class Program
         var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
         var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
 
-        var shader = PbrShader.Create(screen, layer).AsValue(out var _);
-
-        var model = new PbrModel(shader, Shapes.Plane(screen, true), albedo, mr, normal);
+        var model = new PbrModel(app.PbrShader, Shapes.Plane(screen, true), albedo, mr, normal);
         model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
         model.Scale = 10;
         var material = model.Material;
-        var cube = new PbrModel(shader, Shapes.Cube(screen, true),
+        var cube = new PbrModel(app.PbrShader, Shapes.Cube(screen, true),
             material.Albedo, material.MetallicRoughness, material.Normal);
         cube.Scale = 0.3f;
         cube.Position = new Vector3(0, 0.2f, 0);
@@ -282,6 +217,132 @@ internal class Program
             "Height": "80%"
         }
         """);
+    }
+}
+
+public sealed class AppRenderer
+{
+    private readonly Screen _screen;
+    private readonly PbrLayer _pbrLayer;
+    private readonly DeferredProcess _deferredProcess;
+    private readonly UITree _ui;
+
+    private readonly PbrShader _pbrShader;
+
+    public Screen Screen => _screen;
+    public PbrLayer PbrLayer => _pbrLayer;
+    public DeferredProcess DeferredProcess => _deferredProcess;
+    public UITree UI => _ui;
+
+    public PbrShader PbrShader => _pbrShader;
+
+
+    private AppRenderer(Screen screen, PbrLayer pbrLayer, DeferredProcess deferredProcess, UITree ui)
+    {
+        _screen = screen;
+        _pbrLayer = pbrLayer;
+        _deferredProcess = deferredProcess;
+        _ui = ui;
+        _pbrShader = PbrShader.Create(screen, pbrLayer).AsValue(out var shaderOwn);
+        screen.Closed.Subscribe(_ =>
+        {
+            shaderOwn.Dispose();
+        });
+    }
+
+    public static AppRenderer Build(Screen screen)
+    {
+        var ops = screen.Operations;
+        var gBufferProvider = GBufferProvider.Create(screen, screen.ClientSize, stackalloc TextureFormat[4]
+        {
+            TextureFormat.Rgba32Float,
+            TextureFormat.Rgba32Float,
+            TextureFormat.Rgba32Float,
+            TextureFormat.Rgba32Float,
+        }).AsValue(out var gBufferProviderOwn);
+        screen.Resized.Subscribe(x => gBufferProvider.Resize(x.Size));
+        screen.Closed.Subscribe(_ => gBufferProviderOwn.Dispose());
+        var pbrLayer = ops.AddPbrLayer(0, new PbrLayerDescriptor
+        {
+            InputGBuffer = gBufferProvider,
+            DepthStencilFormat = screen.DepthStencil.Format,
+            OnRenderPass = static layer =>
+            {
+                return RenderPass.Create(
+                    layer.Screen,
+                    layer.InputGBuffer,
+                    static (colors, gBuffer) =>
+                    {
+                        for(int i = 0; i < gBuffer.ColorAttachmentCount; i++) {
+                            colors[i] = new ColorAttachment
+                            {
+                                Target = gBuffer[i],
+                                LoadOp = ColorBufferLoadOp.Clear(),
+                            };
+                        }
+                    },
+                    new DepthStencilAttachment
+                    {
+                        Target = layer.Screen.DepthStencil,
+                        LoadOp = new DepthStencilBufferLoadOp
+                        {
+                            Depth = DepthBufferLoadOp.Clear(1f),
+                            Stencil = null,
+                        },
+                    });
+            },
+        });
+        var deferredProcess = ops.AddDeferredProcess(1, new DeferredProcessDescriptor
+        {
+            InputGBuffer = gBufferProvider,
+            ColorFormat = screen.Surface.Format,
+            DepthStencilFormat = screen.DepthStencil.Format,
+            OnRenderPass = static self =>
+            {
+                return RenderPass.Create(
+                    self.Screen,
+                    new ColorAttachment
+                    {
+                        Target = self.Screen.Surface,
+                        LoadOp = ColorBufferLoadOp.Clear(),
+                    },
+                    new DepthStencilAttachment
+                    {
+                        Target = self.Screen.DepthStencil,
+                        LoadOp = new DepthStencilBufferLoadOp
+                        {
+                            Depth = DepthBufferLoadOp.Clear(1f),
+                            Stencil = null,
+                        },
+                    });
+            },
+        });
+        var ui = ops.AddUI(2, new UIDescriptor
+        {
+            ColorFormat = screen.Surface.Format,
+            DepthStencilFormat = screen.DepthStencil.Format,
+            OnRenderPass = static screen =>
+            {
+                return RenderPass.Create(
+                    screen,
+                    new ColorAttachment
+                    {
+                        Target = screen.Surface,
+                        LoadOp = ColorBufferLoadOp.Load(),
+                    },
+                    new DepthStencilAttachment
+                    {
+                        Target = screen.DepthStencil,
+                        LoadOp = new DepthStencilBufferLoadOp
+                        {
+                            Depth = DepthBufferLoadOp.Clear(1f),
+                            Stencil = null,
+                        },
+                    });
+            },
+        });
+
+        return new AppRenderer(screen, pbrLayer, deferredProcess, ui);
     }
 }
 
