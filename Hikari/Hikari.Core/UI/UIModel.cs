@@ -31,8 +31,6 @@ internal sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShad
 
     private static Mesh<VertexSlim> GetMesh(Screen screen)
     {
-        // TODO: remove cache when screen is disposed
-
         var cache = _cache.GetOrAdd(screen, static screen =>
         {
             ReadOnlySpan<VertexSlim> vertices = stackalloc VertexSlim[4]
@@ -44,6 +42,7 @@ internal sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShad
             };
             ReadOnlySpan<ushort> indices = stackalloc ushort[6] { 0, 1, 2, 2, 3, 0 };
             var mesh = Hikari.Mesh.Create(screen, vertices, indices);
+            screen.Closed.Subscribe(static screen => _cache.TryRemove(screen, out _));
             return new MeshCache(mesh);
         });
         return cache.Mesh;
