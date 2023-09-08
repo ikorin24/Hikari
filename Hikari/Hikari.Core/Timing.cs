@@ -18,6 +18,8 @@ public sealed class Timing : IScreenManaged
 
     public Screen Screen => _screen;
 
+    public Event<Screen> Event => _eventSource.Event;
+
     bool IScreenManaged.IsManaged => true;
 
     internal Timing(Screen screen)
