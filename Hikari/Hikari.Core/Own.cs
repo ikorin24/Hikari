@@ -81,6 +81,13 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T : notnul
         }
     }
 
+    public T DisposeOn<S>(Event<S> e)
+    {
+        var self = this;
+        e.Subscribe(_ => self.Dispose());
+        return AsValue();
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T AsValue()
     {

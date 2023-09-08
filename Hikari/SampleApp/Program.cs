@@ -243,11 +243,7 @@ public sealed class AppRenderer
         _pbrLayer = pbrLayer;
         _deferredProcess = deferredProcess;
         _ui = ui;
-        _pbrShader = PbrShader.Create(screen, pbrLayer).AsValue(out var shaderOwn);
-        screen.Closed.Subscribe(_ =>
-        {
-            shaderOwn.Dispose();
-        });
+        _pbrShader = PbrShader.Create(screen, pbrLayer).DisposeOn(screen.Closed);
     }
 
     public static AppRenderer Build(Screen screen)
@@ -259,9 +255,8 @@ public sealed class AppRenderer
             TextureFormat.Rgba32Float,
             TextureFormat.Rgba32Float,
             TextureFormat.Rgba32Float,
-        }).AsValue(out var gBufferProviderOwn);
+        }).DisposeOn(screen.Closed);
         screen.Resized.Subscribe(x => gBufferProvider.Resize(x.Size));
-        screen.Closed.Subscribe(_ => gBufferProviderOwn.Dispose());
         var pbrLayer = ops.AddPbrLayer(0, new PbrLayerDescriptor
         {
             InputGBuffer = gBufferProvider,
