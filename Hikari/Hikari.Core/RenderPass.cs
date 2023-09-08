@@ -38,7 +38,7 @@ public readonly ref struct RenderPass
             new ColorAttachment
             {
                 Target = screen.Surface,
-                LoadOp = ColorBufferInit.Clear(clearColor),
+                LoadOp = ColorBufferLoadOp.Clear(clearColor),
             },
             null);
     }
@@ -217,7 +217,7 @@ public readonly ref struct OwnRenderPass
 public readonly record struct ColorAttachment
 {
     public required ITextureViewProvider Target { get; init; }
-    public required ColorBufferInit LoadOp { get; init; }
+    public required ColorBufferLoadOp LoadOp { get; init; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal CH.RenderPassColorAttachment ToNative()
@@ -233,7 +233,7 @@ public readonly record struct ColorAttachment
 public readonly record struct DepthStencilAttachment
 {
     public required ITextureViewProvider Target { get; init; }
-    public required DepthStencilBufferInit LoadOp { get; init; }
+    public required DepthStencilBufferLoadOp LoadOp { get; init; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal CH.RenderPassDepthStencilAttachment ToNative()
@@ -243,55 +243,55 @@ public readonly record struct DepthStencilAttachment
             view = Target.GetCurrentTextureView(),
             depth = LoadOp.Depth switch
             {
-                DepthBufferInit depth => new(depth.ToNative()),
+                DepthBufferLoadOp depth => new(depth.ToNative()),
                 null => CH.Opt<CH.RenderPassDepthBufferInit>.None,
             },
             stencil = LoadOp.Stencil switch
             {
-                StencilBufferInit stencil => new(stencil.ToNative()),
+                StencilBufferLoadOp stencil => new(stencil.ToNative()),
                 null => CH.Opt<CH.RenderPassStencilBufferInit>.None,
             },
         };
     }
 }
 
-public readonly record struct ColorBufferInit
+public readonly record struct ColorBufferLoadOp
 {
-    public required RenderPassInitMode Mode { get; init; }
+    public required RenderBufferLoadMode Mode { get; init; }
     public (f64 R, f64 G, f64 B, f64 A) ClearValue { get; init; }
 
-    public static ColorBufferInit Clear()
+    public static ColorBufferLoadOp Clear()
     {
-        return new ColorBufferInit
+        return new ColorBufferLoadOp
         {
-            Mode = RenderPassInitMode.Clear,
+            Mode = RenderBufferLoadMode.Clear,
             ClearValue = (0, 0, 0, 0),
         };
     }
 
-    public static ColorBufferInit Clear(f64 r, f64 g, f64 b, f64 a)
+    public static ColorBufferLoadOp Clear(f64 r, f64 g, f64 b, f64 a)
     {
-        return new ColorBufferInit
+        return new ColorBufferLoadOp
         {
-            Mode = RenderPassInitMode.Clear,
+            Mode = RenderBufferLoadMode.Clear,
             ClearValue = (r, g, b, a),
         };
     }
 
-    public static ColorBufferInit Clear((f64 R, f64 G, f64 B, f64 A) clearValue)
+    public static ColorBufferLoadOp Clear((f64 R, f64 G, f64 B, f64 A) clearValue)
     {
-        return new ColorBufferInit
+        return new ColorBufferLoadOp
         {
-            Mode = RenderPassInitMode.Clear,
+            Mode = RenderBufferLoadMode.Clear,
             ClearValue = clearValue,
         };
     }
 
-    public static ColorBufferInit Load()
+    public static ColorBufferLoadOp Load()
     {
-        return new ColorBufferInit
+        return new ColorBufferLoadOp
         {
-            Mode = RenderPassInitMode.Load,
+            Mode = RenderBufferLoadMode.Load,
         };
     }
 
@@ -302,8 +302,8 @@ public readonly record struct ColorBufferInit
         {
             mode = Mode switch
             {
-                RenderPassInitMode.Clear => CH.RenderPassBufferInitMode.Clear,
-                RenderPassInitMode.Load or _ => CH.RenderPassBufferInitMode.Load,
+                RenderBufferLoadMode.Clear => CH.RenderPassBufferInitMode.Clear,
+                RenderBufferLoadMode.Load or _ => CH.RenderPassBufferInitMode.Load,
             },
             value = new Wgpu.Color
             {
@@ -316,20 +316,20 @@ public readonly record struct ColorBufferInit
     }
 }
 
-public readonly record struct DepthBufferInit
+public readonly record struct DepthBufferLoadOp
 {
-    public required RenderPassInitMode Mode { get; init; }
+    public required RenderBufferLoadMode Mode { get; init; }
     public f32 ClearValue { get; init; }
 
-    public static DepthBufferInit Clear(f32 clearValue) => new DepthBufferInit
+    public static DepthBufferLoadOp Clear(f32 clearValue) => new DepthBufferLoadOp
     {
-        Mode = RenderPassInitMode.Clear,
+        Mode = RenderBufferLoadMode.Clear,
         ClearValue = clearValue,
     };
 
-    public static DepthBufferInit Load() => new DepthBufferInit
+    public static DepthBufferLoadOp Load() => new DepthBufferLoadOp
     {
-        Mode = RenderPassInitMode.Load,
+        Mode = RenderBufferLoadMode.Load,
     };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -339,28 +339,28 @@ public readonly record struct DepthBufferInit
         {
             mode = Mode switch
             {
-                RenderPassInitMode.Clear => CH.RenderPassBufferInitMode.Clear,
-                RenderPassInitMode.Load or _ => CH.RenderPassBufferInitMode.Load,
+                RenderBufferLoadMode.Clear => CH.RenderPassBufferInitMode.Clear,
+                RenderBufferLoadMode.Load or _ => CH.RenderPassBufferInitMode.Load,
             },
             value = ClearValue,
         };
     }
 }
 
-public readonly record struct StencilBufferInit
+public readonly record struct StencilBufferLoadOp
 {
-    public required RenderPassInitMode Mode { get; init; }
+    public required RenderBufferLoadMode Mode { get; init; }
     public u32 ClearValue { get; init; }
 
-    public static StencilBufferInit Clear(u32 clearValue) => new StencilBufferInit
+    public static StencilBufferLoadOp Clear(u32 clearValue) => new StencilBufferLoadOp
     {
-        Mode = RenderPassInitMode.Clear,
+        Mode = RenderBufferLoadMode.Clear,
         ClearValue = clearValue,
     };
 
-    public static StencilBufferInit Load() => new StencilBufferInit
+    public static StencilBufferLoadOp Load() => new StencilBufferLoadOp
     {
-        Mode = RenderPassInitMode.Load,
+        Mode = RenderBufferLoadMode.Load,
     };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -370,21 +370,21 @@ public readonly record struct StencilBufferInit
         {
             mode = Mode switch
             {
-                RenderPassInitMode.Clear => CH.RenderPassBufferInitMode.Clear,
-                RenderPassInitMode.Load or _ => CH.RenderPassBufferInitMode.Load,
+                RenderBufferLoadMode.Clear => CH.RenderPassBufferInitMode.Clear,
+                RenderBufferLoadMode.Load or _ => CH.RenderPassBufferInitMode.Load,
             },
             value = ClearValue,
         };
     }
 }
 
-public readonly record struct DepthStencilBufferInit
+public readonly record struct DepthStencilBufferLoadOp
 {
-    public required DepthBufferInit? Depth { get; init; }
-    public required StencilBufferInit? Stencil { get; init; }
+    public required DepthBufferLoadOp? Depth { get; init; }
+    public required StencilBufferLoadOp? Stencil { get; init; }
 }
 
-public enum RenderPassInitMode : u32
+public enum RenderBufferLoadMode : u32
 {
     Clear = 0,
     Load = 1,

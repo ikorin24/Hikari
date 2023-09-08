@@ -31,9 +31,9 @@ public readonly ref struct RenderShadowMapContext
             new DepthStencilAttachment
             {
                 Target = _shadowMap.View,
-                LoadOp = new DepthStencilBufferInit
+                LoadOp = new DepthStencilBufferLoadOp
                 {
-                    Depth = DepthBufferInit.Clear(1f),
+                    Depth = DepthBufferLoadOp.Clear(1f),
                     Stencil = null,
                 }
             });

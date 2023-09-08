@@ -49,22 +49,25 @@ internal class Program
                 InputGBuffer = gBufferProvider,
                 ColorFormat = screen.Surface.Format,
                 DepthStencilFormat = screen.DepthStencil.Format,
-                OnRenderPass = static self => RenderPass.Create(
-                    self.Screen,
-                    new ColorAttachment
-                    {
-                        Target = self.Screen.Surface,
-                        LoadOp = ColorBufferInit.Clear(),
-                    },
-                    new DepthStencilAttachment
-                    {
-                        Target = self.Screen.DepthStencil,
-                        LoadOp = new DepthStencilBufferInit
+                OnRenderPass = static self =>
+                {
+                    return RenderPass.Create(
+                        self.Screen,
+                        new ColorAttachment
                         {
-                            Depth = DepthBufferInit.Clear(1f),
-                            Stencil = null,
+                            Target = self.Screen.Surface,
+                            LoadOp = ColorBufferLoadOp.Clear(),
                         },
-                    }),
+                        new DepthStencilAttachment
+                        {
+                            Target = self.Screen.DepthStencil,
+                            LoadOp = new DepthStencilBufferLoadOp
+                            {
+                                Depth = DepthBufferLoadOp.Clear(1f),
+                                Stencil = null,
+                            },
+                        });
+                },
             });
         var ui = ops.AddUI(
             2,
@@ -72,22 +75,25 @@ internal class Program
             {
                 ColorFormat = screen.Surface.Format,
                 DepthStencilFormat = screen.DepthStencil.Format,
-                OnRenderPass = static screen => RenderPass.Create(
-                    screen,
-                    new ColorAttachment
-                    {
-                        Target = screen.Surface,
-                        LoadOp = ColorBufferInit.Load(),
-                    },
-                    new DepthStencilAttachment
-                    {
-                        Target = screen.DepthStencil,
-                        LoadOp = new DepthStencilBufferInit
+                OnRenderPass = static screen =>
+                {
+                    return RenderPass.Create(
+                        screen,
+                        new ColorAttachment
                         {
-                            Depth = DepthBufferInit.Clear(1f),
-                            Stencil = null,
+                            Target = screen.Surface,
+                            LoadOp = ColorBufferLoadOp.Load(),
                         },
-                    }),
+                        new DepthStencilAttachment
+                        {
+                            Target = screen.DepthStencil,
+                            LoadOp = new DepthStencilBufferLoadOp
+                            {
+                                Depth = DepthBufferLoadOp.Clear(1f),
+                                Stencil = null,
+                            },
+                        });
+                },
             });
 
         ui.RenderRoot($$"""
@@ -255,14 +261,14 @@ internal class Program
                     new ColorAttachment
                     {
                         Target = screen.Surface,
-                        LoadOp = ColorBufferInit.Load(),
+                        LoadOp = ColorBufferLoadOp.Clear(),
                     },
                     new DepthStencilAttachment
                     {
                         Target = screen.DepthStencil,
-                        LoadOp = new DepthStencilBufferInit
+                        LoadOp = new DepthStencilBufferLoadOp
                         {
-                            Depth = DepthBufferInit.Clear(1f),
+                            Depth = DepthBufferLoadOp.Clear(1f),
                             Stencil = null,
                         },
                     }),

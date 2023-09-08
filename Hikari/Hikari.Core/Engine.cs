@@ -12,12 +12,12 @@ public static class Engine
 {
     private static readonly Dictionary<CH.ScreenId, Screen> _screens = new();
 
-    private static Action<Screen>? _onInitialized;
+    private static Action<Screen>? _onScreenInit;
 
-    public static void Run(in ScreenConfig screenConfig, Action<Screen> onInitialized)
+    public static void Run(in ScreenConfig screenConfig, Action<Screen> onScreenInit)
     {
-        ArgumentNullException.ThrowIfNull(onInitialized);
-        if(Interlocked.CompareExchange(ref _onInitialized, onInitialized, null) != null) {
+        ArgumentNullException.ThrowIfNull(onScreenInit);
+        if(Interlocked.CompareExchange(ref _onScreenInit, onScreenInit, null) != null) {
             throw new InvalidOperationException("The engine is already running.");
         }
         var engineConfig = new EngineCoreConfig
@@ -43,7 +43,7 @@ public static class Engine
         (Rust.Box<CH.HostScreen> screenHandle, CH.HostScreenInfo info) =>
         {
             var mainThread = ThreadId.CurrentThread();
-            var screen = new Screen(screenHandle, mainThread, _onInitialized);
+            var screen = new Screen(screenHandle, mainThread, _onScreenInit);
             var id = screen.ScreenId;
             _screens.Add(id, screen);
             screen.OnInitialize(info);
