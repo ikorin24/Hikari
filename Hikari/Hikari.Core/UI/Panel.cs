@@ -134,7 +134,7 @@ file sealed class PanelShader : UIShader
             ) -> vec4<f32> {
                 let texel_color = get_texel_color(f_pos, TEXT_HALIGN_CENTER, TEXT_VALIGN_CENTER, pos, size);
                 let bg_color = calc_background_brush_color(f_pos, pos, size);
-                return blend(texel_color, bg_color, 1.0);
+                return blend(texel_color, bg_color);
             }
 
             @fragment fn fs_main(

@@ -88,11 +88,10 @@ internal static class UIShaderSource
         """u8;
 
     public static ReadOnlySpan<byte> Fn_blend => """
-        fn blend(src: vec4<f32>, dst: vec4<f32>, x: f32) -> vec4<f32> {
-            let a = src.a * x;
+        fn blend(src: vec4<f32>, dst: vec4<f32>) -> vec4<f32> {
             return vec4(
-                src.rgb * a + (1.0 - a) * dst.rgb,
-                a + (1.0 - a) * dst.a,
+                src.rgb * src.a + (1.0 - src.a) * dst.rgb,
+                src.a + (1.0 - src.a) * dst.a,
             );
         }
         """u8;
@@ -132,7 +131,7 @@ internal static class UIShaderSource
             // vector from center of ellipse to the crossed point of 'd' and the ellipse
             let v: vec2<f32> = d * er_x * er_y / sqrt(pow_x2(er_y * d.x) + pow_x2(er_x * d.y));
             let b = saturate(len_d - length(v) + 0.5);
-            let b_color_blend = blend(b_color, back_color, b);
+            let b_color_blend = blend(vec4(b_color.rgb, b_color.a * b), back_color);
             return vec4<f32>(b_color_blend.rgb, b_color_blend.a * a);
         }
         """u8;
@@ -314,7 +313,7 @@ internal static class UIShaderSource
                         vec2<f32>(b_width[3], b_width[0]),
                         back_color, b_color,
                     );
-                    color = blend(tmp, s_color, 1.0);
+                    color = blend(tmp, s_color);
                 }
                 // top-right corner
                 else if(f_pos.x >= center[1].x && f_pos.y < center[1].y) {
@@ -323,7 +322,7 @@ internal static class UIShaderSource
                         vec2<f32>(b_width[1], b_width[0]),
                         back_color, b_color,
                     );
-                    color = blend(tmp, s_color, 1.0);
+                    color = blend(tmp, s_color);
                 }
                 // bottom-right corner
                 else if(f_pos.x >= center[2].x && f_pos.y >= center[2].y) {
@@ -332,7 +331,7 @@ internal static class UIShaderSource
                         vec2<f32>(b_width[1], b_width[2]),
                         back_color, b_color,
                     );
-                    color = blend(tmp, s_color, 1.0);
+                    color = blend(tmp, s_color);
                 }
                 // bottom-left corner
                 else if(f_pos.x < center[3].x && f_pos.y >= center[3].y) {
@@ -341,7 +340,7 @@ internal static class UIShaderSource
                         vec2<f32>(b_width[3], b_width[2]),
                         back_color, b_color,
                     );
-                    color = blend(tmp, s_color, 1.0);
+                    color = blend(tmp, s_color);
                 }
                 // side border
                 else if(
@@ -350,10 +349,10 @@ internal static class UIShaderSource
                     f_pos.y >= pos.y + size.y - b_width[2] || 
                     f_pos.x < pos.x + b_width[3]
                 ) {
-                    color = blend(b_color, s_color, 1.0);
+                    color = blend(b_color, s_color);
                 }
                 else {
-                    color = blend(back_color, s_color, 1.0);
+                    color = blend(back_color, s_color);
                 }
             }
             // outside of the rectangle
