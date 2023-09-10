@@ -25,7 +25,7 @@ public abstract class UIElement : IToJson, IReactive
     private PseudoInfo? _hoverInfo;
     private PseudoInfo? _activeInfo;
 
-    private (LayoutResult Layout, UIElementInfo AppliedInfo)? _layoutCache;
+    private (LayoutResult Layout, UIElementInfo AppliedInfo, Vector2 FlowHead)? _layoutCache;
     private bool _isHover;
     private bool _isClickHolding;
     private bool _needToInvokeClicked;
@@ -169,6 +169,17 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
+    public Flow Flow
+    {
+        get => _info.Flow;
+        set
+        {
+            if(value == _info.Flow) { return; }
+            _info.Flow = value;
+            _needToLayoutUpdate = true;
+        }
+    }
+
     public UIElementCollection Children
     {
         get => _children;
@@ -255,6 +266,9 @@ public abstract class UIElement : IToJson, IReactive
         if(source.TryGetProperty(nameof(BoxShadow), out var boxShadow)) {
             _info.BoxShadow = BoxShadow.FromJson(boxShadow);
         }
+        if(source.TryGetProperty(nameof(Flow), out var flow)) {
+            _info.Flow = Flow.FromJson(flow);
+        }
         if(source.TryGetProperty(nameof(Clicked), out var clicked)) {
             var action = clicked.Instantiate<Action<UIElement>>();
             _clicked.Event.Subscribe(action);
@@ -299,6 +313,7 @@ public abstract class UIElement : IToJson, IReactive
         writer.Write(nameof(BorderRadius), _info.BorderRadius);
         writer.Write(nameof(BorderColor), _info.BorderColor);
         writer.Write(nameof(BoxShadow), _info.BoxShadow);
+        writer.Write(nameof(Flow), _info.Flow);
         writer.Write(nameof(Children), _children);
     }
 
@@ -320,6 +335,7 @@ public abstract class UIElement : IToJson, IReactive
         BorderRadius = source.ApplyProperty(nameof(BorderRadius), BorderRadius, () => UIElementInfo.DefaultBorderRadius, out _);
         BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, () => UIElementInfo.DefaultBorderColor, out _);
         BoxShadow = source.ApplyProperty(nameof(BoxShadow), BoxShadow, () => UIElementInfo.DefaultBoxShadow, out _);
+        Flow = source.ApplyProperty(nameof(Flow), Flow, () => UIElementInfo.DefaultFlow, out _);
 
         if(source.TryGetProperty(nameof(Children), out var childrenProp)) {
             childrenProp.ApplyDiff(Children);
@@ -387,14 +403,19 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    internal LayoutResult UpdateLayout(bool parentLayoutChanged, in ContentAreaInfo parentContentArea, Mouse mouse)
+    internal void OnChildrenChanged()
+    {
+        _needToLayoutUpdate = true;
+    }
+
+    internal LayoutResult UpdateLayout(bool relayoutRequested, in UIElementInfo parent, in RectF parentContentArea, ref Vector2 flowHead, Mouse mouse)
     {
         // 'rect' is top-left based in Screen
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
         // 'rect' is { X = 10, Y = 40, Width = 200, Heigh = 100 }
 
         var needToRelayout =
-            parentLayoutChanged ||
+            relayoutRequested ||
             _needToLayoutUpdate ||
             (mouse.PositionDelta?.IsZero == false && _hoverInfo?.HasLayoutInfo == true) ||
             mouse.IsChanged(MouseButton.Left);
@@ -404,14 +425,15 @@ public abstract class UIElement : IToJson, IReactive
         UIElementInfo appliedInfo;
         LayoutResult layout;
         bool isHover;
+        Vector2 flowHeadOut;
         if(needToRelayout == false && _layoutCache.HasValue) {
-            (layout, appliedInfo) = _layoutCache.Value;
+            (layout, appliedInfo, flowHeadOut) = _layoutCache.Value;
             isHover = _isHover;
         }
         else {
             // First, layout without considering pseudo classes
             appliedInfo = _info;
-            var layout1 = Relayout(appliedInfo, parentContentArea);
+            var layout1 = Relayout(appliedInfo, parent, parentContentArea, flowHead, out var flowHeadOut1);
 
             if(mousePos.HasValue) {
                 var isHover1 = HitTest(mousePos.Value, layout1.Rect, layout1.BorderRadius);
@@ -419,21 +441,21 @@ public abstract class UIElement : IToJson, IReactive
                 // layout with considering hover pseudo classes if needed
                 if(_hoverInfo?.HasLayoutInfo == true) {
                     var mergedInfo = appliedInfo.Merged(_hoverInfo.Value);
-                    var layout2 = Relayout(mergedInfo, parentContentArea);
+                    var layout2 = Relayout(mergedInfo, parent, parentContentArea, flowHead, out var flowHeadOut2);
                     var isHover2 = HitTest(mousePos.Value, layout2.Rect, layout2.BorderRadius);
-                    (isHover, layout, appliedInfo) = (isHover1, isHover2) switch
+                    (isHover, layout, appliedInfo, flowHeadOut) = (isHover1, isHover2) switch
                     {
-                        (true, true) => (true, layout2, mergedInfo),
-                        (false, false) => (false, layout1, appliedInfo),
-                        _ => isHoverPrev ? (true, layout2, mergedInfo) : (false, layout1, appliedInfo),
+                        (true, true) => (true, layout2, mergedInfo, flowHeadOut2),
+                        (false, false) => (false, layout1, appliedInfo, flowHeadOut1),
+                        _ => isHoverPrev ? (true, layout2, mergedInfo, flowHeadOut2) : (false, layout1, appliedInfo, flowHeadOut1),
                     };
                 }
                 else {
-                    (isHover, layout) = (isHover1, layout1);
+                    (isHover, layout, flowHeadOut) = (isHover1, layout1, flowHeadOut1);
                 }
             }
             else {
-                (isHover, layout) = (false, layout1);
+                (isHover, layout, flowHeadOut) = (false, layout1, flowHeadOut1);
             }
         }
 
@@ -451,33 +473,55 @@ public abstract class UIElement : IToJson, IReactive
         // overwrite layout if 'active'
         if(_isClickHolding && _activeInfo?.HasLayoutInfo == true) {
             appliedInfo = appliedInfo.Merged(_activeInfo.Value);
-            layout = Relayout(appliedInfo, parentContentArea);
+            layout = Relayout(appliedInfo, parent, parentContentArea, flowHead, out flowHeadOut);
         }
 
         _needToLayoutUpdate = false;
-        var layoutChanged = _layoutCache?.Layout != layout;
-        _isHover = isHover;
-        _layoutCache = (layout, appliedInfo);
-        var contentArea = new ContentAreaInfo
+        var requestChildRelayout = _layoutCache switch
         {
-            Rect = layout.Rect,
-            Padding = layout.Padding,
+            null => true,
+            _ =>
+                _layoutCache.Value.Layout.Rect != layout.Rect ||
+                _layoutCache.Value.AppliedInfo.Padding != appliedInfo.Padding ||
+                _layoutCache.Value.AppliedInfo.Flow != appliedInfo.Flow,
         };
+        _isHover = isHover;
+        flowHead = flowHeadOut;
+        _layoutCache = (layout, appliedInfo, flowHead);
+        var contentArea = new RectF
+        {
+            X = layout.Rect.X + appliedInfo.Padding.Left,
+            Y = layout.Rect.Y + appliedInfo.Padding.Top,
+            Width = float.Max(0, layout.Rect.Width - appliedInfo.Padding.Left - appliedInfo.Padding.Right),
+            Height = float.Max(0, layout.Rect.Height - appliedInfo.Padding.Top - appliedInfo.Padding.Bottom),
+        };
+
+        Debug.Assert(_layoutCache.HasValue);
+        var childFlowHead = appliedInfo.Flow.Direction switch
+        {
+            FlowDirection.Row => new Vector2(contentArea.X, contentArea.Y),
+            FlowDirection.Column => new Vector2(contentArea.X, contentArea.Y),
+            FlowDirection.RowReverse => new Vector2(contentArea.X + contentArea.Width, contentArea.Y),
+            FlowDirection.ColumnReverse => new Vector2(contentArea.X, contentArea.Y + contentArea.Height),
+            FlowDirection.None or _ => Vector2.Zero,
+        };
+
+        ref readonly var appliedInfoRef = ref _layoutCache.ValueRef().AppliedInfo;
         foreach(var child in _children) {
-            child.UpdateLayout(layoutChanged, contentArea, mouse);
+            child.UpdateLayout(requestChildRelayout, appliedInfoRef, contentArea, ref childFlowHead, mouse);
         }
         return layout;
     }
 
-    private static LayoutResult Relayout(in UIElementInfo info, in ContentAreaInfo parentContentArea)
+    private static LayoutResult Relayout(in UIElementInfo info, in UIElementInfo parent, in RectF parentContentArea, in Vector2 flowHead, out Vector2 flowHeadOut)
     {
-        var rect = UILayouter.DecideRect(info, parentContentArea);
+        flowHeadOut = flowHead;
+        var rect = UILayouter.DecideRect(info, parent, parentContentArea, ref flowHeadOut);
         var borderRadius = UILayouter.DecideBorderRadius(info.BorderRadius, rect.Size);
         var layoutResult = new LayoutResult
         {
             Rect = rect,
             BorderRadius = borderRadius,
-            Padding = info.Padding,
         };
         return layoutResult;
     }
@@ -539,7 +583,7 @@ public abstract class UIElement : IToJson, IReactive
         if(model == null) { return; }
 
         Debug.Assert(_layoutCache != null);
-        var ((rect, borderRadius, _), appliedInfo) = _layoutCache.Value;
+        var ((rect, borderRadius), appliedInfo, _) = _layoutCache.Value;
         var shadowWidth = (appliedInfo.BoxShadow.BlurRadius + appliedInfo.BoxShadow.SpreadRadius);
         var shadowRect = new RectF
         {
@@ -593,6 +637,7 @@ internal record struct UIElementInfo
     public CornerRadius BorderRadius { get; set; }
     public Brush BorderColor { get; set; }
     public BoxShadow BoxShadow { get; set; }
+    public Flow Flow { get; set; }
 
     internal static UIElementInfo Default => new()
     {
@@ -607,6 +652,7 @@ internal record struct UIElementInfo
         BorderRadius = DefaultBorderRadius,
         BorderColor = DefaultBorderColor,
         BoxShadow = DefaultBoxShadow,
+        Flow = DefaultFlow,
     };
 
     internal static LayoutLength DefaultWidth => new LayoutLength(1f, LayoutLengthType.Proportion);
@@ -620,6 +666,7 @@ internal record struct UIElementInfo
     internal static CornerRadius DefaultBorderRadius => CornerRadius.Zero;
     internal static Brush DefaultBorderColor => Brush.Black;
     internal static BoxShadow DefaultBoxShadow => BoxShadow.None;
+    internal static Flow DefaultFlow => Flow.Default;
 
     internal readonly UIElementInfo Merged(in PseudoInfo p)
     {
@@ -636,6 +683,7 @@ internal record struct UIElementInfo
             BorderRadius = p.BorderRadius ?? BorderRadius,
             BorderColor = p.BorderColor ?? BorderColor,
             BoxShadow = p.BoxShadow ?? BoxShadow,
+            Flow = p.Flow ?? Flow,
         };
     }
 }
@@ -661,6 +709,7 @@ public readonly record struct PseudoInfo
     public CornerRadius? BorderRadius { get; init; }
     public Brush? BorderColor { get; init; }
     public BoxShadow? BoxShadow { get; init; }
+    public Flow? Flow { get; init; }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private readonly ImmutableArray<Prop> _ex;
@@ -700,6 +749,7 @@ public readonly record struct PseudoInfo
         CornerRadius? borderRadius = null;
         Brush? borderColor = null;
         BoxShadow? boxShadow = null;
+        Flow? flow = null;
         var ex = ImmutableArray.CreateBuilder<Prop>();
 
         foreach(var (name, value) in source.EnumerateProperties()) {
@@ -748,6 +798,10 @@ public readonly record struct PseudoInfo
                     boxShadow = value.Instantiate<BoxShadow>();
                     break;
                 }
+                case nameof(Flow): {
+                    flow = value.Instantiate<Flow>();
+                    break;
+                }
                 default: {
                     ex.Add(new(name, value));
                     break;
@@ -768,6 +822,7 @@ public readonly record struct PseudoInfo
             BorderRadius = borderRadius,
             BorderColor = borderColor,
             BoxShadow = boxShadow,
+            Flow = flow,
             Ex = ex.Count == 0 ? EmptyEx : ex.ToImmutable(),
         };
     }
@@ -813,35 +868,15 @@ public readonly record struct PseudoInfo
     }
 }
 
-public readonly struct ContentAreaInfo : IEquatable<ContentAreaInfo>
-{
-    public required RectF Rect { get; init; }
-    public required Thickness Padding { get; init; }
-
-    public override bool Equals(object? obj) => obj is ContentAreaInfo info && Equals(info);
-
-    public bool Equals(ContentAreaInfo other)
-        => Rect.Equals(other.Rect) &&
-           Padding.Equals(other.Padding);
-
-    public override int GetHashCode() => HashCode.Combine(Rect, Padding);
-
-    public static bool operator ==(ContentAreaInfo left, ContentAreaInfo right) => left.Equals(right);
-
-    public static bool operator !=(ContentAreaInfo left, ContentAreaInfo right) => !(left == right);
-}
-
 internal readonly record struct LayoutResult
 {
     public required RectF Rect { get; init; }
     public required Vector4 BorderRadius { get; init; }
-    public required Thickness Padding { get; init; }
 
-    public void Deconstruct(out RectF rect, out Vector4 borderRadius, out Thickness padding)
+    public void Deconstruct(out RectF rect, out Vector4 borderRadius)
     {
         rect = Rect;
         borderRadius = BorderRadius;
-        padding = Padding;
     }
 }
 

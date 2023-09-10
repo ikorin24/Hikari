@@ -101,15 +101,12 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         if(rootElement == null) { return; }
         var screen = Screen;
         var screenSize = screen.ClientSize;
-        var contentArea = new ContentAreaInfo
-        {
-            Rect = new RectF(Vector2.Zero, screenSize.ToVector2()),
-            Padding = Thickness.Zero,
-        };
+        var contentArea = new RectF(Vector2.Zero, screenSize.ToVector2());
         var isLayoutDirty = _isLayoutDirty;
         _isLayoutDirty = false;
         var mouse = screen.Mouse;
-        rootElement.UpdateLayout(isLayoutDirty, contentArea, mouse);
+        var childFlowHead = Vector2.Zero;
+        rootElement.UpdateLayout(isLayoutDirty, UIElementInfo.Default, contentArea, ref childFlowHead, mouse);
     }
 
     public void SetRoot(UIElement element)
