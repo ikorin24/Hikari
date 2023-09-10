@@ -106,8 +106,8 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         _isLayoutDirty = false;
         var mouse = screen.Mouse;
         var dummyInfo = UIElementInfo.Default;
-        var childrenFlowHead = dummyInfo.Flow.CalcChildrenFlowHead(contentArea);
-        rootElement.UpdateLayout(isLayoutDirty, dummyInfo, contentArea, ref childrenFlowHead, mouse);
+        var childrenFlowInfo = dummyInfo.Flow.NewChildrenFlowInfo(contentArea);
+        rootElement.UpdateLayout(isLayoutDirty, dummyInfo, contentArea, ref childrenFlowInfo, mouse);
     }
 
     public void SetRoot(UIElement element)

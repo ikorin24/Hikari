@@ -6,12 +6,24 @@ namespace Hikari.UI;
 
 internal static class UILayouter
 {
-    public static RectF DecideRect(in UIElementInfo target, in UIElementInfo parent, in RectF area, ref Vector2 flowHead)
+    public static LayoutResult Relayout(in UIElementInfo info, in UIElementInfo parent, in RectF parentContentArea, in FlowLayoutInfo flowInfo, out FlowLayoutInfo flowInfoOut)
     {
-        const float xWidth = 200;  // TODO:
-        const float yHeight = 100;  // TODO:
+        flowInfoOut = flowInfo;
+        var rect = DecideRect(info, parent, parentContentArea, ref flowInfoOut);
+        var borderRadius = DecideBorderRadius(info.BorderRadius, rect.Size);
+        var layoutResult = new LayoutResult
+        {
+            Rect = rect,
+            BorderRadius = borderRadius,
+        };
+        return layoutResult;
+    }
+
+    private static RectF DecideRect(in UIElementInfo target, in UIElementInfo parent, in RectF area, ref FlowLayoutInfo flowInfo)
+    {
         Debug.Assert(area.Size.X >= 0 && area.Size.Y >= 0);
 
+        ref var flowHead = ref flowInfo.FlowHead;
         var margin = target.Margin;
         var width = target.Width;
         var height = target.Height;
@@ -60,15 +72,17 @@ internal static class UILayouter
                         Y = flowHead.Y + margin.Top,
                     };
                     flowHead.X = float.Max(flowHead.X, flowHead.X + size.X + margin.Left + margin.Right);
+                    flowInfo.NextLineOffset = float.Max(flowInfo.NextLineOffset, size.Y + margin.Top + margin.Bottom);
                 }
                 else {
-                    flowHead.Y += yHeight;
+                    flowHead.Y += flowInfo.NextLineOffset;
                     pos = new Vector2
                     {
                         X = area.Position.X + margin.Left,
                         Y = flowHead.Y + margin.Top,
                     };
                     flowHead.X = pos.X + size.X + margin.Right;
+                    flowInfo.NextLineOffset = size.Y + margin.Top + margin.Bottom;
                 }
                 break;
             }
@@ -90,15 +104,17 @@ internal static class UILayouter
                         Y = y,
                     };
                     flowHead.Y = float.Max(flowHead.Y, flowHead.Y + size.Y + margin.Top + margin.Bottom);
+                    flowInfo.NextLineOffset = float.Max(flowInfo.NextLineOffset, size.X + margin.Left + margin.Right);
                 }
                 else {
-                    flowHead.X += xWidth;
+                    flowHead.Y += flowInfo.NextLineOffset;
                     pos = new Vector2
                     {
                         X = flowHead.X + margin.Left,
                         Y = area.Position.Y + margin.Top,
                     };
                     flowHead.Y = pos.Y + size.Y + margin.Bottom;
+                    flowInfo.NextLineOffset = size.X + margin.Left + margin.Right;
                 }
                 break;
             }
@@ -120,15 +136,17 @@ internal static class UILayouter
                         Y = flowHead.Y + margin.Top,
                     };
                     flowHead.X = float.Min(flowHead.X, flowHead.X - size.X - margin.Left - margin.Right);
+                    flowInfo.NextLineOffset = float.Max(flowInfo.NextLineOffset, size.Y + margin.Top + margin.Bottom);
                 }
                 else {
-                    flowHead.Y += yHeight;
+                    flowHead.Y += flowInfo.NextLineOffset;
                     pos = new Vector2
                     {
                         X = area.Position.X + area.Size.X - size.X - margin.Right,
                         Y = flowHead.Y + margin.Top,
                     };
                     flowHead.X = pos.X - margin.Left;
+                    flowInfo.NextLineOffset = size.Y + margin.Top + margin.Bottom;
                 }
                 break;
             }
@@ -150,15 +168,17 @@ internal static class UILayouter
                         Y = y,
                     };
                     flowHead.Y = float.Min(flowHead.Y, flowHead.Y - size.Y - margin.Top - margin.Bottom);
+                    flowInfo.NextLineOffset = float.Max(flowInfo.NextLineOffset, size.X + margin.Left + margin.Right);
                 }
                 else {
-                    flowHead.X += xWidth;
+                    flowHead.X += flowInfo.NextLineOffset;
                     pos = new Vector2
                     {
                         X = flowHead.X + margin.Left,
                         Y = area.Position.Y + area.Size.Y - size.Y - margin.Bottom,
                     };
                     flowHead.Y = pos.Y - margin.Top;
+                    flowInfo.NextLineOffset = size.X + margin.Left + margin.Right;
                 }
                 break;
             }
@@ -194,7 +214,7 @@ internal static class UILayouter
         }
     }
 
-    public static Vector4 DecideBorderRadius(in CornerRadius desiredBorderRadius, in Vector2 actualSize)
+    private static Vector4 DecideBorderRadius(in CornerRadius desiredBorderRadius, in Vector2 actualSize)
     {
         var ratio0 = actualSize.X / (desiredBorderRadius.TopLeft + desiredBorderRadius.TopRight);
         var ratio1 = actualSize.Y / (desiredBorderRadius.TopRight + desiredBorderRadius.BottomRight);
@@ -203,4 +223,10 @@ internal static class UILayouter
         var ratio = float.Min(1f, float.Min(float.Min(ratio0, ratio1), float.Min(ratio2, ratio3)));
         return desiredBorderRadius.ToVector4() * ratio;
     }
+}
+
+internal struct FlowLayoutInfo
+{
+    public required Vector2 FlowHead;
+    public required float NextLineOffset;
 }

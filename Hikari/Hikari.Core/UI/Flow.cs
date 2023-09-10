@@ -61,9 +61,9 @@ public readonly record struct Flow
         }
     }
 
-    internal Vector2 CalcChildrenFlowHead(in RectF contentArea)
+    internal FlowLayoutInfo NewChildrenFlowInfo(in RectF contentArea)
     {
-        return Wrap switch
+        var flowHead = Wrap switch
         {
             FlowWrapMode.NoWrap or FlowWrapMode.Wrap => Direction switch
             {
@@ -82,6 +82,11 @@ public readonly record struct Flow
                 FlowDirection.None or _ => Vector2.Zero,
             },
             _ => Vector2.Zero,
+        };
+        return new FlowLayoutInfo
+        {
+            FlowHead = flowHead,
+            NextLineOffset = 0f,
         };
     }
 }

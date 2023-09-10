@@ -25,7 +25,7 @@ public abstract class UIElement : IToJson, IReactive
     private PseudoInfo? _hoverInfo;
     private PseudoInfo? _activeInfo;
 
-    private (LayoutResult Layout, UIElementInfo AppliedInfo, Vector2 FlowHead)? _layoutCache;
+    private (LayoutResult Layout, UIElementInfo AppliedInfo, FlowLayoutInfo FlowInfo)? _layoutCache;
     private bool _isHover;
     private bool _isClickHolding;
     private bool _needToInvokeClicked;
@@ -408,7 +408,7 @@ public abstract class UIElement : IToJson, IReactive
         _needToLayoutUpdate = true;
     }
 
-    internal LayoutResult UpdateLayout(bool relayoutRequested, in UIElementInfo parent, in RectF parentContentArea, ref Vector2 flowHead, Mouse mouse)
+    internal LayoutResult UpdateLayout(bool relayoutRequested, in UIElementInfo parent, in RectF parentContentArea, ref FlowLayoutInfo flowInfo, Mouse mouse)
     {
         // 'rect' is top-left based in Screen
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
@@ -425,15 +425,15 @@ public abstract class UIElement : IToJson, IReactive
         UIElementInfo appliedInfo;
         LayoutResult layout;
         bool isHover;
-        Vector2 flowHeadOut;
+        FlowLayoutInfo flowInfoOut;
         if(needToRelayout == false && _layoutCache.HasValue) {
-            (layout, appliedInfo, flowHeadOut) = _layoutCache.Value;
+            (layout, appliedInfo, flowInfoOut) = _layoutCache.Value;
             isHover = _isHover;
         }
         else {
             // First, layout without considering pseudo classes
             appliedInfo = _info;
-            var layout1 = Relayout(appliedInfo, parent, parentContentArea, flowHead, out var flowHeadOut1);
+            var layout1 = UILayouter.Relayout(appliedInfo, parent, parentContentArea, flowInfo, out var flowInfoOut1);
 
             if(mousePos.HasValue) {
                 var isHover1 = HitTest(mousePos.Value, layout1.Rect, layout1.BorderRadius);
@@ -441,21 +441,21 @@ public abstract class UIElement : IToJson, IReactive
                 // layout with considering hover pseudo classes if needed
                 if(_hoverInfo != null) {
                     var mergedInfo = appliedInfo.Merged(_hoverInfo.Value);
-                    var layout2 = Relayout(mergedInfo, parent, parentContentArea, flowHead, out var flowHeadOut2);
+                    var layout2 = UILayouter.Relayout(mergedInfo, parent, parentContentArea, flowInfo, out var flowInfoOut2);
                     var isHover2 = HitTest(mousePos.Value, layout2.Rect, layout2.BorderRadius);
-                    (isHover, layout, appliedInfo, flowHeadOut) = (isHover1, isHover2) switch
+                    (isHover, layout, appliedInfo, flowInfoOut) = (isHover1, isHover2) switch
                     {
-                        (true, true) => (true, layout2, mergedInfo, flowHeadOut2),
-                        (false, false) => (false, layout1, appliedInfo, flowHeadOut1),
-                        _ => isHoverPrev ? (true, layout2, mergedInfo, flowHeadOut2) : (false, layout1, appliedInfo, flowHeadOut1),
+                        (true, true) => (true, layout2, mergedInfo, flowInfoOut2),
+                        (false, false) => (false, layout1, appliedInfo, flowInfoOut1),
+                        _ => isHoverPrev ? (true, layout2, mergedInfo, flowInfoOut2) : (false, layout1, appliedInfo, flowInfoOut1),
                     };
                 }
                 else {
-                    (isHover, layout, flowHeadOut) = (isHover1, layout1, flowHeadOut1);
+                    (isHover, layout, flowInfoOut) = (isHover1, layout1, flowInfoOut1);
                 }
             }
             else {
-                (isHover, layout, flowHeadOut) = (false, layout1, flowHeadOut1);
+                (isHover, layout, flowInfoOut) = (false, layout1, flowInfoOut1);
             }
         }
 
@@ -474,7 +474,7 @@ public abstract class UIElement : IToJson, IReactive
         if(_isClickHolding && _activeInfo != null) {
             appliedInfo = appliedInfo.Merged(_activeInfo.Value);
             if(_activeInfo.Value.HasLayoutInfo) {
-                layout = Relayout(appliedInfo, parent, parentContentArea, flowHead, out flowHeadOut);
+                layout = UILayouter.Relayout(appliedInfo, parent, parentContentArea, flowInfo, out flowInfoOut);
             }
         }
 
@@ -488,8 +488,8 @@ public abstract class UIElement : IToJson, IReactive
                 _layoutCache.Value.AppliedInfo.Flow != appliedInfo.Flow,
         };
         _isHover = isHover;
-        flowHead = flowHeadOut;
-        _layoutCache = (layout, appliedInfo, flowHead);
+        flowInfo = flowInfoOut;
+        _layoutCache = (layout, appliedInfo, flowInfo);
         var contentArea = new RectF
         {
             X = layout.Rect.X + appliedInfo.Padding.Left,
@@ -498,27 +498,14 @@ public abstract class UIElement : IToJson, IReactive
             Height = float.Max(0, layout.Rect.Height - appliedInfo.Padding.Top - appliedInfo.Padding.Bottom),
         };
 
-        var childrenFlowHead = appliedInfo.Flow.CalcChildrenFlowHead(contentArea);
+        var childrenFlowInfo = appliedInfo.Flow.NewChildrenFlowInfo(contentArea);
 
         Debug.Assert(_layoutCache.HasValue);
         ref readonly var appliedInfoRef = ref _layoutCache.ValueRef().AppliedInfo;
         foreach(var child in _children) {
-            child.UpdateLayout(requestChildRelayout, appliedInfoRef, contentArea, ref childrenFlowHead, mouse);
+            child.UpdateLayout(requestChildRelayout, appliedInfoRef, contentArea, ref childrenFlowInfo, mouse);
         }
         return layout;
-    }
-
-    private static LayoutResult Relayout(in UIElementInfo info, in UIElementInfo parent, in RectF parentContentArea, in Vector2 flowHead, out Vector2 flowHeadOut)
-    {
-        flowHeadOut = flowHead;
-        var rect = UILayouter.DecideRect(info, parent, parentContentArea, ref flowHeadOut);
-        var borderRadius = UILayouter.DecideBorderRadius(info.BorderRadius, rect.Size);
-        var layoutResult = new LayoutResult
-        {
-            Rect = rect,
-            BorderRadius = borderRadius,
-        };
-        return layoutResult;
     }
 
     private static bool HitTest(in Vector2 mousePos, in RectF rect, in Vector4 borderRadius)
