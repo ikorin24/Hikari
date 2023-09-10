@@ -60,6 +60,30 @@ public readonly record struct Flow
             }
         }
     }
+
+    internal Vector2 CalcChildrenFlowHead(in RectF contentArea)
+    {
+        return Wrap switch
+        {
+            FlowWrapMode.NoWrap or FlowWrapMode.Wrap => Direction switch
+            {
+                FlowDirection.Row => new Vector2(contentArea.X, contentArea.Y),
+                FlowDirection.Column => new Vector2(contentArea.X, contentArea.Y),
+                FlowDirection.RowReverse => new Vector2(contentArea.X + contentArea.Width, contentArea.Y),
+                FlowDirection.ColumnReverse => new Vector2(contentArea.X, contentArea.Y + contentArea.Height),
+                FlowDirection.None or _ => Vector2.Zero,
+            },
+            FlowWrapMode.WrapReverse => Direction switch
+            {
+                FlowDirection.Row => new Vector2(contentArea.X, contentArea.Y + contentArea.Height),
+                FlowDirection.Column => new Vector2(contentArea.X + contentArea.Width, contentArea.Y),
+                FlowDirection.RowReverse => new Vector2(contentArea.X + contentArea.Width, contentArea.Y + contentArea.Height),
+                FlowDirection.ColumnReverse => new Vector2(contentArea.X + contentArea.Width, contentArea.Y + contentArea.Height),
+                FlowDirection.None or _ => Vector2.Zero,
+            },
+            _ => Vector2.Zero,
+        };
+    }
 }
 
 public enum FlowDirection
@@ -75,5 +99,5 @@ public enum FlowWrapMode
 {
     NoWrap = 0,
     Wrap,
-    //WrapReverse,
+    WrapReverse,
 }

@@ -498,19 +498,12 @@ public abstract class UIElement : IToJson, IReactive
             Height = float.Max(0, layout.Rect.Height - appliedInfo.Padding.Top - appliedInfo.Padding.Bottom),
         };
 
-        var childFlowHead = appliedInfo.Flow.Direction switch
-        {
-            FlowDirection.Row => new Vector2(contentArea.X, contentArea.Y),
-            FlowDirection.Column => new Vector2(contentArea.X, contentArea.Y),
-            FlowDirection.RowReverse => new Vector2(contentArea.X + contentArea.Width, contentArea.Y),
-            FlowDirection.ColumnReverse => new Vector2(contentArea.X, contentArea.Y + contentArea.Height),
-            FlowDirection.None or _ => Vector2.Zero,
-        };
+        var childrenFlowHead = appliedInfo.Flow.CalcChildrenFlowHead(contentArea);
 
         Debug.Assert(_layoutCache.HasValue);
         ref readonly var appliedInfoRef = ref _layoutCache.ValueRef().AppliedInfo;
         foreach(var child in _children) {
-            child.UpdateLayout(requestChildRelayout, appliedInfoRef, contentArea, ref childFlowHead, mouse);
+            child.UpdateLayout(requestChildRelayout, appliedInfoRef, contentArea, ref childrenFlowHead, mouse);
         }
         return layout;
     }
