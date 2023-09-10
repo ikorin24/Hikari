@@ -89,9 +89,10 @@ internal static class UIShaderSource
 
     public static ReadOnlySpan<byte> Fn_blend => """
         fn blend(src: vec4<f32>, dst: vec4<f32>) -> vec4<f32> {
+            let a = src.a + (1.0 - src.a) * dst.a;
             return vec4(
-                src.rgb * src.a + (1.0 - src.a) * dst.rgb,
-                src.a + (1.0 - src.a) * dst.a,
+                (src.rgb * src.a + dst.rgb * dst.a * (1.0 - src.a)) / a,
+                a,
             );
         }
         """u8;
