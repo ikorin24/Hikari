@@ -44,7 +44,7 @@ internal static class UILayouter
                 pos = new Vector2
                 {
                     X = flowHead.X + margin.Left,
-                    Y = CalcDefaultY(target, area, fullSize, size),
+                    Y = CalcNoFlowY(target, area, fullSize, size),
                 };
                 flowHead.X = float.Max(flowHead.X, flowHead.X + size.X + margin.Left + margin.Right);
                 break;
@@ -56,7 +56,7 @@ internal static class UILayouter
             case { Direction: FlowDirection.Column, Wrap: FlowWrapMode.NoWrap }: {
                 pos = new Vector2
                 {
-                    X = CalcDefaultX(target, area, fullSize, size),
+                    X = CalcNoFlowX(target, area, fullSize, size),
                     Y = flowHead.Y + margin.Top,
                 };
                 flowHead.Y = float.Max(flowHead.Y, flowHead.Y + size.Y + margin.Top + margin.Bottom);
@@ -71,7 +71,7 @@ internal static class UILayouter
                 pos = new Vector2
                 {
                     X = flowHead.X - size.X - margin.Right,
-                    Y = CalcDefaultY(target, area, fullSize, size),
+                    Y = CalcNoFlowY(target, area, fullSize, size),
                 };
                 flowHead.X = float.Min(flowHead.X, flowHead.X - size.X - margin.Left - margin.Right);
                 break;
@@ -83,7 +83,7 @@ internal static class UILayouter
             case { Direction: FlowDirection.ColumnReverse, Wrap: FlowWrapMode.NoWrap }: {
                 pos = new Vector2
                 {
-                    X = CalcDefaultX(target, area, fullSize, size),
+                    X = CalcNoFlowX(target, area, fullSize, size),
                     Y = flowHead.Y - size.Y - margin.Bottom,
                 };
                 flowHead.Y = float.Min(flowHead.Y, flowHead.Y - size.Y - margin.Top - margin.Bottom);
@@ -96,15 +96,15 @@ internal static class UILayouter
             case { Direction: FlowDirection.None } or _: {
                 pos = new Vector2
                 {
-                    X = CalcDefaultX(target, area, fullSize, size),
-                    Y = CalcDefaultY(target, area, fullSize, size),
+                    X = CalcNoFlowX(target, area, fullSize, size),
+                    Y = CalcNoFlowY(target, area, fullSize, size),
                 };
                 break;
             }
         }
         return new RectF(pos, size);
 
-        static float CalcDefaultX(in UIElementInfo target, in RectF area, in Vector2 fullSize, in Vector2 size)
+        static float CalcNoFlowX(in UIElementInfo target, in RectF area, in Vector2 fullSize, in Vector2 size)
         {
             return target.HorizontalAlignment switch
             {
@@ -114,7 +114,7 @@ internal static class UILayouter
             } + area.Position.X;
         }
 
-        static float CalcDefaultY(in UIElementInfo target, in RectF area, in Vector2 fullSize, in Vector2 size)
+        static float CalcNoFlowY(in UIElementInfo target, in RectF area, in Vector2 fullSize, in Vector2 size)
         {
             return target.VerticalAlignment switch
             {
