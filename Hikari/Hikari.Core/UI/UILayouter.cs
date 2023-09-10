@@ -43,7 +43,7 @@ internal static class UILayouter
             case { Direction: FlowDirection.Row, Wrap: FlowWrapMode.NoWrap }: {
                 pos = new Vector2
                 {
-                    X = flowHead.X,
+                    X = flowHead.X + margin.Left,
                     Y = CalcDefaultY(target, area, fullSize, size),
                 };
                 flowHead.X = float.Max(flowHead.X, flowHead.X + size.X + margin.Left + margin.Right);
@@ -57,7 +57,7 @@ internal static class UILayouter
                 pos = new Vector2
                 {
                     X = CalcDefaultX(target, area, fullSize, size),
-                    Y = flowHead.Y,
+                    Y = flowHead.Y + margin.Top,
                 };
                 flowHead.Y = float.Max(flowHead.Y, flowHead.Y + size.Y + margin.Top + margin.Bottom);
                 break;
@@ -70,7 +70,7 @@ internal static class UILayouter
             case { Direction: FlowDirection.RowReverse, Wrap: FlowWrapMode.NoWrap }: {
                 pos = new Vector2
                 {
-                    X = flowHead.X - size.X,
+                    X = flowHead.X - size.X - margin.Right,
                     Y = CalcDefaultY(target, area, fullSize, size),
                 };
                 flowHead.X = float.Min(flowHead.X, flowHead.X - size.X - margin.Left - margin.Right);
@@ -84,7 +84,7 @@ internal static class UILayouter
                 pos = new Vector2
                 {
                     X = CalcDefaultX(target, area, fullSize, size),
-                    Y = flowHead.Y - size.Y,
+                    Y = flowHead.Y - size.Y - margin.Bottom,
                 };
                 flowHead.Y = float.Min(flowHead.Y, flowHead.Y - size.Y - margin.Top - margin.Bottom);
                 break;
