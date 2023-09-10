@@ -417,7 +417,7 @@ public abstract class UIElement : IToJson, IReactive
         var needToRelayout =
             relayoutRequested ||
             _needToLayoutUpdate ||
-            (mouse.PositionDelta?.IsZero == false && _hoverInfo?.HasLayoutInfo == true) ||
+            (mouse.PositionDelta?.IsZero == false && _hoverInfo != null) ||
             mouse.IsChanged(MouseButton.Left);
         var mousePos = mouse.Position;
 
@@ -439,7 +439,7 @@ public abstract class UIElement : IToJson, IReactive
                 var isHover1 = HitTest(mousePos.Value, layout1.Rect, layout1.BorderRadius);
 
                 // layout with considering hover pseudo classes if needed
-                if(_hoverInfo?.HasLayoutInfo == true) {
+                if(_hoverInfo != null) {
                     var mergedInfo = appliedInfo.Merged(_hoverInfo.Value);
                     var layout2 = Relayout(mergedInfo, parent, parentContentArea, flowHead, out var flowHeadOut2);
                     var isHover2 = HitTest(mousePos.Value, layout2.Rect, layout2.BorderRadius);
@@ -471,9 +471,11 @@ public abstract class UIElement : IToJson, IReactive
         }
 
         // overwrite layout if 'active'
-        if(_isClickHolding && _activeInfo?.HasLayoutInfo == true) {
+        if(_isClickHolding && _activeInfo != null) {
             appliedInfo = appliedInfo.Merged(_activeInfo.Value);
-            layout = Relayout(appliedInfo, parent, parentContentArea, flowHead, out flowHeadOut);
+            if(_activeInfo.Value.HasLayoutInfo) {
+                layout = Relayout(appliedInfo, parent, parentContentArea, flowHead, out flowHeadOut);
+            }
         }
 
         _needToLayoutUpdate = false;

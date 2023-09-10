@@ -319,13 +319,9 @@ public partial class CountButton
             "BoxShadow": "0px 0px 4px 0px #000e",
             "Clicked": {{props.Clicked}},
             "&:Hover": {
-                "Width": {{props.Width + 1}},
-                "Height": {{props.Height + 1}},
                 "Background": "#27acd9",
             },
             "&:Active": {
-                "Width": {{props.Width - 4}},
-                "Height": {{props.Height - 4}},
                 "BoxShadow": "0px 0px 2px 0px #000e",
                 "Background": "#1089d9",
                 "BorderColor": "#1089d9",
