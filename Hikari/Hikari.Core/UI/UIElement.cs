@@ -496,7 +496,6 @@ public abstract class UIElement : IToJson, IReactive
             Height = float.Max(0, layout.Rect.Height - appliedInfo.Padding.Top - appliedInfo.Padding.Bottom),
         };
 
-        Debug.Assert(_layoutCache.HasValue);
         var childFlowHead = appliedInfo.Flow.Direction switch
         {
             FlowDirection.Row => new Vector2(contentArea.X, contentArea.Y),
@@ -506,6 +505,7 @@ public abstract class UIElement : IToJson, IReactive
             FlowDirection.None or _ => Vector2.Zero,
         };
 
+        Debug.Assert(_layoutCache.HasValue);
         ref readonly var appliedInfoRef = ref _layoutCache.ValueRef().AppliedInfo;
         foreach(var child in _children) {
             child.UpdateLayout(requestChildRelayout, appliedInfoRef, contentArea, ref childFlowHead, mouse);
