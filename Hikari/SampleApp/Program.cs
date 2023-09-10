@@ -227,10 +227,12 @@ public partial class Counter
         LayoutLength Width,
         LayoutLength Height
     );
-    private int _count;
+    private int _countA;
+    private int _countB;
+    private int _countC;
     private partial ObjectSourceBuilder Render(in Props props)
     {
-        var text = $"click count: {_count}";
+        var text = $"A: {_countA}, B: {_countB}, C: {_countC}";
         return $$"""
         {
             "@type": {{typeof(Panel)}},
@@ -238,6 +240,7 @@ public partial class Counter
             "Height": {{props.Height}},
             "Background": "#ddd",
             "BorderRadius": "10px",
+            "Flow": "Column NoWrap",
             "Children": [
             {
                 "@type": {{typeof(Button)}},
@@ -252,13 +255,34 @@ public partial class Counter
             {
                 "@type": {{typeof(CountButton)}},
                 "@key": "1",
-                "Width": 550,
-                "Height": 150,
+                "Width": 150,
+                "Height": 60,
                 "Clicked": {{(UIElement _) =>
                 {
-                    SetState(ref _count, _count + 1);
+                    SetState(ref _countA, _countA + 1);
                 }}}
-            }]
+            },
+            {
+                "@type": {{typeof(CountButton)}},
+                "@key": "2",
+                "Width": 150,
+                "Height": 60,
+                "Clicked": {{(UIElement _) =>
+                {
+                    SetState(ref _countB, _countB + 1);
+                }}}
+            },
+            {
+                "@type": {{typeof(CountButton)}},
+                "@key": "3",
+                "Width": 150,
+                "Height": 60,
+                "Clicked": {{(UIElement _) =>
+                {
+                    SetState(ref _countC, _countC + 1);
+                }}}
+            }
+            ]
         }
         """;
     }
@@ -286,12 +310,13 @@ public partial class CountButton
             "Height": {{props.Height}},
             "BorderRadius": {{props.Height / 2f}},
             "BorderColor": "#27acd9",
-            "BorderWidth": 10,
+            "BorderWidth": 4,
             "Background": "#fff",
+            "Margin": 4,
             "Text": "click me!",
-            "FontSize": 30,
+            "FontSize": 20,
             "Color": "red",
-            "BoxShadow": "0px 2px 10px 4px gray",
+            "BoxShadow": "0px 0px 4px 0px #000e",
             "Clicked": {{props.Clicked}},
             "&:Hover": {
                 "Width": {{props.Width + 1}},
@@ -301,7 +326,7 @@ public partial class CountButton
             "&:Active": {
                 "Width": {{props.Width - 4}},
                 "Height": {{props.Height - 4}},
-                "BoxShadow": "0px 0px 6px 1px gray",
+                "BoxShadow": "0px 0px 2px 0px #000e",
                 "Background": "#1089d9",
                 "BorderColor": "#1089d9",
             }
