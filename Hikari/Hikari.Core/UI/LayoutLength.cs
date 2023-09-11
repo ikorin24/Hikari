@@ -16,7 +16,12 @@ public readonly struct LayoutLength
     public required LayoutLengthType Type { get; init; }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private string DebugView => $"{Value}{(Type == LayoutLengthType.Length ? "px" : "%")}";
+    private string DebugView => Type switch
+    {
+        LayoutLengthType.Length => $"{Value}px",
+        LayoutLengthType.Proportion => $"{Value * 100f}%",
+        _ => "?",
+    };
 
     static LayoutLength() => Serializer.RegisterConstructor(FromJson);
 
