@@ -268,8 +268,6 @@ file sealed class ButtonShader : UIShader
                     Debug.Assert(MathTool.IsPowerOfTwo(result.Image.Size.Y));
                     var material = result.Arg;
                     var image = result.Image;
-                    Debug.WriteLine(image.Size);
-
                     if(material.Texture is Texture2D currentTex
                         && currentTex.Usage.HasFlag(TextureUsages.CopyDst)
                         && currentTex.Size == (Vector2u)image.Size) {
