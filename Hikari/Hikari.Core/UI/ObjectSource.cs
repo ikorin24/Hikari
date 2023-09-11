@@ -51,6 +51,11 @@ public readonly partial struct ObjectSource : IEquatable<ObjectSource>
         _types = types;
     }
 
+    public static ObjectSource New(ObjectSourceBuilder value)
+    {
+        return value.ToSourceClear();
+    }
+
     public bool HasObjectType([MaybeNullWhen(false)] out Type type)
     {
         type = _element.ValueKind switch
