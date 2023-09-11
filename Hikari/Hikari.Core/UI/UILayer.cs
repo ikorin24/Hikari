@@ -187,6 +187,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
                             SampleType = TextureSampleType.FloatNotFilterable,
                         }),
                         BindGroupLayoutEntry.Sampler(1, ShaderStages.Vertex | ShaderStages.Fragment, SamplerBindingType.NonFiltering),
+                        BindGroupLayoutEntry.Buffer(2, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
                     },
                 }).AsValue(out layout1),
 

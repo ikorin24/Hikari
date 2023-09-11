@@ -1,5 +1,4 @@
 ﻿#nullable enable
-
 using System.Runtime.CompilerServices;
 
 namespace Hikari.UI;
@@ -15,6 +14,8 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
     private Brush? _background;
     private MaybeOwn<Texture2D> _texture;
     private readonly MaybeOwn<Sampler> _sampler;
+    private readonly Own<Buffer> _texContentSizeBuffer;
+    private Vector2u? _texContentSize;
 
     public BindGroup BindGroup0 => _bindGroup0.AsValue();
     public BindGroup BindGroup1 => _bindGroup1.AsValue();
@@ -22,6 +23,8 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
 
     protected Buffer DataBuffer => _buffer.AsValue();
     protected Buffer BackgroundBuffer => _backgroundBuffer.AsValue();
+
+    public Texture2D? Texture => _texture.TryAsValue(out var texture) ? texture : null;
 
     protected UIMaterial(
         UIShader shader,
@@ -35,6 +38,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         _sampler = sampler;
 
         _buffer = Buffer.Create(Screen, (nuint)Unsafe.SizeOf<UIShaderSource.BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
+        _texContentSizeBuffer = Buffer.Create(Screen, (nuint)Unsafe.SizeOf<Vector2u>(), BufferUsages.Uniform | BufferUsages.CopyDst);
         _bindGroup0 = BindGroup.Create(screen, new()
         {
             Layout = Operation.BindGroupLayout0,
@@ -51,6 +55,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
             {
                 BindGroupEntry.TextureView(0, texture.AsValue().View),
                 BindGroupEntry.Sampler(1, sampler.AsValue()),
+                BindGroupEntry.Buffer(2, _texContentSizeBuffer.AsValue()),
             },
         });
         _backgroundBuffer = Own<Buffer>.None;
@@ -67,6 +72,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
             _backgroundBuffer.Dispose();
             _texture.Dispose();
             _sampler.Dispose();
+            _texContentSizeBuffer.Dispose();
         }
     }
 
@@ -115,8 +121,17 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
             {
                 BindGroupEntry.TextureView(0, textureValue.View),
                 BindGroupEntry.Sampler(1, _sampler.AsValue()),
+                BindGroupEntry.Buffer(2, _texContentSizeBuffer.AsValue()),
             },
         });
+    }
+
+    protected void UpdateTextureContentSize(Vector2u contentSize)
+    {
+        if(_texContentSize != contentSize) {
+            _texContentSizeBuffer.AsValue().WriteData(0, contentSize);
+            _texContentSize = contentSize;
+        }
     }
 
     private void UpdateBackground(in Brush background)

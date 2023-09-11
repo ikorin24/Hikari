@@ -76,6 +76,7 @@ internal static class UIShaderSource
     public static ReadOnlySpan<byte> Group1 => """
         @group(1) @binding(0) var tex: texture_2d<f32>;
         @group(1) @binding(1) var tex_sampler: sampler;
+        @group(1) @binding(2) var<uniform> tex_content_size: vec2<u32>;
         """u8;
     public static ReadOnlySpan<byte> Group2 => """
         @group(2) @binding(0) var<storage, read> background: BrushBufferData;
@@ -152,7 +153,7 @@ internal static class UIShaderSource
             rect_pos: vec2<f32>,
             rect_size: vec2<f32>,
         ) -> vec4<f32> {
-            let tex_size: vec2<i32> = textureDimensions(tex, 0).xy;
+            let tex_size: vec2<u32> = tex_content_size;
             var offset_in_rect: vec2<f32>;
             if(h_align == TEXT_HALIGN_CENTER) {
                 offset_in_rect.x = (rect_size.x - vec2<f32>(tex_size).x) * 0.5;
