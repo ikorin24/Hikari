@@ -25,7 +25,7 @@ public abstract class UIElement : IToJson, IReactive
     private PseudoInfo? _hoverInfo;
     private PseudoInfo? _activeInfo;
 
-    private (LayoutResult Layout, bool IsHover, UIElementInfo AppliedInfo, FlowLayoutInfo FlowInfo)? _layoutCache;
+    private LayoutCache? _layoutCache;
     private bool _isClickHolding;
     private bool _needToInvokeClicked;
     private bool _needToLayoutUpdate;
@@ -420,7 +420,7 @@ public abstract class UIElement : IToJson, IReactive
         _needToLayoutUpdate = true;
     }
 
-    internal LayoutResult UpdateLayout(bool relayoutRequested, in UIElementInfo parent, in RectF parentContentArea, ref FlowLayoutInfo flowInfo, Mouse mouse)
+    internal void UpdateLayout(bool relayoutRequested, in UIElementInfo parent, in RectF parentContentArea, ref FlowLayoutInfo flowInfo, Mouse mouse)
     {
         // 'rect' is top-left based in Screen
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
@@ -434,58 +434,78 @@ public abstract class UIElement : IToJson, IReactive
         var mousePos = mouse.Position;
 
         var isHoverPrev = _layoutCache?.IsHover ?? false;
-        UIElementInfo appliedInfo;
-        LayoutResult layout;
-        bool isHover;
-        FlowLayoutInfo flowInfoOut;
+        LayoutCache cache;
         if(needToRelayout == false && _layoutCache.HasValue) {
-            (layout, isHover, appliedInfo, flowInfoOut) = _layoutCache.Value;
+            cache = _layoutCache.Value;
         }
         else {
             // First, layout without considering pseudo classes
-            appliedInfo = _info;
-            var layout1 = UILayouter.Relayout(appliedInfo, parent, parentContentArea, flowInfo, out var flowInfoOut1);
+            cache.AppliedInfo = _info;
+            var layout1 = UILayouter.Relayout(cache.AppliedInfo, parent, parentContentArea, flowInfo, out var flowInfoOut1);
 
             if(mousePos.HasValue) {
                 var isHover1 = HitTest(mousePos.Value, layout1.Rect, layout1.BorderRadius);
 
                 // layout with considering hover pseudo classes if needed
                 if(_hoverInfo != null) {
-                    var mergedInfo = appliedInfo.Merged(_hoverInfo.Value);
+                    var mergedInfo = cache.AppliedInfo.Merged(_hoverInfo.Value);
                     var layout2 = UILayouter.Relayout(mergedInfo, parent, parentContentArea, flowInfo, out var flowInfoOut2);
                     var isHover2 = HitTest(mousePos.Value, layout2.Rect, layout2.BorderRadius);
-                    (isHover, layout, appliedInfo, flowInfoOut) = (isHover1, isHover2) switch
+                    cache = (isHover1, isHover2) switch
                     {
-                        (true, true) => (true, layout2, mergedInfo, flowInfoOut2),
-                        (false, false) => (false, layout1, appliedInfo, flowInfoOut1),
-                        _ => isHoverPrev ? (true, layout2, mergedInfo, flowInfoOut2) : (false, layout1, appliedInfo, flowInfoOut1),
+                        (true, true) => new LayoutCache
+                        {
+                            IsHover = true,
+                            Layout = layout2,
+                            AppliedInfo = mergedInfo,
+                            FlowInfo = flowInfoOut2,
+                        },
+                        (false, false) => new LayoutCache
+                        {
+                            IsHover = false,
+                            Layout = layout1,
+                            AppliedInfo = cache.AppliedInfo,
+                            FlowInfo = flowInfoOut1,
+                        },
+                        _ => new LayoutCache
+                        {
+                            IsHover = isHoverPrev,
+                            Layout = isHoverPrev ? layout2 : layout1,
+                            AppliedInfo = isHoverPrev ? mergedInfo : cache.AppliedInfo,
+                            FlowInfo = isHoverPrev ? flowInfoOut2 : flowInfoOut1,
+                        },
                     };
+
                 }
                 else {
-                    (isHover, layout, flowInfoOut) = (isHover1, layout1, flowInfoOut1);
+                    cache.IsHover = isHover1;
+                    cache.Layout = layout1;
+                    cache.FlowInfo = flowInfoOut1;
                 }
             }
             else {
-                (isHover, layout, flowInfoOut) = (false, layout1, flowInfoOut1);
+                cache.IsHover = false;
+                cache.Layout = layout1;
+                cache.FlowInfo = flowInfoOut1;
             }
         }
 
         // set or clear flag for click holding
         if(_isClickHolding && mouse.IsUp(MouseButton.Left)) {
             _isClickHolding = false;
-            if(isHover) {
+            if(cache.IsHover) {
                 _needToInvokeClicked = true;
             }
         }
-        else if(isHover && mouse.IsDown(MouseButton.Left)) {
+        else if(cache.IsHover && mouse.IsDown(MouseButton.Left)) {
             _isClickHolding = true;
         }
 
         // overwrite layout if 'active'
         if(_isClickHolding && _activeInfo != null) {
-            appliedInfo = appliedInfo.Merged(_activeInfo.Value);
+            cache.AppliedInfo = cache.AppliedInfo.Merged(_activeInfo.Value);
             if(_activeInfo.Value.HasLayoutInfo) {
-                layout = UILayouter.Relayout(appliedInfo, parent, parentContentArea, flowInfo, out flowInfoOut);
+                cache.Layout = UILayouter.Relayout(cache.AppliedInfo, parent, parentContentArea, flowInfo, out cache.FlowInfo);
             }
         }
 
@@ -494,28 +514,27 @@ public abstract class UIElement : IToJson, IReactive
         {
             null => true,
             _ =>
-                _layoutCache.Value.Layout.Rect != layout.Rect ||
-                _layoutCache.Value.AppliedInfo.Padding != appliedInfo.Padding ||
-                _layoutCache.Value.AppliedInfo.Flow != appliedInfo.Flow,
+                _layoutCache.Value.Layout.Rect != cache.Layout.Rect ||
+                _layoutCache.Value.AppliedInfo.Padding != cache.AppliedInfo.Padding ||
+                _layoutCache.Value.AppliedInfo.Flow != cache.AppliedInfo.Flow,
         };
-        flowInfo = flowInfoOut;
-        _layoutCache = (layout, isHover, appliedInfo, flowInfo);
+        flowInfo = cache.FlowInfo;
+        _layoutCache = cache;
         var contentArea = new RectF
         {
-            X = layout.Rect.X + appliedInfo.Padding.Left,
-            Y = layout.Rect.Y + appliedInfo.Padding.Top,
-            Width = float.Max(0, layout.Rect.Width - appliedInfo.Padding.Left - appliedInfo.Padding.Right),
-            Height = float.Max(0, layout.Rect.Height - appliedInfo.Padding.Top - appliedInfo.Padding.Bottom),
+            X = cache.Layout.Rect.X + cache.AppliedInfo.Padding.Left,
+            Y = cache.Layout.Rect.Y + cache.AppliedInfo.Padding.Top,
+            Width = float.Max(0, cache.Layout.Rect.Width - cache.AppliedInfo.Padding.Left - cache.AppliedInfo.Padding.Right),
+            Height = float.Max(0, cache.Layout.Rect.Height - cache.AppliedInfo.Padding.Top - cache.AppliedInfo.Padding.Bottom),
         };
 
-        var childrenFlowInfo = appliedInfo.Flow.NewChildrenFlowInfo(contentArea);
+        var childrenFlowInfo = cache.AppliedInfo.Flow.NewChildrenFlowInfo(contentArea);
 
         Debug.Assert(_layoutCache.HasValue);
         ref readonly var appliedInfoRef = ref _layoutCache.ValueRef().AppliedInfo;
         foreach(var child in _children) {
             child.UpdateLayout(requestChildRelayout, appliedInfoRef, contentArea, ref childrenFlowInfo, mouse);
         }
-        return layout;
     }
 
     private static bool HitTest(in Vector2 mousePos, in RectF rect, in Vector4 borderRadius)
@@ -575,17 +594,18 @@ public abstract class UIElement : IToJson, IReactive
         if(model == null) { return; }
 
         Debug.Assert(_layoutCache != null);
-        var ((rect, borderRadius), isHover, appliedInfo, _) = _layoutCache.Value;
-        var shadowWidth = (appliedInfo.BoxShadow.BlurRadius + appliedInfo.BoxShadow.SpreadRadius);
+        ref readonly var cache = ref _layoutCache.ValueRef();
+
+        var shadowWidth = (cache.AppliedInfo.BoxShadow.BlurRadius + cache.AppliedInfo.BoxShadow.SpreadRadius);
         var shadowRect = new RectF
         {
-            X = rect.X - shadowWidth + appliedInfo.BoxShadow.OffsetX,
-            Y = rect.Y - shadowWidth + appliedInfo.BoxShadow.OffsetY,
-            Width = rect.Width + shadowWidth * 2f,
-            Height = rect.Height + shadowWidth * 2f,
+            X = cache.Layout.Rect.X - shadowWidth + cache.AppliedInfo.BoxShadow.OffsetX,
+            Y = cache.Layout.Rect.Y - shadowWidth + cache.AppliedInfo.BoxShadow.OffsetY,
+            Width = cache.Layout.Rect.Width + shadowWidth * 2f,
+            Height = cache.Layout.Rect.Height + shadowWidth * 2f,
         };
 
-        var polygonRect = rect.GetMargedRect(shadowRect);
+        var polygonRect = cache.Layout.Rect.GetMargedRect(shadowRect);
         var depth = float.Max(0, 1f - (float)index / 100000f);
         var modelOrigin = new Vector3
         {
@@ -603,15 +623,15 @@ public abstract class UIElement : IToJson, IReactive
                 new Vector4(0, 0, 0, 1));
         var result = new UIUpdateResult
         {
-            ActualRect = rect,
-            ActualBorderWidth = appliedInfo.BorderWidth.ToVector4(),
-            ActualBorderRadius = borderRadius,
+            ActualRect = cache.Layout.Rect,
+            ActualBorderWidth = cache.AppliedInfo.BorderWidth.ToVector4(),
+            ActualBorderRadius = cache.Layout.BorderRadius,
             MvpMatrix = uiProjection * modelMatrix,
-            Background = appliedInfo.Background,
-            BorderColor = appliedInfo.BorderColor,
-            BoxShadow = appliedInfo.BoxShadow,
-            Color = appliedInfo.Color.ToColorByte(),
-            IsHover = isHover,
+            Background = cache.AppliedInfo.Background,
+            BorderColor = cache.AppliedInfo.BorderColor,
+            BoxShadow = cache.AppliedInfo.BoxShadow,
+            Color = cache.AppliedInfo.Color.ToColorByte(),
+            IsHover = cache.IsHover,
         };
         model.Material.UpdateMaterial(this, result);
     }
@@ -876,6 +896,14 @@ public readonly record struct PseudoInfo
         writer.WriteEndObject();
         return JsonValueKind.Object;
     }
+}
+
+internal record struct LayoutCache
+{
+    public LayoutResult Layout;
+    public bool IsHover;
+    public UIElementInfo AppliedInfo;
+    public FlowLayoutInfo FlowInfo;
 }
 
 internal readonly record struct LayoutResult
