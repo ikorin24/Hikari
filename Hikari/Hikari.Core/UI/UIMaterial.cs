@@ -83,29 +83,29 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         _sampler.Validate();
     }
 
-    public virtual void UpdateMaterial(UIElement element, in UIUpdateResult result)
+    public virtual void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp)
     {
         var bufferData = new UIShaderSource.BufferData
         {
-            Mvp = result.MvpMatrix,
-            Rect = result.ActualRect,
-            BorderWidth = result.ActualBorderWidth,
-            BorderRadius = result.ActualBorderRadius,
-            BorderSolidColor = result.BorderColor.SolidColor,
+            Mvp = mvp,
+            Rect = result.Layout.Rect,
+            BorderWidth = result.AppliedInfo.BorderWidth.ToVector4(),
+            BorderRadius = result.Layout.BorderRadius,
+            BorderSolidColor = result.AppliedInfo.BorderColor.SolidColor,   // TODO:
             BoxShadowValues = new()
             {
-                X = result.BoxShadow.OffsetX,
-                Y = result.BoxShadow.OffsetY,
-                Z = result.BoxShadow.BlurRadius,
-                W = result.BoxShadow.IsInset ? -result.BoxShadow.SpreadRadius : result.BoxShadow.SpreadRadius,
+                X = result.AppliedInfo.BoxShadow.OffsetX,
+                Y = result.AppliedInfo.BoxShadow.OffsetY,
+                Z = result.AppliedInfo.BoxShadow.BlurRadius,
+                W = result.AppliedInfo.BoxShadow.IsInset ? -result.AppliedInfo.BoxShadow.SpreadRadius : result.AppliedInfo.BoxShadow.SpreadRadius,
             },
-            BoxShadowColor = result.BoxShadow.Color,
+            BoxShadowColor = result.AppliedInfo.BoxShadow.Color,
         };
         if(_bufferData != bufferData) {
             _bufferData = bufferData;
             _buffer.AsValue().WriteData(0, bufferData);
         }
-        UpdateBackground(result.Background);
+        UpdateBackground(result.AppliedInfo.Background);
     }
 
     protected void UpdateTexture(MaybeOwn<Texture2D> texture)

@@ -183,9 +183,9 @@ file sealed class PanelShader : UIShader
             return CreateOwn(self);
         }
 
-        public override void UpdateMaterial(UIElement element, in UIUpdateResult result)
+        public override void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp)
         {
-            base.UpdateMaterial(element, result);
+            base.UpdateMaterial(element, result, mvp);
         }
     }
 }

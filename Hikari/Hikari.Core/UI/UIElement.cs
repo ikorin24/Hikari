@@ -621,19 +621,7 @@ public abstract class UIElement : IToJson, IReactive
                 new Vector4(0, polygonRect.Size.Y, 0, 0),
                 new Vector4(0, 0, 1, 0),
                 new Vector4(0, 0, 0, 1));
-        var result = new UIUpdateResult
-        {
-            ActualRect = cache.Layout.Rect,
-            ActualBorderWidth = cache.AppliedInfo.BorderWidth.ToVector4(),
-            ActualBorderRadius = cache.Layout.BorderRadius,
-            MvpMatrix = uiProjection * modelMatrix,
-            Background = cache.AppliedInfo.Background,
-            BorderColor = cache.AppliedInfo.BorderColor,
-            BoxShadow = cache.AppliedInfo.BoxShadow,
-            Color = cache.AppliedInfo.Color.ToColorByte(),
-            IsHover = cache.IsHover,
-        };
-        model.Material.UpdateMaterial(this, result);
+        model.Material.UpdateMaterial(this, cache, uiProjection * modelMatrix);
     }
 }
 
@@ -916,17 +904,4 @@ internal readonly record struct LayoutResult
         rect = Rect;
         borderRadius = BorderRadius;
     }
-}
-
-public readonly record struct UIUpdateResult
-{
-    public required RectF ActualRect { get; init; }
-    public required Vector4 ActualBorderWidth { get; init; }
-    public required Vector4 ActualBorderRadius { get; init; }
-    public required Matrix4 MvpMatrix { get; init; }
-    public required Brush Background { get; init; }
-    public required Brush BorderColor { get; init; }
-    public required BoxShadow BoxShadow { get; init; }
-    public required ColorByte Color { get; init; }
-    public required bool IsHover { get; init; }
 }

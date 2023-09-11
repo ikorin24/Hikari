@@ -224,7 +224,7 @@ file sealed class ButtonShader : UIShader
     private sealed class Material : UIMaterial
     {
         private ButtonInfo? _buttonInfo;
-        private ColorByte? _color;
+        private Color4? _color;
 
         private Material(
             UIShader shader,
@@ -240,14 +240,14 @@ file sealed class ButtonShader : UIShader
             return CreateOwn(self);
         }
 
-        public override void UpdateMaterial(UIElement element, in UIUpdateResult result)
+        public override void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp)
         {
-            base.UpdateMaterial(element, result);
+            base.UpdateMaterial(element, result, mvp);
             var button = (Button)element;
-            if(_buttonInfo != button.ButtonInfo || _color != result.Color) {
+            if(_buttonInfo != button.ButtonInfo || _color != result.AppliedInfo.Color) {
                 _buttonInfo = button.ButtonInfo;
-                _color = result.Color;
-                UpdateButtonTexture(button.ButtonInfo, result.Color);
+                _color = result.AppliedInfo.Color;
+                UpdateButtonTexture(button.ButtonInfo, result.AppliedInfo.Color.ToColorByte());
             }
         }
 
