@@ -25,8 +25,7 @@ public abstract class UIElement : IToJson, IReactive
     private PseudoInfo? _hoverInfo;
     private PseudoInfo? _activeInfo;
 
-    private (LayoutResult Layout, UIElementInfo AppliedInfo, FlowLayoutInfo FlowInfo)? _layoutCache;
-    private bool _isHover;
+    private (LayoutResult Layout, bool IsHover, UIElementInfo AppliedInfo, FlowLayoutInfo FlowInfo)? _layoutCache;
     private bool _isClickHolding;
     private bool _needToInvokeClicked;
     private bool _needToLayoutUpdate;
@@ -434,14 +433,13 @@ public abstract class UIElement : IToJson, IReactive
             mouse.IsChanged(MouseButton.Left);
         var mousePos = mouse.Position;
 
-        var isHoverPrev = _isHover;
+        var isHoverPrev = _layoutCache?.IsHover ?? false;
         UIElementInfo appliedInfo;
         LayoutResult layout;
         bool isHover;
         FlowLayoutInfo flowInfoOut;
         if(needToRelayout == false && _layoutCache.HasValue) {
-            (layout, appliedInfo, flowInfoOut) = _layoutCache.Value;
-            isHover = _isHover;
+            (layout, isHover, appliedInfo, flowInfoOut) = _layoutCache.Value;
         }
         else {
             // First, layout without considering pseudo classes
@@ -500,9 +498,8 @@ public abstract class UIElement : IToJson, IReactive
                 _layoutCache.Value.AppliedInfo.Padding != appliedInfo.Padding ||
                 _layoutCache.Value.AppliedInfo.Flow != appliedInfo.Flow,
         };
-        _isHover = isHover;
         flowInfo = flowInfoOut;
-        _layoutCache = (layout, appliedInfo, flowInfo);
+        _layoutCache = (layout, isHover, appliedInfo, flowInfo);
         var contentArea = new RectF
         {
             X = layout.Rect.X + appliedInfo.Padding.Left,
@@ -578,7 +575,7 @@ public abstract class UIElement : IToJson, IReactive
         if(model == null) { return; }
 
         Debug.Assert(_layoutCache != null);
-        var ((rect, borderRadius), appliedInfo, _) = _layoutCache.Value;
+        var ((rect, borderRadius), isHover, appliedInfo, _) = _layoutCache.Value;
         var shadowWidth = (appliedInfo.BoxShadow.BlurRadius + appliedInfo.BoxShadow.SpreadRadius);
         var shadowRect = new RectF
         {
@@ -614,7 +611,7 @@ public abstract class UIElement : IToJson, IReactive
             BorderColor = appliedInfo.BorderColor,
             BoxShadow = appliedInfo.BoxShadow,
             Color = appliedInfo.Color.ToColorByte(),
-            IsHover = _isHover,
+            IsHover = isHover,
         };
         model.Material.UpdateMaterial(this, result);
     }
