@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace Hikari.UI;
@@ -8,7 +9,7 @@ public readonly record struct Flow
     : IFromJson<Flow>,
       IToJson
 {
-    public FlowDirection Direction { get; init; }
+    public required FlowDirection Direction { get; init; }
     public FlowWrapMode Wrap { get; init; }
 
     public static Flow Default => new()
@@ -18,6 +19,20 @@ public readonly record struct Flow
     };
 
     static Flow() => Serializer.RegisterConstructor(FromJson);
+
+    [SetsRequiredMembers]
+    public Flow(FlowDirection direction)
+    {
+        Direction = direction;
+        Wrap = FlowWrapMode.NoWrap;
+    }
+
+    [SetsRequiredMembers]
+    public Flow(FlowDirection direction, FlowWrapMode wrap)
+    {
+        Direction = direction;
+        Wrap = wrap;
+    }
 
     public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
