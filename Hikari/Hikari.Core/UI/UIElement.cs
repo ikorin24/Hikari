@@ -120,7 +120,6 @@ public abstract class UIElement : IToJson, IReactive
         get => _info.Background;
         set
         {
-            ArgumentNullException.ThrowIfNull(value);
             if(value == _info.Background) { return; }
             _info.Background = value;
         }
@@ -153,7 +152,6 @@ public abstract class UIElement : IToJson, IReactive
         get => _info.BorderColor;
         set
         {
-            ArgumentNullException.ThrowIfNull(value);
             if(value == _info.BorderColor) { return; }
             _info.BorderColor = value;
         }
@@ -177,6 +175,16 @@ public abstract class UIElement : IToJson, IReactive
             if(value == _info.Flow) { return; }
             _info.Flow = value;
             _needToLayoutUpdate = true;
+        }
+    }
+
+    public Color4 Color
+    {
+        get => _info.Color;
+        set
+        {
+            if(value == _info.Color) { return; }
+            _info.Color = value;
         }
     }
 
@@ -269,6 +277,9 @@ public abstract class UIElement : IToJson, IReactive
         if(source.TryGetProperty(nameof(Flow), out var flow)) {
             _info.Flow = Flow.FromJson(flow);
         }
+        if(source.TryGetProperty(nameof(Color), out var color)) {
+            _info.Color = color.Instantiate<Color4>();
+        }
         if(source.TryGetProperty(nameof(Clicked), out var clicked)) {
             var action = clicked.Instantiate<Action<UIElement>>();
             _clicked.Event.Subscribe(action);
@@ -314,6 +325,7 @@ public abstract class UIElement : IToJson, IReactive
         writer.Write(nameof(BorderColor), _info.BorderColor);
         writer.Write(nameof(BoxShadow), _info.BoxShadow);
         writer.Write(nameof(Flow), _info.Flow);
+        writer.Write(nameof(Color), _info.Color);
         writer.Write(nameof(Children), _children);
     }
 
@@ -336,6 +348,7 @@ public abstract class UIElement : IToJson, IReactive
         BorderColor = source.ApplyProperty(nameof(BorderColor), BorderColor, () => UIElementInfo.DefaultBorderColor, out _);
         BoxShadow = source.ApplyProperty(nameof(BoxShadow), BoxShadow, () => UIElementInfo.DefaultBoxShadow, out _);
         Flow = source.ApplyProperty(nameof(Flow), Flow, () => UIElementInfo.DefaultFlow, out _);
+        Color = source.ApplyProperty(nameof(Color), Color, () => UIElementInfo.DefaultColor, out _);
 
         if(source.TryGetProperty(nameof(Children), out var childrenProp)) {
             childrenProp.ApplyDiff(Children);
@@ -417,7 +430,7 @@ public abstract class UIElement : IToJson, IReactive
         var needToRelayout =
             relayoutRequested ||
             _needToLayoutUpdate ||
-            (mouse.PositionDelta?.IsZero == false && _hoverInfo != null) ||
+            (mouse.PositionDelta is null or { IsZero: false } && _hoverInfo != null) ||
             mouse.IsChanged(MouseButton.Left);
         var mousePos = mouse.Position;
 
@@ -600,6 +613,7 @@ public abstract class UIElement : IToJson, IReactive
             Background = appliedInfo.Background,
             BorderColor = appliedInfo.BorderColor,
             BoxShadow = appliedInfo.BoxShadow,
+            Color = appliedInfo.Color.ToColorByte(),
             IsHover = _isHover,
         };
         model.Material.UpdateMaterial(this, result);
@@ -620,6 +634,7 @@ internal record struct UIElementInfo
     public Brush BorderColor { get; set; }
     public BoxShadow BoxShadow { get; set; }
     public Flow Flow { get; set; }
+    public Color4 Color { get; set; }
 
     internal static UIElementInfo Default => new()
     {
@@ -635,6 +650,7 @@ internal record struct UIElementInfo
         BorderColor = DefaultBorderColor,
         BoxShadow = DefaultBoxShadow,
         Flow = DefaultFlow,
+        Color = DefaultColor,
     };
 
     internal static LayoutLength DefaultWidth => new LayoutLength(1f, LayoutLengthType.Proportion);
@@ -649,6 +665,7 @@ internal record struct UIElementInfo
     internal static Brush DefaultBorderColor => Brush.Black;
     internal static BoxShadow DefaultBoxShadow => BoxShadow.None;
     internal static Flow DefaultFlow => Flow.Default;
+    internal static Color4 DefaultColor => Color4.Black;
 
     internal readonly UIElementInfo Merged(in PseudoInfo p)
     {
@@ -666,6 +683,7 @@ internal record struct UIElementInfo
             BorderColor = p.BorderColor ?? BorderColor,
             BoxShadow = p.BoxShadow ?? BoxShadow,
             Flow = p.Flow ?? Flow,
+            Color = p.Color ?? Color,
         };
     }
 }
@@ -692,6 +710,7 @@ public readonly record struct PseudoInfo
     public Brush? BorderColor { get; init; }
     public BoxShadow? BoxShadow { get; init; }
     public Flow? Flow { get; init; }
+    public Color4? Color { get; init; }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private readonly ImmutableArray<Prop> _ex;
@@ -732,6 +751,7 @@ public readonly record struct PseudoInfo
         Brush? borderColor = null;
         BoxShadow? boxShadow = null;
         Flow? flow = null;
+        Color4? color = null;
         var ex = ImmutableArray.CreateBuilder<Prop>();
 
         foreach(var (name, value) in source.EnumerateProperties()) {
@@ -784,6 +804,10 @@ public readonly record struct PseudoInfo
                     flow = value.Instantiate<Flow>();
                     break;
                 }
+                case nameof(Color): {
+                    color = value.Instantiate<Color4>();
+                    break;
+                }
                 default: {
                     ex.Add(new(name, value));
                     break;
@@ -805,6 +829,7 @@ public readonly record struct PseudoInfo
             BorderColor = borderColor,
             BoxShadow = boxShadow,
             Flow = flow,
+            Color = color,
             Ex = ex.Count == 0 ? EmptyEx : ex.ToImmutable(),
         };
     }
@@ -845,6 +870,12 @@ public readonly record struct PseudoInfo
         if(BoxShadow.HasValue) {
             writer.Write(nameof(BoxShadow), BoxShadow.Value);
         }
+        if(Flow.HasValue) {
+            writer.Write(nameof(Flow), Flow.Value);
+        }
+        if(Color.HasValue) {
+            writer.Write(nameof(Color), Color.Value);
+        }
         writer.WriteEndObject();
         return JsonValueKind.Object;
     }
@@ -871,5 +902,6 @@ public readonly record struct UIUpdateResult
     public required Brush Background { get; init; }
     public required Brush BorderColor { get; init; }
     public required BoxShadow BoxShadow { get; init; }
+    public required ColorByte Color { get; init; }
     public required bool IsHover { get; init; }
 }

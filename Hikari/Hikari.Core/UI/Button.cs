@@ -224,6 +224,7 @@ file sealed class ButtonShader : UIShader
     private sealed class Material : UIMaterial
     {
         private ButtonInfo? _buttonInfo;
+        private ColorByte? _color;
 
         private Material(
             UIShader shader,
@@ -243,55 +244,54 @@ file sealed class ButtonShader : UIShader
         {
             base.UpdateMaterial(element, result);
             var button = (Button)element;
-            if(_buttonInfo != button.ButtonInfo) {
+            if(_buttonInfo != button.ButtonInfo || _color != result.Color) {
                 _buttonInfo = button.ButtonInfo;
-                UpdateButtonTexture(button.ButtonInfo);
+                _color = result.Color;
+                UpdateButtonTexture(button.ButtonInfo, result.Color);
             }
         }
 
-        private void UpdateButtonTexture(in ButtonInfo button)
+        private void UpdateButtonTexture(in ButtonInfo button, ColorByte color)
         {
             var text = button.Text;
-            if(string.IsNullOrEmpty(text) == false) {
-                using var font = new SkiaSharp.SKFont();
-                font.Size = button.FontSize.Px;
-                var options = new TextDrawOptions
-                {
-                    Background = ColorByte.Transparent,
-                    Foreground = ColorByte.Black,
-                    PowerOfTwoSizeRequired = true,
-                    Font = font,
-                };
-                TextDrawer.Draw(text, options, this, static result =>
-                {
-                    Debug.Assert(MathTool.IsPowerOfTwo(result.Image.Size.X));
-                    Debug.Assert(MathTool.IsPowerOfTwo(result.Image.Size.Y));
-                    var material = result.Arg;
-                    var image = result.Image;
-                    if(material.Texture is Texture2D currentTex
-                        && currentTex.Usage.HasFlag(TextureUsages.CopyDst)
-                        && currentTex.Size == (Vector2u)image.Size) {
+            using var font = new SkiaSharp.SKFont();
+            font.Size = button.FontSize.Px;
+            var options = new TextDrawOptions
+            {
+                Background = ColorByte.Transparent,
+                Foreground = color,
+                PowerOfTwoSizeRequired = true,
+                Font = font,
+            };
+            TextDrawer.Draw(text, options, this, static result =>
+            {
+                Debug.Assert(MathTool.IsPowerOfTwo(result.Image.Size.X));
+                Debug.Assert(MathTool.IsPowerOfTwo(result.Image.Size.Y));
+                var material = result.Arg;
+                var image = result.Image;
+                if(material.Texture is Texture2D currentTex
+                    && currentTex.Usage.HasFlag(TextureUsages.CopyDst)
+                    && currentTex.Size == (Vector2u)image.Size) {
 
-                        Debug.Assert(currentTex.Format == TextureFormat.Rgba8UnormSrgb);
-                        Debug.Assert(currentTex.Usage.HasFlag(TextureUsages.CopyDst));
-                        Debug.Assert(currentTex.MipLevelCount == 1);
-                        currentTex.Write(0, image.GetPixels());
-                        material.UpdateTextureContentSize(result.TextBoundsSize);
-                    }
-                    else {
-                        var texture = Texture2D.CreateFromRawData(material.Shader.Screen, new()
-                        {
-                            Format = TextureFormat.Rgba8UnormSrgb,
-                            MipLevelCount = 1,
-                            SampleCount = 1,
-                            Size = (Vector2u)image.Size,
-                            Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
-                        }, image.GetPixels().AsBytes());
-                        material.UpdateTexture(texture);
-                        material.UpdateTextureContentSize(result.TextBoundsSize);
-                    }
-                });
-            }
+                    Debug.Assert(currentTex.Format == TextureFormat.Rgba8UnormSrgb);
+                    Debug.Assert(currentTex.Usage.HasFlag(TextureUsages.CopyDst));
+                    Debug.Assert(currentTex.MipLevelCount == 1);
+                    currentTex.Write(0, image.GetPixels());
+                    material.UpdateTextureContentSize(result.TextBoundsSize);
+                }
+                else {
+                    var texture = Texture2D.CreateFromRawData(material.Shader.Screen, new()
+                    {
+                        Format = TextureFormat.Rgba8UnormSrgb,
+                        MipLevelCount = 1,
+                        SampleCount = 1,
+                        Size = (Vector2u)image.Size,
+                        Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
+                    }, image.GetPixels().AsBytes());
+                    material.UpdateTexture(texture);
+                    material.UpdateTextureContentSize(result.TextBoundsSize);
+                }
+            });
         }
     }
 }

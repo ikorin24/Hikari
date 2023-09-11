@@ -155,30 +155,30 @@ public sealed class Mouse
         private Vector2? _delta;
         private Vector2? _current;
         private Vector2? _newValue;
-        private bool _changed;
+        private bool _isNewValueSet;
 
-        public Vector2? Current => _current;
+        public readonly Vector2? Current => _current;
 
-        public Vector2? Delta => _delta;
+        public readonly Vector2? Delta => _delta;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetValue(Vector2? value)
         {
             _newValue = value;
-            _changed = true;
+            _isNewValueSet = true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void InitFrame()
         {
-            if(_changed) {
+            if(_isNewValueSet) {
                 _delta = _newValue - _current;
                 _current = _newValue;
             }
             else {
                 _delta = default;
             }
-            _changed = false;
+            _isNewValueSet = false;
         }
     }
 
@@ -186,29 +186,29 @@ public sealed class Mouse
     {
         private bool _current;
         private bool _prev;
-        private bool _changed;
+        private bool _isNewValueSet;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetValue(bool value)
         {
             _prev = _current;
             _current = value;
-            _changed = true;
+            _isNewValueSet = true;
         }
 
-        public bool IsKeyPressed => _current;
+        public readonly bool IsKeyPressed => _current;
 
-        public bool IsKeyDown => _current && !_prev;
+        public readonly bool IsKeyDown => _current && !_prev;
 
-        public bool IsKeyUp => !_current && _prev;
+        public readonly bool IsKeyUp => !_current && _prev;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void InitFrame()
         {
-            if(_changed == false) {
+            if(_isNewValueSet == false) {
                 _prev = _current;
             }
-            _changed = false;
+            _isNewValueSet = false;
         }
     }
 
@@ -216,27 +216,27 @@ public sealed class Mouse
     {
         private Vector2 _current;
         private Vector2 _newValue;
-        private bool _changed;
+        private bool _isNewValueSet;
 
-        public Vector2 Current => _current;
+        public readonly Vector2 Current => _current;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetValue(Vector2 value)
         {
             _newValue = value;
-            _changed = true;
+            _isNewValueSet = true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void InitFrame()
         {
-            if(_changed) {
+            if(_isNewValueSet) {
                 _current = _newValue;
             }
             else {
                 _current = default;
             }
-            _changed = false;
+            _isNewValueSet = false;
         }
     }
 }
