@@ -197,8 +197,27 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.RowReverse, Wrap: FlowWrapMode.WrapReverse }: {
-                throw new System.NotImplementedException();
-                //break;
+                var x = flowHead.X - size.X - margin.Right;
+                if(x - margin.Left >= area.Position.X) {
+                    pos = new Vector2
+                    {
+                        X = x,
+                        Y = flowHead.Y - size.Y - margin.Bottom,
+                    };
+                    flowHead.X = float.Min(flowHead.X, flowHead.X - size.X - margin.Left - margin.Right);
+                    flowInfo.NextLineOffset = float.Min(flowInfo.NextLineOffset, -size.Y - margin.Top - margin.Bottom);
+                }
+                else {
+                    flowHead.Y += flowInfo.NextLineOffset;
+                    pos = new Vector2
+                    {
+                        X = area.Position.X + area.Size.X - size.X - margin.Right,
+                        Y = flowHead.Y - size.Y - margin.Bottom,
+                    };
+                    flowHead.X = pos.X - margin.Left;
+                    flowInfo.NextLineOffset = -size.Y - margin.Top - margin.Bottom;
+                }
+                break;
             }
             case { Direction: FlowDirection.ColumnReverse, Wrap: FlowWrapMode.NoWrap }: {
                 pos = new Vector2
@@ -233,8 +252,27 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.ColumnReverse, Wrap: FlowWrapMode.WrapReverse }: {
-                throw new System.NotImplementedException();
-                //break;
+                var y = flowHead.Y - size.Y - margin.Bottom;
+                if(y - margin.Top >= area.Position.Y) {
+                    pos = new Vector2
+                    {
+                        X = flowHead.X - size.X - margin.Right,
+                        Y = y,
+                    };
+                    flowHead.Y = float.Min(flowHead.Y, flowHead.Y - size.Y - margin.Top - margin.Bottom);
+                    flowInfo.NextLineOffset = float.Min(flowInfo.NextLineOffset, -size.X - margin.Left - margin.Right);
+                }
+                else {
+                    flowHead.X += flowInfo.NextLineOffset;
+                    pos = new Vector2
+                    {
+                        X = flowHead.X - size.X - margin.Right,
+                        Y = area.Position.Y + area.Size.Y - size.Y - margin.Bottom,
+                    };
+                    flowHead.Y = pos.Y - margin.Top;
+                    flowInfo.NextLineOffset = -size.X - margin.Left - margin.Right;
+                }
+                break;
             }
             case { Direction: FlowDirection.None } or _: {
                 pos = new Vector2
