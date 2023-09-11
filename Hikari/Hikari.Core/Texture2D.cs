@@ -28,6 +28,9 @@ public sealed class Texture2D : ITexture2DProvider, IScreenManaged
     public TextureUsages Usage => _desc.Usage;
     public TextureDimension Dimension => _desc.Dimension;
 
+    public bool CanWrite => Usage.HasFlag(TextureUsages.CopyDst);
+    public bool CanRead => Usage.HasFlag(TextureUsages.CopySrc);
+
     public TextureView View => _defaultView.AsValue();
 
     public Vector2u Size => _desc.Size;
@@ -168,6 +171,9 @@ public sealed class Texture2D : ITexture2DProvider, IScreenManaged
 
     public unsafe void Write<TPixel>(u32 mipLevel, ReadOnlySpan<TPixel> pixelData) where TPixel : unmanaged
     {
+        if(CanWrite == false) {
+            ThrowHelper.ThrowInvalidOperation("Texture is not writable");
+        }
         var screenRef = _screen.AsRefChecked();
         var texture = NativeRef;
         var size = new Wgpu.Extent3d((Width >> (int)mipLevel), (Height >> (int)mipLevel), 1);
