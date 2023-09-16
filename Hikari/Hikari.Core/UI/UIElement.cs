@@ -730,7 +730,7 @@ public readonly record struct PseudoInfo
         Padding.HasValue || HorizontalAlignment.HasValue || VerticalAlignment.HasValue ||
         BorderWidth.HasValue;
 
-    public bool TryGetEx<T>(string propName, [MaybeNullWhen(false)] out T value)
+    public bool TryGetEx<T>(string propName, [MaybeNullWhen(false)] out T value) where T : notnull
     {
         foreach(var (name, v) in Ex) {
             if(name == propName) {

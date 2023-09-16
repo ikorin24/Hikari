@@ -226,51 +226,17 @@ public static class Serializer
     internal record struct EnumMarker;
     internal record struct JsonMarker;
 
-    //public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlyMemory<byte> utf8Json, DeserializeRuntimeData data = default)
-    //{
-    //    using var doc = JsonDocument.Parse(utf8Json, ParseOptions);
-    //    return DeserializeCore<T>(doc.RootElement, data);
-    //}
-
-    //public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] string json, DeserializeRuntimeData data = default)
-    //{
-    //    using var doc = JsonDocument.Parse(json, ParseOptions);
-    //    return DeserializeCore<T>(doc.RootElement, data);
-    //}
-
-    //public static T Deserialize<T>([StringSyntax(StringSyntaxAttribute.Json)] ReadOnlyMemory<char> json, DeserializeRuntimeData data = default)
-    //{
-    //    using var doc = JsonDocument.Parse(json, ParseOptions);
-    //    return DeserializeCore<T>(doc.RootElement, data);
-    //}
-
-    //internal static object Deserialize(string json, DeserializeRuntimeData data = default)
-    //{
-    //    using var doc = JsonDocument.Parse(json, ParseOptions);
-    //    var rootElement = doc.RootElement;
-    //    return rootElement.ValueKind switch
-    //    {
-    //        JsonValueKind.Object => GetConstructor(rootElement, null).Func(rootElement, data),
-    //        _ => throw new FormatException("element should be kind of object"),
-    //    };
-    //}
-
-    internal static T Instantiate<T>(in ObjectSource source)
+    internal static T Instantiate<T>(in ObjectSource source) where T : notnull
     {
         return DeserializeCore<T>(source);
     }
-
-    //internal static object Instantiate(JsonElement element, DeserializeRuntimeData data)
-    //{
-    //    return DeserializeCore(element, null, data);
-    //}
 
     public static object Instantiate(in ObjectSource source, Type? type)
     {
         return DeserializeCore(source, type);
     }
 
-    private static T DeserializeCore<T>(in ObjectSource source)
+    private static T DeserializeCore<T>(in ObjectSource source) where T : notnull
     {
         if(typeof(T) == typeof(string)) { var x = source.GetStringNotNull(); return Unsafe.As<string, T>(ref x); }
         if(typeof(T) == typeof(bool)) { var x = source.GetBoolean(); return Unsafe.As<bool, T>(ref x); }

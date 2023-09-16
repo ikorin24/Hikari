@@ -204,7 +204,7 @@ public readonly partial struct ObjectSource : IEquatable<ObjectSource>
 
     public PropertyEnumerable EnumerateProperties() => new PropertyEnumerable(this);
 
-    public T Instantiate<T>()
+    public T Instantiate<T>() where T : notnull
     {
         return Serializer.Instantiate<T>(this);
     }
