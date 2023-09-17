@@ -24,10 +24,10 @@ internal class Program
             Style = WindowStyle.Default,
             PresentMode = SurfacePresentMode.VsyncOn,
         };
-        Engine.Run(screenConfig, OnInitialized_);
+        Engine.Run(screenConfig, OnInitialized);
     }
 
-    private static void OnInitialized_(Screen screen)
+    private static void OnInitialized(Screen screen)
     {
         screen.Title = "sample";
 
@@ -181,43 +181,6 @@ internal class Program
         result.Y = radius * sinBeta;
         return result + center;
     }
-
-    private static void OnInitialized(Screen screen)
-    {
-        screen.Title = "New Window";
-        var ui = screen.Operations.AddUI(
-            0,
-            new UIDescriptor
-            {
-                ColorFormat = screen.Surface.Format,
-                DepthStencilFormat = screen.DepthStencil.Format,
-                OnRenderPass = static screen => RenderPass.Create(
-                    screen,
-                    new ColorAttachment
-                    {
-                        Target = screen.Surface,
-                        LoadOp = ColorBufferLoadOp.Clear(),
-                    },
-                    new DepthStencilAttachment
-                    {
-                        Target = screen.DepthStencil,
-                        LoadOp = new DepthStencilBufferLoadOp
-                        {
-                            Depth = DepthBufferLoadOp.Clear(1f),
-                            Stencil = null,
-                        },
-                    }),
-            });
-
-
-        ui.RenderRoot($$"""
-        {
-            "@type": {{typeof(Counter)}},
-            "Width": "80%",
-            "Height": "80%"
-        }
-        """);
-    }
 }
 
 [ReactComponent]
@@ -253,36 +216,40 @@ public partial class Counter
                 "Text": {{text}}
             },
             {
-                "@type": {{typeof(CountButton)}},
-                "@key": "1",
-                "Width": 150,
-                "Height": 60,
-                "Clicked": {{(UIElement _) =>
+                "@type": {{typeof(Panel)}},
+                "Flow": "Row Wrap",
+                "Children": [
                 {
-                    SetState(ref _countA, _countA + 1);
-                }}}
-            },
-            {
-                "@type": {{typeof(CountButton)}},
-                "@key": "2",
-                "Width": 150,
-                "Height": 60,
-                "Clicked": {{(UIElement _) =>
+                    "@type": {{typeof(CountButton)}},
+                    "@key": "1",
+                    "Width": 150,
+                    "Height": 60,
+                    "Clicked": {{(UIElement _) =>
+                    {
+                        SetState(ref _countA, _countA + 1);
+                    }}}
+                },
                 {
-                    SetState(ref _countB, _countB + 1);
-                }}}
-            },
-            {
-                "@type": {{typeof(CountButton)}},
-                "@key": "3",
-                "Width": 150,
-                "Height": 60,
-                "Clicked": {{(UIElement _) =>
+                    "@type": {{typeof(CountButton)}},
+                    "@key": "2",
+                    "Width": 150,
+                    "Height": 60,
+                    "Clicked": {{(UIElement _) =>
+                    {
+                        SetState(ref _countB, _countB + 1);
+                    }}}
+                },
                 {
-                    SetState(ref _countC, _countC + 1);
-                }}}
-            }
-            ]
+                    "@type": {{typeof(CountButton)}},
+                    "@key": "3",
+                    "Width": 150,
+                    "Height": 60,
+                    "Clicked": {{(UIElement _) =>
+                    {
+                        SetState(ref _countC, _countC + 1);
+                    }}}
+                }]
+            }]
         }
         """;
     }
