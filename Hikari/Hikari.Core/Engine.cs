@@ -39,8 +39,8 @@ public static class Engine
         EngineCore.EngineStart(engineConfig, screenConfig);
     }
 
-    private static readonly Func<Rust.Box<CH.HostScreen>, CH.HostScreenInfo, CH.ScreenId> _onStart =
-        (Rust.Box<CH.HostScreen> screenHandle, CH.HostScreenInfo info) =>
+    private static readonly Func<Rust.Box<CH.Screen>, CH.ScreenInfo, CH.ScreenId> _onStart =
+        (Rust.Box<CH.Screen> screenHandle, CH.ScreenInfo info) =>
         {
             var mainThread = ThreadId.CurrentThread();
             var screen = new Screen(screenHandle, mainThread, _onScreenInit);
@@ -118,11 +118,11 @@ public static class Engine
             _screens[id].OnClosing(ref cancel);
         };
 
-    private static readonly Func<CH.ScreenId, Rust.OptionBox<CH.HostScreen>> _onClosed =
+    private static readonly Func<CH.ScreenId, Rust.OptionBox<CH.Screen>> _onClosed =
         (CH.ScreenId id) =>
         {
             if(_screens.Remove(id, out var screen) == false) {
-                return Rust.OptionBox<CH.HostScreen>.None;
+                return Rust.OptionBox<CH.Screen>.None;
             }
             return screen.OnClosed();
         };

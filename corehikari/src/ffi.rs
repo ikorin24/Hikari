@@ -12,25 +12,25 @@ use std::num::NonZeroU32;
 #[no_mangle]
 extern "cdecl" fn hikari_engine_start(
     engine_config: &EngineCoreConfig,
-    screen_config: &HostScreenConfig,
+    screen_config: &ScreenConfig,
 ) -> ApiResult {
     let result = engine_start(engine_config, screen_config);
     ApiResult::ok_or_set_error(result)
 }
 
-static_assertions::assert_impl_all!(HostScreenConfig: Send, Sync);
+static_assertions::assert_impl_all!(ScreenConfig: Send, Sync);
 
 /// # Thread Safety
 /// ## OK
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn hikari_create_screen(config: &HostScreenConfig) -> ApiResult {
+extern "cdecl" fn hikari_create_screen(config: &ScreenConfig) -> ApiResult {
     let result = send_proxy_message(ProxyMessage::CreateScreen(*config));
     ApiResult::ok_or_set_error(result)
 }
 
-static_assertions::assert_impl_all!(HostScreen: Send, Sync);
+static_assertions::assert_impl_all!(Screen: Send, Sync);
 static_assertions::assert_impl_all!(Slice<u8>: Send, Sync);
 
 /// # Thread Safety
@@ -39,7 +39,7 @@ static_assertions::assert_impl_all!(Slice<u8>: Send, Sync);
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_screen_resize_surface(
-    screen: &HostScreen,
+    screen: &Screen,
     width: u32,
     height: u32,
 ) -> ApiResult {
@@ -53,14 +53,14 @@ extern "cdecl" fn hikari_screen_resize_surface(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn hikari_screen_request_redraw(screen: &HostScreen) -> ApiResult {
+extern "cdecl" fn hikari_screen_request_redraw(screen: &Screen) -> ApiResult {
     screen.window.request_redraw();
     ApiResult::ok()
 }
 
 #[no_mangle]
 extern "cdecl" fn hikari_create_command_encoder(
-    screen: &HostScreen,
+    screen: &Screen,
 ) -> ApiBoxResult<wgpu::CommandEncoder> {
     let encoder = screen
         .device
@@ -70,7 +70,7 @@ extern "cdecl" fn hikari_create_command_encoder(
 
 #[no_mangle]
 extern "cdecl" fn hikari_finish_command_encoder(
-    screen: &HostScreen,
+    screen: &Screen,
     encoder: Box<wgpu::CommandEncoder>,
 ) {
     screen.queue.submit(std::iter::once(encoder.finish()));
@@ -78,7 +78,7 @@ extern "cdecl" fn hikari_finish_command_encoder(
 
 #[no_mangle]
 extern "cdecl" fn hikari_get_surface_texture(
-    screen: &HostScreen,
+    screen: &Screen,
 ) -> ApiValueResult<Option<Box<wgpu::SurfaceTexture>>> {
     match screen.surface.get_current_texture() {
         Ok(surface_texture) => {
@@ -122,7 +122,7 @@ extern "cdecl" fn hikari_present_surface_texture(surface_texture: Box<wgpu::Surf
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn hikari_screen_set_title(screen: &HostScreen, title: Slice<u8>) -> ApiResult {
+extern "cdecl" fn hikari_screen_set_title(screen: &Screen, title: Slice<u8>) -> ApiResult {
     let result = title.as_str().map(|title| {
         screen.window.set_title(title);
     });
@@ -203,7 +203,7 @@ static_assertions::assert_impl_all!(wgpu::ComputePass: Send, Sync);
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_screen_set_inner_size(
-    screen: &HostScreen,
+    screen: &Screen,
     width: u32,
     height: u32,
 ) -> ApiResult {
@@ -218,14 +218,14 @@ extern "cdecl" fn hikari_screen_set_inner_size(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn hikari_screen_get_inner_size(screen: &HostScreen) -> ApiValueResult<SizeU32> {
+extern "cdecl" fn hikari_screen_get_inner_size(screen: &Screen) -> ApiValueResult<SizeU32> {
     let size: (u32, u32) = screen.window.inner_size().into();
     ApiValueResult::ok(size.into())
 }
 
 #[no_mangle]
 extern "cdecl" fn hikari_screen_set_location(
-    screen: &HostScreen,
+    screen: &Screen,
     x: i32,
     y: i32,
     monitor_id: Opt<MonitorId>,
@@ -252,7 +252,7 @@ extern "cdecl" fn hikari_screen_set_location(
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_screen_get_location(
-    screen: &HostScreen,
+    screen: &Screen,
     monitor_id: Opt<MonitorId>,
 ) -> ApiValueResult<Tuple<i32, i32>> {
     let f = || -> Result<_, Box<dyn Error>> {
@@ -275,7 +275,7 @@ extern "cdecl" fn hikari_screen_get_location(
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn hikari_current_monitor(screen: &HostScreen) -> ApiValueResult<Opt<MonitorId>> {
+extern "cdecl" fn hikari_current_monitor(screen: &Screen) -> ApiValueResult<Opt<MonitorId>> {
     let result = screen
         .window
         .current_monitor()
@@ -291,7 +291,7 @@ extern "cdecl" fn hikari_current_monitor(screen: &HostScreen) -> ApiValueResult<
 /// - called from any thread
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn hikari_monitor_count(screen: &HostScreen) -> ApiValueResult<usize> {
+extern "cdecl" fn hikari_monitor_count(screen: &Screen) -> ApiValueResult<usize> {
     let count = screen.window.available_monitors().count();
     ApiValueResult::ok(count)
 }
@@ -304,7 +304,7 @@ extern "cdecl" fn hikari_monitor_count(screen: &HostScreen) -> ApiValueResult<us
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_monitors(
-    screen: &HostScreen,
+    screen: &Screen,
     buf: *mut MonitorId,
     buflen: usize,
 ) -> ApiValueResult<usize> {
@@ -323,7 +323,7 @@ extern "cdecl" fn hikari_monitors(
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_write_texture(
-    screen: &HostScreen,
+    screen: &Screen,
     texture: &ImageCopyTexture,
     data: Slice<u8>,
     data_layout: &wgpu::ImageDataLayout,
@@ -341,7 +341,7 @@ extern "cdecl" fn hikari_write_texture(
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_create_bind_group_layout(
-    screen: &HostScreen,
+    screen: &Screen,
     desc: &BindGroupLayoutDescriptor,
 ) -> ApiBoxResult<wgpu::BindGroupLayout> {
     let value = desc.use_wgpu_type(|desc| {
@@ -372,7 +372,7 @@ extern "cdecl" fn hikari_destroy_bind_group_layout(layout: Box<wgpu::BindGroupLa
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_create_bind_group(
-    screen: &HostScreen,
+    screen: &Screen,
     desc: &BindGroupDescriptor,
 ) -> ApiBoxResult<wgpu::BindGroup> {
     let value = desc.use_wgpu_type(|desc| {
@@ -403,7 +403,7 @@ extern "cdecl" fn hikari_destroy_bind_group(bind_group: Box<wgpu::BindGroup>) {
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_create_pipeline_layout(
-    screen: &HostScreen,
+    screen: &Screen,
     desc: &PipelineLayoutDescriptor,
 ) -> ApiBoxResult<wgpu::PipelineLayout> {
     let value = screen.device.create_pipeline_layout(&desc.to_wgpu_type());
@@ -432,7 +432,7 @@ extern "cdecl" fn hikari_destroy_pipeline_layout(layout: Box<wgpu::PipelineLayou
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_create_render_pipeline(
-    screen: &HostScreen,
+    screen: &Screen,
     desc: &RenderPipelineDescriptor,
 ) -> ApiBoxResult<wgpu::RenderPipeline> {
     let result = desc.use_wgpu_type(|desc| {
@@ -464,7 +464,7 @@ extern "cdecl" fn hikari_destroy_render_pipeline(pipeline: Box<wgpu::RenderPipel
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_create_compute_pipeline(
-    screen: &HostScreen,
+    screen: &Screen,
     desc: &ComputePipelineDescriptor,
 ) -> ApiBoxResult<wgpu::ComputePipeline> {
     let result = desc.use_wgpu_type(|desc| {
@@ -493,7 +493,7 @@ extern "cdecl" fn hikari_destroy_compute_pipeline(pipeline: Box<wgpu::ComputePip
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_create_buffer(
-    screen: &HostScreen,
+    screen: &Screen,
     size: u64,
     usage: wgpu::BufferUsages,
 ) -> ApiBoxResult<wgpu::Buffer> {
@@ -513,7 +513,7 @@ extern "cdecl" fn hikari_create_buffer(
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_create_buffer_init(
-    screen: &HostScreen,
+    screen: &Screen,
     contents: Slice<u8>,
     usage: wgpu::BufferUsages,
 ) -> ApiBoxResult<wgpu::Buffer> {
@@ -547,7 +547,7 @@ extern "cdecl" fn hikari_destroy_buffer(buffer: Box<wgpu::Buffer>) {
 
 #[no_mangle]
 extern "cdecl" fn hikari_copy_texture_to_buffer(
-    screen: &HostScreen,
+    screen: &Screen,
     source: &ImageCopyTexture,
     copy_size: &wgpu::Extent3d,
     buffer: &wgpu::Buffer,
@@ -596,7 +596,7 @@ extern "cdecl" fn hikari_copy_texture_to_buffer(
 
 #[no_mangle]
 extern "cdecl" fn hikari_read_buffer(
-    screen: &HostScreen,
+    screen: &Screen,
     buffer_slice: BufferSlice,
     token: usize,
     callback: extern "cdecl" fn(token: usize, result: ApiResult, view: *const u8, len: usize),
@@ -627,7 +627,7 @@ static_assertions::assert_impl_all!(SamplerDescriptor: Send, Sync);
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_create_sampler(
-    screen: &HostScreen,
+    screen: &Screen,
     desc: &SamplerDescriptor,
 ) -> ApiBoxResult<wgpu::Sampler> {
     let sampler = screen.device.create_sampler(&desc.to_wgpu_type());
@@ -656,7 +656,7 @@ extern "cdecl" fn hikari_destroy_sampler(sampler: Box<wgpu::Sampler>) {
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_create_shader_module(
-    screen: &HostScreen,
+    screen: &Screen,
     shader_source: Slice<u8>,
 ) -> ApiBoxResult<wgpu::ShaderModule> {
     let result = shader_source.as_str().map(|s| {
@@ -692,7 +692,7 @@ extern "cdecl" fn hikari_destroy_shader_module(shader: Box<wgpu::ShaderModule>) 
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_create_texture(
-    screen: &HostScreen,
+    screen: &Screen,
     desc: &TextureDescriptor,
 ) -> ApiBoxResult<wgpu::Texture> {
     let value = Box::new(screen.device.create_texture(&desc.to_wgpu_type()));
@@ -729,7 +729,7 @@ extern "cdecl" fn hikari_get_texture_descriptor(
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_create_texture_with_data(
-    screen: &HostScreen,
+    screen: &Screen,
     desc: &TextureDescriptor,
     data: Slice<u8>,
 ) -> ApiBoxResult<wgpu::Texture> {
@@ -808,7 +808,7 @@ extern "cdecl" fn hikari_destroy_texture_view(texture_view: Box<wgpu::TextureVie
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "cdecl" fn hikari_write_buffer(
-    screen: &HostScreen,
+    screen: &Screen,
     buffer: &wgpu::Buffer,
     offset: u64,
     data: Slice<u8>,
@@ -993,13 +993,13 @@ extern "cdecl" fn hikari_draw_indexed<'a>(
 static_assertions::assert_impl_all!(winit::window::Window: Send, Sync);
 
 #[no_mangle]
-extern "cdecl" fn hikari_set_ime_allowed(screen: &HostScreen, allowed: bool) -> ApiResult {
+extern "cdecl" fn hikari_set_ime_allowed(screen: &Screen, allowed: bool) -> ApiResult {
     screen.window.set_ime_allowed(allowed);
     ApiResult::ok()
 }
 
 #[no_mangle]
-extern "cdecl" fn hikari_set_ime_position(screen: &HostScreen, x: u32, y: u32) -> ApiResult {
+extern "cdecl" fn hikari_set_ime_position(screen: &Screen, x: u32, y: u32) -> ApiResult {
     let pos = winit::dpi::PhysicalPosition::new(x, y);
     screen.window.set_ime_position(pos);
     ApiResult::ok()

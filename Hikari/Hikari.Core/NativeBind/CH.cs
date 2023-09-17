@@ -16,7 +16,7 @@ namespace Hikari.NativeBind;
 /// </summary>
 internal static class CH
 {
-    internal sealed class HostScreen : INativeTypeNonReprC { private HostScreen() { } }
+    internal sealed class Screen : INativeTypeNonReprC { private Screen() { } }
 
     [StructLayout(LayoutKind.Sequential)]
     internal readonly struct Opt<T> where T : unmanaged
@@ -294,7 +294,7 @@ internal static class CH
 
     internal unsafe struct EngineCoreConfig
     {
-        public required HostScreenInitFn on_screen_init;
+        public required ScreenInitFn on_screen_init;
         public required EngineUnhandledErrorFn on_unhandled_error;
         public required ClearedEventFn event_cleared;
         public required RedrawRequestedEventFn event_redraw_requested;
@@ -310,7 +310,7 @@ internal static class CH
         public required ClosedEventFn event_closed;
     }
 
-    internal struct HostScreenConfig
+    internal struct ScreenConfig
     {
         public required WindowStyle style;
         public required u32 width;
@@ -319,7 +319,7 @@ internal static class CH
         public required CH.PresentMode present_mode;
     }
 
-    internal struct HostScreenInfo
+    internal struct ScreenInfo
     {
         public required Wgpu.Backend backend;
         public required Opt<TextureFormat> surface_format;
@@ -342,13 +342,13 @@ internal static class CH
         public readonly bool is_named_buton;
     }
 
-    internal unsafe readonly struct HostScreenInitFn
+    internal unsafe readonly struct ScreenInitFn
     {
-        private readonly delegate* unmanaged[Cdecl]<Rust.Box<HostScreen>, HostScreenInfo*, ScreenId> _func;
+        private readonly delegate* unmanaged[Cdecl]<Rust.Box<Screen>, ScreenInfo*, ScreenId> _func;
 
-        public HostScreenInitFn(delegate* unmanaged[Cdecl]<void*, HostScreenInfo*, ScreenId> f)
+        public ScreenInitFn(delegate* unmanaged[Cdecl]<void*, ScreenInfo*, ScreenId> f)
         {
-            _func = (delegate* unmanaged[Cdecl]<Rust.Box<HostScreen>, HostScreenInfo*, ScreenId>)f;
+            _func = (delegate* unmanaged[Cdecl]<Rust.Box<Screen>, ScreenInfo*, ScreenId>)f;
         }
     }
 
@@ -430,10 +430,10 @@ internal static class CH
 
     internal unsafe readonly struct ClosedEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionBox<HostScreen>> _func;
+        private readonly delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionBox<Screen>> _func;
         public ClosedEventFn(delegate* unmanaged[Cdecl]<ScreenId, NativePointer> f)
         {
-            _func = (delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionBox<HostScreen>>)f;
+            _func = (delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionBox<Screen>>)f;
         }
     }
 
@@ -441,7 +441,7 @@ internal static class CH
     {
         private readonly NativePointer _value;
 
-        internal ScreenId(Rust.Box<HostScreen> screen)
+        internal ScreenId(Rust.Box<Screen> screen)
         {
             _value = screen.AsPtrChecked();
         }

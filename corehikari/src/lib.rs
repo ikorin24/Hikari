@@ -2,7 +2,7 @@ mod engine;
 mod ffi;
 mod screen;
 
-use crate::screen::{HostScreen, ScreenId};
+use crate::screen::{Screen, ScreenId};
 use corehikari_macros::tagged_ref_union;
 use smallvec::SmallVec;
 use static_assertions::assert_eq_size;
@@ -15,7 +15,7 @@ use winit::window;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub(crate) struct EngineCoreConfig {
-    pub on_screen_init: HostScreenInitFn,
+    pub on_screen_init: ScreenInitFn,
     pub on_unhandled_error: EngineUnhandledErrorFn,
     pub event_cleared: ClearedEventFn,
     pub event_redraw_requested: RedrawRequestedEventFn,
@@ -33,7 +33,7 @@ pub(crate) struct EngineCoreConfig {
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct HostScreenConfig {
+pub(crate) struct ScreenConfig {
     pub style: WindowStyle,
     pub width: u32,
     pub height: u32,
@@ -1866,7 +1866,7 @@ pub(crate) enum ImeInputDataTag {
 }
 
 #[repr(C)]
-pub(crate) struct HostScreenInfo {
+pub(crate) struct ScreenInfo {
     pub backend: wgpu::Backend,
     pub surface_format: Opt<TextureFormat>,
 }
@@ -1945,8 +1945,8 @@ static_assertions::const_assert_eq!(wgpu::PUSH_CONSTANT_ALIGNMENT, 4);
 static_assertions::const_assert_eq!(wgpu::QUERY_SET_MAX_QUERIES, 8192);
 static_assertions::const_assert_eq!(wgpu::QUERY_SIZE, 8);
 
-pub(crate) type HostScreenInitFn =
-    extern "cdecl" fn(screen: Box<HostScreen>, screen_info: &HostScreenInfo) -> ScreenId;
+pub(crate) type ScreenInitFn =
+    extern "cdecl" fn(screen: Box<Screen>, screen_info: &ScreenInfo) -> ScreenId;
 pub(crate) type EngineUnhandledErrorFn = extern "cdecl" fn(message: *const u8, len: usize);
 pub(crate) type ClearedEventFn = extern "cdecl" fn(screen_id: ScreenId);
 pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> bool;
@@ -1962,4 +1962,4 @@ pub(crate) type MouseWheelEventFn =
 pub(crate) type CursorMovedEventFn = extern "cdecl" fn(screen_id: ScreenId, x: f32, y: f32);
 pub(crate) type CursorEnteredLeftEventFn = extern "cdecl" fn(screen_id: ScreenId, entered: bool);
 pub(crate) type ClosingEventFn = extern "cdecl" fn(screen_id: ScreenId, cancel: &mut bool);
-pub(crate) type ClosedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> Option<Box<HostScreen>>;
+pub(crate) type ClosedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> Option<Box<Screen>>;

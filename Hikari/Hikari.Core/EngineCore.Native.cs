@@ -16,33 +16,33 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_engine_start(
         CH.EngineCoreConfig* engine_config,
-        CH.HostScreenConfig* screen_config);
+        CH.ScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static partial ApiResult hikari_create_screen(CH.HostScreenConfig* config);
+    private static partial ApiResult hikari_create_screen(CH.ScreenConfig* config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_screen_resize_surface(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         u32 width,
         u32 height);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_screen_request_redraw(
-        Rust.Ref<CH.HostScreen> screen);
+        Rust.Ref<CH.Screen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.CommandEncoder> hikari_create_command_encoder(
-        Rust.Ref<CH.HostScreen> screen);
+        Rust.Ref<CH.Screen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void hikari_finish_command_encoder(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         Rust.Box<Wgpu.CommandEncoder> encoder);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiValueResult<Rust.OptionBox<Wgpu.SurfaceTexture>> hikari_get_surface_texture(
-        Rust.Ref<CH.HostScreen> screen);
+        Rust.Ref<CH.Screen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial void hikari_destroy_surface_texture(
@@ -58,7 +58,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_screen_set_title(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.Slice<u8> title);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -80,43 +80,43 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_screen_set_inner_size(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         u32 width,
         u32 height);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiValueResult<CH.SizeU32> hikari_screen_get_inner_size(
-        Rust.Ref<CH.HostScreen> screen);
+        Rust.Ref<CH.Screen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_screen_set_location(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         i32 x,
         i32 y,
         CH.Opt<CH.MonitorId> monitor_id);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiValueResult<Vector2i> hikari_screen_get_location(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.Opt<CH.MonitorId> monitor_id);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiValueResult<CH.Opt<CH.MonitorId>> hikari_current_monitor(
-        Rust.Ref<CH.HostScreen> screen);
+        Rust.Ref<CH.Screen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiValueResult<usize> hikari_monitor_count(
-        Rust.Ref<CH.HostScreen> screen);
+        Rust.Ref<CH.Screen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiValueResult<usize> hikari_monitors(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.MonitorId* buf_out,
         usize buflen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_write_texture(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.ImageCopyTexture* texture,
         CH.Slice<u8> data,
         Wgpu.ImageDataLayout* data_layout,
@@ -124,7 +124,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.BindGroupLayout> hikari_create_bind_group_layout(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.BindGroupLayoutDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -133,7 +133,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.BindGroup> hikari_create_bind_group(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.BindGroupDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -142,7 +142,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.PipelineLayout> hikari_create_pipeline_layout(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.PipelineLayoutDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -151,7 +151,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.RenderPipeline> hikari_create_render_pipeline(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.RenderPipelineDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -160,7 +160,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.ComputePipeline> hikari_create_compute_pipeline(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         in CH.ComputePipelineDescriptor desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -169,13 +169,13 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Buffer> hikari_create_buffer(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         u64 size,
         Wgpu.BufferUsages usage);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Buffer> hikari_create_buffer_init(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.Slice<u8> contents,
         Wgpu.BufferUsages usage);
 
@@ -185,7 +185,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_copy_texture_to_buffer(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         in CH.ImageCopyTexture source,
         in Wgpu.Extent3d copy_size,
         Rust.Ref<Wgpu.Buffer> buffer,
@@ -193,14 +193,14 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_read_buffer(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.BufferSlice buffer_slice,
         usize token,
         delegate* unmanaged[Cdecl]<usize, ApiResult, u8*, usize, void> callback);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Sampler> hikari_create_sampler(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.SamplerDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -209,7 +209,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.ShaderModule> hikari_create_shader_module(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.Slice<u8> shader_source);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -218,7 +218,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Texture> hikari_create_texture(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.TextureDescriptor* desc);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -228,7 +228,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiBoxResult<Wgpu.Texture> hikari_create_texture_with_data(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         CH.TextureDescriptor* desc,
         CH.Slice<u8> data);
 
@@ -252,7 +252,7 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_write_buffer(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         Rust.Ref<Wgpu.Buffer> buffer,
         u64 offset,
         CH.Slice<u8> data);
@@ -323,12 +323,12 @@ static unsafe partial class EngineCore
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_set_ime_allowed(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         [MarshalAs(UnmanagedType.U1)] bool allowed);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_set_ime_position(
-        Rust.Ref<CH.HostScreen> screen,
+        Rust.Ref<CH.Screen> screen,
         u32 x,
         u32 y);
 

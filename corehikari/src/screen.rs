@@ -19,7 +19,7 @@ use winit;
 use winit::event_loop::EventLoopWindowTarget;
 use winit::{dpi, window};
 
-pub(crate) struct HostScreen {
+pub(crate) struct Screen {
     pub window: window::Window,
     pub surface: wgpu::Surface,
     surface_config_data: SurfaceConfigData,
@@ -29,11 +29,11 @@ pub(crate) struct HostScreen {
     pub queue: wgpu::Queue,
 }
 
-impl HostScreen {
+impl Screen {
     pub fn new(
-        config: &HostScreenConfig,
+        config: &ScreenConfig,
         event_loop: &EventLoopWindowTarget<ProxyMessage>,
-    ) -> Result<HostScreen, Box<dyn Error>> {
+    ) -> Result<Screen, Box<dyn Error>> {
         let window = platform::create_window(&config, event_loop)?;
         if let Some(monitor) = window.current_monitor() {
             let monitor_size = monitor.size();
@@ -53,7 +53,7 @@ impl HostScreen {
         window: window::Window,
         backends: &wgpu::Backends,
         present_mode: &wgpu::PresentMode,
-    ) -> Result<HostScreen, Box<dyn Error>> {
+    ) -> Result<Screen, Box<dyn Error>> {
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: *backends,
@@ -115,7 +115,7 @@ impl HostScreen {
         };
         surface.configure(&device, &surface_config);
         let size = (surface_config.width, surface_config.height);
-        Ok(HostScreen {
+        Ok(Screen {
             window,
             surface,
             surface_config_data: surface_config.into(),
@@ -129,9 +129,9 @@ impl HostScreen {
         })
     }
 
-    pub fn get_info(&self) -> HostScreenInfo {
+    pub fn get_info(&self) -> ScreenInfo {
         let format = self.surface_config_data.format;
-        HostScreenInfo {
+        ScreenInfo {
             backend: self.backend,
             surface_format: format.try_into().ok().into(),
         }

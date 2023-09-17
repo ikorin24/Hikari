@@ -55,12 +55,12 @@ internal unsafe static partial class EngineCore
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         static CH.ScreenId OnScreenInit(
-            void* screen_,  // Rust.Box<CH.HostScreen> screen
-            CH.HostScreenInfo* info
+            void* screen_,  // Rust.Box<CH.Screen> screen
+            CH.ScreenInfo* info
             )
         {
             // UnmanagedCallersOnly methods cannot have generic type args.
-            Rust.Box<CH.HostScreen> screen = *(Rust.Box<CH.HostScreen>*)(&screen_);
+            Rust.Box<CH.Screen> screen = *(Rust.Box<CH.Screen>*)(&screen_);
 
             return _config.OnStart(screen, *info);
         }
@@ -162,32 +162,32 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void ScreenResizeSurface(this Rust.Ref<CH.HostScreen> screen, u32 width, u32 height)
+    public static void ScreenResizeSurface(this Rust.Ref<CH.Screen> screen, u32 width, u32 height)
     {
         hikari_screen_resize_surface(screen, width, height).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void ScreenRequestRedraw(this Rust.Ref<CH.HostScreen> screen)
+    public static void ScreenRequestRedraw(this Rust.Ref<CH.Screen> screen)
     {
         hikari_screen_request_redraw(screen).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Rust.Box<Wgpu.CommandEncoder> CreateCommandEncoder(this Rust.Ref<CH.HostScreen> screen)
+    public static Rust.Box<Wgpu.CommandEncoder> CreateCommandEncoder(this Rust.Ref<CH.Screen> screen)
     {
         return hikari_create_command_encoder(screen).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void FinishCommandEncoder(this Rust.Ref<CH.HostScreen> screen, Rust.Box<Wgpu.CommandEncoder> encoder)
+    public static void FinishCommandEncoder(this Rust.Ref<CH.Screen> screen, Rust.Box<Wgpu.CommandEncoder> encoder)
     {
         hikari_finish_command_encoder(screen, encoder);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Rust.OptionBox<Wgpu.SurfaceTexture> GetSurfaceTexture(
-        this Rust.Ref<CH.HostScreen> screen)
+        this Rust.Ref<CH.Screen> screen)
     {
         return hikari_get_surface_texture(screen).Validate();
     }
@@ -213,7 +213,7 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public unsafe static void ScreenSetTitle(this Rust.Ref<CH.HostScreen> screen, ReadOnlySpan<byte> title)
+    public unsafe static void ScreenSetTitle(this Rust.Ref<CH.Screen> screen, ReadOnlySpan<byte> title)
     {
         fixed(byte* p = title) {
             var titleRaw = new CH.Slice<byte>(p, title.Length);
@@ -250,7 +250,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Vector2u ScreenGetInnerSize(
-        this Rust.Ref<CH.HostScreen> screen)
+        this Rust.Ref<CH.Screen> screen)
     {
         var size = hikari_screen_get_inner_size(screen).Validate();
         return new Vector2u(size.width, size.height);
@@ -259,7 +259,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static void ScreenSetLocation(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         i32 x,
         i32 y,
         MonitorId? monitorId)
@@ -271,7 +271,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Vector2i ScreenGetLocation(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         MonitorId? monitorId)
     {
         var id = monitorId.HasValue ? CH.Opt<CH.MonitorId>.Some(monitorId.Value.Id) : CH.Opt<CH.MonitorId>.None;
@@ -281,7 +281,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static usize MonitorCount(
-        this Rust.Ref<CH.HostScreen> screen)
+        this Rust.Ref<CH.Screen> screen)
     {
         return hikari_monitor_count(screen).Validate();
     }
@@ -289,7 +289,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static usize Monitors(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         Span<CH.MonitorId> buf)
     {
         fixed(CH.MonitorId* p = buf) {
@@ -297,7 +297,7 @@ internal unsafe static partial class EngineCore
         }
     }
 
-    public static MonitorId? CurrentMonitor(this Rust.Ref<CH.HostScreen> screen)
+    public static MonitorId? CurrentMonitor(this Rust.Ref<CH.Screen> screen)
     {
         return hikari_current_monitor(screen)
             .Validate()
@@ -307,7 +307,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static void ScreenSetInnerSize(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         u32 width,
         u32 height)
         => hikari_screen_set_inner_size(screen, width, height).Validate();
@@ -315,7 +315,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static void WriteTexture(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         in CH.ImageCopyTexture texture,
         CH.Slice<u8> data,
         in Wgpu.ImageDataLayout dataLayout,
@@ -331,7 +331,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         in CH.BindGroupLayoutDescriptor desc)
     {
         fixed(CH.BindGroupLayoutDescriptor* descPtr = &desc) {
@@ -351,7 +351,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.BindGroup> CreateBindGroup(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         in CH.BindGroupDescriptor desc)
     {
         fixed(CH.BindGroupDescriptor* descPtr = &desc) {
@@ -371,7 +371,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.PipelineLayout> CreatePipelineLayout(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         in CH.PipelineLayoutDescriptor desc)
     {
         fixed(CH.PipelineLayoutDescriptor* descPtr = &desc) {
@@ -391,7 +391,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.RenderPipeline> CreateRenderPipeline(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         in CH.RenderPipelineDescriptor desc)
     {
         fixed(CH.RenderPipelineDescriptor* descPtr = &desc) {
@@ -411,7 +411,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.ComputePipeline> CreateComputePipeline(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         in CH.ComputePipelineDescriptor desc)
     {
         return hikari_create_compute_pipeline(screen, desc).Validate();
@@ -429,7 +429,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.Buffer> CreateBuffer(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         u64 size,
         Wgpu.BufferUsages usage)
         => hikari_create_buffer(screen, size, usage).Validate();
@@ -437,7 +437,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.Buffer> CreateBufferInit(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         CH.Slice<u8> contents,
         Wgpu.BufferUsages usage)
         => hikari_create_buffer_init(screen, contents, usage).Validate();
@@ -454,7 +454,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static void CopyTextureToBuffer(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         in CH.ImageCopyTexture source,
         in Wgpu.Extent3d copy_size,
         Rust.Ref<Wgpu.Buffer> buffer,
@@ -466,7 +466,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.Sampler> CreateSampler(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         in CH.SamplerDescriptor desc)
     {
         fixed(CH.SamplerDescriptor* descPtr = &desc) {
@@ -486,7 +486,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     //[DebuggerHidden]
     public static Rust.Box<Wgpu.ShaderModule> CreateShaderModule(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         ReadOnlySpan<byte> shaderSource)
     {
         fixed(byte* shaderSourcePtr = shaderSource) {
@@ -507,7 +507,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.Texture> CreateTexture(
-    this Rust.Ref<CH.HostScreen> screen,
+    this Rust.Ref<CH.Screen> screen,
     in CH.TextureDescriptor desc)
     {
         fixed(CH.TextureDescriptor* descPtr = &desc) {
@@ -526,7 +526,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static Rust.Box<Wgpu.Texture> CreateTextureWithData(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         in CH.TextureDescriptor desc,
         CH.Slice<u8> data)
     {
@@ -576,7 +576,7 @@ internal unsafe static partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static void WriteBuffer(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         Rust.Ref<Wgpu.Buffer> buffer,
         u64 offset,
         CH.Slice<u8> data)
@@ -698,7 +698,7 @@ internal unsafe static partial class EngineCore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SetImeAllowed(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         bool allowed)
     {
         hikari_set_ime_allowed(screen, allowed).Validate();
@@ -706,7 +706,7 @@ internal unsafe static partial class EngineCore
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void SetImePosition(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         u32 x,
         u32 y)
     {
@@ -787,7 +787,7 @@ internal unsafe static partial class EngineCore
 
 internal readonly struct EngineCoreConfig
 {
-    public required Func<Rust.Box<CH.HostScreen>, CH.HostScreenInfo, CH.ScreenId> OnStart { get; init; }
+    public required Func<Rust.Box<CH.Screen>, CH.ScreenInfo, CH.ScreenId> OnStart { get; init; }
     public required Func<CH.ScreenId, bool> OnRedrawRequested { get; init; }
     public required Action<CH.ScreenId> OnCleared { get; init; }
 
@@ -803,7 +803,7 @@ internal readonly struct EngineCoreConfig
     public required Action<CH.ScreenId, bool> OnCursorEnteredLeft { get; init; }
 
     public required EngineCoreScreenClosingAction OnClosing { get; init; }
-    public required Func<CH.ScreenId, Rust.OptionBox<CH.HostScreen>> OnClosed { get; init; }
+    public required Func<CH.ScreenId, Rust.OptionBox<CH.Screen>> OnClosed { get; init; }
 }
 
 internal delegate void EngineCoreImeInputAction(CH.ScreenId id, in CH.ImeInputData input);
@@ -811,10 +811,10 @@ internal delegate void EngineCoreImeInputAction(CH.ScreenId id, in CH.ImeInputDa
 internal delegate void EngineCoreScreenClosingAction(CH.ScreenId id, ref bool cancel);
 
 
-internal delegate void EngineCoreRenderAction(Rust.Ref<CH.HostScreen> screen, Rust.MutRef<Wgpu.RenderPass> renderPass);
-internal delegate void EngineCoreResizedAction(Rust.Ref<CH.HostScreen> screen, uint width, uint height);
+internal delegate void EngineCoreRenderAction(Rust.Ref<CH.Screen> screen, Rust.MutRef<Wgpu.RenderPass> renderPass);
+internal delegate void EngineCoreResizedAction(Rust.Ref<CH.Screen> screen, uint width, uint height);
 internal delegate Rust.Box<Wgpu.RenderPass> OnCommandBeginFunc(
-    Rust.Ref<CH.HostScreen> screen,
+    Rust.Ref<CH.Screen> screen,
     Rust.Ref<Wgpu.TextureView> surfaceTextureView,
     Rust.MutRef<Wgpu.CommandEncoder> commandEncoder,
     CreateRenderPassFunc createRenderPass);

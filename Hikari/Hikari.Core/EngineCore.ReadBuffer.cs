@@ -14,7 +14,7 @@ unsafe partial class EngineCore
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static void ReadBuffer(
-        this Rust.Ref<CH.HostScreen> screen,
+        this Rust.Ref<CH.Screen> screen,
         CH.BufferSlice buffer_slice,
         ReadOnlySpanAction<byte> onRead,
         Action<Exception>? onException)

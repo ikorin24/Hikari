@@ -5,7 +5,7 @@ use dpi::{PhysicalSize, Size};
 use winit::window::{Fullscreen, WindowButtons};
 
 pub(crate) fn create_window(
-    config: &HostScreenConfig,
+    config: &ScreenConfig,
     event_loop: &EventLoopWindowTarget<ProxyMessage>,
 ) -> Result<window::Window, Box<dyn Error>> {
     let window = window::WindowBuilder::new()

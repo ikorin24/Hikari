@@ -41,7 +41,7 @@ impl Engine {
         Engine { config: *config }
     }
 
-    pub fn on_screen_init(screen: Box<HostScreen>) -> ScreenId {
+    pub fn on_screen_init(screen: Box<Screen>) -> ScreenId {
         let f = Self::get_engine_field(|engine| engine.config.on_screen_init).unwrap();
         let screen_info = &screen.get_info();
         f(screen, screen_info)
@@ -126,7 +126,7 @@ impl Engine {
         !cancel
     }
 
-    pub fn event_closed(screen_id: ScreenId) -> Option<Box<HostScreen>> {
+    pub fn event_closed(screen_id: ScreenId) -> Option<Box<Screen>> {
         let f = Self::get_engine_field(|engine| engine.config.event_closed).unwrap();
         f(screen_id)
     }
@@ -148,7 +148,7 @@ static LOOP_PROXY: Mutex<Option<EventLoopProxy<ProxyMessage>>> = Mutex::new(None
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum ProxyMessage {
-    CreateScreen(HostScreenConfig),
+    CreateScreen(ScreenConfig),
 }
 
 pub(crate) fn get_loop_proxy() -> Result<EventLoopProxy<ProxyMessage>, EngineErr> {
@@ -187,10 +187,10 @@ pub(crate) fn send_proxy_message(message: ProxyMessage) -> Result<(), Box<dyn Er
 }
 
 fn create_screen(
-    screen_config: &HostScreenConfig,
+    screen_config: &ScreenConfig,
     event_loop: &EventLoopWindowTarget<ProxyMessage>,
 ) -> Result<(), Box<dyn Error>> {
-    let screen = HostScreen::new(screen_config, event_loop)?;
+    let screen = Screen::new(screen_config, event_loop)?;
     let screen = Box::new(screen);
     let window_id = screen.window.id();
     let screen_id = Engine::on_screen_init(screen);
@@ -200,7 +200,7 @@ fn create_screen(
 
 pub(crate) fn engine_start(
     engine_config: &EngineCoreConfig,
-    screen_config: &HostScreenConfig,
+    screen_config: &ScreenConfig,
 ) -> Result<(), Box<dyn Error>> {
     let is_engine_running = {
         let engine = ENGINE.read().unwrap();

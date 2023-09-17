@@ -11,7 +11,7 @@ namespace Hikari;
 
 public sealed class Screen
 {
-    private Rust.OptionBox<CH.HostScreen> _native;
+    private Rust.OptionBox<CH.Screen> _native;
     private readonly ThreadId _mainThread;
     private readonly SubscriptionBag _subscriptions;
     private readonly Camera _camera;
@@ -132,7 +132,7 @@ public sealed class Screen
     public Camera Camera => _camera;
     public Lights Lights => _lights;
 
-    internal Screen(Rust.Box<CH.HostScreen> screen, ThreadId mainThread, Action<Screen>? onPrepare)
+    internal Screen(Rust.Box<CH.Screen> screen, ThreadId mainThread, Action<Screen>? onPrepare)
     {
         _native = screen;
         _mainThread = mainThread;
@@ -207,7 +207,7 @@ public sealed class Screen
         return monitors;
     }
 
-    internal void OnInitialize(in CH.HostScreenInfo info)
+    internal void OnInitialize(in CH.ScreenInfo info)
     {
         _backend = info.backend.MapOrThrow();
 
@@ -333,12 +333,12 @@ public sealed class Screen
         }
     }
 
-    internal Rust.OptionBox<CH.HostScreen> OnClosed()
+    internal Rust.OptionBox<CH.Screen> OnClosed()
     {
         _operations.OnClosed();
         _closed.Invoke(this);
 
-        var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CH.HostScreen>.None);
+        var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CH.Screen>.None);
         _closed.Clear();
         _camera.DisposeInternal();
         _depthStencil.Dispose();
@@ -351,7 +351,7 @@ public sealed class Screen
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal Rust.Ref<CH.HostScreen> AsRefChecked()
+    internal Rust.Ref<CH.Screen> AsRefChecked()
     {
         return _native.Unwrap().AsRef();
     }
@@ -399,9 +399,9 @@ public readonly struct ScreenConfig
     public required GraphicsBackend Backend { get; init; }
     public required SurfacePresentMode PresentMode { get; init; }
 
-    internal CH.HostScreenConfig ToCoreType()
+    internal CH.ScreenConfig ToCoreType()
     {
-        return new CH.HostScreenConfig
+        return new CH.ScreenConfig
         {
             style = Style.MapOrThrow(),
             width = Width,
