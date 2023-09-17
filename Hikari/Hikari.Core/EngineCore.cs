@@ -257,6 +257,13 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static f64 ScreenGetScaleFactor(
+        this Rust.Ref<CH.Screen> screen)
+    {
+        return hikari_screen_get_scale_factor(screen).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerHidden]
     public static void ScreenSetLocation(
         this Rust.Ref<CH.Screen> screen,

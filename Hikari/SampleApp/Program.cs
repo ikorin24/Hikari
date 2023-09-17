@@ -67,14 +67,13 @@ internal class Program
         var N = 100;
         screen.Update.Subscribe(screen =>
         {
-            System.Threading.Thread.Sleep(11);
             var tmp = sw.Elapsed;
             var delta = tmp - elapsed;
             elapsed = tmp;
             sum += delta;
             if(screen.FrameNum % (ulong)N == 0) {
                 var fps = 1.0 / (sum / N).TotalSeconds;
-                Console.WriteLine($"{fps:N1}");
+                Debug.WriteLine($"{fps:N1}");
                 sum = TimeSpan.Zero;
             }
 

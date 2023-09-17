@@ -89,6 +89,10 @@ static unsafe partial class EngineCore
         Rust.Ref<CH.Screen> screen);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static partial ApiValueResult<f64> hikari_screen_get_scale_factor(
+        Rust.Ref<CH.Screen> screen);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     private static partial ApiResult hikari_screen_set_location(
         Rust.Ref<CH.Screen> screen,
         i32 x,

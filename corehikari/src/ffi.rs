@@ -223,6 +223,16 @@ extern "cdecl" fn hikari_screen_get_inner_size(screen: &Screen) -> ApiValueResul
     ApiValueResult::ok(size.into())
 }
 
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn hikari_screen_get_scale_factor(screen: &Screen) -> ApiValueResult<f64> {
+    let scale_factor = screen.window.scale_factor();
+    ApiValueResult::ok(scale_factor)
+}
+
 #[no_mangle]
 extern "cdecl" fn hikari_screen_set_location(
     screen: &Screen,
