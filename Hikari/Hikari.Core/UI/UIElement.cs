@@ -392,6 +392,7 @@ public abstract class UIElement : IToJson, IReactive
 
         var isHoverPrev = _layoutCache?.IsHover ?? false;
         LayoutCache cache;
+        var flags = PseudoFlags.None;
         if(needToRelayout == false && _layoutCache.HasValue) {
             cache = _layoutCache.Value;
         }
@@ -447,6 +448,10 @@ public abstract class UIElement : IToJson, IReactive
             }
         }
 
+        if(cache.IsHover) {
+            flags |= PseudoFlags.Hover;
+        }
+
         // set or clear flag for click holding
         if(_isClickHolding && mouse.IsUp(MouseButton.Left)) {
             _isClickHolding = false;
@@ -460,10 +465,13 @@ public abstract class UIElement : IToJson, IReactive
 
         // overwrite layout if 'active'
         var activeInfo = GetActiveProps();
-        if(_isClickHolding && activeInfo is not null) {
-            cache.AppliedInfo = cache.AppliedInfo.Merged(activeInfo);
-            if(activeInfo.HasLayoutInfo) {
-                cache.Layout = UILayouter.Relayout(cache.AppliedInfo, parent, parentContentArea, flowInfo, out cache.FlowInfo);
+        if(_isClickHolding) {
+            flags |= PseudoFlags.Active;
+            if(activeInfo is not null) {
+                cache.AppliedInfo = cache.AppliedInfo.Merged(activeInfo);
+                if(activeInfo.HasLayoutInfo) {
+                    cache.Layout = UILayouter.Relayout(cache.AppliedInfo, parent, parentContentArea, flowInfo, out cache.FlowInfo);
+                }
             }
         }
 
@@ -478,6 +486,8 @@ public abstract class UIElement : IToJson, IReactive
         };
         flowInfo = cache.FlowInfo;
         _layoutCache = cache;
+        OnUpdateLayout(flags);
+
         var contentArea = new RectF
         {
             X = cache.Layout.Rect.X + cache.AppliedInfo.Padding.Left,
@@ -494,6 +504,8 @@ public abstract class UIElement : IToJson, IReactive
             child.UpdateLayout(requestChildRelayout, appliedInfoRef, contentArea, ref childrenFlowInfo, mouse);
         }
     }
+
+    protected abstract void OnUpdateLayout(PseudoFlags flags);
 
     private static bool HitTest(in Vector2 mousePos, in RectF rect, in Vector4 borderRadius)
     {
@@ -585,19 +597,19 @@ public abstract class UIElement : IToJson, IReactive
 
 internal record struct UIElementInfo
 {
-    public LayoutLength Width { get; set; }
-    public LayoutLength Height { get; set; }
-    public Thickness Margin { get; set; }
-    public Thickness Padding { get; set; }
-    public HorizontalAlignment HorizontalAlignment { get; set; }
-    public VerticalAlignment VerticalAlignment { get; set; }
-    public Brush Background { get; set; }
-    public Thickness BorderWidth { get; set; }
-    public CornerRadius BorderRadius { get; set; }
-    public Brush BorderColor { get; set; }
-    public BoxShadow BoxShadow { get; set; }
-    public Flow Flow { get; set; }
-    public Color4 Color { get; set; }
+    public required LayoutLength Width { get; set; }
+    public required LayoutLength Height { get; set; }
+    public required Thickness Margin { get; set; }
+    public required Thickness Padding { get; set; }
+    public required HorizontalAlignment HorizontalAlignment { get; set; }
+    public required VerticalAlignment VerticalAlignment { get; set; }
+    public required Brush Background { get; set; }
+    public required Thickness BorderWidth { get; set; }
+    public required CornerRadius BorderRadius { get; set; }
+    public required Brush BorderColor { get; set; }
+    public required BoxShadow BoxShadow { get; set; }
+    public required Flow Flow { get; set; }
+    public required Color4 Color { get; set; }
 
     internal static UIElementInfo Default => new()
     {
@@ -726,6 +738,14 @@ public abstract record PseudoInfo
             writer.Write(nameof(Color), Color.Value);
         }
     }
+}
+
+[Flags]
+public enum PseudoFlags : uint
+{
+    None = 0,
+    Hover = (1 << 0),
+    Active = (1 << 1),
 }
 
 internal record struct LayoutCache

@@ -64,6 +64,11 @@ public sealed class Panel : UIElement, IFromJson<Panel>
     protected override PanelPseudoInfo? GetHoverProps() => _hoverInfo;
 
     protected override PanelPseudoInfo? GetActiveProps() => _activeInfo;
+
+    protected override void OnUpdateLayout(PseudoFlags flags)
+    {
+        // nop
+    }
 }
 
 public sealed record PanelPseudoInfo

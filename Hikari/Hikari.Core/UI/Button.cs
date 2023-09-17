@@ -9,30 +9,31 @@ namespace Hikari.UI;
 
 public sealed class Button : UIElement, IFromJson<Button>
 {
-    private ButtonInfo _buttonInfo;
+    private ButtonInfo _info;
     private ButtonPseudoInfo? _hoverInfo;
     private ButtonPseudoInfo? _activeInfo;
+    private ButtonInfo? _appliedInfo;
 
-    internal ref readonly ButtonInfo ButtonInfo => ref _buttonInfo;
+    internal ref readonly ButtonInfo? ButtonApplied => ref _appliedInfo;
 
     public string Text
     {
-        get => _buttonInfo.Text;
+        get => _info.Text;
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            if(value == _buttonInfo.Text) { return; }
-            _buttonInfo.Text = value;
+            if(value == _info.Text) { return; }
+            _info.Text = value;
         }
     }
 
     public FontSize FontSize
     {
-        get => _buttonInfo.FontSize;
+        get => _info.FontSize;
         set
         {
-            if(value == _buttonInfo.FontSize) { return; }
-            _buttonInfo.FontSize = value;
+            if(value == _info.FontSize) { return; }
+            _info.FontSize = value;
         }
     }
 
@@ -85,12 +86,12 @@ public sealed class Button : UIElement, IFromJson<Button>
 
     public Button() : base()
     {
-        _buttonInfo = ButtonInfo.Default;
+        _info = ButtonInfo.Default;
     }
 
     private Button(in ObjectSource source) : base(source)
     {
-        _buttonInfo = ButtonInfo.Default;
+        _info = ButtonInfo.Default;
         if(source.TryGetProperty(nameof(Text), out var text)) {
             Text = Serializer.Instantiate<string>(text);
         }
@@ -108,6 +109,18 @@ public sealed class Button : UIElement, IFromJson<Button>
     protected override ButtonPseudoInfo? GetHoverProps() => _hoverInfo;
 
     protected override ButtonPseudoInfo? GetActiveProps() => _activeInfo;
+
+    protected override void OnUpdateLayout(PseudoFlags flags)
+    {
+        var info = _info;
+        if(flags.HasFlag(PseudoFlags.Hover) && _hoverInfo is not null) {
+            info = info.Merged(_hoverInfo);
+        }
+        if(flags.HasFlag(PseudoFlags.Active) && _activeInfo is not null) {
+            info = info.Merged(_activeInfo);
+        }
+        _appliedInfo = info;
+    }
 }
 
 public sealed record ButtonPseudoInfo
@@ -176,6 +189,15 @@ internal record struct ButtonInfo
 
     public static string DefaultText => "";
     public static FontSize DefaultFontSize => 16;
+
+    public ButtonInfo Merged(ButtonPseudoInfo p)
+    {
+        return new ButtonInfo
+        {
+            Text = p.Text ?? Text,
+            FontSize = p.FontSize ?? FontSize,
+        };
+    }
 }
 
 file sealed class ButtonShader : UIShader
@@ -331,10 +353,12 @@ file sealed class ButtonShader : UIShader
         {
             base.UpdateMaterial(element, result, mvp);
             var button = (Button)element;
-            if(_buttonInfo != button.ButtonInfo || _color != result.AppliedInfo.Color) {
-                _buttonInfo = button.ButtonInfo;
+            Debug.Assert(button.ButtonApplied.HasValue);
+            ref readonly var applied = ref button.ButtonApplied.ValueRef();
+            if(_buttonInfo != applied || _color != result.AppliedInfo.Color) {
+                _buttonInfo = applied;
                 _color = result.AppliedInfo.Color;
-                UpdateButtonTexture(button.ButtonInfo, result.AppliedInfo.Color.ToColorByte());
+                UpdateButtonTexture(applied, result.AppliedInfo.Color.ToColorByte());
             }
         }
 
