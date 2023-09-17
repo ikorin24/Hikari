@@ -66,12 +66,12 @@ public sealed class UIElementCollection
     {
         ArgumentNullException.ThrowIfNull(element);
         _children.Add(element);
-        _parent?.OnChildrenChanged();
+        _parent?.RequestRelayout();
         element.ModelDead.Subscribe(model =>
         {
             if(_children.Remove(model.Element)) {
                 model.Element.ClearParent();
-                _parent?.OnChildrenChanged();
+                _parent?.RequestRelayout();
             }
         }).AddTo(element.ModelSubscriptions);
         var parent = _parent;

@@ -10,6 +10,8 @@ namespace Hikari.UI;
 public sealed class Button : UIElement, IFromJson<Button>
 {
     private ButtonInfo _buttonInfo;
+    private ButtonPseudoInfo? _hoverInfo;
+    private ButtonPseudoInfo? _activeInfo;
 
     internal ref readonly ButtonInfo ButtonInfo => ref _buttonInfo;
 
@@ -31,6 +33,28 @@ public sealed class Button : UIElement, IFromJson<Button>
         {
             if(value == _buttonInfo.FontSize) { return; }
             _buttonInfo.FontSize = value;
+        }
+    }
+
+    public ButtonPseudoInfo? HoverProps
+    {
+        get => GetHoverProps();
+        set
+        {
+            if(_hoverInfo == value) { return; }
+            _hoverInfo = value;
+            RequestRelayout();
+        }
+    }
+
+    public ButtonPseudoInfo? ActiveProps
+    {
+        get => _activeInfo;
+        set
+        {
+            if(_activeInfo == value) { return; }
+            _activeInfo = value;
+            RequestRelayout();
         }
     }
 
@@ -72,6 +96,69 @@ public sealed class Button : UIElement, IFromJson<Button>
         }
         if(source.TryGetProperty(nameof(FontSize), out var fontSize)) {
             FontSize = Serializer.Instantiate<FontSize>(fontSize);
+        }
+        if(source.TryGetProperty(PseudoInfo.HoverName, out var hover)) {
+            _hoverInfo = ButtonPseudoInfo.FromJson(hover);
+        }
+        if(source.TryGetProperty(PseudoInfo.ActiveName, out var active)) {
+            _activeInfo = ButtonPseudoInfo.FromJson(active);
+        }
+    }
+
+    protected override ButtonPseudoInfo? GetHoverProps() => _hoverInfo;
+
+    protected override ButtonPseudoInfo? GetActiveProps() => _activeInfo;
+}
+
+public sealed record ButtonPseudoInfo
+    : PseudoInfo,
+    IFromJson<ButtonPseudoInfo>
+{
+    static ButtonPseudoInfo() => Serializer.RegisterConstructor(FromJson);
+
+    public string? Text { get; init; }
+    public FontSize? FontSize { get; init; }
+
+    public static ButtonPseudoInfo FromJson(in ObjectSource source)
+    {
+        return new ButtonPseudoInfo
+        {
+            Width = GetValueProp<LayoutLength>(source, nameof(Width)),
+            Height = GetValueProp<LayoutLength>(source, nameof(Height)),
+            Margin = GetValueProp<Thickness>(source, nameof(Margin)),
+            Padding = GetValueProp<Thickness>(source, nameof(Padding)),
+            HorizontalAlignment = GetValueProp<HorizontalAlignment>(source, nameof(HorizontalAlignment)),
+            VerticalAlignment = GetValueProp<VerticalAlignment>(source, nameof(VerticalAlignment)),
+            Background = GetValueProp<Brush>(source, nameof(Background)),
+            BorderWidth = GetValueProp<Thickness>(source, nameof(BorderWidth)),
+            BorderRadius = GetValueProp<CornerRadius>(source, nameof(BorderRadius)),
+            BorderColor = GetValueProp<Brush>(source, nameof(BorderColor)),
+            BoxShadow = GetValueProp<BoxShadow>(source, nameof(BoxShadow)),
+            Flow = GetValueProp<Flow>(source, nameof(Flow)),
+            Color = GetValueProp<Color4>(source, nameof(Color)),
+            Text = GetClassProp<string>(source, nameof(Text)),
+            FontSize = GetValueProp<FontSize>(source, nameof(FontSize)),
+        };
+
+        static T? GetValueProp<T>(in ObjectSource source, string propName) where T : struct
+        {
+            return source.TryGetProperty(propName, out var value) ? value.Instantiate<T>() : default(T?);
+        }
+
+        static T? GetClassProp<T>(in ObjectSource source, string propName) where T : class
+        {
+            return source.TryGetProperty(propName, out var value) ? value.Instantiate<T>() : default(T?);
+        }
+    }
+
+    protected override void ToJsonProtected(Utf8JsonWriter writer)
+    {
+        base.ToJsonProtected(writer);
+        if(Text != null) {
+            writer.WriteString(nameof(Text), Text);
+        }
+        if(FontSize.HasValue) {
+            writer.Write(nameof(FontSize), FontSize.Value);
         }
     }
 }

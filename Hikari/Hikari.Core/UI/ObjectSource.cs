@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Hikari;
 using System;
 using System.Buffers;
 using System.Collections;
@@ -402,6 +401,23 @@ public readonly partial struct ObjectSource : IEquatable<ObjectSource>
     public static bool operator !=(ObjectSource left, ObjectSource right)
     {
         return !(left == right);
+    }
+}
+
+public sealed class ObjectSourceLazy<T> where T : notnull
+{
+    private readonly ObjectSource _source;
+    private readonly Lazy<T> _value;
+
+    public ObjectSourceLazy(in ObjectSource source)
+    {
+        _source = source;
+        _value = new Lazy<T>(() => _source.Instantiate<T>());
+    }
+
+    public T Instantiate()
+    {
+        return _value.Value;
     }
 }
 

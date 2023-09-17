@@ -20,11 +20,7 @@ public abstract class UIElement : IToJson, IReactive
     private EventSource<UIModel> _modelDead;
     private EventSource<UIElement> _clicked;
     private readonly SubscriptionBag _modelSubscriptions = new SubscriptionBag();
-
     private UIElementInfo _info;
-    private PseudoInfo? _hoverInfo;
-    private PseudoInfo? _activeInfo;
-
     private LayoutCache? _layoutCache;
     private bool _isClickHolding;
     private bool _needToInvokeClicked;
@@ -198,33 +194,12 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    public PseudoInfo? HoverProps
-    {
-        get => _hoverInfo;
-        set
-        {
-            if(_hoverInfo == value) { return; }
-            _hoverInfo = value;
-            _needToLayoutUpdate = true;
-        }
-    }
-
-    public PseudoInfo? ActiveProps
-    {
-        get => _activeInfo;
-        set
-        {
-            if(_activeInfo == value) { return; }
-            _activeInfo = value;
-            _needToLayoutUpdate = true;
-        }
-    }
+    protected abstract PseudoInfo? GetHoverProps();
+    protected abstract PseudoInfo? GetActiveProps();
 
     protected UIElement()
     {
         _info = UIElementInfo.Default;
-        _hoverInfo = null;
-        _activeInfo = null;
         Children = new UIElementCollection();
         _needToLayoutUpdate = true;
 
@@ -282,26 +257,6 @@ public abstract class UIElement : IToJson, IReactive
         if(source.TryGetProperty(nameof(Clicked), out var clicked)) {
             var action = clicked.Instantiate<Action<UIElement>>();
             _clicked.Event.Subscribe(action);
-        }
-
-
-        foreach(var (name, value) in source.EnumerateProperties()) {
-            if(name.StartsWith("&:")) {
-                var pseudo = name.AsSpan(2);
-                switch(pseudo) {
-                    case "Hover": {
-                        _hoverInfo = PseudoInfo.FromJson(value);
-                        break;
-                    }
-                    case "Active": {
-                        _activeInfo = PseudoInfo.FromJson(value);
-                        break;
-                    }
-                    default: {
-                        break;
-                    }
-                }
-            }
         }
 
         if(source.TryGetProperty(nameof(Children), out var children)) {
@@ -415,7 +370,7 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    internal void OnChildrenChanged()
+    internal void RequestRelayout()
     {
         _needToLayoutUpdate = true;
     }
@@ -426,10 +381,12 @@ public abstract class UIElement : IToJson, IReactive
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
         // 'rect' is { X = 10, Y = 40, Width = 200, Heigh = 100 }
 
+        var hoverInfo = GetHoverProps();
+
         var needToRelayout =
             relayoutRequested ||
             _needToLayoutUpdate ||
-            (mouse.PositionDelta is null or { IsZero: false } && _hoverInfo != null) ||
+            (mouse.PositionDelta is null or { IsZero: false } && hoverInfo is not null) ||
             mouse.IsChanged(MouseButton.Left);
         var mousePos = mouse.Position;
 
@@ -447,8 +404,8 @@ public abstract class UIElement : IToJson, IReactive
                 var isHover1 = HitTest(mousePos.Value, layout1.Rect, layout1.BorderRadius);
 
                 // layout with considering hover pseudo classes if needed
-                if(_hoverInfo != null) {
-                    var mergedInfo = cache.AppliedInfo.Merged(_hoverInfo.Value);
+                if(hoverInfo != null) {
+                    var mergedInfo = cache.AppliedInfo.Merged(hoverInfo);
                     var layout2 = UILayouter.Relayout(mergedInfo, parent, parentContentArea, flowInfo, out var flowInfoOut2);
                     var isHover2 = HitTest(mousePos.Value, layout2.Rect, layout2.BorderRadius);
                     cache = (isHover1, isHover2) switch
@@ -502,9 +459,10 @@ public abstract class UIElement : IToJson, IReactive
         }
 
         // overwrite layout if 'active'
-        if(_isClickHolding && _activeInfo != null) {
-            cache.AppliedInfo = cache.AppliedInfo.Merged(_activeInfo.Value);
-            if(_activeInfo.Value.HasLayoutInfo) {
+        var activeInfo = GetActiveProps();
+        if(_isClickHolding && activeInfo is not null) {
+            cache.AppliedInfo = cache.AppliedInfo.Merged(activeInfo);
+            if(activeInfo.HasLayoutInfo) {
                 cache.Layout = UILayouter.Relayout(cache.AppliedInfo, parent, parentContentArea, flowInfo, out cache.FlowInfo);
             }
         }
@@ -672,7 +630,7 @@ internal record struct UIElementInfo
     internal static Flow DefaultFlow => Flow.Default;
     internal static Color4 DefaultColor => Color4.Black;
 
-    internal readonly UIElementInfo Merged(in PseudoInfo p)
+    internal readonly UIElementInfo Merged(PseudoInfo p)
     {
         return new()
         {
@@ -693,16 +651,9 @@ internal record struct UIElementInfo
     }
 }
 
-public readonly record struct PseudoInfo
-    : IFromJson<PseudoInfo>,
-      IToJson
+public abstract record PseudoInfo
+    : IToJson
 {
-    public readonly record struct Prop(string PropName, ObjectSource Value);
-
-    static PseudoInfo() => Serializer.RegisterConstructor(FromJson);
-
-    private static readonly ImmutableArray<Prop> EmptyEx = ImmutableArray<Prop>.Empty;
-
     public LayoutLength? Width { get; init; }
     public LayoutLength? Height { get; init; }
     public Thickness? Margin { get; init; }
@@ -717,131 +668,24 @@ public readonly record struct PseudoInfo
     public Flow? Flow { get; init; }
     public Color4? Color { get; init; }
 
-    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private readonly ImmutableArray<Prop> _ex;
-    public ImmutableArray<Prop> Ex
-    {
-        get => _ex.IsDefault ? EmptyEx : _ex;
-        init => _ex = value.IsDefault ? EmptyEx : value;
-    }
-
     public bool HasLayoutInfo =>
         Width.HasValue || Height.HasValue || Margin.HasValue ||
         Padding.HasValue || HorizontalAlignment.HasValue || VerticalAlignment.HasValue ||
         BorderWidth.HasValue;
 
-    public bool TryGetEx<T>(string propName, [MaybeNullWhen(false)] out T value) where T : notnull
-    {
-        foreach(var (name, v) in Ex) {
-            if(name == propName) {
-                value = v.Instantiate<T>();
-                return true;
-            }
-        }
-        value = default;
-        return false;
-    }
-
-    public static PseudoInfo FromJson(in ObjectSource source)
-    {
-        LayoutLength? width = null;
-        LayoutLength? height = null;
-        Thickness? margin = null;
-        Thickness? padding = null;
-        HorizontalAlignment? horizontalAlignment = null;
-        VerticalAlignment? verticalAlignment = null;
-        Brush? backgroundColor = null;
-        Thickness? borderWidth = null;
-        CornerRadius? borderRadius = null;
-        Brush? borderColor = null;
-        BoxShadow? boxShadow = null;
-        Flow? flow = null;
-        Color4? color = null;
-        var ex = ImmutableArray.CreateBuilder<Prop>();
-
-        foreach(var (name, value) in source.EnumerateProperties()) {
-            switch(name) {
-                case nameof(Width): {
-                    width = value.Instantiate<LayoutLength>();
-                    break;
-                }
-                case nameof(Height): {
-                    height = value.Instantiate<LayoutLength>();
-                    break;
-                }
-                case nameof(Margin): {
-                    margin = value.Instantiate<Thickness>();
-                    break;
-                }
-                case nameof(Padding): {
-                    padding = value.Instantiate<Thickness>();
-                    break;
-                }
-                case nameof(HorizontalAlignment): {
-                    horizontalAlignment = value.Instantiate<HorizontalAlignment>();
-                    break;
-                }
-                case nameof(VerticalAlignment): {
-                    verticalAlignment = value.Instantiate<VerticalAlignment>();
-                    break;
-                }
-                case nameof(Background): {
-                    backgroundColor = value.Instantiate<Brush>();
-                    break;
-                }
-                case nameof(BorderWidth): {
-                    borderWidth = value.Instantiate<Thickness>();
-                    break;
-                }
-                case nameof(BorderRadius): {
-                    borderRadius = value.Instantiate<CornerRadius>();
-                    break;
-                }
-                case nameof(BorderColor): {
-                    borderColor = value.Instantiate<Brush>();
-                    break;
-                }
-                case nameof(BoxShadow): {
-                    boxShadow = value.Instantiate<BoxShadow>();
-                    break;
-                }
-                case nameof(Flow): {
-                    flow = value.Instantiate<Flow>();
-                    break;
-                }
-                case nameof(Color): {
-                    color = value.Instantiate<Color4>();
-                    break;
-                }
-                default: {
-                    ex.Add(new(name, value));
-                    break;
-                }
-            }
-        }
-
-        return new PseudoInfo
-        {
-            Width = width,
-            Height = height,
-            Margin = margin,
-            Padding = padding,
-            HorizontalAlignment = horizontalAlignment,
-            VerticalAlignment = verticalAlignment,
-            Background = backgroundColor,
-            BorderWidth = borderWidth,
-            BorderRadius = borderRadius,
-            BorderColor = borderColor,
-            BoxShadow = boxShadow,
-            Flow = flow,
-            Color = color,
-            Ex = ex.Count == 0 ? EmptyEx : ex.ToImmutable(),
-        };
-    }
+    internal const string HoverName = "&:Hover";
+    internal const string ActiveName = "&:Active";
 
     public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
         writer.WriteStartObject();
+        ToJsonProtected(writer);
+        writer.WriteEndObject();
+        return JsonValueKind.Object;
+    }
+
+    protected virtual void ToJsonProtected(Utf8JsonWriter writer)
+    {
         if(Width.HasValue) {
             writer.Write(nameof(Width), Width.Value);
         }
@@ -881,8 +725,6 @@ public readonly record struct PseudoInfo
         if(Color.HasValue) {
             writer.Write(nameof(Color), Color.Value);
         }
-        writer.WriteEndObject();
-        return JsonValueKind.Object;
     }
 }
 
