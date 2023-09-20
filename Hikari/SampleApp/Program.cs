@@ -36,8 +36,8 @@ internal class Program
         app.UI.RenderRoot($$"""
         {
             "@type": {{typeof(Counter)}},
-            "Width": "80%",
-            "Height": "80%"
+            "Width": "600px",
+            "Height": "300px"
         }
         """);
 
@@ -209,13 +209,14 @@ public partial class Counter
                 "@key": "0",
                 "VerticalAlignment": "Top",
                 "Height": 80,
-                "FontSize": 30,
+                "FontSize": 18,
                 "Background": "#27acd9",
                 "BorderRadius": "10px 10px 0px 0px",
                 "Text": {{text}}
             },
             {
                 "@type": {{typeof(Panel)}},
+                "Background": "#0000",
                 "Flow": "Row Wrap",
                 "Children": [
                 {
@@ -280,17 +281,19 @@ public partial class CountButton
             "Background": "#fff",
             "Margin": 4,
             "Text": "click me!",
-            "FontSize": 20,
-            "Color": "red",
+            "FontSize": 16,
+            "Color": "#27acd9",
             "BoxShadow": "0px 0px 4px 0px #000e",
             "Clicked": {{props.Clicked}},
             "&:Hover": {
                 "Background": "#27acd9",
+                "Color": "#fff",
             },
             "&:Active": {
                 "BoxShadow": "0px 0px 2px 0px #000e",
                 "Background": "#1089d9",
                 "BorderColor": "#1089d9",
+                "Color": "#fff",
             }
         }
         """;
