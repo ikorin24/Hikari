@@ -99,12 +99,12 @@ public sealed class Screen
         }
     }
 
-    public double ScaleFactor
+    public float ScaleFactor
     {
         get
         {
             var native = _native.Unwrap().AsRef();
-            return native.ScreenGetScaleFactor();
+            return (float)native.ScreenGetScaleFactor();
         }
     }
 
