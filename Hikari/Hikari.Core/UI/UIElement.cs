@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
@@ -375,7 +374,10 @@ public abstract class UIElement : IToJson, IReactive
         _needToLayoutUpdate = true;
     }
 
-    internal void UpdateLayout(bool relayoutRequested, in UIElementInfo parent, in RectF parentContentArea, ref FlowLayoutInfo flowInfo, Mouse mouse)
+    internal void UpdateLayout(
+        bool relayoutRequested, in UIElementInfo parent,
+        in RectF parentContentArea, ref FlowLayoutInfo flowInfo,
+        Mouse mouse, float scaleFactor)
     {
         // 'rect' is top-left based in Screen
         // When the top-left corner of the UIElement whose size is (200, 100) is placed at (10, 40) in screen,
@@ -399,7 +401,7 @@ public abstract class UIElement : IToJson, IReactive
         else {
             // First, layout without considering pseudo classes
             cache.AppliedInfo = _info;
-            var layout1 = UILayouter.Relayout(cache.AppliedInfo, parent, parentContentArea, flowInfo, out var flowInfoOut1);
+            var layout1 = UILayouter.Relayout(cache.AppliedInfo, parent, parentContentArea, flowInfo, scaleFactor, out var flowInfoOut1);
 
             if(mousePos.HasValue) {
                 var isHover1 = HitTest(mousePos.Value, layout1.Rect, layout1.BorderRadius);
@@ -407,7 +409,7 @@ public abstract class UIElement : IToJson, IReactive
                 // layout with considering hover pseudo classes if needed
                 if(hoverInfo != null) {
                     var mergedInfo = cache.AppliedInfo.Merged(hoverInfo);
-                    var layout2 = UILayouter.Relayout(mergedInfo, parent, parentContentArea, flowInfo, out var flowInfoOut2);
+                    var layout2 = UILayouter.Relayout(mergedInfo, parent, parentContentArea, flowInfo, scaleFactor, out var flowInfoOut2);
                     var isHover2 = HitTest(mousePos.Value, layout2.Rect, layout2.BorderRadius);
                     cache = (isHover1, isHover2) switch
                     {
@@ -470,7 +472,7 @@ public abstract class UIElement : IToJson, IReactive
             if(activeInfo is not null) {
                 cache.AppliedInfo = cache.AppliedInfo.Merged(activeInfo);
                 if(activeInfo.HasLayoutInfo) {
-                    cache.Layout = UILayouter.Relayout(cache.AppliedInfo, parent, parentContentArea, flowInfo, out cache.FlowInfo);
+                    cache.Layout = UILayouter.Relayout(cache.AppliedInfo, parent, parentContentArea, flowInfo, scaleFactor, out cache.FlowInfo);
                 }
             }
         }
@@ -486,14 +488,21 @@ public abstract class UIElement : IToJson, IReactive
         };
         flowInfo = cache.FlowInfo;
         _layoutCache = cache;
-        OnUpdateLayout(flags);
+        OnUpdateLayout(flags, scaleFactor);
 
+        var padding = new Thickness
+        {
+            Top = cache.AppliedInfo.Padding.Top * scaleFactor,
+            Right = cache.AppliedInfo.Padding.Right * scaleFactor,
+            Bottom = cache.AppliedInfo.Padding.Bottom * scaleFactor,
+            Left = cache.AppliedInfo.Padding.Left * scaleFactor,
+        };
         var contentArea = new RectF
         {
-            X = cache.Layout.Rect.X + cache.AppliedInfo.Padding.Left,
-            Y = cache.Layout.Rect.Y + cache.AppliedInfo.Padding.Top,
-            Width = float.Max(0, cache.Layout.Rect.Width - cache.AppliedInfo.Padding.Left - cache.AppliedInfo.Padding.Right),
-            Height = float.Max(0, cache.Layout.Rect.Height - cache.AppliedInfo.Padding.Top - cache.AppliedInfo.Padding.Bottom),
+            X = cache.Layout.Rect.X + padding.Left,
+            Y = cache.Layout.Rect.Y + padding.Top,
+            Width = float.Max(0, cache.Layout.Rect.Width - padding.Left - padding.Right),
+            Height = float.Max(0, cache.Layout.Rect.Height - padding.Top - padding.Bottom),
         };
 
         var childrenFlowInfo = cache.AppliedInfo.Flow.NewChildrenFlowInfo(contentArea);
@@ -501,11 +510,11 @@ public abstract class UIElement : IToJson, IReactive
         Debug.Assert(_layoutCache.HasValue);
         ref readonly var appliedInfoRef = ref _layoutCache.ValueRef().AppliedInfo;
         foreach(var child in _children) {
-            child.UpdateLayout(requestChildRelayout, appliedInfoRef, contentArea, ref childrenFlowInfo, mouse);
+            child.UpdateLayout(requestChildRelayout, appliedInfoRef, contentArea, ref childrenFlowInfo, mouse, scaleFactor);
         }
     }
 
-    protected abstract void OnUpdateLayout(PseudoFlags flags);
+    protected abstract void OnUpdateLayout(PseudoFlags flags, float scaleFactor);
 
     private static bool HitTest(in Vector2 mousePos, in RectF rect, in Vector4 borderRadius)
     {
@@ -557,7 +566,7 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    internal void UpdateMaterial(in Vector2u screenSize, in Matrix4 uiProjection, uint index)
+    internal void UpdateMaterial(in Vector2u screenSize, float scaleFactor, in Matrix4 uiProjection, uint index)
     {
         var model = _model;
         Debug.Assert(model != null);
@@ -566,16 +575,17 @@ public abstract class UIElement : IToJson, IReactive
         Debug.Assert(_layoutCache != null);
         ref readonly var cache = ref _layoutCache.ValueRef();
 
-        var shadowWidth = (cache.AppliedInfo.BoxShadow.BlurRadius + cache.AppliedInfo.BoxShadow.SpreadRadius);
+        var shadowWidth = (cache.AppliedInfo.BoxShadow.BlurRadius + cache.AppliedInfo.BoxShadow.SpreadRadius) * scaleFactor;
         var shadowRect = new RectF
         {
-            X = cache.Layout.Rect.X - shadowWidth + cache.AppliedInfo.BoxShadow.OffsetX,
-            Y = cache.Layout.Rect.Y - shadowWidth + cache.AppliedInfo.BoxShadow.OffsetY,
+            X = cache.Layout.Rect.X - shadowWidth + cache.AppliedInfo.BoxShadow.OffsetX * scaleFactor,
+            Y = cache.Layout.Rect.Y - shadowWidth + cache.AppliedInfo.BoxShadow.OffsetY * scaleFactor,
             Width = cache.Layout.Rect.Width + shadowWidth * 2f,
             Height = cache.Layout.Rect.Height + shadowWidth * 2f,
         };
 
         var polygonRect = cache.Layout.Rect.GetMargedRect(shadowRect);
+
         var depth = float.Max(0, 1f - (float)index / 100000f);
         var modelOrigin = new Vector3
         {
@@ -591,25 +601,25 @@ public abstract class UIElement : IToJson, IReactive
                 new Vector4(0, polygonRect.Size.Y, 0, 0),
                 new Vector4(0, 0, 1, 0),
                 new Vector4(0, 0, 0, 1));
-        model.Material.UpdateMaterial(this, cache, uiProjection * modelMatrix);
+        model.Material.UpdateMaterial(this, cache, uiProjection * modelMatrix, scaleFactor);
     }
 }
 
 internal record struct UIElementInfo
 {
-    public required LayoutLength Width { get; set; }
-    public required LayoutLength Height { get; set; }
-    public required Thickness Margin { get; set; }
-    public required Thickness Padding { get; set; }
-    public required HorizontalAlignment HorizontalAlignment { get; set; }
-    public required VerticalAlignment VerticalAlignment { get; set; }
-    public required Brush Background { get; set; }
-    public required Thickness BorderWidth { get; set; }
-    public required CornerRadius BorderRadius { get; set; }
-    public required Brush BorderColor { get; set; }
-    public required BoxShadow BoxShadow { get; set; }
-    public required Flow Flow { get; set; }
-    public required Color4 Color { get; set; }
+    public required LayoutLength Width;
+    public required LayoutLength Height;
+    public required Thickness Margin;
+    public required Thickness Padding;
+    public required HorizontalAlignment HorizontalAlignment;
+    public required VerticalAlignment VerticalAlignment;
+    public required Brush Background;
+    public required Thickness BorderWidth;
+    public required CornerRadius BorderRadius;
+    public required Brush BorderColor;
+    public required BoxShadow BoxShadow;
+    public required Flow Flow;
+    public required Color4 Color;
 
     internal static UIElementInfo Default => new()
     {

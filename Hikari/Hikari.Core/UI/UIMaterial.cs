@@ -83,21 +83,23 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         _sampler.Validate();
     }
 
-    public virtual void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp)
+    public virtual void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)
     {
         var bufferData = new UIShaderSource.BufferData
         {
             Mvp = mvp,
             Rect = result.Layout.Rect,
-            BorderWidth = result.AppliedInfo.BorderWidth.ToVector4(),
+            BorderWidth = result.AppliedInfo.BorderWidth.ToVector4() * scaleFactor,
             BorderRadius = result.Layout.BorderRadius,
             BorderSolidColor = result.AppliedInfo.BorderColor.SolidColor,   // TODO:
             BoxShadowValues = new()
             {
-                X = result.AppliedInfo.BoxShadow.OffsetX,
-                Y = result.AppliedInfo.BoxShadow.OffsetY,
-                Z = result.AppliedInfo.BoxShadow.BlurRadius,
-                W = result.AppliedInfo.BoxShadow.IsInset ? -result.AppliedInfo.BoxShadow.SpreadRadius : result.AppliedInfo.BoxShadow.SpreadRadius,
+                X = result.AppliedInfo.BoxShadow.OffsetX * scaleFactor,
+                Y = result.AppliedInfo.BoxShadow.OffsetY * scaleFactor,
+                Z = result.AppliedInfo.BoxShadow.BlurRadius * scaleFactor,
+                W = result.AppliedInfo.BoxShadow.IsInset ?
+                    -result.AppliedInfo.BoxShadow.SpreadRadius * scaleFactor :
+                    result.AppliedInfo.BoxShadow.SpreadRadius * scaleFactor,
             },
             BoxShadowColor = result.AppliedInfo.BoxShadow.Color,
         };

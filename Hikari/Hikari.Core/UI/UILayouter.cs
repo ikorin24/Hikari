@@ -6,50 +6,63 @@ namespace Hikari.UI;
 
 internal static class UILayouter
 {
-    public static LayoutResult Relayout(in UIElementInfo info, in UIElementInfo parent, in RectF parentContentArea, in FlowLayoutInfo flowInfo, out FlowLayoutInfo flowInfoOut)
+    public static LayoutResult Relayout(
+        in UIElementInfo info,
+        in UIElementInfo parent,
+        in RectF parentContentArea,
+        in FlowLayoutInfo flowInfo,
+        float scaleFactor,
+        out FlowLayoutInfo flowInfoOut)
     {
         flowInfoOut = flowInfo;
-        var rect = DecideRect(info, parent, parentContentArea, ref flowInfoOut);
-        var borderRadius = DecideBorderRadius(info.BorderRadius, rect.Size);
+        var rect = DecideRect(info, parent, parentContentArea, scaleFactor, ref flowInfoOut);
+        var desiredBorderRadius = new CornerRadius
+        {
+            TopLeft = info.BorderRadius.TopLeft * scaleFactor,
+            TopRight = info.BorderRadius.TopRight * scaleFactor,
+            BottomRight = info.BorderRadius.BottomRight * scaleFactor,
+            BottomLeft = info.BorderRadius.BottomLeft * scaleFactor,
+        };
         var layoutResult = new LayoutResult
         {
             Rect = rect,
-            BorderRadius = borderRadius,
+            BorderRadius = DecideBorderRadius(desiredBorderRadius, rect.Size),
         };
         return layoutResult;
     }
 
-    private static RectF DecideRect(in UIElementInfo target, in UIElementInfo parent, in RectF area, ref FlowLayoutInfo flowInfo)
+    private static RectF DecideRect(in UIElementInfo target, in UIElementInfo parent, in RectF area, float scaleFactor, ref FlowLayoutInfo flowInfo)
     {
         Debug.Assert(area.Size.X >= 0 && area.Size.Y >= 0);
 
         ref var flowHead = ref flowInfo.FlowHead;
-        var margin = target.Margin;
-        var width = target.Width;
-        var height = target.Height;
-        var blankSize = new Vector2
+        var margin = new Thickness
         {
-            X = margin.Left + margin.Right,
-            Y = margin.Top + margin.Bottom,
+            Top = target.Margin.Top * scaleFactor,
+            Right = target.Margin.Right * scaleFactor,
+            Bottom = target.Margin.Bottom * scaleFactor,
+            Left = target.Margin.Left * scaleFactor,
         };
-        var fullSize = Vector2.Max(Vector2.Zero, area.Size - blankSize);
+        var fullSize = Vector2.Max(
+            Vector2.Zero,
+            area.Size - new Vector2(margin.Left + margin.Right, margin.Top + margin.Bottom));
         var sizeCoeff = new Vector2
         {
-            X = width.Type switch
+            X = target.Width.Type switch
             {
                 LayoutLengthType.Proportion => area.Size.X,
-                LayoutLengthType.Length or _ => 1f,
+                LayoutLengthType.Length or _ => scaleFactor,
             },
-            Y = height.Type switch
+            Y = target.Height.Type switch
             {
                 LayoutLengthType.Proportion => area.Size.Y,
-                LayoutLengthType.Length or _ => 1f,
+                LayoutLengthType.Length or _ => scaleFactor,
             },
         };
         var size = new Vector2
         {
-            X = float.Clamp(width.Value * sizeCoeff.X, 0, fullSize.X),
-            Y = float.Clamp(height.Value * sizeCoeff.Y, 0, fullSize.Y),
+            X = float.Clamp(target.Width.Value * sizeCoeff.X, 0, fullSize.X),
+            Y = float.Clamp(target.Height.Value * sizeCoeff.Y, 0, fullSize.Y),
         };
 
         Vector2 pos;
@@ -58,7 +71,7 @@ internal static class UILayouter
                 pos = new Vector2
                 {
                     X = flowHead.X + margin.Left,
-                    Y = CalcNoFlowY(target, area, fullSize, size),
+                    Y = CalcNoFlowY(target.VerticalAlignment, margin, area, fullSize, size),
                 };
                 flowHead.X = float.Max(flowHead.X, flowHead.X + size.X + margin.Left + margin.Right);
                 break;
@@ -112,7 +125,7 @@ internal static class UILayouter
             case { Direction: FlowDirection.Column, Wrap: FlowWrapMode.NoWrap }: {
                 pos = new Vector2
                 {
-                    X = CalcNoFlowX(target, area, fullSize, size),
+                    X = CalcNoFlowX(target.HorizontalAlignment, margin, area, fullSize, size),
                     Y = flowHead.Y + margin.Top,
                 };
                 flowHead.Y = float.Max(flowHead.Y, flowHead.Y + size.Y + margin.Top + margin.Bottom);
@@ -168,7 +181,7 @@ internal static class UILayouter
                 pos = new Vector2
                 {
                     X = flowHead.X - size.X - margin.Right,
-                    Y = CalcNoFlowY(target, area, fullSize, size),
+                    Y = CalcNoFlowY(target.VerticalAlignment, margin, area, fullSize, size),
                 };
                 flowHead.X = float.Min(flowHead.X, flowHead.X - size.X - margin.Left - margin.Right);
                 break;
@@ -222,7 +235,7 @@ internal static class UILayouter
             case { Direction: FlowDirection.ColumnReverse, Wrap: FlowWrapMode.NoWrap }: {
                 pos = new Vector2
                 {
-                    X = CalcNoFlowX(target, area, fullSize, size),
+                    X = CalcNoFlowX(target.HorizontalAlignment, margin, area, fullSize, size),
                     Y = flowHead.Y - size.Y - margin.Bottom,
                 };
                 flowHead.Y = float.Min(flowHead.Y, flowHead.Y - size.Y - margin.Top - margin.Bottom);
@@ -277,31 +290,31 @@ internal static class UILayouter
             case { Direction: FlowDirection.None } or _: {
                 pos = new Vector2
                 {
-                    X = CalcNoFlowX(target, area, fullSize, size),
-                    Y = CalcNoFlowY(target, area, fullSize, size),
+                    X = CalcNoFlowX(target.HorizontalAlignment, margin, area, fullSize, size),
+                    Y = CalcNoFlowY(target.VerticalAlignment, margin, area, fullSize, size),
                 };
                 break;
             }
         }
         return new RectF(pos, size);
 
-        static float CalcNoFlowX(in UIElementInfo target, in RectF area, in Vector2 fullSize, in Vector2 size)
+        static float CalcNoFlowX(HorizontalAlignment ha, in Thickness margin, in RectF area, in Vector2 fullSize, in Vector2 size)
         {
-            return target.HorizontalAlignment switch
+            return ha switch
             {
-                HorizontalAlignment.Left => target.Margin.Left,
-                HorizontalAlignment.Right => area.Size.X - target.Margin.Right - size.X,
-                HorizontalAlignment.Center or _ => target.Margin.Left + (fullSize.X - size.X) / 2f,
+                HorizontalAlignment.Left => margin.Left,
+                HorizontalAlignment.Right => area.Size.X - margin.Right - size.X,
+                HorizontalAlignment.Center or _ => margin.Left + (fullSize.X - size.X) / 2f,
             } + area.Position.X;
         }
 
-        static float CalcNoFlowY(in UIElementInfo target, in RectF area, in Vector2 fullSize, in Vector2 size)
+        static float CalcNoFlowY(VerticalAlignment va, in Thickness margin, in RectF area, in Vector2 fullSize, in Vector2 size)
         {
-            return target.VerticalAlignment switch
+            return va switch
             {
-                VerticalAlignment.Top => target.Margin.Top,
-                VerticalAlignment.Bottom => area.Size.Y - target.Margin.Bottom - size.Y,
-                VerticalAlignment.Center or _ => target.Margin.Top + (fullSize.Y - size.Y) / 2f,
+                VerticalAlignment.Top => margin.Top,
+                VerticalAlignment.Bottom => area.Size.Y - margin.Bottom - size.Y,
+                VerticalAlignment.Center or _ => margin.Top + (fullSize.Y - size.Y) / 2f,
             } + area.Position.Y;
         }
     }
@@ -312,6 +325,8 @@ internal static class UILayouter
         var ratio1 = actualSize.Y / (desiredBorderRadius.TopRight + desiredBorderRadius.BottomRight);
         var ratio2 = actualSize.X / (desiredBorderRadius.BottomRight + desiredBorderRadius.BottomLeft);
         var ratio3 = actualSize.Y / (desiredBorderRadius.BottomLeft + desiredBorderRadius.TopLeft);
+
+        // min(1f, ratio0, ratio1, ratio2, ratio3)
         var ratio = float.Min(1f, float.Min(float.Min(ratio0, ratio1), float.Min(ratio2, ratio3)));
         return desiredBorderRadius.ToVector4() * ratio;
     }

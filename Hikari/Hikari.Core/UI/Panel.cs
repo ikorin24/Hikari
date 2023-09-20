@@ -65,7 +65,7 @@ public sealed class Panel : UIElement, IFromJson<Panel>
 
     protected override PanelPseudoInfo? GetActiveProps() => _activeInfo;
 
-    protected override void OnUpdateLayout(PseudoFlags flags)
+    protected override void OnUpdateLayout(PseudoFlags flags, float scaleFactor)
     {
         // nop
     }
@@ -249,9 +249,9 @@ file sealed class PanelShader : UIShader
             return CreateOwn(self);
         }
 
-        public override void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp)
+        public override void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)
         {
-            base.UpdateMaterial(element, result, mvp);
+            base.UpdateMaterial(element, result, mvp, scaleFactor);
         }
     }
 }

@@ -110,7 +110,7 @@ public sealed class Button : UIElement, IFromJson<Button>
 
     protected override ButtonPseudoInfo? GetActiveProps() => _activeInfo;
 
-    protected override void OnUpdateLayout(PseudoFlags flags)
+    protected override void OnUpdateLayout(PseudoFlags flags, float scaleFactor)
     {
         var info = _info;
         if(flags.HasFlag(PseudoFlags.Hover) && _hoverInfo is not null) {
@@ -334,6 +334,7 @@ file sealed class ButtonShader : UIShader
     {
         private ButtonInfo? _buttonInfo;
         private Color4? _color;
+        private float? _scaleFactor;
 
         private Material(
             UIShader shader,
@@ -349,24 +350,25 @@ file sealed class ButtonShader : UIShader
             return CreateOwn(self);
         }
 
-        public override void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp)
+        public override void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)
         {
-            base.UpdateMaterial(element, result, mvp);
+            base.UpdateMaterial(element, result, mvp, scaleFactor);
             var button = (Button)element;
             Debug.Assert(button.ButtonApplied.HasValue);
             ref readonly var applied = ref button.ButtonApplied.ValueRef();
-            if(_buttonInfo != applied || _color != result.AppliedInfo.Color) {
+            if(_buttonInfo != applied || _color != result.AppliedInfo.Color || _scaleFactor != scaleFactor) {
                 _buttonInfo = applied;
                 _color = result.AppliedInfo.Color;
-                UpdateButtonTexture(applied, result.AppliedInfo.Color.ToColorByte());
+                _scaleFactor = scaleFactor;
+                UpdateButtonTexture(applied, result.AppliedInfo.Color.ToColorByte(), scaleFactor);
             }
         }
 
-        private void UpdateButtonTexture(in ButtonInfo button, ColorByte color)
+        private void UpdateButtonTexture(in ButtonInfo button, ColorByte color, float scaleFactor)
         {
             var text = button.Text;
             using var font = new SkiaSharp.SKFont();
-            font.Size = button.FontSize.Px;
+            font.Size = button.FontSize.Px * scaleFactor;
             var options = new TextDrawOptions
             {
                 Background = ColorByte.Transparent,
