@@ -109,9 +109,6 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
             Width = (float)screenSize.X,
             Height = (float)screenSize.Y,
         };
-        Debug.WriteLine(screenSize);
-        //Debug.WriteLine(contentArea.Size);
-
         var isLayoutDirty = _isLayoutDirty;
         _isLayoutDirty = false;
         var mouse = screen.Mouse;

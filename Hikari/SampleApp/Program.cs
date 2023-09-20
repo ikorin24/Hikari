@@ -209,9 +209,10 @@ public partial class Counter
                 "@key": "0",
                 "VerticalAlignment": "Top",
                 "Height": 80,
-                "FontSize": 18,
+                "FontSize": 20,
                 "Background": "#27acd9",
                 "BorderRadius": "10px 10px 0px 0px",
+                "Color": "#fff",
                 "Text": {{text}}
             },
             {
