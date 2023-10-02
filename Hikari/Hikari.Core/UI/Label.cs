@@ -5,14 +5,14 @@ using System.Text.Json;
 
 namespace Hikari.UI;
 
-public sealed class Button : UIElement, IFromJson<Button>
+public sealed class Label : UIElement, IFromJson<Label>
 {
-    private ButtonInfo _info;
-    private ButtonPseudoInfo? _hoverInfo;
-    private ButtonPseudoInfo? _activeInfo;
-    private ButtonInfo? _appliedInfo;
+    private LabelInfo _info;
+    private LabelPseudoInfo? _hoverInfo;
+    private LabelPseudoInfo? _activeInfo;
+    private LabelInfo? _appliedInfo;
 
-    internal ref readonly ButtonInfo? ButtonApplied => ref _appliedInfo;
+    internal ref readonly LabelInfo? LabelApplied => ref _appliedInfo;
 
     public string Text
     {
@@ -35,7 +35,7 @@ public sealed class Button : UIElement, IFromJson<Button>
         }
     }
 
-    public ButtonPseudoInfo? HoverProps
+    public LabelPseudoInfo? HoverProps
     {
         get => GetHoverProps();
         set
@@ -46,7 +46,7 @@ public sealed class Button : UIElement, IFromJson<Button>
         }
     }
 
-    public ButtonPseudoInfo? ActiveProps
+    public LabelPseudoInfo? ActiveProps
     {
         get => _activeInfo;
         set
@@ -57,56 +57,9 @@ public sealed class Button : UIElement, IFromJson<Button>
         }
     }
 
-    static Button()
-    {
-        Serializer.RegisterConstructor(FromJson);
-        UILayer.RegisterShader<Button>(static layer =>
-        {
-            return ButtonShader.Create(layer).Cast<UIShader>();
-        });
-    }
+    protected override LabelPseudoInfo? GetHoverProps() => _hoverInfo;
 
-    public static Button FromJson(in ObjectSource source) => new Button(source);
-
-    protected override void ToJsonProtected(Utf8JsonWriter writer)
-    {
-        base.ToJsonProtected(writer);
-        writer.WriteString(nameof(Text), Text);
-        writer.Write(nameof(FontSize), FontSize);
-    }
-
-    protected override void ApplyDiffProtected(in ObjectSource source)
-    {
-        base.ApplyDiffProtected(source);
-        Text = source.ApplyProperty(nameof(Text), Text, () => ButtonInfo.DefaultText, out _);
-        FontSize = source.ApplyProperty(nameof(FontSize), FontSize, () => ButtonInfo.DefaultFontSize, out _);
-    }
-
-    public Button() : base()
-    {
-        _info = ButtonInfo.Default;
-    }
-
-    private Button(in ObjectSource source) : base(source)
-    {
-        _info = ButtonInfo.Default;
-        if(source.TryGetProperty(nameof(Text), out var text)) {
-            Text = Serializer.Instantiate<string>(text);
-        }
-        if(source.TryGetProperty(nameof(FontSize), out var fontSize)) {
-            FontSize = Serializer.Instantiate<FontSize>(fontSize);
-        }
-        if(source.TryGetProperty(PseudoInfo.HoverName, out var hover)) {
-            _hoverInfo = ButtonPseudoInfo.FromJson(hover);
-        }
-        if(source.TryGetProperty(PseudoInfo.ActiveName, out var active)) {
-            _activeInfo = ButtonPseudoInfo.FromJson(active);
-        }
-    }
-
-    protected override ButtonPseudoInfo? GetHoverProps() => _hoverInfo;
-
-    protected override ButtonPseudoInfo? GetActiveProps() => _activeInfo;
+    protected override LabelPseudoInfo? GetActiveProps() => _activeInfo;
 
     protected override void OnUpdateLayout(PseudoFlags flags, float scaleFactor)
     {
@@ -119,20 +72,67 @@ public sealed class Button : UIElement, IFromJson<Button>
         }
         _appliedInfo = info;
     }
+
+    static Label()
+    {
+        Serializer.RegisterConstructor(FromJson);
+        UILayer.RegisterShader<Label>(static layer =>
+        {
+            return LabelShader.Create(layer).Cast<UIShader>();
+        });
+    }
+
+    public static Label FromJson(in ObjectSource source) => new Label(source);
+
+    protected override void ToJsonProtected(Utf8JsonWriter writer)
+    {
+        base.ToJsonProtected(writer);
+        writer.WriteString(nameof(Text), Text);
+        writer.Write(nameof(FontSize), FontSize);
+    }
+
+    protected override void ApplyDiffProtected(in ObjectSource source)
+    {
+        base.ApplyDiffProtected(source);
+        Text = source.ApplyProperty(nameof(Text), Text, () => LabelInfo.DefaultText, out _);
+        FontSize = source.ApplyProperty(nameof(FontSize), FontSize, () => LabelInfo.DefaultFontSize, out _);
+    }
+
+    public Label() : base()
+    {
+        _info = LabelInfo.Default;
+    }
+
+    private Label(in ObjectSource source) : base(source)
+    {
+        _info = LabelInfo.Default;
+        if(source.TryGetProperty(nameof(Text), out var text)) {
+            Text = Serializer.Instantiate<string>(text);
+        }
+        if(source.TryGetProperty(nameof(FontSize), out var fontSize)) {
+            FontSize = Serializer.Instantiate<FontSize>(fontSize);
+        }
+        if(source.TryGetProperty(PseudoInfo.HoverName, out var hover)) {
+            _hoverInfo = LabelPseudoInfo.FromJson(hover);
+        }
+        if(source.TryGetProperty(PseudoInfo.ActiveName, out var active)) {
+            _activeInfo = LabelPseudoInfo.FromJson(active);
+        }
+    }
 }
 
-public sealed record ButtonPseudoInfo
+public sealed record LabelPseudoInfo
     : PseudoInfo,
-    IFromJson<ButtonPseudoInfo>
+    IFromJson<LabelPseudoInfo>
 {
-    static ButtonPseudoInfo() => Serializer.RegisterConstructor(FromJson);
+    static LabelPseudoInfo() => Serializer.RegisterConstructor(FromJson);
 
     public string? Text { get; init; }
     public FontSize? FontSize { get; init; }
 
-    public static ButtonPseudoInfo FromJson(in ObjectSource source)
+    public static LabelPseudoInfo FromJson(in ObjectSource source)
     {
-        return new ButtonPseudoInfo
+        return new LabelPseudoInfo
         {
             Width = GetValueProp<LayoutLength>(source, nameof(Width)),
             Height = GetValueProp<LayoutLength>(source, nameof(Height)),
@@ -174,12 +174,12 @@ public sealed record ButtonPseudoInfo
     }
 }
 
-internal record struct ButtonInfo
+internal record struct LabelInfo
 {
     public required string Text { get; set; }
     public required FontSize FontSize { get; set; }
 
-    public static ButtonInfo Default => new()
+    public static LabelInfo Default => new()
     {
         Text = DefaultText,
         FontSize = DefaultFontSize,
@@ -188,9 +188,9 @@ internal record struct ButtonInfo
     public static string DefaultText => "";
     public static FontSize DefaultFontSize => 16;
 
-    public ButtonInfo Merged(ButtonPseudoInfo p)
+    public LabelInfo Merged(LabelPseudoInfo p)
     {
-        return new ButtonInfo
+        return new LabelInfo
         {
             Text = p.Text ?? Text,
             FontSize = p.FontSize ?? FontSize,
@@ -198,48 +198,48 @@ internal record struct ButtonInfo
     }
 }
 
-file sealed class ButtonShader : UIShader
+file sealed class LabelShader : UIShader
 {
-    private ButtonShader(UILayer operation) : base(operation)
+    private LabelShader(UILayer operation) : base(operation)
     {
     }
 
-    public static Own<ButtonShader> Create(UILayer layer) => CreateOwn(new ButtonShader(layer));
+    public static Own<LabelShader> Create(UILayer layer) => CreateOwn(new LabelShader(layer));
 
     public override Own<UIMaterial> CreateMaterial()
     {
-        return ButtonMaterial.Create(this, EmptyTexture, EmptySampler).Cast<UIMaterial>();
+        return LabelMaterial.Create(this, EmptyTexture, EmptySampler).Cast<UIMaterial>();
     }
 }
 
-file sealed class ButtonMaterial : UIMaterial
+file sealed class LabelMaterial : UIMaterial
 {
-    private ButtonInfo? _buttonInfo;
+    private LabelInfo? _labelInfo;
     private Color4? _color;
     private float? _scaleFactor;
 
-    private ButtonMaterial(
-        ButtonShader shader,
+    private LabelMaterial(
+        LabelShader shader,
         MaybeOwn<Texture2D> texture,
         MaybeOwn<Sampler> sampler)
         : base(shader, texture, sampler)
     {
     }
 
-    internal static Own<ButtonMaterial> Create(ButtonShader shader, MaybeOwn<Texture2D> texture, MaybeOwn<Sampler> sampler)
+    internal static Own<LabelMaterial> Create(LabelShader shader, MaybeOwn<Texture2D> texture, MaybeOwn<Sampler> sampler)
     {
-        var self = new ButtonMaterial(shader, texture, sampler);
+        var self = new LabelMaterial(shader, texture, sampler);
         return CreateOwn(self);
     }
 
     public override void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)
     {
         base.UpdateMaterial(element, result, mvp, scaleFactor);
-        var button = (Button)element;
-        Debug.Assert(button.ButtonApplied.HasValue);
-        ref readonly var applied = ref button.ButtonApplied.ValueRef();
-        if(_buttonInfo != applied || _color != result.AppliedInfo.Color || _scaleFactor != scaleFactor) {
-            _buttonInfo = applied;
+        var label = (Label)element;
+        Debug.Assert(label.LabelApplied.HasValue);
+        ref readonly var applied = ref label.LabelApplied.ValueRef();
+        if(_labelInfo != applied || _color != result.AppliedInfo.Color || _scaleFactor != scaleFactor) {
+            _labelInfo = applied;
             _color = result.AppliedInfo.Color;
             _scaleFactor = scaleFactor;
             TextMaterialHelper.UpdateTextTexture(this, applied.Text, applied.FontSize, result.AppliedInfo.Color.ToColorByte(), scaleFactor);

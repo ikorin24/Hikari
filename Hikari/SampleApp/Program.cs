@@ -205,7 +205,7 @@ public partial class Counter
             "Flow": "Column NoWrap",
             "Children": [
             {
-                "@type": {{typeof(Button)}},
+                "@type": {{typeof(Label)}},
                 "@key": "0",
                 "VerticalAlignment": "Top",
                 "Height": 80,

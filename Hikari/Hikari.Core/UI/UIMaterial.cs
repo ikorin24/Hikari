@@ -110,7 +110,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         UpdateBackground(result.AppliedInfo.Background);
     }
 
-    protected void UpdateTexture(MaybeOwn<Texture2D> texture)
+    internal void UpdateTexture(MaybeOwn<Texture2D> texture)
     {
         var textureValue = texture.AsValue();
         _texture.Dispose();
@@ -128,7 +128,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         });
     }
 
-    protected void UpdateTextureContentSize(Vector2u contentSize)
+    internal void UpdateTextureContentSize(Vector2u contentSize)
     {
         if(_texContentSize != contentSize) {
             _texContentSizeBuffer.AsValue().WriteData(0, contentSize);

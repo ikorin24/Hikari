@@ -121,14 +121,14 @@ file sealed class PanelShader : UIShader
 file sealed class PanelMaterial : UIMaterial
 {
     private PanelMaterial(
-        UIShader shader,
+        PanelShader shader,
         MaybeOwn<Texture2D> texture,
         MaybeOwn<Sampler> sampler)
         : base(shader, texture, sampler)
     {
     }
 
-    internal static Own<PanelMaterial> Create(UIShader shader, MaybeOwn<Texture2D> texture, MaybeOwn<Sampler> sampler)
+    internal static Own<PanelMaterial> Create(PanelShader shader, MaybeOwn<Texture2D> texture, MaybeOwn<Sampler> sampler)
     {
         var self = new PanelMaterial(shader, texture, sampler);
         return CreateOwn(self);
