@@ -43,31 +43,25 @@ internal static class UILayouter
             Bottom = target.Margin.Bottom * scaleFactor,
             Left = target.Margin.Left * scaleFactor,
         };
+
+        const float Delta = 0.001f;
+        Vector2 pos;
+        Vector2 size;
+
         var fullSize = Vector2.Max(
             Vector2.Zero,
             area.Size - new Vector2(margin.Left + margin.Right, margin.Top + margin.Bottom));
-        var sizeCoeff = new Vector2
-        {
-            X = target.Width.Type switch
-            {
-                LayoutLengthType.Proportion => area.Size.X,
-                LayoutLengthType.Length or _ => scaleFactor,
-            },
-            Y = target.Height.Type switch
-            {
-                LayoutLengthType.Proportion => area.Size.Y,
-                LayoutLengthType.Length or _ => scaleFactor,
-            },
-        };
-        var size = new Vector2
-        {
-            X = float.Clamp(target.Width.Value * sizeCoeff.X, 0, fullSize.X),
-            Y = float.Clamp(target.Height.Value * sizeCoeff.Y, 0, fullSize.Y),
-        };
+        size = Vector2.Min(CalcSize(target.Width, target.Height, area.Size, scaleFactor), fullSize);
 
-        Vector2 pos;
         switch(parent.Flow) {
             case { Direction: FlowDirection.Row, Wrap: FlowWrapMode.NoWrap }: {
+                var a = float.Max(flowHead.X - area.Position.X, 0);
+                fullSize = new Vector2
+                {
+                    X = float.Max(area.Size.X - (margin.Left + margin.Right) - a, 0),
+                    Y = float.Max(area.Size.Y - (margin.Top + margin.Bottom), 0),
+                };
+                size = Vector2.Min(CalcSize(target.Width, target.Height, area.Size - new Vector2(a, 0), scaleFactor), fullSize);
                 pos = new Vector2
                 {
                     X = flowHead.X + margin.Left,
@@ -77,8 +71,10 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.Row, Wrap: FlowWrapMode.Wrap }: {
+                var a = float.Max(flowHead.X - area.Position.X, 0);
+                size = CalcSize(target.Width, target.Height, area.Size - new Vector2(a, 0), scaleFactor);
                 var x = flowHead.X + margin.Left;
-                if(x + size.X + margin.Right <= area.Position.X + area.Size.X) {
+                if(x + size.X + margin.Right <= area.Position.X + area.Size.X + Delta) {
                     pos = new Vector2
                     {
                         X = x,
@@ -100,8 +96,10 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.Row, Wrap: FlowWrapMode.WrapReverse }: {
+                var a = float.Max(flowHead.X - area.Position.X, 0);
+                size = CalcSize(target.Width, target.Height, area.Size - new Vector2(a, 0), scaleFactor);
                 var x = flowHead.X + margin.Left;
-                if(x + size.X + margin.Right <= area.Position.X + area.Size.X) {
+                if(x + size.X + margin.Right <= area.Position.X + area.Size.X + Delta) {
                     pos = new Vector2
                     {
                         X = x,
@@ -123,6 +121,13 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.Column, Wrap: FlowWrapMode.NoWrap }: {
+                var a = float.Max(flowHead.Y - area.Position.Y, 0);
+                fullSize = new Vector2
+                {
+                    X = float.Max(area.Size.X - (margin.Left + margin.Right), 0),
+                    Y = float.Max(area.Size.Y - (margin.Top + margin.Bottom) - a, 0),
+                };
+                size = Vector2.Min(CalcSize(target.Width, target.Height, area.Size - new Vector2(0, a), scaleFactor), fullSize);
                 pos = new Vector2
                 {
                     X = CalcNoFlowX(target.HorizontalAlignment, margin, area, fullSize, size),
@@ -132,8 +137,10 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.Column, Wrap: FlowWrapMode.Wrap }: {
+                var a = float.Max(flowHead.Y - area.Position.Y, 0);
+                size = CalcSize(target.Width, target.Height, area.Size - new Vector2(0, a), scaleFactor);
                 var y = flowHead.Y + margin.Top;
-                if(y + size.Y + margin.Bottom <= area.Position.Y + area.Size.Y) {
+                if(y + size.Y + margin.Bottom <= area.Position.Y + area.Size.Y + Delta) {
                     pos = new Vector2
                     {
                         X = flowHead.X + margin.Left,
@@ -143,7 +150,7 @@ internal static class UILayouter
                     flowInfo.NextLineOffset = float.Max(flowInfo.NextLineOffset, size.X + margin.Left + margin.Right);
                 }
                 else {
-                    flowHead.Y += flowInfo.NextLineOffset;
+                    flowHead.X += flowInfo.NextLineOffset;
                     pos = new Vector2
                     {
                         X = flowHead.X + margin.Left,
@@ -155,8 +162,10 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.Column, Wrap: FlowWrapMode.WrapReverse }: {
+                var a = float.Max(flowHead.Y - area.Position.Y, 0);
+                size = CalcSize(target.Width, target.Height, area.Size - new Vector2(0, a), scaleFactor);
                 var y = flowHead.Y + margin.Top;
-                if(y + size.Y + margin.Bottom <= area.Position.Y + area.Size.Y) {
+                if(y + size.Y + margin.Bottom <= area.Position.Y + area.Size.Y + Delta) {
                     pos = new Vector2
                     {
                         X = flowHead.X - size.X - margin.Right,
@@ -178,6 +187,13 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.RowReverse, Wrap: FlowWrapMode.NoWrap }: {
+                var a = float.Max((area.X + area.Width) - flowHead.X, 0);
+                fullSize = new Vector2
+                {
+                    X = float.Max(area.Size.X - (margin.Left + margin.Right) - a, 0),
+                    Y = float.Max(area.Size.Y - (margin.Top + margin.Bottom), 0),
+                };
+                size = Vector2.Min(CalcSize(target.Width, target.Height, area.Size - new Vector2(a, 0), scaleFactor), fullSize);
                 pos = new Vector2
                 {
                     X = flowHead.X - size.X - margin.Right,
@@ -187,8 +203,10 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.RowReverse, Wrap: FlowWrapMode.Wrap }: {
+                var a = float.Max((area.X + area.Width) - flowHead.X, 0);
+                size = CalcSize(target.Width, target.Height, area.Size - new Vector2(a, 0), scaleFactor);
                 var x = flowHead.X - size.X - margin.Right;
-                if(x - margin.Left >= area.Position.X) {
+                if(x - margin.Left >= area.Position.X - Delta) {
                     pos = new Vector2
                     {
                         X = x,
@@ -210,8 +228,10 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.RowReverse, Wrap: FlowWrapMode.WrapReverse }: {
+                var a = float.Max((area.X + area.Width) - flowHead.X, 0);
+                size = CalcSize(target.Width, target.Height, area.Size - new Vector2(a, 0), scaleFactor);
                 var x = flowHead.X - size.X - margin.Right;
-                if(x - margin.Left >= area.Position.X) {
+                if(x - margin.Left >= area.Position.X - Delta) {
                     pos = new Vector2
                     {
                         X = x,
@@ -233,6 +253,13 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.ColumnReverse, Wrap: FlowWrapMode.NoWrap }: {
+                var a = float.Max((area.Y + area.Height) - flowHead.Y, 0);
+                fullSize = new Vector2
+                {
+                    X = float.Max(area.Size.X - (margin.Left + margin.Right), 0),
+                    Y = float.Max(area.Size.Y - (margin.Top + margin.Bottom) - a, 0),
+                };
+                size = Vector2.Min(CalcSize(target.Width, target.Height, area.Size - new Vector2(0, a), scaleFactor), fullSize);
                 pos = new Vector2
                 {
                     X = CalcNoFlowX(target.HorizontalAlignment, margin, area, fullSize, size),
@@ -242,8 +269,10 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.ColumnReverse, Wrap: FlowWrapMode.Wrap }: {
+                var a = float.Max((area.Y + area.Height) - flowHead.Y, 0);
+                size = CalcSize(target.Width, target.Height, area.Size - new Vector2(0, a), scaleFactor);
                 var y = flowHead.Y - size.Y - margin.Bottom;
-                if(y - margin.Top >= area.Position.Y) {
+                if(y - margin.Top >= area.Position.Y - Delta) {
                     pos = new Vector2
                     {
                         X = flowHead.X + margin.Left,
@@ -265,8 +294,10 @@ internal static class UILayouter
                 break;
             }
             case { Direction: FlowDirection.ColumnReverse, Wrap: FlowWrapMode.WrapReverse }: {
+                var a = float.Max((area.Y + area.Height) - flowHead.Y, 0);
+                size = CalcSize(target.Width, target.Height, area.Size - new Vector2(0, a), scaleFactor);
                 var y = flowHead.Y - size.Y - margin.Bottom;
-                if(y - margin.Top >= area.Position.Y) {
+                if(y - margin.Top >= area.Position.Y - Delta) {
                     pos = new Vector2
                     {
                         X = flowHead.X - size.X - margin.Right,
@@ -316,6 +347,23 @@ internal static class UILayouter
                 VerticalAlignment.Bottom => area.Size.Y - margin.Bottom - size.Y,
                 VerticalAlignment.Center or _ => margin.Top + (fullSize.Y - size.Y) / 2f,
             } + area.Position.Y;
+        }
+
+        static Vector2 CalcSize(in LayoutLength width, in LayoutLength height, in Vector2 proportionBaseSize, float scaleFactor)
+        {
+            return new Vector2
+            {
+                X = width.Type switch
+                {
+                    LayoutLengthType.Proportion => float.Max(proportionBaseSize.X * width.Value, 0),
+                    LayoutLengthType.Length or _ => float.Max(scaleFactor * width.Value, 0),
+                },
+                Y = height.Type switch
+                {
+                    LayoutLengthType.Proportion => float.Max(proportionBaseSize.Y * height.Value, 0),
+                    LayoutLengthType.Length or _ => float.Max(scaleFactor * height.Value, 0),
+                },
+            };
         }
     }
 

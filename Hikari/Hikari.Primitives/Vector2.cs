@@ -114,6 +114,16 @@ namespace Hikari
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector2 Clamp(in Vector2 vec, in Vector2 min, in Vector2 max)
+        {
+            return new Vector2
+            {
+                X = float.Clamp(vec.X, min.X, max.X),
+                Y = float.Clamp(vec.Y, min.Y, max.Y),
+            };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly Vector2 Normalized()
         {
             return AsVector2(AsNVec2(this) / AsNVec2(this).Length());

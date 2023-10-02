@@ -153,6 +153,17 @@ namespace Hikari
             };
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector3 Clamp(in Vector3 vec, in Vector3 min, in Vector3 max)
+        {
+            return new Vector3
+            {
+                X = float.Clamp(vec.X, min.X, max.X),
+                Y = float.Clamp(vec.Y, min.Y, max.Y),
+                Z = float.Clamp(vec.Z, min.Z, max.Z),
+            };
+        }
+
         /// <summary>Get angle as radian between two vectors</summary>
         /// <param name="vec1">vector1</param>
         /// <param name="vec2">vector2</param>

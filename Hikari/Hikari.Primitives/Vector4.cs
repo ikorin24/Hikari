@@ -246,6 +246,18 @@ namespace Hikari
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Vector4 Clamp(in Vector4 vec, in Vector4 min, in Vector4 max)
+        {
+            return new Vector4
+            {
+                X = float.Clamp(vec.X, min.X, max.X),
+                Y = float.Clamp(vec.Y, min.Y, max.Y),
+                Z = float.Clamp(vec.Z, min.Z, max.Z),
+                W = float.Clamp(vec.W, min.W, max.W),
+            };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly Vector4 Normalized()
         {
             return AsVector4(AsNVec4(this) / Length);
