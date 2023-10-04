@@ -33,7 +33,7 @@ public readonly ref struct RenderShadowMapContext
                 Target = _shadowMap.View,
                 LoadOp = new DepthStencilBufferLoadOp
                 {
-                    Depth = DepthBufferLoadOp.Clear(1f),
+                    Depth = DepthBufferLoadOp.Clear(0f),
                     Stencil = null,
                 }
             });

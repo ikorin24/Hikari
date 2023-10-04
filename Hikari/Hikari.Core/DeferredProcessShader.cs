@@ -113,7 +113,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                     -p.y * 0.5 + 0.5,
                     p.z);
                 let bias = 0.001;       // TODO:
-                let slope_scaled_bias = bias * acos(cos(dot_nl));
+                let slope_scaled_bias = bias * acos(cos(dot_nl)) / ((f32(cascade) + 1.0) * 0.5);
                 var vis: f32 = 0.0;
 
                 let shadowmap_size: vec2<i32> = textureDimensions(shadowmap, 0);
@@ -125,7 +125,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                 // PCF
                 var seed: vec2<u32> = random_vec2_u32(in.uv);
                 let sample_count: i32 = 4;
-                let ref_z = shadowmap_pos.z - slope_scaled_bias;
+                let ref_z = shadowmap_pos.z + slope_scaled_bias;
                 let R = 2.0;
                 let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
                 for(var i: i32 = 0; i < sample_count; i++) {
@@ -295,7 +295,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                         MagFilter = FilterMode.Nearest,
                         MinFilter = FilterMode.Nearest,
                         MipmapFilter = FilterMode.Nearest,
-                        Compare = CompareFunction.Less,
+                        Compare = CompareFunction.Greater,
                     }).AsValue(out var shadowSampler)),
                     BindGroupEntry.Buffer(2, directionalLight.LightMatricesBuffer),
                     BindGroupEntry.Buffer(3, directionalLight.CascadeFarsBuffer),
@@ -356,7 +356,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             {
                 Format = operation.DepthStencilFormat,
                 DepthWriteEnabled = true,
-                DepthCompare = CompareFunction.Less,
+                DepthCompare = CompareFunction.Greater,
                 Stencil = StencilState.Default,
                 Bias = DepthBiasState.Default,
             },

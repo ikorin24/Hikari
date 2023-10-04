@@ -262,7 +262,7 @@ namespace Hikari
 
             // This is for DirectX or WebGPU, whose clip space depth is [0, 1]
             #pragma warning disable IDE0055 // code formatter
-            return new Matrix4(
+            return RemapRangeMatrix * new Matrix4(
                 2 * invRL,  0,          0,          -(right + left) * invRL,
                 0,          2 * invTB,  0,          -(top + bottom) * invTB,
                 0,          0,          -invFN,     (-(depthFar + depthNear) * invFN + 1) * 0.5f,
@@ -286,7 +286,7 @@ namespace Hikari
 
             // This is for DirectX or WebGPU, whose clip space depth is [0, 1]
             #pragma warning disable IDE0055 // code formatter
-            return new Matrix4(
+            return RemapRangeMatrix * new Matrix4(
                 x,      0,      a,              0,
                 0,      y,      b,              0,
                 0,      0,      (c - 1) * 0.5f, d * 0.5f,
@@ -309,6 +309,37 @@ namespace Hikari
 
             return PerspectiveProjection(minX, maxX, minY, maxY, depthNear, depthFar);
         }
+
+        // TODO:
+        private static Matrix4 RemapRangeMatrix => new Matrix4(
+                new Vector4(1, 0, 0, 0),
+                new Vector4(0, 1, 0, 0),
+                new Vector4(0, 0, -1, 0),
+                new Vector4(0, 0, 1, 1));
+
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //public static Matrix4 PerspectiveProjectionInfReversedZ(float fovy, float aspect, float depthNear, float _depthFar)
+        //{
+        //    // PerspectiveProjectionInfReversedZ
+
+        //    if(fovy <= 0 || fovy > float.Pi) { throw new ArgumentOutOfRangeException(nameof(fovy)); }
+        //    if(aspect <= 0) { throw new ArgumentOutOfRangeException(nameof(aspect)); }
+        //    if(depthNear <= 0) { throw new ArgumentOutOfRangeException(nameof(depthNear)); }
+        //    if(_depthFar <= 0) { throw new ArgumentOutOfRangeException(nameof(_depthFar)); }
+
+        //    //var maxY = depthNear * MathF.Tan(0.5f * fovy);
+        //    //var minY = -maxY;
+        //    //var minX = minY * aspect;
+        //    //var maxX = maxY * aspect;
+
+        //    //return PerspectiveProjection(minX, maxX, minY, maxY, depthNear, depthFar);
+        //    float f = 1.0f / float.Tan(fovy * 0.5f);
+        //    return new Matrix4(
+        //        new Vector4(f / aspect, 0, 0, 0),
+        //        new Vector4(0, f, 0, 0),
+        //        new Vector4(0, 0, 0, -1),
+        //        new Vector4(0, 0, depthNear, 0));
+        //}
 
         public static Matrix4 LookAt(in Vector3 eye, in Vector3 target, in Vector3 up)
         {

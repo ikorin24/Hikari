@@ -133,7 +133,7 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
             {
                 Format = layer.DepthStencilFormat,
                 DepthWriteEnabled = true,
-                DepthCompare = CompareFunction.LessEqual,
+                DepthCompare = CompareFunction.GreaterEqual,
                 Stencil = StencilState.Default,
                 Bias = DepthBiasState.Default,
             },

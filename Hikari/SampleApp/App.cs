@@ -65,7 +65,7 @@ public sealed class App
                         Target = layer.Screen.DepthStencil,
                         LoadOp = new DepthStencilBufferLoadOp
                         {
-                            Depth = DepthBufferLoadOp.Clear(1f),
+                            Depth = DepthBufferLoadOp.Clear(0f),
                             Stencil = null,
                         },
                     });
@@ -90,7 +90,7 @@ public sealed class App
                         Target = self.Screen.DepthStencil,
                         LoadOp = new DepthStencilBufferLoadOp
                         {
-                            Depth = DepthBufferLoadOp.Clear(1f),
+                            Depth = DepthBufferLoadOp.Clear(0f),
                             Stencil = null,
                         },
                     });
@@ -114,7 +114,7 @@ public sealed class App
                         Target = screen.DepthStencil,
                         LoadOp = new DepthStencilBufferLoadOp
                         {
-                            Depth = DepthBufferLoadOp.Clear(1f),
+                            Depth = DepthBufferLoadOp.Clear(0f),
                             Stencil = null,
                         },
                     });

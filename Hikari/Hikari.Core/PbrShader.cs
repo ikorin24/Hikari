@@ -175,7 +175,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
             {
                 Format = operation.ShadowMapFormat,
                 DepthWriteEnabled = true,
-                DepthCompare = CompareFunction.Less,
+                DepthCompare = CompareFunction.Greater,
                 Stencil = StencilState.Default,
                 Bias = DepthBiasState.Default,
             },
@@ -261,7 +261,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
             {
                 Format = layer.DepthStencilFormat,
                 DepthWriteEnabled = true,
-                DepthCompare = CompareFunction.Less,
+                DepthCompare = CompareFunction.Greater,
                 Stencil = StencilState.Default,
                 Bias = DepthBiasState.Default,
             },
