@@ -383,12 +383,12 @@ public sealed class Camera
         }
 
         if(mode.IsPerspective(out var fovy)) {
-            return Matrix4.PerspectiveProjection(fovy, aspect, near, far);
+            return Matrix4.ReversedZ.PerspectiveProjection(fovy, aspect, near, far);
         }
         else if(mode.IsOrthographic(out var height)) {
             var y = height / 2f;
             var x = y * aspect;
-            return Matrix4.OrthographicProjection(-x, x, -y, y, near, far);
+            return Matrix4.ReversedZ.OrthographicProjection(-x, x, -y, y, near, far);
         }
         else {
             throw new UnreachableException("invalid camera projection mode");

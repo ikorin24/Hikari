@@ -141,7 +141,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
         var screen = Screen;
         var screenSize = screen.ClientSize;
         var scaleFactor = screen.ScaleFactor;
-        var uiProjection = Matrix4.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
+        var uiProjection = Matrix4.ReversedZ.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
         uint i = 0;
         if(rootElement != null) {
             RenderElementRecursively(pass, ref i, rootElement, render, screenSize, scaleFactor, uiProjection);
