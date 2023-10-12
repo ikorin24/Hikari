@@ -65,6 +65,7 @@ internal ref struct Utf8StringBuilder
     {
         var b = new Utf8StringBuilder(l1.Length + l2.Length + NL.Length * 2);
         b.AppendLine(l1);
+        b.AppendLine(l2);
         return b;
     }
 
