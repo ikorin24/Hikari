@@ -47,11 +47,11 @@ internal class Program
 
         var model = new PbrModel(app.PbrShader, Shapes.Plane(screen, true), albedo, mr, normal);
         model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
-        model.Scale = 10;
+        model.Scale = new Vector3(10);
         var material = model.Material;
         var cube = new PbrModel(app.PbrShader, Shapes.Cube(screen, true),
             material.Albedo, material.MetallicRoughness, material.Normal);
-        cube.Scale = 0.3f;
+        cube.Scale = new Vector3(0.3f);
         cube.Position = new Vector3(0, 0.2f, 0);
 
         var camera = screen.Camera;

@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System.Collections.Generic;
 
 namespace Hikari;
 
@@ -6,7 +7,7 @@ public interface IModel
 {
     Vector3 Position { get; set; }
     Quaternion Rotation { get; set; }
-    Matrix4 GetModel();
+    Matrix4 GetModel(out bool isUniformScale);
 }
 
 public interface IModel<TScale>
@@ -16,13 +17,13 @@ public interface IModel<TScale>
     TScale Scale { get; set; }
 }
 
-public interface ITreeModel<TChildren, TScale>
+public interface ITreeModel<TScale>
     : IModel<TScale>
     where TScale : unmanaged
 {
     IModel? Parent { get; }
-    TChildren Children { get; }
-    Matrix4 GetSelfModel();
+    IReadOnlyList<IModel> Children { get; }
+    Matrix4 GetSelfModel(out bool isUniformScale);
 }
 
 
@@ -33,5 +34,5 @@ public interface IStrongTypedTreeModel<TParent, TChildren, TScale>
 {
     TParent? Parent { get; }
     TChildren Children { get; }
-    Matrix4 GetSelfModel();
+    Matrix4 GetSelfModel(out bool isUniformScale);
 }

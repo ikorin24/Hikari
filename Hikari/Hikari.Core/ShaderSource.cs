@@ -9,11 +9,11 @@ internal static class ShaderSource
         fn Inverse2x2(m: mat2x2<f32>) -> mat2x2<f32> {
             let inv_det_m: f32 = 1.0 / determinant(m);
             return mat2x2<f32>(
-                m[1].y * inv_det_m,    // [0][0]
+                 m[1].y * inv_det_m,    // [0][0]
                 -m[0].y * inv_det_m,    // [0][1]
 
                 -m[1].x * inv_det_m,    // [1][0]
-                m[0].x * inv_det_m     // [1][1]
+                 m[0].x * inv_det_m     // [1][1]
             );
         }
         """u8;

@@ -1,5 +1,7 @@
 ﻿#nullable enable
 using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Hikari;
 
@@ -9,7 +11,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
     private readonly MaybeOwn<Texture2D> _albedo;
     private readonly MaybeOwn<Texture2D> _metallicRoughness;
     private readonly MaybeOwn<Texture2D> _normal;
-    private readonly Own<Buffer> _modelUniform;
+    private readonly Own<Buffer> _modelUniform;     // UniformValue
     private readonly Own<BindGroup> _bindGroup0;
     private readonly BindGroup _bindGroup1;
     private readonly Own<BindGroup> _shadowBindGroup0;
@@ -18,8 +20,6 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
     public Texture2D MetallicRoughness => _metallicRoughness.AsValue();
     public Texture2D Normal => _normal.AsValue();
 
-    internal BufferSlice ModelUniform => _modelUniform.AsValue().Slice();
-
     internal BindGroup BindGroup0 => _bindGroup0.AsValue();
     internal BindGroup BindGroup1 => _bindGroup1;
 
@@ -27,7 +27,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
 
     private PbrMaterial(
         PbrShader shader,
-        Own<Buffer> modelUniform,
+        Own<Buffer> uniformBuffer,
         Own<Sampler> sampler,
         MaybeOwn<Texture2D> albedo,
         MaybeOwn<Texture2D> metallicRoughness,
@@ -36,7 +36,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
         Own<BindGroup> shadowBindGroup0)
         : base(shader)
     {
-        _modelUniform = modelUniform;
+        _modelUniform = uniformBuffer;
         _sampler = sampler;
         _albedo = albedo;
         _metallicRoughness = metallicRoughness;
@@ -82,7 +82,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
 
         var screen = shader.Screen;
         var lights = screen.Lights;
-        var modelUniform = Buffer.Create(screen, (usize)Matrix4.SizeInBytes, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
+        var uniformBuffer = Buffer.Create(screen, (usize)Unsafe.SizeOf<UniformValue>(), BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
         var sampler = Sampler.Create(screen, new()
         {
             AddressModeU = AddressMode.ClampToEdge,
@@ -97,7 +97,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
             Layout = shader.Operation.BindGroupLayout0,
             Entries = new BindGroupEntry[]
             {
-                BindGroupEntry.Buffer(0, modelUniform.AsValue()),
+                BindGroupEntry.Buffer(0, uniformBuffer.AsValue()),
                 BindGroupEntry.Sampler(1, sampler.AsValue()),
                 BindGroupEntry.TextureView(2, albedo.AsValue().View),
                 BindGroupEntry.TextureView(3, metallicRoughness.AsValue().View),
@@ -110,14 +110,14 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
             Layout = shader.Operation.ShadowBindGroupLayout0,
             Entries = new[]
             {
-                BindGroupEntry.Buffer(0, modelUniform.AsValue()),
+                BindGroupEntry.Buffer(0, uniformBuffer.AsValue()),
                 BindGroupEntry.Buffer(1, lights.DirectionalLight.LightMatricesBuffer),
             },
         });
 
         var material = new PbrMaterial(
             shader,
-            modelUniform,
+            uniformBuffer,
             sampler,
             albedo,
             metallicRoughness,
@@ -128,8 +128,16 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
         return CreateOwn(material);
     }
 
-    internal void WriteModelUniform(in Matrix4 model)
+    internal void WriteModelUniform(in UniformValue value)
     {
-        _modelUniform.AsValue().WriteData(0, model);
+        System.Diagnostics.Debug.WriteLine(value.IsUniformScale);
+        _modelUniform.AsValue().WriteData(0, value);
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_mat4x4_f32, Size = 80)]
+    internal struct UniformValue
+    {
+        public required Matrix4 Model;
+        public required int IsUniformScale;  // true: 1, false: 0
     }
 }

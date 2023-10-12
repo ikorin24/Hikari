@@ -7,6 +7,14 @@ namespace Hikari;
 
 public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
 {
+    private static readonly Lazy<byte[]> _shaderSource = new(() =>
+    {
+        using var sb = Utf8StringBuilder.FromLines(
+            ShaderSource.Fn_Inverse3x3,
+            Source);
+        return sb.Utf8String.ToArray();
+    });
+
     private static T ShadowShaderSource<TArg, T>(uint cascade, TArg arg, ReadOnlySpanFunc<byte, TArg, T> func)
     {
         using var builder = new Utf8StringBuilder(1024);
@@ -25,7 +33,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
         return func(builder.Utf8String, arg);
     }
 
-    private static ReadOnlySpan<byte> ShaderSource => """
+    private static ReadOnlySpan<byte> Source => """
         struct Vin {
             @location(0) pos: vec3<f32>,
             @location(1) normal: vec3<f32>,
@@ -49,6 +57,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
         }
         struct UniformValue {
             model: mat4x4<f32>,
+            is_uniform_scale: i32,
         }
 
         struct CameraMatrix {
@@ -69,7 +78,10 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
             v: Vin,
         ) -> V2F {
             let model_view = c.view * u.model;
-            let mv33 = mat44_to_33(model_view);
+            var mv33 = mat44_to_33(model_view);
+            if(u.is_uniform_scale == 0) {
+                mv33 = transpose(Inverse3x3(mv33));
+            }
             var output: V2F;
             let pos4: vec4<f32> = model_view * vec4(v.pos, 1.0);
 
@@ -106,7 +118,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
 
     private PbrShader(Screen screen, PbrLayer operation)
         : base(
-            ShaderSource,
+            _shaderSource.Value,
             operation,
             Desc)
     {
