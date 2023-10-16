@@ -8,13 +8,13 @@ namespace Hikari;
 
 public sealed class PbrModel
     : FrameObject<PbrModel, PbrLayer, V, PbrShader, PbrMaterial>,
-      ITreeModel<Vector3>
+      ITreeModel
 {
     private Vector3 _position;
     private Quaternion _rotation = Quaternion.Identity;
     private Vector3 _scale = Vector3.One;
-    private PbrModel? _parent;
-    private readonly List<PbrModel> _children = new List<PbrModel>();
+    private ITreeModel? _parent;
+    private readonly List<ITreeModel> _children = new();
     private readonly BufferSlice _tangent;
 
     public Vector3 Position
@@ -33,16 +33,12 @@ public sealed class PbrModel
         set => _scale = value;
     }
 
-    public PbrModel? Parent => _parent;
+    public ITreeModel? Parent => _parent;
 
     [MemberNotNullWhen(true, nameof(Parent))]
     public bool HasParent => _parent != null;
 
-    public IReadOnlyList<PbrModel> Children => _children;
-
-    IModel? ITreeModel<Vector3>.Parent => _parent;
-
-    IReadOnlyList<IModel> ITreeModel<Vector3>.Children => _children;
+    public IReadOnlyList<ITreeModel> Children => _children;
 
     [Obsolete]      // TODO:
     public PbrModel(
@@ -69,20 +65,36 @@ public sealed class PbrModel
         _tangent = tangent;
     }
 
-    public void AddChild(PbrModel child)
+    void ITreeModel.OnAddedToChildren(ITreeModel parent)
     {
-        if(child._parent != null) {
+        if(parent == null) {
+            ArgumentNullException.ThrowIfNull(parent);
+        }
+        _parent = parent;
+    }
+
+    void ITreeModel.OnRemovedFromChildren()
+    {
+        if(_parent == null) {
+            ThrowHelper.ThrowInvalidOperation("no parent");
+        }
+        _parent = null;
+    }
+
+    public void AddChild(ITreeModel child)
+    {
+        if(child.Parent != null) {
             ThrowHelper.ThrowArgument("The child already has a parent");
         }
         _children.Add(child);
-        child._parent = this;
+        child.OnAddedToChildren(this);
     }
 
-    public void RemoveChild(PbrModel child)
+    public void RemoveChild(ITreeModel child)
     {
-        if(child._parent != null) {
+        if(child.Parent != null) {
             if(_children.Remove(child)) {
-                child._parent = null;
+                child.OnRemovedFromChildren();
             }
         }
     }
