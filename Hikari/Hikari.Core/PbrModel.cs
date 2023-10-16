@@ -10,35 +10,31 @@ public sealed class PbrModel
     : FrameObject<PbrModel, PbrLayer, V, PbrShader, PbrMaterial>,
       ITreeModel
 {
-    private Vector3 _position;
-    private Quaternion _rotation = Quaternion.Identity;
-    private Vector3 _scale = Vector3.One;
-    private ITreeModel? _parent;
-    private readonly List<ITreeModel> _children = new();
+    private TreeModelImpl _treeModelImpl;
     private readonly BufferSlice _tangent;
 
     public Vector3 Position
     {
-        get => _position;
-        set => _position = value;
+        get => _treeModelImpl.Position;
+        set => _treeModelImpl.Position = value;
     }
     public Quaternion Rotation
     {
-        get => _rotation;
-        set => _rotation = value;
+        get => _treeModelImpl.Rotation;
+        set => _treeModelImpl.Rotation = value;
     }
     public Vector3 Scale
     {
-        get => _scale;
-        set => _scale = value;
+        get => _treeModelImpl.Scale;
+        set => _treeModelImpl.Scale = value;
     }
 
-    public ITreeModel? Parent => _parent;
+    public ITreeModel? Parent => _treeModelImpl.Parent;
 
     [MemberNotNullWhen(true, nameof(Parent))]
-    public bool HasParent => _parent != null;
+    public bool HasParent => _treeModelImpl.Parent != null;
 
-    public IReadOnlyList<ITreeModel> Children => _children;
+    public IReadOnlyList<ITreeModel> Children => _treeModelImpl.Children;
 
     [Obsolete]      // TODO:
     public PbrModel(
@@ -65,75 +61,17 @@ public sealed class PbrModel
         _tangent = tangent;
     }
 
-    void ITreeModel.OnAddedToChildren(ITreeModel parent)
-    {
-        if(parent == null) {
-            ArgumentNullException.ThrowIfNull(parent);
-        }
-        _parent = parent;
-    }
+    void ITreeModel.OnAddedToChildren(ITreeModel parent) => _treeModelImpl.OnAddedToChildren(parent);
 
-    void ITreeModel.OnRemovedFromChildren()
-    {
-        if(_parent == null) {
-            ThrowHelper.ThrowInvalidOperation("no parent");
-        }
-        _parent = null;
-    }
+    void ITreeModel.OnRemovedFromChildren() => _treeModelImpl.OnRemovedFromChildren();
 
-    public void AddChild(ITreeModel child)
-    {
-        if(child.Parent != null) {
-            ThrowHelper.ThrowArgument("The child already has a parent");
-        }
-        _children.Add(child);
-        child.OnAddedToChildren(this);
-    }
+    public void AddChild(ITreeModel child) => _treeModelImpl.AddChild(this, child);
 
-    public void RemoveChild(ITreeModel child)
-    {
-        if(child.Parent != null) {
-            if(_children.Remove(child)) {
-                child.OnRemovedFromChildren();
-            }
-        }
-    }
+    public void RemoveChild(ITreeModel child) => _treeModelImpl.RemoveChild(child);
 
-    public Matrix4 GetModel(out bool isUniformScale)
-    {
-        var parent = Parent;
-        if(parent == null) {
-            return GetSelfModel(out isUniformScale);
-        }
-        var mat = parent.GetModel(out var isUniformScale1) * GetSelfModel(out var isUniformScale2);
-        isUniformScale = isUniformScale1 && isUniformScale2;
-        return mat;
-    }
+    public Matrix4 GetModel(out bool isUniformScale) => _treeModelImpl.GetModel(out isUniformScale);
 
-    public Matrix4 GetSelfModel(out bool isUniformScale)
-    {
-        // TODO: cache
-        // TODO: thread safe
-        return CalcModel(out isUniformScale);
-    }
-
-    private Matrix4 CalcModel(out bool isUniformScale)
-    {
-        var s = _scale;
-        const float Epsilon = 0.0001f;
-
-        isUniformScale =
-            float.Abs(s.X - s.Y) / s.X < Epsilon &&
-            float.Abs(s.X - s.Z) / s.X < Epsilon;
-        return
-            _position.ToTranslationMatrix4() *
-            _rotation.ToMatrix4() *
-            new Matrix4(
-                new Vector4(s.X, 0, 0, 0),
-                new Vector4(0, s.Y, 0, 0),
-                new Vector4(0, 0, s.Z, 0),
-                new Vector4(0, 0, 0, 1));
-    }
+    public Matrix4 GetSelfModel(out bool isUniformScale) => _treeModelImpl.GetSelfModel(out isUniformScale);
 
     protected override void Render(in RenderPass pass, PbrMaterial material, Mesh<V> mesh)
     {
