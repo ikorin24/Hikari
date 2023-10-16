@@ -16,7 +16,7 @@ public static class VertexAccessor
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ref readonly TField GetField<TVertex, TField>(in TVertex v, uint offset)
-        where TVertex : unmanaged, IVertex
+        where TVertex : unmanaged
         where TField : unmanaged
     {
         return ref Unsafe.As<TVertex, TField>(
@@ -25,7 +25,7 @@ public static class VertexAccessor
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ref TField GetRefField<TVertex, TField>(ref TVertex v, uint offset)
-        where TVertex : unmanaged, IVertex
+        where TVertex : unmanaged
         where TField : unmanaged
     {
         return ref Unsafe.As<TVertex, TField>(
@@ -78,6 +78,86 @@ public static class VertexAccessor
     {
         return ref Unsafe.As<TVertex, Vector3>(
             ref Unsafe.AddByteOffset(ref v, TVertex.NormalOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly Vector4 Color<TVertex>(in TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexColor
+    {
+        return ref Unsafe.As<TVertex, Vector4>(
+            ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in v), TVertex.ColorOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref Vector4 RefColor<TVertex>(ref TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexColor
+    {
+        return ref Unsafe.As<TVertex, Vector4>(
+            ref Unsafe.AddByteOffset(ref v, TVertex.ColorOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly uint TextureIndex<TVertex>(in TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexTextureIndex
+    {
+        return ref Unsafe.As<TVertex, uint>(
+            ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in v), TVertex.TextureIndexOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref uint RefTextureIndex<TVertex>(ref TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexTextureIndex
+    {
+        return ref Unsafe.As<TVertex, uint>(
+            ref Unsafe.AddByteOffset(ref v, TVertex.TextureIndexOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly Vector4u Bone<TVertex>(in TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexBone
+    {
+        return ref Unsafe.As<TVertex, Vector4u>(
+            ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in v), TVertex.BoneOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref Vector4u RefBone<TVertex>(ref TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexBone
+    {
+        return ref Unsafe.As<TVertex, Vector4u>(
+            ref Unsafe.AddByteOffset(ref v, TVertex.BoneOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly Vector4 Weight<TVertex>(in TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexWeight
+    {
+        return ref Unsafe.As<TVertex, Vector4>(
+            ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in v), TVertex.WeightOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref Vector4 RefWeight<TVertex>(ref TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexWeight
+    {
+        return ref Unsafe.As<TVertex, Vector4>(
+            ref Unsafe.AddByteOffset(ref v, TVertex.WeightOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly Vector3 Tangent<TVertex>(in TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexTangent
+    {
+        return ref Unsafe.As<TVertex, Vector3>(
+            ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in v), TVertex.TangentOffset));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref Vector3 RefTangent<TVertex>(ref TVertex v)
+        where TVertex : unmanaged, IVertex, IVertexTangent
+    {
+        return ref Unsafe.As<TVertex, Vector3>(
+            ref Unsafe.AddByteOffset(ref v, TVertex.TangentOffset));
     }
 }
 

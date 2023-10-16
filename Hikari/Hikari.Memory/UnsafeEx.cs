@@ -68,4 +68,34 @@ public static class UnsafeEx
     {
         return MemoryMarshal.CreateReadOnlySpan(ref Unsafe.As<T, byte>(ref Unsafe.AsRef(in value)), sizeof(T));
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly T Add<T>(in T source, nuint elementOffset)
+    {
+        return ref Unsafe.Add(ref Unsafe.AsRef(in source), elementOffset);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly T Add<T>(in T source, int elementOffset)
+    {
+        return ref Unsafe.Add(ref Unsafe.AsRef(in source), elementOffset);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly T Add<T>(in T source, nint elementOffset)
+    {
+        return ref Unsafe.Add(ref Unsafe.AsRef(in source), elementOffset);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly T AddByteOffset<T>(in T source, nuint byteOffset)
+    {
+        return ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in source), byteOffset);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref readonly T AddByteOffset<T>(in T source, nint byteOffset)
+    {
+        return ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in source), byteOffset);
+    }
 }

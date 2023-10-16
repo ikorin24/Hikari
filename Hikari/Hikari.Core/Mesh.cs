@@ -105,6 +105,12 @@ public sealed class Mesh<TVertex>
 
 public static class Mesh
 {
+    public unsafe static Own<Mesh<TVertex>> Empty<TVertex>(Screen screen)
+        where TVertex : unmanaged, IVertex
+    {
+        return Mesh<TVertex>.Create<u16>(screen, null, 0, null, 0, null, 0);
+    }
+
     public unsafe static Own<Mesh<TVertex>> Create<TVertex>(
         Screen screen,
         ReadOnlySpan<TVertex> vertices,

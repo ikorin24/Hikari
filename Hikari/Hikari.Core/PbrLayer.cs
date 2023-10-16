@@ -7,20 +7,13 @@ namespace Hikari;
 public sealed class PbrLayer
     : ObjectLayer<PbrLayer, V, PbrShader, PbrMaterial, PbrModel>
 {
-    private static readonly TextureFormat[] _formats = new TextureFormat[4]
-    {
-        TextureFormat.Rgba32Float,
-        TextureFormat.Rgba32Float,
-        TextureFormat.Rgba32Float,
-        TextureFormat.Rgba32Float,
-    };
-
     private readonly Own<PipelineLayout> _shadowPipelineLayout;
     private readonly Own<BindGroupLayout> _bindGroupLayout0;
     private readonly BindGroupLayout _bindGroupLayout1;
     private readonly PbrLayerDescriptor _desc;
     private readonly TextureFormat _shadowMapFormat;
     private readonly Own<BindGroupLayout> _shadowBindGroupLayout0;
+    private readonly Lazy<PbrShader> _defaultShader;
 
     public IGBufferProvider InputGBuffer => _desc.InputGBuffer;
     public TextureFormat DepthStencilFormat => _desc.DepthStencilFormat;
@@ -54,7 +47,17 @@ public sealed class PbrLayer
             self._shadowBindGroupLayout0.Dispose();
             self._shadowPipelineLayout.Dispose();
         }).AddTo(Subscriptions);
+
+        _defaultShader = new(() =>
+        {
+            if(LifeState == LifeState.Dead) {
+                throw new InvalidOperationException("already dead");
+            }
+            return PbrShader.Create(Screen, this).DisposeOn(Dead);
+        });
     }
+
+    public override PbrShader GetDefaultShader() => _defaultShader.Value;
 
     private static Own<PipelineLayout> BuildShadowPipeline(
         Screen screen,

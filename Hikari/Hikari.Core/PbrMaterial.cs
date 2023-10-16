@@ -7,10 +7,14 @@ namespace Hikari;
 
 public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
 {
-    private readonly Own<Sampler> _sampler;
+    //private readonly Own<Sampler> _sampler;
     private readonly MaybeOwn<Texture2D> _albedo;
     private readonly MaybeOwn<Texture2D> _metallicRoughness;
     private readonly MaybeOwn<Texture2D> _normal;
+    private readonly MaybeOwn<Sampler> _albedoSampler;
+    private readonly MaybeOwn<Sampler> _metallicRoughnessSampler;
+    private readonly MaybeOwn<Sampler> _normalSampler;
+
     private readonly Own<Buffer> _modelUniform;     // UniformValue
     private readonly Own<BindGroup> _bindGroup0;
     private readonly BindGroup _bindGroup1;
@@ -25,22 +29,47 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
 
     internal BindGroup ShadowBindGroup0 => _shadowBindGroup0.AsValue();
 
+    //private PbrMaterial(
+    //    PbrShader shader,
+    //    Own<Buffer> uniformBuffer,
+    //    Own<Sampler> sampler,
+    //    MaybeOwn<Texture2D> albedo,
+    //    MaybeOwn<Texture2D> metallicRoughness,
+    //    MaybeOwn<Texture2D> normal,
+    //    Own<BindGroup> bindGroup0,
+    //    Own<BindGroup> shadowBindGroup0)
+    //    : base(shader)
+    //{
+    //    _modelUniform = uniformBuffer;
+    //    _sampler = sampler;
+    //    _albedo = albedo;
+    //    _metallicRoughness = metallicRoughness;
+    //    _normal = normal;
+    //    _bindGroup0 = bindGroup0;
+    //    _bindGroup1 = Screen.Camera.CameraDataBindGroup;
+    //    _shadowBindGroup0 = shadowBindGroup0;
+    //}
+
     private PbrMaterial(
         PbrShader shader,
         Own<Buffer> uniformBuffer,
-        Own<Sampler> sampler,
         MaybeOwn<Texture2D> albedo,
+        MaybeOwn<Sampler> albedoSampler,
         MaybeOwn<Texture2D> metallicRoughness,
+        MaybeOwn<Sampler> metallicRoughnessSampler,
         MaybeOwn<Texture2D> normal,
+        MaybeOwn<Sampler> normalSampler,
         Own<BindGroup> bindGroup0,
         Own<BindGroup> shadowBindGroup0)
         : base(shader)
     {
         _modelUniform = uniformBuffer;
-        _sampler = sampler;
         _albedo = albedo;
+        _albedoSampler = albedoSampler;
         _metallicRoughness = metallicRoughness;
+        _metallicRoughnessSampler = metallicRoughnessSampler;
         _normal = normal;
+        _normalSampler = normalSampler;
         _bindGroup0 = bindGroup0;
         _bindGroup1 = Screen.Camera.CameraDataBindGroup;
         _shadowBindGroup0 = shadowBindGroup0;
@@ -60,10 +89,12 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
         base.Release(manualRelease);
         if(manualRelease) {
             _modelUniform.Dispose();
-            _sampler.Dispose();
             _albedo.Dispose();
+            _albedoSampler.Dispose();
             _metallicRoughness.Dispose();
+            _metallicRoughnessSampler.Dispose();
             _normal.Dispose();
+            _normalSampler.Dispose();
             _bindGroup0.Dispose();
             _shadowBindGroup0.Dispose();
         }
@@ -83,7 +114,25 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
         var screen = shader.Screen;
         var lights = screen.Lights;
         var uniformBuffer = Buffer.Create(screen, (usize)Unsafe.SizeOf<UniformValue>(), BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
-        var sampler = Sampler.Create(screen, new()
+        var albedoSampler = Sampler.Create(screen, new()
+        {
+            AddressModeU = AddressMode.ClampToEdge,
+            AddressModeV = AddressMode.ClampToEdge,
+            AddressModeW = AddressMode.ClampToEdge,
+            MagFilter = FilterMode.Linear,
+            MinFilter = FilterMode.Linear,
+            MipmapFilter = FilterMode.Linear,
+        });
+        var metallicRoughnessSampler = Sampler.Create(screen, new()
+        {
+            AddressModeU = AddressMode.ClampToEdge,
+            AddressModeV = AddressMode.ClampToEdge,
+            AddressModeW = AddressMode.ClampToEdge,
+            MagFilter = FilterMode.Linear,
+            MinFilter = FilterMode.Linear,
+            MipmapFilter = FilterMode.Linear,
+        });
+        var normalSampler = Sampler.Create(screen, new()
         {
             AddressModeU = AddressMode.ClampToEdge,
             AddressModeV = AddressMode.ClampToEdge,
@@ -98,7 +147,7 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
             Entries = new BindGroupEntry[]
             {
                 BindGroupEntry.Buffer(0, uniformBuffer.AsValue()),
-                BindGroupEntry.Sampler(1, sampler.AsValue()),
+                BindGroupEntry.Sampler(1, albedoSampler.AsValue()),
                 BindGroupEntry.TextureView(2, albedo.AsValue().View),
                 BindGroupEntry.TextureView(3, metallicRoughness.AsValue().View),
                 BindGroupEntry.TextureView(4, normal.AsValue().View),
@@ -118,10 +167,70 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
         var material = new PbrMaterial(
             shader,
             uniformBuffer,
-            sampler,
             albedo,
+            albedoSampler,
             metallicRoughness,
+            metallicRoughnessSampler,
             normal,
+            normalSampler,
+            bindGroup0,
+            shadowBindGroup0
+        );
+        return CreateOwn(material);
+    }
+
+    public static Own<PbrMaterial> Create(
+        PbrShader shader,
+        MaybeOwn<Texture2D> albedo,
+        MaybeOwn<Sampler> albedoSampler,
+        MaybeOwn<Texture2D> metallicRoughness,
+        MaybeOwn<Sampler> metallicRoughnessSampler,
+        MaybeOwn<Texture2D> normal,
+        MaybeOwn<Sampler> normalSampler)
+    {
+        ArgumentNullException.ThrowIfNull(shader);
+        albedo.ThrowArgumentExceptionIfNone();
+        albedoSampler.ThrowArgumentExceptionIfNone();
+        metallicRoughness.ThrowArgumentExceptionIfNone();
+        metallicRoughnessSampler.ThrowArgumentExceptionIfNone();
+        normal.ThrowArgumentExceptionIfNone();
+        normalSampler.ThrowArgumentExceptionIfNone();
+
+        var screen = shader.Screen;
+        var lights = screen.Lights;
+        var uniformBuffer = Buffer.Create(screen, (usize)Unsafe.SizeOf<UniformValue>(), BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
+        var bindGroup0 = BindGroup.Create(screen, new()
+        {
+            Layout = shader.Operation.BindGroupLayout0,
+            Entries = new BindGroupEntry[]
+            {
+                BindGroupEntry.Buffer(0, uniformBuffer.AsValue()),
+                BindGroupEntry.Sampler(1, albedoSampler.AsValue()), // TODO:
+                BindGroupEntry.TextureView(2, albedo.AsValue().View),
+                BindGroupEntry.TextureView(3, metallicRoughness.AsValue().View),
+                BindGroupEntry.TextureView(4, normal.AsValue().View),
+            },
+        });
+
+        var shadowBindGroup0 = BindGroup.Create(screen, new()
+        {
+            Layout = shader.Operation.ShadowBindGroupLayout0,
+            Entries = new[]
+            {
+                BindGroupEntry.Buffer(0, uniformBuffer.AsValue()),
+                BindGroupEntry.Buffer(1, lights.DirectionalLight.LightMatricesBuffer),
+            },
+        });
+
+        var material = new PbrMaterial(
+            shader,
+            uniformBuffer,
+            albedo,
+            albedoSampler,
+            metallicRoughness,
+            metallicRoughnessSampler,
+            normal,
+            normalSampler,
             bindGroup0,
             shadowBindGroup0
         );

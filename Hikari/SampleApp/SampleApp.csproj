@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Hikari.Core\Hikari.Core.csproj" />
+    <ProjectReference Include="..\Hikari.Gltf\Hikari.Gltf.csproj" />
   </ItemGroup>
 
   <ItemGroup>

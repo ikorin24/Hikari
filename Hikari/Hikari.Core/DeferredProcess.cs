@@ -47,6 +47,11 @@ public sealed class DeferredProcess : RenderOperation<DeferredProcess, DeferredP
         _desc.InputGBuffer.GBufferChanged.Subscribe(RecreateMaterial).AddTo(Subscriptions);
     }
 
+    public override DeferredProcessShader GetDefaultShader()
+    {
+        return _shader.AsValue();
+    }
+
     private void OnDead()
     {
         _shader.Dispose();
