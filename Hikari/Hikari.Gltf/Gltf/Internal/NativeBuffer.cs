@@ -22,7 +22,12 @@ internal unsafe readonly struct NativeBuffer : IDisposable
             _size = 0;
             return;
         }
-        _ptr = (IntPtr)NativeMemory.Alloc(size);
+        if(zeroClear) {
+            _ptr = (IntPtr)NativeMemory.AllocZeroed(size);
+        }
+        else {
+            _ptr = (IntPtr)NativeMemory.Alloc(size);
+        }
         _size = size;
     }
 
