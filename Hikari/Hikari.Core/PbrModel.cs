@@ -36,6 +36,8 @@ public sealed class PbrModel
 
     public IReadOnlyList<ITreeModel> Children => _treeModelImpl.Children;
 
+    public bool HasChildren => _treeModelImpl.Children.Count > 0;
+
     [Obsolete]      // TODO:
     public PbrModel(
         PbrShader shader,
