@@ -14,19 +14,19 @@ namespace Hikari.Gltf;
 
 public static class GlbModelBuilder
 {
-    private static PbrModel BuildRoot(in BuilderState state)
+    private static ITreeModel BuildRoot(in BuilderState state)
     {
         var gltf = state.Gltf;
         ValidateVersion(gltf);
-        //var root = new PbrModel();
+        var root = new EmptyTreeModel();
         if(gltf.scene is uint sceneNum) {
             ref readonly var scene = ref gltf.scenes.GetOrThrow(sceneNum);
             foreach(var nodeNum in scene.nodes.AsSpan()) {
-                BuildNode(in state, in gltf.nodes.GetOrThrow(nodeNum));
+                var child = BuildNode(in state, in gltf.nodes.GetOrThrow(nodeNum));
+                root.AddChild(child);
             }
         }
-        throw new NotImplementedException();
-        //return root;
+        return root;
     }
 
     private static void ValidateVersion(GltfObject gltf)
