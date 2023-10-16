@@ -36,11 +36,11 @@ public static class GlbModelBuilder
         }
     }
 
-    private static PbrModel BuildNode(in BuilderState state, in Node node)
+    private static ITreeModel BuildNode(in BuilderState state, in Node node)
     {
         var gltf = state.Gltf;
 
-        PbrModel model;
+        ITreeModel model;
         if(node.mesh is uint meshNum) {
             var meshPrimitives = gltf.meshes.GetOrThrow(meshNum).primitives.AsSpan();
             if(meshPrimitives.Length != 1) {
@@ -50,13 +50,18 @@ public static class GlbModelBuilder
             //    var (mesh, material) = ReadMeshPrimitive<Vertex>(in state, in meshPrimitives[i]);
             //}
             var (mesh, material) = ReadMeshPrimitive<Vertex>(in state, in meshPrimitives[0]);
-            model = new PbrModel(mesh, material);
+            model = new PbrModel(mesh, material)
+            {
+                Name = node.name?.ToString(),
+            };
         }
         else {
-            throw new NotImplementedException();        // TODO:
+            model = new EmptyTreeModel()
+            {
+                Name = node.name?.ToString(),
+            };
         }
 
-        model.Name = node.name?.ToString();
         // glTF and Engine has same coordinate (Y-up, right-hand)
         model.Rotation = new Quaternion(node.rotation.X, node.rotation.Y, node.rotation.Z, node.rotation.W);
         model.Position = new Vector3(node.translation.X, node.translation.Y, node.translation.Z);
