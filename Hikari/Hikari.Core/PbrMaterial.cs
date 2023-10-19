@@ -239,7 +239,6 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
 
     internal void WriteModelUniform(in UniformValue value)
     {
-        System.Diagnostics.Debug.WriteLine(value.IsUniformScale);
         _modelUniform.AsValue().WriteData(0, value);
     }
 

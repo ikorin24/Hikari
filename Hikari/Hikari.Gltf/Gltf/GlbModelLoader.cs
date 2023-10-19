@@ -7,36 +7,84 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
-
+using System.Threading;
 using HI = Hikari.Imaging;
 
 namespace Hikari.Gltf;
 
-public static class GlbModelBuilder
+public static class GlbModelLoader
 {
-    private static ITreeModel BuildRoot(in BuilderState state)
+    public static ITreeModel LoadGlbFile(PbrLayer layer, string filePath, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(layer);
+        using var glb = GltfParser.ParseGlbFile(filePath, ct);
+        var state = new LoaderState
+        {
+            Glb = glb,
+            Layer = layer,
+            Ct = ct,
+        };
+        return LoadRoot(state);
+    }
+
+    public static ITreeModel LoadGlb(PbrLayer layer, ResourceFile file, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(layer);
+        using var glb = GltfParser.ParseGlb(file, ct);
+        var state = new LoaderState
+        {
+            Glb = glb,
+            Layer = layer,
+            Ct = ct,
+        };
+        return LoadRoot(state);
+    }
+
+    public static ITreeModel LoadGlb(PbrLayer layer, ReadOnlySpan<byte> data, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(layer);
+        using var glb = GltfParser.ParseGlb(data, ct);
+        var state = new LoaderState
+        {
+            Glb = glb,
+            Layer = layer,
+            Ct = ct,
+        };
+        return LoadRoot(state);
+    }
+
+    public unsafe static ITreeModel LoadGlb(PbrLayer layer, void* data, nuint length, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(layer);
+        using var glb = GltfParser.ParseGlb(data, length, ct);
+        var state = new LoaderState
+        {
+            Glb = glb,
+            Layer = layer,
+            Ct = ct,
+        };
+        return LoadRoot(state);
+    }
+
+    private static ITreeModel LoadRoot(in LoaderState state)
     {
         var gltf = state.Gltf;
-        ValidateVersion(gltf);
+        if(gltf.asset.version != "2.0"u8) {
+            throw new NotSupportedException("only supports gltf v2.0");
+        }
+
         var root = new EmptyTreeModel();
         if(gltf.scene is uint sceneNum) {
             ref readonly var scene = ref gltf.scenes.GetOrThrow(sceneNum);
             foreach(var nodeNum in scene.nodes.AsSpan()) {
-                var child = BuildNode(in state, in gltf.nodes.GetOrThrow(nodeNum));
+                var child = LoadNode(in state, in gltf.nodes.GetOrThrow(nodeNum));
                 root.AddChild(child);
             }
         }
         return root;
     }
 
-    private static void ValidateVersion(GltfObject gltf)
-    {
-        if(gltf.asset.version != "2.0"u8) {
-            throw new NotSupportedException("only supports gltf v2.0");
-        }
-    }
-
-    private static ITreeModel BuildNode(in BuilderState state, in Node node)
+    private static ITreeModel LoadNode(in LoaderState state, in Node node)
     {
         var gltf = state.Gltf;
 
@@ -49,7 +97,7 @@ public static class GlbModelBuilder
             //for(int i = 0; i < meshPrimitives.Length; i++) {
             //    var (mesh, material) = ReadMeshPrimitive<Vertex>(in state, in meshPrimitives[i]);
             //}
-            var (mesh, material) = ReadMeshPrimitive<Vertex>(in state, in meshPrimitives[0]);
+            var (mesh, material) = LoadMeshAndMaterial<Vertex>(in state, in meshPrimitives[0]);
             model = new PbrModel(mesh, material)
             {
                 Name = node.name?.ToString(),
@@ -69,47 +117,20 @@ public static class GlbModelBuilder
         var matrix = new Matrix4(node.matrix.AsSpan()); // TODO:
 
         foreach(var childNum in node.children.AsSpan()) {
-            var child = BuildNode(in state, in gltf.nodes.GetOrThrow(childNum));
+            var child = LoadNode(in state, in gltf.nodes.GetOrThrow(childNum));
             model.AddChild(child);
         }
         return model;
     }
 
-    private unsafe static void StoreIndicesAsUInt32(in BufferData data, uint* dest)
-    {
-        var elementCount = data.Count;
-        switch(data.ComponentType) {
-            case AccessorComponentType.UnsignedByte: {
-                ConvertUInt8ToUInt32((byte*)data.Ptr, dest, elementCount);
-                break;
-            }
-            case AccessorComponentType.UnsignedShort: {
-                ConvertUInt16ToUInt32((ushort*)data.Ptr, dest, elementCount);
-                break;
-            }
-            case AccessorComponentType.UnsignedInt: {
-                System.Buffer.MemoryCopy(data.Ptr, dest, data.ByteLength, data.ByteLength);
-                if(BitConverter.IsLittleEndian == false) {
-                    ReverseEndianUInt32(dest, elementCount);
-                }
-                break;
-            }
-            default: {
-                Debug.Fail("It should not be possible to reach here.");
-                break;
-            }
-
-        }
-    }
-
-    private unsafe static (Own<Mesh<TVertex>>, Own<PbrMaterial>) ReadMeshPrimitive<TVertex>(in BuilderState state, in MeshPrimitive meshPrimitive)
+    private unsafe static (Own<Mesh<TVertex>>, Own<PbrMaterial>) LoadMeshAndMaterial<TVertex>(in LoaderState state, in MeshPrimitive meshPrimitive)
         where TVertex : unmanaged, IVertex, IVertexPosition, IVertexUV, IVertexNormal
     {
         var materials = state.Gltf.materials;
         var accessors = state.Gltf.accessors;
         var material = meshPrimitive.material switch
         {
-            uint index => ReadMaterial(in state, in materials.GetOrThrow(index)),
+            uint index => LoadMaterial(in state, in materials.GetOrThrow(index)),
             null => Own<PbrMaterial>.None,
         };
         if(meshPrimitive.mode != MeshPrimitiveMode.Triangles) {
@@ -124,7 +145,7 @@ public static class GlbModelBuilder
             if(attrs.POSITION is uint posAttr) {
                 ref readonly var position = ref accessors.GetOrThrow(posAttr);
                 if(position is not { type: AccessorType.Vec3, componentType: AccessorComponentType.Float }) {
-                    ThrowInvalidGlb();
+                    ThrowHelper.ThrowInvalidGlb();
                 }
                 var data = AccessData(state, position);
                 vertices = new NativeBuffer(data.Count * TVertex.VertexSize, true);
@@ -140,7 +161,7 @@ public static class GlbModelBuilder
             if(attrs.NORMAL is uint normalAttr) {
                 ref readonly var normal = ref accessors.GetOrThrow(normalAttr);
                 if(normal is not { type: AccessorType.Vec3, componentType: AccessorComponentType.Float }) {
-                    ThrowInvalidGlb();
+                    ThrowHelper.ThrowInvalidGlb();
                 }
                 var data = AccessData(state, normal);
                 data.CopyToVertexField<TVertex, Vector3>((TVertex*)vertices.Ptr, TVertex.NormalOffset);
@@ -150,7 +171,7 @@ public static class GlbModelBuilder
             if(attrs.TEXCOORD_0 is uint uv0Attr) {
                 ref readonly var uv0 = ref accessors.GetOrThrow(uv0Attr);
                 if(uv0 is not { type: AccessorType.Vec2, componentType: AccessorComponentType.Float }) {
-                    ThrowInvalidGlb();
+                    ThrowHelper.ThrowInvalidGlb();
                 }
                 var data = AccessData(state, uv0);
                 data.CopyToVertexField<TVertex, Vector2>((TVertex*)vertices.Ptr, TVertex.UVOffset);
@@ -161,7 +182,7 @@ public static class GlbModelBuilder
             if(attrs.TANGENT is uint tangentAttr) {
                 ref readonly var tangent = ref accessors.GetOrThrow(tangentAttr);
                 if(tangent is not { type: AccessorType.Vec4, componentType: AccessorComponentType.Float }) {
-                    ThrowInvalidGlb();
+                    ThrowHelper.ThrowInvalidGlb();
                 }
                 var data = AccessData(state, tangent);
                 data.CopyToVertexField<Vector3, Vector4, Vector3>((Vector3*)tangents.Ptr, 0, &ConvertData);
@@ -178,12 +199,12 @@ public static class GlbModelBuilder
                         type: AccessorType.Scalar,
                         componentType: AccessorComponentType.UnsignedByte or AccessorComponentType.UnsignedShort or AccessorComponentType.UnsignedInt
                     }) {
-                    ThrowInvalidGlb();
+                    ThrowHelper.ThrowInvalidGlb();
                 }
                 var data = AccessData(state, indexAccessor);
                 indices = new NativeBuffer(data.Count * (nuint)sizeof(uint), false);
                 indexCount = (uint)data.Count;
-                StoreIndicesAsUInt32(data, (uint*)indices.Ptr);
+                data.StoreIndicesAsUInt32((uint*)indices.Ptr);
             }
 
             var needToCalcTangent =
@@ -209,7 +230,7 @@ public static class GlbModelBuilder
         }
     }
 
-    private static Own<PbrMaterial> ReadMaterial(in BuilderState state, in Material material)
+    private static Own<PbrMaterial> LoadMaterial(in LoaderState state, in Material material)
     {
         var textures = state.Gltf.textures;
         var matData = new MaterialData
@@ -223,22 +244,22 @@ public static class GlbModelBuilder
                     RoughnessFactor = pbr.roughnessFactor,
                     BaseColor = pbr.baseColorTexture switch
                     {
-                        TextureInfo baseColor => CreateTexture(state, textures.GetOrThrow(baseColor.index)),
+                        TextureInfo baseColor => LoadTexture(state, textures.GetOrThrow(baseColor.index)),
                         null => Own<Texture2D>.None,
                     },
                     BaseColorSampler = pbr.baseColorTexture switch
                     {
-                        TextureInfo baseColor => CreateSampler(state, textures.GetOrThrow(baseColor.index)),
+                        TextureInfo baseColor => LoadSampler(state, textures.GetOrThrow(baseColor.index)),
                         null => Own<Sampler>.None,
                     },
                     MetallicRoughness = pbr.metallicRoughnessTexture switch
                     {
-                        TextureInfo metallicRoughness => CreateTexture(state, textures.GetOrThrow(metallicRoughness.index)),
+                        TextureInfo metallicRoughness => LoadTexture(state, textures.GetOrThrow(metallicRoughness.index)),
                         null => Own<Texture2D>.None,
                     },
                     MetallicRoughnessSampler = pbr.metallicRoughnessTexture switch
                     {
-                        TextureInfo metallicRoughness => CreateSampler(state, textures.GetOrThrow(metallicRoughness.index)),
+                        TextureInfo metallicRoughness => LoadSampler(state, textures.GetOrThrow(metallicRoughness.index)),
                         null => Own<Sampler>.None,
                     },
                 },
@@ -250,8 +271,8 @@ public static class GlbModelBuilder
                 {
                     Scale = normal.scale,
                     UVIndex = normal.texCoord,
-                    Texture = CreateTexture(state, textures.GetOrThrow(normal.index)),
-                    Sampler = CreateSampler(state, textures.GetOrThrow(normal.index)),
+                    Texture = LoadTexture(state, textures.GetOrThrow(normal.index)),
+                    Sampler = LoadSampler(state, textures.GetOrThrow(normal.index)),
                 },
                 null => null,
             },
@@ -261,8 +282,8 @@ public static class GlbModelBuilder
                 {
                     Factor = material.emissiveFactor,
                     UVIndex = emissive.texCoord,
-                    Texture = CreateTexture(state, textures.GetOrThrow(emissive.index)),
-                    Sampler = CreateSampler(state, textures.GetOrThrow(emissive.index)),
+                    Texture = LoadTexture(state, textures.GetOrThrow(emissive.index)),
+                    Sampler = LoadSampler(state, textures.GetOrThrow(emissive.index)),
                 },
                 null => null,
             },
@@ -272,8 +293,8 @@ public static class GlbModelBuilder
                 {
                     Strength = occlusion.strength,
                     UVIndex = occlusion.texCoord,
-                    Texture = CreateTexture(state, textures.GetOrThrow(occlusion.index)),
-                    Sampler = CreateSampler(state, textures.GetOrThrow(occlusion.index)),
+                    Texture = LoadTexture(state, textures.GetOrThrow(occlusion.index)),
+                    Sampler = LoadSampler(state, textures.GetOrThrow(occlusion.index)),
                 },
                 null => null,
             },
@@ -288,19 +309,19 @@ public static class GlbModelBuilder
             matData.Normal!.Value.Sampler);
     }
 
-    private static Own<Texture2D> CreateTexture(in BuilderState state, in Texture tex)
+    private static Own<Texture2D> LoadTexture(in LoaderState state, in Texture tex)
     {
         var gltf = state.Gltf;
         using var image = tex.source switch
         {
-            uint index => ReadImage(in state, in gltf.images.GetOrThrow(index)),
+            uint index => LoadImage(in state, in gltf.images.GetOrThrow(index)),
             _ => default,
         };
 
         return Texture2D.CreateWithAutoMipmap(state.Screen, image, TextureFormat.Rgba8UnormSrgb, TextureUsages.CopySrc | TextureUsages.TextureBinding);
     }
 
-    private static Own<Sampler> CreateSampler(in BuilderState state, in Texture tex)
+    private static Own<Sampler> LoadSampler(in LoaderState state, in Texture tex)
     {
         var gltf = state.Gltf;
         switch(tex.sampler) {
@@ -374,10 +395,10 @@ public static class GlbModelBuilder
         ExistingMemory,
     }
 
-    private unsafe static BufferData AccessData(in BuilderState state, in Accessor accessor)
+    private unsafe static BufferData AccessData(in LoaderState state, in Accessor accessor)
     {
         var gltf = state.Gltf;
-        if(accessor.bufferView.TryGetValue(out var bufferViewNum) == false) {
+        if(accessor.bufferView is uint bufferViewNum == false) {
             throw new InvalidOperationException("bufferView is not specified in accessor.");
         }
         ref readonly var bufferView = ref gltf.bufferViews.GetOrThrow(bufferViewNum);
@@ -393,7 +414,7 @@ public static class GlbModelBuilder
         };
     }
 
-    private unsafe static GlbBinaryData ReadBufferView(in BuilderState state, in BufferView bufferView)
+    private unsafe static GlbBinaryData ReadBufferView(in LoaderState state, in BufferView bufferView)
     {
         var gltf = state.Gltf;
         ref readonly var buffer = ref gltf.buffers.GetOrThrow(bufferView.buffer);
@@ -404,25 +425,25 @@ public static class GlbModelBuilder
             return bin;
         }
         else {
-            ThrowUriNotSupported();
+            ThrowHelper.ThrowUriNotSupported();
             return default;
         }
     }
 
-    private unsafe static HI.Image ReadImage(in BuilderState state, in Image image)
+    private unsafe static HI.Image LoadImage(in LoaderState state, in Image image)
     {
         var gltf = state.Gltf;
         if(image.uri != null) {
-            ThrowUriNotSupported();
+            ThrowHelper.ThrowUriNotSupported();
         }
 
         if(image.bufferView.TryGetValue(out var bufferViewNum) == false) {
-            ThrowInvalidGlb();
+            ThrowHelper.ThrowInvalidGlb();
         }
         ref readonly var bufferView = ref gltf.bufferViews.GetOrThrow(bufferViewNum);
         var bin = ReadBufferView(in state, in bufferView);
         if(image.mimeType.TryGetValue(out var mimeType) == false) {
-            ThrowInvalidGlb();
+            ThrowHelper.ThrowInvalidGlb();
         }
         using var stream = new PointerMemoryStream(bin.Ptr, bin.ByteLength);
 
@@ -434,15 +455,15 @@ public static class GlbModelBuilder
         };
     }
 
-    private record struct BufferData(
-        IntPtr P,
-        nuint ByteLength,
-        nuint? ByteStride,
-        nuint Count,
-        AccessorType Type,
-        AccessorComponentType ComponentType
-    )
+    private record struct BufferData
     {
+        public required IntPtr P;
+        public required nuint ByteLength;
+        public required nuint? ByteStride;
+        public required nuint Count;
+        public required AccessorType Type;
+        public required AccessorComponentType ComponentType;
+
         public readonly unsafe void* Ptr => (void*)P;
 
         public readonly unsafe void CopyToVertexField<TVertex, TField>(TVertex* vertices, uint fieldOffset)
@@ -473,127 +494,41 @@ public static class GlbModelBuilder
                 VertexAccessor.GetRefField<TVertex, TField>(ref vertices[i], fieldOffset) = *(TField*)(ptr + byteStride * i);
             }
         }
-    }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ref T GetItemOrThrow<T>(T[]? array, uint index)
-    {
-        if(array == null) {
-            ThrowInvalidGlb();
-        }
-        return ref array[index];
-    }
-
-    private unsafe static void ReverseEndianUInt32(uint* p, nuint count)
-    {
-        for(nuint i = 0; i < count; i++) {
-            p[i] = ((p[i] & 0x0000_00FF) << 24) + ((p[i] & 0x0000_FF00) << 8) + ((p[i] & 0x00FF_0000) >> 8) + ((p[i] & 0xFF00_0000) >> 24);
-        }
-    }
-
-    [DoesNotReturn]
-    [DebuggerHidden]
-    private static void ThrowInvalidGlb() => throw new FormatException("invalid glb");
-
-    [DoesNotReturn]
-    [DebuggerHidden]
-    private static void ThrowUriNotSupported() => throw new NotSupportedException("Data from URI is not supported.");
-
-    private static unsafe void ConvertUInt16ToUInt32(ushort* src, uint* dest, nuint elementCount)
-    {
-        if(Sse2.IsSupported && Avx2.IsSupported) {
-            // extend each packed u16 to u32
-            //
-            // <u16, u16, u16, u16, u16, u16, u16, u16> (128 bits)
-            //   |    |    |    |    |    |    |    |
-            //   |    |    |    |    |    |    |    | 
-            // <u32, u32, u32, u32, u32, u32, u32, u32> (256 bits)
-
-            var (n, m) = Math.DivRem(elementCount, 8);
-
-            const uint LoopUnrollFactor = 4;
-            var (n1, n2) = Math.DivRem(n, LoopUnrollFactor);
-            for(nuint i = 0; i < n1; i++) {
-                var x = i * 8 * LoopUnrollFactor;
-                Unsafe.As<uint, Vector256<int>>(ref dest[x]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x]));
-                Unsafe.As<uint, Vector256<int>>(ref dest[x + 8]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 8]));
-                Unsafe.As<uint, Vector256<int>>(ref dest[x + 16]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 16]));
-                Unsafe.As<uint, Vector256<int>>(ref dest[x + 24]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 24]));
-            }
-            var offset = n1 * 8 * LoopUnrollFactor;
-            for(nuint i = 0; i < n2; i++) {
-                var x = offset + i * 8;
-                Unsafe.As<uint, Vector256<int>>(ref dest[x]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x]));
-            }
-            offset += n2 * 8;
-            for(nuint i = 0; i < m; i++) {
-                dest[offset + i] = (uint)src[offset + i];
-            }
-        }
-        else {
-            NonVectorFallback(src, dest, elementCount);
-        }
-
-        static void NonVectorFallback(ushort* src, uint* dest, nuint elementCount)
+        public readonly unsafe void StoreIndicesAsUInt32(uint* dest)
         {
-            for(nuint i = 0; i < elementCount; i++) {
-                dest[i] = (uint)src[i];
+            var elementCount = Count;
+            switch(ComponentType) {
+                case AccessorComponentType.UnsignedByte: {
+                    PrimitiveHelper.ConvertUInt8ToUInt32((byte*)Ptr, dest, elementCount);
+                    break;
+                }
+                case AccessorComponentType.UnsignedShort: {
+                    PrimitiveHelper.ConvertUInt16ToUInt32((ushort*)Ptr, dest, elementCount);
+                    break;
+                }
+                case AccessorComponentType.UnsignedInt: {
+                    System.Buffer.MemoryCopy(Ptr, dest, ByteLength, ByteLength);
+                    if(BitConverter.IsLittleEndian == false) {
+                        PrimitiveHelper.ReverseEndianUInt32(dest, elementCount);
+                    }
+                    break;
+                }
+                default: {
+                    Debug.Fail("It should not be possible to reach here.");
+                    break;
+                }
+
             }
         }
     }
 
-    private static unsafe void ConvertUInt8ToUInt32(byte* src, uint* dest, nuint elementCount)
-    {
-        if(Sse2.IsSupported && Avx2.IsSupported) {
-            // extend each packed u8 to u32
-            // 
-            // (uint8 * 16) is packed in 128 bits,
-            // but 'Avx2.ConvertToVector256Int32' method converts only eight packed uint8 in lower 64 bits.
-
-            // 128 bits
-            // <u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8>
-            //                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            //                                              | lower 64 bits
-            // 256 bits                                     |
-            // <u32, u32, u32, u32, u32, u32, u32, u32>  <--'
-
-            var (n, m) = Math.DivRem(elementCount, 8);
-
-            const uint LoopUnrollFactor = 4;
-            var (n1, n2) = Math.DivRem(n, LoopUnrollFactor);
-            for(nuint i = 0; i < n1; i++) {
-                var x = i * 8 * LoopUnrollFactor;
-                Unsafe.As<uint, Vector256<int>>(ref dest[x]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x]));
-                Unsafe.As<uint, Vector256<int>>(ref dest[x + 8]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 8]));
-                Unsafe.As<uint, Vector256<int>>(ref dest[x + 16]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 16]));
-                Unsafe.As<uint, Vector256<int>>(ref dest[x + 24]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 24]));
-            }
-            var offset = n1 * 8 * LoopUnrollFactor;
-            for(nuint i = 0; i < n2; i++) {
-                var x = offset + i * 8;
-                Unsafe.As<uint, Vector256<int>>(ref dest[x]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x]));
-            }
-            offset += n2 * 8;
-            for(nuint i = 0; i < m; i++) {
-                dest[offset + i] = (uint)src[offset + i];
-            }
-        }
-        else {
-            NonVectorFallback(src, dest, elementCount);
-        }
-
-        static void NonVectorFallback(byte* src, uint* dest, nuint elementCount)
-        {
-            for(nuint i = 0; i < elementCount; i++) {
-                dest[i] = (uint)src[i];
-            }
-        }
-    }
-
-    private readonly record struct BuilderState
+    private readonly record struct LoaderState
     {
         public required GlbObject Glb { get; init; }
         public required PbrLayer Layer { get; init; }
+        public required CancellationToken Ct { get; init; }
+
         public Screen Screen => Layer.Screen;
 
         public readonly GltfObject Gltf => Glb.Gltf;
@@ -654,11 +589,120 @@ file static class LocalExtensions
     }
 }
 
+file static class PrimitiveHelper
+{
+    public static unsafe void ConvertUInt16ToUInt32(ushort* src, uint* dest, nuint elementCount)
+    {
+        if(Sse2.IsSupported && Avx2.IsSupported) {
+            // extend each packed u16 to u32
+            //
+            // <u16, u16, u16, u16, u16, u16, u16, u16> (128 bits)
+            //   |    |    |    |    |    |    |    |
+            //   |    |    |    |    |    |    |    | 
+            // <u32, u32, u32, u32, u32, u32, u32, u32> (256 bits)
+
+            var (n, m) = Math.DivRem(elementCount, 8);
+
+            const uint LoopUnrollFactor = 4;
+            var (n1, n2) = Math.DivRem(n, LoopUnrollFactor);
+            for(nuint i = 0; i < n1; i++) {
+                var x = i * 8 * LoopUnrollFactor;
+                Unsafe.As<uint, Vector256<int>>(ref dest[x]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x]));
+                Unsafe.As<uint, Vector256<int>>(ref dest[x + 8]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 8]));
+                Unsafe.As<uint, Vector256<int>>(ref dest[x + 16]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 16]));
+                Unsafe.As<uint, Vector256<int>>(ref dest[x + 24]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 24]));
+            }
+            var offset = n1 * 8 * LoopUnrollFactor;
+            for(nuint i = 0; i < n2; i++) {
+                var x = offset + i * 8;
+                Unsafe.As<uint, Vector256<int>>(ref dest[x]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x]));
+            }
+            offset += n2 * 8;
+            for(nuint i = 0; i < m; i++) {
+                dest[offset + i] = (uint)src[offset + i];
+            }
+        }
+        else {
+            NonVectorFallback(src, dest, elementCount);
+        }
+
+        static void NonVectorFallback(ushort* src, uint* dest, nuint elementCount)
+        {
+            for(nuint i = 0; i < elementCount; i++) {
+                dest[i] = (uint)src[i];
+            }
+        }
+    }
+
+    public static unsafe void ConvertUInt8ToUInt32(byte* src, uint* dest, nuint elementCount)
+    {
+        if(Sse2.IsSupported && Avx2.IsSupported) {
+            // extend each packed u8 to u32
+            // 
+            // (uint8 * 16) is packed in 128 bits,
+            // but 'Avx2.ConvertToVector256Int32' method converts only eight packed uint8 in lower 64 bits.
+
+            // 128 bits
+            // <u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8>
+            //                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            //                                              | lower 64 bits
+            // 256 bits                                     |
+            // <u32, u32, u32, u32, u32, u32, u32, u32>  <--'
+
+            var (n, m) = Math.DivRem(elementCount, 8);
+
+            const uint LoopUnrollFactor = 4;
+            var (n1, n2) = Math.DivRem(n, LoopUnrollFactor);
+            for(nuint i = 0; i < n1; i++) {
+                var x = i * 8 * LoopUnrollFactor;
+                Unsafe.As<uint, Vector256<int>>(ref dest[x]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x]));
+                Unsafe.As<uint, Vector256<int>>(ref dest[x + 8]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 8]));
+                Unsafe.As<uint, Vector256<int>>(ref dest[x + 16]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 16]));
+                Unsafe.As<uint, Vector256<int>>(ref dest[x + 24]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x + 24]));
+            }
+            var offset = n1 * 8 * LoopUnrollFactor;
+            for(nuint i = 0; i < n2; i++) {
+                var x = offset + i * 8;
+                Unsafe.As<uint, Vector256<int>>(ref dest[x]) = Avx2.ConvertToVector256Int32(Sse2.LoadVector128(&src[x]));
+            }
+            offset += n2 * 8;
+            for(nuint i = 0; i < m; i++) {
+                dest[offset + i] = (uint)src[offset + i];
+            }
+        }
+        else {
+            NonVectorFallback(src, dest, elementCount);
+        }
+
+        static void NonVectorFallback(byte* src, uint* dest, nuint elementCount)
+        {
+            for(nuint i = 0; i < elementCount; i++) {
+                dest[i] = (uint)src[i];
+            }
+        }
+    }
+
+    public unsafe static void ReverseEndianUInt32(uint* p, nuint count)
+    {
+        for(nuint i = 0; i < count; i++) {
+            p[i] = ((p[i] & 0x0000_00FF) << 24) + ((p[i] & 0x0000_FF00) << 8) + ((p[i] & 0x00FF_0000) >> 8) + ((p[i] & 0xFF00_0000) >> 24);
+        }
+    }
+}
+
 internal static class ThrowHelper
 {
     [DoesNotReturn]
     [DebuggerHidden]
     public static void ThrowFormat(string message) => throw new FormatException(message);
+
+    [DoesNotReturn]
+    [DebuggerHidden]
+    public static void ThrowInvalidGlb() => throw new FormatException("invalid glb");
+
+    [DoesNotReturn]
+    [DebuggerHidden]
+    public static void ThrowUriNotSupported() => throw new NotSupportedException("Data from URI is not supported.");
 }
 
 internal static class ErrorMessage

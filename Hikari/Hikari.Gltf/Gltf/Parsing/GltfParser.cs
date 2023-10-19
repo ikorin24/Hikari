@@ -13,7 +13,7 @@ using Hikari.Gltf.Internal;
 
 namespace Hikari.Gltf.Parsing;
 
-internal static class GltfParser
+internal unsafe static class GltfParser
 {
     private const uint ChunkType_Json = 0x4E4F534A;
     private const uint ChunkType_Bin = 0x004E4942;
@@ -30,13 +30,7 @@ internal static class GltfParser
     {
         public override nuint Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if(Unsafe.SizeOf<nuint>() == 4) {
-                return reader.GetUInt32();
-            }
-            if(Unsafe.SizeOf<nuint>() == 8) {
-                return (nuint)reader.GetUInt64();
-            }
-            throw new NotSupportedException();
+            return checked((nuint)reader.GetUInt64());
         }
 
         public override void Write(Utf8JsonWriter writer, nuint value, JsonSerializerOptions options) => throw new NotSupportedException();
@@ -71,7 +65,7 @@ internal static class GltfParser
         return gltf;
     }
 
-    public unsafe static GltfObject ParseGltf(void* data, nuint length)
+    public static GltfObject ParseGltf(void* data, nuint length)
     {
         if(length > int.MaxValue) {
             using var stream = new PointerMemoryStream((byte*)data, length);
@@ -87,7 +81,7 @@ internal static class GltfParser
         }
     }
 
-    private unsafe static GltfObject ParseGltfPrivate(in byte data, nuint length)
+    private static GltfObject ParseGltfPrivate(in byte data, nuint length)
     {
         if(length > int.MaxValue) {
             fixed(byte* ptr = &data) {
@@ -105,7 +99,7 @@ internal static class GltfParser
         }
     }
 
-    public unsafe static GlbObject ParseGlbFile(string filePath)
+    public static GlbObject ParseGlbFile(string filePath, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(filePath);
         using var handle = File.OpenHandle(filePath);
@@ -113,16 +107,16 @@ internal static class GltfParser
         using var buf = new NativeBuffer(fileSize);
         if(buf.TryGetSpan(out var span)) {
             RandomAccess.Read(handle, span, 0);
-            return ParseGlb(span);
+            return ParseGlb(span, ct);
         }
         else {
             var memories = buf.GetMemories();
             RandomAccess.Read(handle, memories, 0);
-            return ParseGlb(buf.Ptr, buf.ByteLength);
+            return ParseGlb(buf.Ptr, buf.ByteLength, ct);
         }
     }
 
-    public static unsafe GlbObject ParseGlb(ResourceFile file, CancellationToken ct)
+    public static GlbObject ParseGlb(ResourceFile file, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         if(file.TryGetHandle(out var handle)) {
@@ -130,7 +124,7 @@ internal static class GltfParser
             void* ptr = NativeMemory.Alloc(len);
             try {
                 handle.Read(ptr, len, 0);
-                return ParseGlb(ptr, len);
+                return ParseGlb(ptr, len, ct);
             }
             finally {
                 NativeMemory.Free(ptr);
@@ -150,7 +144,7 @@ internal static class GltfParser
                     pos += (ulong)readlen;
                     if(readlen == 0) { break; }
                 }
-                return ParseGlb(ptr, len);
+                return ParseGlb(ptr, len, ct);
             }
             finally {
                 NativeMemory.Free(ptr);
@@ -158,20 +152,21 @@ internal static class GltfParser
         }
     }
 
-    public static GlbObject ParseGlb(ReadOnlySpan<byte> data)
+    public static GlbObject ParseGlb(ReadOnlySpan<byte> data, CancellationToken ct)
     {
-        return ParseGlbCore(in MemoryMarshal.GetReference(data), (nuint)data.Length);
+        return ParseGlbCore(in MemoryMarshal.GetReference(data), (nuint)data.Length, ct);
     }
 
-    public unsafe static GlbObject ParseGlb(void* data, nuint length)
+    public static GlbObject ParseGlb(void* data, nuint length, CancellationToken ct)
     {
-        return ParseGlbCore(in *(byte*)data, length);
+        return ParseGlbCore(in *(byte*)data, length, ct);
     }
 
-    private static GlbObject ParseGlbCore(in byte data, nuint length)
+    private static GlbObject ParseGlbCore(in byte data, nuint length, CancellationToken ct)
     {
         // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#glb-stored-buffer
 
+        ct.ThrowIfCancellationRequested();
         GlbObject? glb = null;
         try {
             // --- Header [12 bytes] ---
@@ -190,11 +185,12 @@ internal static class GltfParser
                 if(chunkType != ChunkType_Json) {
                     throw new FormatException("Chunk type must be 'JSON' (chunk 0)");
                 }
-                var gltf = ParseGltfPrivate(in AddOffset(data, 20), chunkLen);
+                var gltf = ParseGltfPrivate(in UnsafeEx.AddByteOffset(data, 20), chunkLen);
                 pos = 20 + chunkLen;
                 glb = new GlbObject(gltf);
             }
 
+            ct.ThrowIfCancellationRequested();
             // --- Chunk 1 (Binary Buffer) ---
             {
                 pos += (pos % 4) switch
@@ -209,7 +205,7 @@ internal static class GltfParser
                 pos += 4;
                 var chunkType = ReadUInt32(in data, pos);
                 pos += 4;
-                ref readonly var chunkData = ref AddOffset(in data, pos);
+                ref readonly var chunkData = ref UnsafeEx.AddByteOffset(in data, pos);
                 pos += chunkLen;
                 if(chunkType != ChunkType_Bin) { throw new FormatException("Chunk must be 'BIN' (chunk 1)"); }
 
@@ -224,6 +220,7 @@ internal static class GltfParser
 
             // --- Chunk n ---
             while(true) {
+                ct.ThrowIfCancellationRequested();
                 pos += (pos % 4) switch
                 {
                     1 => 3,
@@ -239,14 +236,13 @@ internal static class GltfParser
                 pos += 4;
                 var chunkType = ReadUInt32(in data, pos);
                 pos += 4;
-                ref readonly var chunkData = ref AddOffset(in data, pos);
+                //ref readonly var chunkData = ref AddOffset(in data, pos);
+                ref readonly var chunkData = ref UnsafeEx.AddByteOffset(in data, pos);
                 pos += chunkLen;
                 if(chunkType == ChunkType_Bin) {
                     var binBuf = glb.CreateNewBuffer(chunkLen);
-                    unsafe {
-                        fixed(void* source = &chunkData) {
-                            System.Buffer.MemoryCopy(source, binBuf.Ptr, binBuf.byteLength, chunkLen);
-                        }
+                    fixed(void* source = &chunkData) {
+                        System.Buffer.MemoryCopy(source, binBuf.Ptr, binBuf.byteLength, chunkLen);
                     }
                 }
             }
@@ -263,12 +259,6 @@ internal static class GltfParser
     private static uint ReadUInt32(in byte dataHead, nuint offset)
     {
         return BinaryPrimitives.ReadUInt32LittleEndian(MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in dataHead), offset), sizeof(uint)));
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ref readonly byte AddOffset(in byte data, nuint offset)
-    {
-        return ref Unsafe.AddByteOffset(ref Unsafe.AsRef(in data), offset);
     }
 
     private static void ThrowIfGltfIsNull([NotNull] GltfObject? gltf)
