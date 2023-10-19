@@ -86,6 +86,7 @@ public static class GlbModelLoader
 
     private static ITreeModel LoadNode(in LoaderState state, in Node node)
     {
+        state.Ct.ThrowIfCancellationRequested();
         var gltf = state.Gltf;
 
         ITreeModel model;
@@ -95,7 +96,7 @@ public static class GlbModelLoader
                 throw new NotImplementedException();        // TODO:
             }
             //for(int i = 0; i < meshPrimitives.Length; i++) {
-            //    var (mesh, material) = ReadMeshPrimitive<Vertex>(in state, in meshPrimitives[i]);
+            //    var (mesh, material) = LoadMeshAndMaterial<Vertex>(in state, in meshPrimitives[i]);
             //}
             var (mesh, material) = LoadMeshAndMaterial<Vertex>(in state, in meshPrimitives[0]);
             model = new PbrModel(mesh, material)
@@ -126,6 +127,7 @@ public static class GlbModelLoader
     private unsafe static (Own<Mesh<TVertex>>, Own<PbrMaterial>) LoadMeshAndMaterial<TVertex>(in LoaderState state, in MeshPrimitive meshPrimitive)
         where TVertex : unmanaged, IVertex, IVertexPosition, IVertexUV, IVertexNormal
     {
+        state.Ct.ThrowIfCancellationRequested();
         var materials = state.Gltf.materials;
         var accessors = state.Gltf.accessors;
         var material = meshPrimitive.material switch
