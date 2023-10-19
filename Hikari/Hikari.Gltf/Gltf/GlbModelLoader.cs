@@ -130,11 +130,12 @@ public static class GlbModelLoader
         state.Ct.ThrowIfCancellationRequested();
         var materials = state.Gltf.materials;
         var accessors = state.Gltf.accessors;
-        var material = meshPrimitive.material switch
+        var materialData = meshPrimitive.material switch
         {
-            uint index => LoadMaterial(in state, in materials.GetOrThrow(index)),
-            null => Own<PbrMaterial>.None,
+            uint index => LoadMaterialData(in state, in materials.GetOrThrow(index)),
+            null => MaterialData.Default,
         };
+
         if(meshPrimitive.mode != MeshPrimitiveMode.Triangles) {
             throw new NotImplementedException();
         }
@@ -157,7 +158,6 @@ public static class GlbModelLoader
             else {
                 throw new NotSupportedException();
             }
-
 
             // normal
             if(attrs.NORMAL is uint normalAttr) {
@@ -210,6 +210,7 @@ public static class GlbModelLoader
             }
 
             var needToCalcTangent =
+                materialData.Normal.Texture.IsNone == false &&
                 attrs.POSITION.HasValue &&
                 attrs.NORMAL.HasValue &&
                 attrs.TEXCOORD_0.HasValue &&
@@ -224,6 +225,14 @@ public static class GlbModelLoader
             }
 
             var mesh = Mesh.Create(state.Screen, (TVertex*)vertices.Ptr, vertexCount, (uint*)indices.Ptr, indexCount, (Vector3*)tangents.Ptr, vertexCount);
+            var material = PbrMaterial.Create(
+                state.Layer.GetDefaultShader(),
+                materialData.Pbr.BaseColor,
+                materialData.Pbr.BaseColorSampler,
+                materialData.Pbr.MetallicRoughness,
+                materialData.Pbr.MetallicRoughnessSampler,
+                materialData.Normal.Texture,
+                materialData.Normal.Sampler);
             return (mesh, material);
         }
         finally {
@@ -232,10 +241,10 @@ public static class GlbModelLoader
         }
     }
 
-    private static Own<PbrMaterial> LoadMaterial(in LoaderState state, in Material material)
+    private static MaterialData LoadMaterialData(in LoaderState state, in Material material)
     {
         var textures = state.Gltf.textures;
-        var matData = new MaterialData
+        return new MaterialData
         {
             Pbr = material.pbrMetallicRoughness switch
             {
@@ -265,7 +274,7 @@ public static class GlbModelLoader
                         null => Own<Sampler>.None,
                     },
                 },
-                null => null,
+                null => MaterialData.PbrData.Default,
             },
             Normal = material.normalTexture switch
             {
@@ -276,7 +285,7 @@ public static class GlbModelLoader
                     Texture = LoadTexture(state, textures.GetOrThrow(normal.index)),
                     Sampler = LoadSampler(state, textures.GetOrThrow(normal.index)),
                 },
-                null => null,
+                null => MaterialData.NormalData.Default,
             },
             Emissive = material.emissiveTexture switch
             {
@@ -287,7 +296,7 @@ public static class GlbModelLoader
                     Texture = LoadTexture(state, textures.GetOrThrow(emissive.index)),
                     Sampler = LoadSampler(state, textures.GetOrThrow(emissive.index)),
                 },
-                null => null,
+                null => MaterialData.EmissiveData.Default,
             },
             Occlusion = material.occlusionTexture switch
             {
@@ -298,17 +307,9 @@ public static class GlbModelLoader
                     Texture = LoadTexture(state, textures.GetOrThrow(occlusion.index)),
                     Sampler = LoadSampler(state, textures.GetOrThrow(occlusion.index)),
                 },
-                null => null,
+                null => MaterialData.OcclusionData.Default,
             },
         };
-        return PbrMaterial.Create(
-            state.Layer.GetDefaultShader(),
-            matData.Pbr!.Value.BaseColor,
-            matData.Pbr!.Value.BaseColorSampler,
-            matData.Pbr!.Value.MetallicRoughness,
-            matData.Pbr!.Value.MetallicRoughnessSampler,
-            matData.Normal!.Value.Texture,
-            matData.Normal!.Value.Sampler);
     }
 
     private static Own<Texture2D> LoadTexture(in LoaderState state, in Texture tex)
@@ -538,10 +539,18 @@ public static class GlbModelLoader
 
     private record struct MaterialData
     {
-        public required PbrData? Pbr;
-        public required NormalData? Normal;
-        public required EmissiveData? Emissive;
-        public required OcclusionData? Occlusion;
+        public required PbrData Pbr;
+        public required NormalData Normal;
+        public required EmissiveData Emissive;
+        public required OcclusionData Occlusion;
+
+        public static MaterialData Default => new()
+        {
+            Pbr = PbrData.Default,
+            Normal = NormalData.Default,
+            Emissive = EmissiveData.Default,
+            Occlusion = OcclusionData.Default,
+        };
 
         public record struct PbrData
         {
@@ -552,6 +561,17 @@ public static class GlbModelLoader
             public required Own<Sampler> BaseColorSampler;
             public required Own<Texture2D> MetallicRoughness;
             public required Own<Sampler> MetallicRoughnessSampler;
+
+            public static PbrData Default => new PbrData
+            {
+                BaseColorFactor = Vector4.One,
+                MetallicFactor = 1.0f,
+                RoughnessFactor = 1.0f,
+                BaseColor = Own<Texture2D>.None,
+                BaseColorSampler = Own<Sampler>.None,
+                MetallicRoughness = Own<Texture2D>.None,
+                MetallicRoughnessSampler = Own<Sampler>.None,
+            };
         }
 
         public record struct NormalData
@@ -560,6 +580,14 @@ public static class GlbModelLoader
             public required Own<Sampler> Sampler;
             public required float Scale;
             public required uint UVIndex;
+
+            public static NormalData Default => new()
+            {
+                Scale = 1.0f,
+                UVIndex = 0,
+                Texture = Own<Texture2D>.None,
+                Sampler = Own<Sampler>.None,
+            };
         }
         public record struct EmissiveData
         {
@@ -567,6 +595,14 @@ public static class GlbModelLoader
             public required Own<Sampler> Sampler;
             public required Vector3 Factor;
             public required uint UVIndex;
+
+            public static EmissiveData Default => new()
+            {
+                Factor = Vector3.Zero,
+                UVIndex = 0,
+                Texture = Own<Texture2D>.None,
+                Sampler = Own<Sampler>.None,
+            };
         }
 
         public record struct OcclusionData
@@ -575,6 +611,14 @@ public static class GlbModelLoader
             public required Own<Sampler> Sampler;
             public required float Strength;
             public required uint UVIndex;
+
+            public static OcclusionData Default => new()
+            {
+                Strength = 1.0f,
+                UVIndex = 0,
+                Texture = Own<Texture2D>.None,
+                Sampler = Own<Sampler>.None,
+            };
         }
     }
 }

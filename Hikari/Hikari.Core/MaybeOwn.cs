@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -73,12 +74,16 @@ public static class MaybeOwn
         self._inner.Validate();
     }
 
+    [DebuggerHidden]
     internal static void ThrowArgumentExceptionIfNone<T>(this MaybeOwn<T> self, [CallerArgumentExpression(nameof(self))] string? paramName = null)
         where T : notnull
     {
         if(self.IsNone) {
             Throw(paramName);
-            [DoesNotReturn] static void Throw(string? paramName) => throw new ArgumentException("the value is none", paramName);
+
+            [DoesNotReturn]
+            [DebuggerHidden]
+            static void Throw(string? paramName) => throw new ArgumentException("the value is none", paramName);
         }
     }
 
