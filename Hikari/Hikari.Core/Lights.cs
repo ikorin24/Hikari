@@ -6,8 +6,7 @@ public sealed class Lights
 {
     private readonly Screen _screen;
     private readonly DirectionalLight _dirLight;
-    private readonly Own<Buffer> _buffer;
-    private BufferData _bufferData;
+    private BufferCached<BufferData> _buffer;
     private readonly Own<BindGroupLayout> _bindGroupLayout;
     private readonly Own<BindGroup> _bindGroup;
 
@@ -17,15 +16,13 @@ public sealed class Lights
 
     public float AmbientStrength
     {
-        get => _bufferData.AmbientStrength;
+        get => _buffer.Value.AmbientStrength;
         set
         {
-            var newData = new BufferData
+            _buffer.WriteValue(new BufferData
             {
                 AmbientStrength = value,
-            };
-            _buffer.AsValue().WriteData(0, in newData);
-            _bufferData = newData;
+            });
         }
     }
 
@@ -36,11 +33,10 @@ public sealed class Lights
     {
         _screen = screen;
         _dirLight = new DirectionalLight(screen);
-        _bufferData = new BufferData
+        _buffer = new(screen, new BufferData
         {
             AmbientStrength = 0.2f,
-        };
-        _buffer = Buffer.CreateInitData(screen, _bufferData, BufferUsages.Storage);
+        }, BufferUsages.Storage | BufferUsages.CopyDst);
         _bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
         {
             Entries = new BindGroupLayoutEntry[]
@@ -61,7 +57,7 @@ public sealed class Lights
             Entries = new BindGroupEntry[]
             {
                 BindGroupEntry.Buffer(0, _dirLight.DataBuffer),
-                BindGroupEntry.Buffer(1, _buffer.AsValue()),
+                BindGroupEntry.Buffer(1, _buffer.Buffer),
             },
         });
     }
@@ -74,7 +70,6 @@ public sealed class Lights
         _bindGroup.Dispose();
     }
 
-    //[StructLayout(LayoutKind.Sequential, Pack = )]
     private record struct BufferData
     {
         public float AmbientStrength;
