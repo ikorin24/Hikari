@@ -634,9 +634,9 @@ public static class GlbModelLoader
             public static Vector4 DefaultBaseColorFactor() => Vector4.One;
             public static float DefaultMetallicFactor() => 1.0f;
             public static float DefaultRoughnessFactor() => 1.0f;
-            public static Own<Texture2D> DefaultBaseColor(Screen screen) => Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, ColorByte.Black);
+            public static Own<Texture2D> DefaultBaseColor(Screen screen) => Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, ColorByte.White);
             public static Own<Sampler> DefaultBaseColorSampler(Screen screen) => DefaultSampler(screen);
-            public static Own<Texture2D> DefaultMetallicRoughness(Screen screen) => Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, new ColorByte(255, 255, 0, 0));
+            public static Own<Texture2D> DefaultMetallicRoughness(Screen screen) => Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, ColorByte.White);
             public static Own<Sampler> DefaultMetallicRoughnessSampler(Screen screen) => DefaultSampler(screen);
         }
 
