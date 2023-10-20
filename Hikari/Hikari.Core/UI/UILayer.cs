@@ -205,7 +205,7 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
                 {
                     Entries = new[]
                     {
-                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.StorateReadOnly } ),
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.StorageReadOnly } ),
                     },
                 }).AsValue(out layout2),
             },

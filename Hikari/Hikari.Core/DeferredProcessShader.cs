@@ -29,13 +29,17 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             dir: vec4<f32>,
             color: vec4<f32>,
         }
+        struct LightData {
+            ambient_strength: f32,
+        }
         @group(0) @binding(0) var g_sampler: sampler;
         @group(0) @binding(1) var g0: texture_2d<f32>;
         @group(0) @binding(2) var g1: texture_2d<f32>;
         @group(0) @binding(3) var g2: texture_2d<f32>;
         @group(0) @binding(4) var g3: texture_2d<f32>;
         @group(1) @binding(0) var<uniform> camera: CameraMatrix;
-        @group(2) @binding(0) var<storage> dir_light: DirLightData;
+        @group(2) @binding(0) var<storage, read> dir_light: DirLightData;
+        @group(2) @binding(1) var<storage, read> light: LightData;
         @group(3) @binding(0) var shadowmap: texture_depth_2d;
         @group(3) @binding(1) var sm_sampler: sampler_comparison;
         @group(3) @binding(2) var<storage, read> lightMatrices: array<mat4x4<f32>>;
@@ -144,7 +148,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                         vis += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
                     }
                 }
-                visibility = vis / f32(sample_count);
+                visibility = vis / f32(sample_count) + light.ambient_strength;
             }
 
             if (cascade == cascade_count - 1u) {

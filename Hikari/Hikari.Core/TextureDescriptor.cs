@@ -346,6 +346,6 @@ public enum SamplerBindingType
 public enum BufferBindingType
 {
     [EnumMapTo(CH.BufferBindingType.Uniform)] Uniform = 0,
-    [EnumMapTo(CH.BufferBindingType.Storate)] Storate = 1,
-    [EnumMapTo(CH.BufferBindingType.StorateReadOnly)] StorateReadOnly = 2,
+    [EnumMapTo(CH.BufferBindingType.Storage)] Storage = 1,
+    [EnumMapTo(CH.BufferBindingType.StorageReadOnly)] StorageReadOnly = 2,
 }

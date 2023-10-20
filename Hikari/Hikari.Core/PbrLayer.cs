@@ -72,7 +72,7 @@ public sealed class PbrLayer
                     Entries = new[]
                     {
                         BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new() { Type = BufferBindingType.Uniform }),
-                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex, new() { Type = BufferBindingType.StorateReadOnly }),
+                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex, new() { Type = BufferBindingType.StorageReadOnly }),
                     },
                 }).AsValue(out bgl0),
             },

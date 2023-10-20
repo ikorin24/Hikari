@@ -868,8 +868,8 @@ internal static class CH
     internal enum BufferBindingType
     {
         Uniform = 0,
-        Storate = 1,
-        StorateReadOnly = 2,
+        Storage = 1,
+        StorageReadOnly = 2,
     }
 
     internal enum SamplerBindingType
