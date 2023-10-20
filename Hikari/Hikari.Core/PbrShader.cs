@@ -68,10 +68,12 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
         }
 
         @group(0) @binding(0) var<uniform> u: UniformValue;
-        @group(0) @binding(1) var tex_sampler: sampler;
-        @group(0) @binding(2) var albedo_tex: texture_2d<f32>;
+        @group(0) @binding(1) var albedo_tex: texture_2d<f32>;
+        @group(0) @binding(2) var albedo_sampler: sampler;
         @group(0) @binding(3) var mr_tex: texture_2d<f32>;
-        @group(0) @binding(4) var normal_tex: texture_2d<f32>;
+        @group(0) @binding(4) var mr_sampler: sampler;
+        @group(0) @binding(5) var normal_tex: texture_2d<f32>;
+        @group(0) @binding(6) var normal_sampler: sampler;
         @group(1) @binding(0) var<uniform> c: CameraMatrix;
 
         @vertex fn vs_main(
@@ -97,13 +99,13 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
         @fragment fn fs_main(in: V2F) -> GBuffer {
             // TBN matrix: tangent space -> camera space
             var tbn = mat3x3<f32>(in.tangent_camera_coord, in.bitangent_camera_coord, in.normal_camera_coord);
-            var mrao: vec3<f32> = textureSample(mr_tex, tex_sampler, in.uv).rgb;
-            var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, tex_sampler, in.uv).rgb * 2.0 - 1.0);
+            var mrao: vec3<f32> = textureSample(mr_tex, mr_sampler, in.uv).rgb;
+            var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, normal_sampler, in.uv).rgb * 2.0 - 1.0);
 
             var output: GBuffer;
             output.g0 = vec4(in.pos_camera_coord, mrao.r);
             output.g1 = vec4(normal_camera_coord, mrao.g);
-            output.g2 = textureSample(albedo_tex, tex_sampler, in.uv);
+            output.g2 = textureSample(albedo_tex, albedo_sampler, in.uv);
             output.g3 = vec4(mrao.b, 1.0, 1.0, 1.0);
             return output;
         }

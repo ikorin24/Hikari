@@ -98,29 +98,31 @@ public sealed class PbrLayer
                 {
                     Entries = new[]
                     {
-                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new BufferBindingData
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new()
                         {
                             Type = BufferBindingType.Uniform,
                         }),
-                        BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Filtering),
-                        BindGroupLayoutEntry.Texture(2, ShaderStages.Fragment, new TextureBindingData
+                        BindGroupLayoutEntry.Texture(1, ShaderStages.Fragment, new()
                         {
                             ViewDimension = TextureViewDimension.D2,
                             Multisampled = false,
                             SampleType = TextureSampleType.FloatFilterable,
                         }),
-                        BindGroupLayoutEntry.Texture(3, ShaderStages.Fragment, new TextureBindingData
+                        BindGroupLayoutEntry.Sampler(2, ShaderStages.Fragment, SamplerBindingType.Filtering),
+                        BindGroupLayoutEntry.Texture(3, ShaderStages.Fragment, new()
                         {
                             ViewDimension = TextureViewDimension.D2,
                             Multisampled = false,
                             SampleType = TextureSampleType.FloatFilterable,
                         }),
-                        BindGroupLayoutEntry.Texture(4, ShaderStages.Fragment, new TextureBindingData
+                        BindGroupLayoutEntry.Sampler(4, ShaderStages.Fragment, SamplerBindingType.Filtering),
+                        BindGroupLayoutEntry.Texture(5, ShaderStages.Fragment, new()
                         {
                             ViewDimension = TextureViewDimension.D2,
                             Multisampled = false,
                             SampleType = TextureSampleType.FloatFilterable,
                         }),
+                        BindGroupLayoutEntry.Sampler(6, ShaderStages.Fragment, SamplerBindingType.Filtering),
                     },
                 }).AsValue(out bindGroupLayout0),
                 bindGroupLayout1,

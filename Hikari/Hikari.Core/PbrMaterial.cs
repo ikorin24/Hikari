@@ -88,15 +88,8 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
         MaybeOwn<Texture2D> metallicRoughness,
         MaybeOwn<Texture2D> normal)
     {
-        ArgumentNullException.ThrowIfNull(shader);
-        albedo.ThrowArgumentExceptionIfNone();
-        metallicRoughness.ThrowArgumentExceptionIfNone();
-        normal.ThrowArgumentExceptionIfNone();
-
         var screen = shader.Screen;
-        var lights = screen.Lights;
-        var uniformBuffer = Buffer.Create(screen, (usize)Unsafe.SizeOf<UniformValue>(), BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
-        var albedoSampler = Sampler.Create(screen, new()
+        var samplerOwn = Sampler.Create(screen, new()
         {
             AddressModeU = AddressMode.ClampToEdge,
             AddressModeV = AddressMode.ClampToEdge,
@@ -105,60 +98,11 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
             MinFilter = FilterMode.Linear,
             MipmapFilter = FilterMode.Linear,
         });
-        var metallicRoughnessSampler = Sampler.Create(screen, new()
-        {
-            AddressModeU = AddressMode.ClampToEdge,
-            AddressModeV = AddressMode.ClampToEdge,
-            AddressModeW = AddressMode.ClampToEdge,
-            MagFilter = FilterMode.Linear,
-            MinFilter = FilterMode.Linear,
-            MipmapFilter = FilterMode.Linear,
-        });
-        var normalSampler = Sampler.Create(screen, new()
-        {
-            AddressModeU = AddressMode.ClampToEdge,
-            AddressModeV = AddressMode.ClampToEdge,
-            AddressModeW = AddressMode.ClampToEdge,
-            MagFilter = FilterMode.Linear,
-            MinFilter = FilterMode.Linear,
-            MipmapFilter = FilterMode.Linear,
-        });
-        var bindGroup0 = BindGroup.Create(screen, new()
-        {
-            Layout = shader.Operation.BindGroupLayout0,
-            Entries = new BindGroupEntry[]
-            {
-                BindGroupEntry.Buffer(0, uniformBuffer.AsValue()),
-                BindGroupEntry.Sampler(1, albedoSampler.AsValue()),
-                BindGroupEntry.TextureView(2, albedo.AsValue().View),
-                BindGroupEntry.TextureView(3, metallicRoughness.AsValue().View),
-                BindGroupEntry.TextureView(4, normal.AsValue().View),
-            },
-        });
-
-        var shadowBindGroup0 = BindGroup.Create(screen, new()
-        {
-            Layout = shader.Operation.ShadowBindGroupLayout0,
-            Entries = new[]
-            {
-                BindGroupEntry.Buffer(0, uniformBuffer.AsValue()),
-                BindGroupEntry.Buffer(1, lights.DirectionalLight.LightMatricesBuffer),
-            },
-        });
-
-        var material = new PbrMaterial(
+        return Create(
             shader,
-            uniformBuffer,
-            albedo,
-            albedoSampler,
-            metallicRoughness,
-            metallicRoughnessSampler,
-            normal,
-            normalSampler,
-            bindGroup0,
-            shadowBindGroup0
-        );
-        return CreateOwn(material);
+            albedo, samplerOwn,
+            metallicRoughness, samplerOwn.AsValue(),
+            normal, samplerOwn.AsValue());
     }
 
     public static Own<PbrMaterial> Create(
@@ -187,10 +131,12 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
             Entries = new BindGroupEntry[]
             {
                 BindGroupEntry.Buffer(0, uniformBuffer.AsValue()),
-                BindGroupEntry.Sampler(1, albedoSampler.AsValue()), // TODO:
-                BindGroupEntry.TextureView(2, albedo.AsValue().View),
+                BindGroupEntry.TextureView(1, albedo.AsValue().View),
+                BindGroupEntry.Sampler(2, albedoSampler.AsValue()),
                 BindGroupEntry.TextureView(3, metallicRoughness.AsValue().View),
-                BindGroupEntry.TextureView(4, normal.AsValue().View),
+                BindGroupEntry.Sampler(4, metallicRoughnessSampler.AsValue()),
+                BindGroupEntry.TextureView(5, normal.AsValue().View),
+                BindGroupEntry.Sampler(6, normalSampler.AsValue()),
             },
         });
 
