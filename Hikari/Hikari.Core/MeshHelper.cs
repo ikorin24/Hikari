@@ -190,30 +190,34 @@ partial class MeshHelper
         }
     }
 
-    public static void CalcNormal(Span<Vertex> vertices, ReadOnlySpan<int> indices)  // TODO: something wrong
+    public static void CalcNormal<TVertex>(Span<TVertex> vertices, ReadOnlySpan<int> indices)  // TODO: something wrong
+        where TVertex : unmanaged, IVertex, IVertexNormal
     {
         if(indices.Length % 3 != 0) {
             ThrowArgumentIndicesLengthInvalid();
         }
 
         for(int i = 0; i < vertices.Length; i++) {
-            vertices[i].Normal = default;
+            VertexAccessor.RefNormal(ref vertices[i]) = default;
         }
 
         using var counts = new ValueTypeRentMemory<int>(vertices.Length, true);
         var faces = indices.MarshalCast<int, Face>();
         foreach(var f in faces) {
-            var n = Vector3.Cross(vertices[f.I1].Position - vertices[f.I0].Position, vertices[f.I2].Position - vertices[f.I0].Position).Normalized();
-            vertices[f.I0].Normal += n;
-            vertices[f.I1].Normal += n;
-            vertices[f.I2].Normal += n;
+            var n = Vector3.Cross(
+                VertexAccessor.RefPosition(ref vertices[f.I1]) - VertexAccessor.RefPosition(ref vertices[f.I0]),
+                VertexAccessor.RefPosition(ref vertices[f.I2]) - VertexAccessor.RefPosition(ref vertices[f.I0])).Normalized();
+
+            VertexAccessor.RefNormal(ref vertices[f.I0]) += n;
+            VertexAccessor.RefNormal(ref vertices[f.I1]) += n;
+            VertexAccessor.RefNormal(ref vertices[f.I2]) += n;
             counts[f.I0] += 1;
             counts[f.I1] += 1;
             counts[f.I2] += 1;
         }
 
         for(int i = 0; i < vertices.Length; i++) {
-            vertices[i].Normal /= counts[i];
+            VertexAccessor.RefNormal(ref vertices[i]) /= counts[i];
         }
     }
 

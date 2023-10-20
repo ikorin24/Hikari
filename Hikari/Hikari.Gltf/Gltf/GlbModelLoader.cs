@@ -144,6 +144,23 @@ public static class GlbModelLoader
         var indices = NativeBuffer.Empty;
         uint vertexCount;
         try {
+            // indices
+            var indexCount = 0u;
+            if(meshPrimitive.indices is uint indicesNum) {
+                ref readonly var indexAccessor = ref accessors.GetOrThrow(indicesNum);
+                if(indexAccessor is not
+                    {
+                        type: AccessorType.Scalar,
+                        componentType: AccessorComponentType.UnsignedByte or AccessorComponentType.UnsignedShort or AccessorComponentType.UnsignedInt
+                    }) {
+                    ThrowHelper.ThrowInvalidGlb();
+                }
+                var data = AccessData(state, indexAccessor);
+                indices = new NativeBuffer(data.Count * (nuint)sizeof(uint), false);
+                indexCount = (uint)data.Count;
+                data.StoreIndicesAsUInt32((uint*)indices.Ptr);
+            }
+
             // position
             if(attrs.POSITION is uint posAttr) {
                 ref readonly var position = ref accessors.GetOrThrow(posAttr);
@@ -159,6 +176,15 @@ public static class GlbModelLoader
                 throw new NotSupportedException();
             }
 
+            if(meshPrimitive.indices == null) {
+                // if not indexed, generate indices
+                uint* p = (uint*)indices.Ptr;
+                for(uint i = 0; i < vertexCount; i++) {
+                    p[i] = i;
+                }
+                indexCount = vertexCount;
+            }
+
             // normal
             if(attrs.NORMAL is uint normalAttr) {
                 ref readonly var normal = ref accessors.GetOrThrow(normalAttr);
@@ -167,6 +193,13 @@ public static class GlbModelLoader
                 }
                 var data = AccessData(state, normal);
                 data.CopyToVertexField<TVertex, Vector3>((TVertex*)vertices.Ptr, TVertex.NormalOffset);
+            }
+            else {
+                // TODO: Avoid using span for the case that the length is longer than int.MaxValue
+
+                var verticesSpan = new Span<TVertex>(vertices.Ptr, checked((int)vertexCount));
+                var indicesSpan = new Span<int>(indices.Ptr, checked((int)indexCount));
+                MeshHelper.CalcNormal(verticesSpan, indicesSpan);
             }
 
             // uv
@@ -192,27 +225,10 @@ public static class GlbModelLoader
                 static Vector3 ConvertData(in Vector4 d) => new Vector3(d.X, d.Y, d.Z) * d.W;   // W is -1 or 1 (left-hand or right-hand)
             }
 
-            // indices
-            var indexCount = 0u;
-            if(meshPrimitive.indices is uint indicesNum) {
-                ref readonly var indexAccessor = ref accessors.GetOrThrow(indicesNum);
-                if(indexAccessor is not
-                    {
-                        type: AccessorType.Scalar,
-                        componentType: AccessorComponentType.UnsignedByte or AccessorComponentType.UnsignedShort or AccessorComponentType.UnsignedInt
-                    }) {
-                    ThrowHelper.ThrowInvalidGlb();
-                }
-                var data = AccessData(state, indexAccessor);
-                indices = new NativeBuffer(data.Count * (nuint)sizeof(uint), false);
-                indexCount = (uint)data.Count;
-                data.StoreIndicesAsUInt32((uint*)indices.Ptr);
-            }
-
             var needToCalcTangent =
                 //materialData.Normal.Texture.IsNone == false &&
                 attrs.POSITION.HasValue &&
-                attrs.NORMAL.HasValue &&
+                //attrs.NORMAL.HasValue &&
                 attrs.TEXCOORD_0.HasValue &&
                 attrs.TANGENT.HasValue == false;
             if(needToCalcTangent) {
@@ -621,7 +637,7 @@ public static class GlbModelLoader
             {
                 Scale = 1.0f,
                 UVIndex = 0,
-                Texture = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 0, 0, 0)),
+                Texture = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(127, 127, 255, 255)),
                 Sampler = DefaultSampler(screen),
             };
         }
