@@ -40,6 +40,12 @@ internal static class TextureHelper
         //     ...
         // ]
 
+        Span<(Vector3u MipSize, u32 ByteLength)> mipData = stackalloc (Vector3u, u32)[(int)desc.MipLevelCount];
+        CalcMipDataSize(desc, mipData, out var totalByteSize);
+        if((uint)data.Length != totalByteSize) {
+            throw new ArgumentException($"length of {nameof(data)} should be {totalByteSize}, but actual {data.Length}");
+        }
+
         ArgumentNullException.ThrowIfNull(screen);
         var descNative = desc.ToNative();
         Rust.Box<Wgpu.Texture> textureNative;

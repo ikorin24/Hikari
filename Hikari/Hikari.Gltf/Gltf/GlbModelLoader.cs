@@ -136,6 +136,20 @@ public static class GlbModelLoader
             null => MaterialData.CreateDefault(state.Screen),
         };
 
+
+        //materialData.Pbr.BaseColor.AsValue().ReadCallback((span, texture) =>
+        //{
+        //    var s = span.MarshalCast<byte, ColorByte>();
+        //    var image = new HI.ReadOnlyImageRef(s, (int)texture.Width, (int)texture.Height);
+        //    HI.ImageExtensions.SaveAsPng(image, "basecolor.png");
+        //});
+        //materialData.Pbr.MetallicRoughness.AsValue().ReadCallback((span, texture) =>
+        //{
+        //    var s = span.MarshalCast<byte, ColorByte>();
+        //    var image = new HI.ReadOnlyImageRef(s, (int)texture.Width, (int)texture.Height);
+        //    HI.ImageExtensions.SaveAsPng(image, "MetallicRoughness.png");
+        //});
+
         if(meshPrimitive.mode != MeshPrimitiveMode.Triangles) {
             throw new NotImplementedException();
         }
@@ -287,7 +301,7 @@ public static class GlbModelLoader
                     BaseColor = pbr.baseColorTexture switch
                     {
                         TextureInfo baseColor => LoadTexture(state, textures.GetOrThrow(baseColor.index), TextureFormat.Rgba8UnormSrgb),
-                        null => Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding, ColorByte.Black),
+                        null => MaterialData.PbrData.DefaultBaseColor(screen),
                     },
                     BaseColorSampler = pbr.baseColorTexture switch
                     {
@@ -297,7 +311,7 @@ public static class GlbModelLoader
                     MetallicRoughness = pbr.metallicRoughnessTexture switch
                     {
                         TextureInfo metallicRoughness => LoadTexture(state, textures.GetOrThrow(metallicRoughness.index), TextureFormat.Rgba8Unorm),
-                        null => Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 0, 0, 0)),
+                        null => MaterialData.PbrData.DefaultMetallicRoughness(screen),
                     },
                     MetallicRoughnessSampler = pbr.metallicRoughnessTexture switch
                     {
@@ -352,7 +366,7 @@ public static class GlbModelLoader
             _ => HI.Image.Empty,
         };
 
-        return Texture2D.CreateWithAutoMipmap(state.Screen, image, format, TextureUsages.TextureBinding);
+        return Texture2D.CreateWithAutoMipmap(state.Screen, image, format, TextureUsages.TextureBinding | TextureUsages.CopySrc);
     }
 
     private static Own<Sampler> LoadSampler(in LoaderState state, in Texture tex)
@@ -620,9 +634,9 @@ public static class GlbModelLoader
             public static Vector4 DefaultBaseColorFactor() => Vector4.One;
             public static float DefaultMetallicFactor() => 1.0f;
             public static float DefaultRoughnessFactor() => 1.0f;
-            public static Own<Texture2D> DefaultBaseColor(Screen screen) => Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding, ColorByte.Black);
+            public static Own<Texture2D> DefaultBaseColor(Screen screen) => Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, ColorByte.Black);
             public static Own<Sampler> DefaultBaseColorSampler(Screen screen) => DefaultSampler(screen);
-            public static Own<Texture2D> DefaultMetallicRoughness(Screen screen) => Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 0, 0, 0));
+            public static Own<Texture2D> DefaultMetallicRoughness(Screen screen) => Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, new ColorByte(255, 255, 0, 0));
             public static Own<Sampler> DefaultMetallicRoughnessSampler(Screen screen) => DefaultSampler(screen);
         }
 
@@ -637,7 +651,7 @@ public static class GlbModelLoader
             {
                 Scale = 1.0f,
                 UVIndex = 0,
-                Texture = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(127, 127, 255, 255)),
+                Texture = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, new ColorByte(127, 127, 255, 255)),
                 Sampler = DefaultSampler(screen),
             };
         }
@@ -652,7 +666,7 @@ public static class GlbModelLoader
             {
                 Factor = Vector3.Zero,
                 UVIndex = 0,
-                Texture = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 0, 0, 0)),
+                Texture = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, new ColorByte(0, 0, 0, 0)),
                 Sampler = DefaultSampler(screen),
             };
         }
@@ -668,7 +682,7 @@ public static class GlbModelLoader
             {
                 Strength = 1.0f,
                 UVIndex = 0,
-                Texture = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 0, 0, 0)),
+                Texture = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, new ColorByte(0, 0, 0, 0)),
                 Sampler = DefaultSampler(screen),
             };
         }
