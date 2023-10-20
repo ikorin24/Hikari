@@ -38,22 +38,6 @@ public sealed class PbrModel
 
     public bool HasChildren => _treeModelImpl.Children.Count > 0;
 
-    [Obsolete]      // TODO:
-    public PbrModel(
-        PbrShader shader,
-        MaybeOwn<Mesh<V>> mesh,
-        MaybeOwn<Texture2D> albedo,
-        MaybeOwn<Texture2D> metallicRoughness,
-        MaybeOwn<Texture2D> normal)
-        : this(
-            mesh, PbrMaterial.Create(shader, albedo, metallicRoughness, normal))
-    {
-        if(Mesh.TryGetOptionalTangent(out var tangent) == false) {
-            throw new ArgumentException("The mesh does not have Tangent vertex buffer", nameof(mesh));
-        }
-        _tangent = tangent;
-    }
-
     public PbrModel(MaybeOwn<Mesh<V>> mesh, Own<PbrMaterial> material)
         : base(mesh, material)
     {
