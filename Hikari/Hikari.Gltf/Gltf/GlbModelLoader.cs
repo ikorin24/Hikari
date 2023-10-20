@@ -133,7 +133,7 @@ public static class GlbModelLoader
         var materialData = meshPrimitive.material switch
         {
             uint index => LoadMaterialData(in state, in materials.GetOrThrow(index)),
-            null => MaterialData.Default,
+            null => MaterialData.CreateDefault(state.Screen),
         };
 
         if(meshPrimitive.mode != MeshPrimitiveMode.Triangles) {
@@ -210,7 +210,7 @@ public static class GlbModelLoader
             }
 
             var needToCalcTangent =
-                materialData.Normal.Texture.IsNone == false &&
+                //materialData.Normal.Texture.IsNone == false &&
                 attrs.POSITION.HasValue &&
                 attrs.NORMAL.HasValue &&
                 attrs.TEXCOORD_0.HasValue &&
@@ -244,6 +244,21 @@ public static class GlbModelLoader
     private static MaterialData LoadMaterialData(in LoaderState state, in Material material)
     {
         var textures = state.Gltf.textures;
+        var screen = state.Screen;
+
+        static Own<Sampler> DefaultSampler(Screen screen)
+        {
+            return Sampler.Create(screen, new SamplerDescriptor
+            {
+                AddressModeU = AddressMode.ClampToEdge,
+                AddressModeV = AddressMode.ClampToEdge,
+                AddressModeW = AddressMode.ClampToEdge,
+                MagFilter = FilterMode.Linear,
+                MinFilter = FilterMode.Linear,
+                MipmapFilter = FilterMode.Linear,
+            });
+        }
+
         return new MaterialData
         {
             Pbr = material.pbrMetallicRoughness switch
@@ -255,26 +270,26 @@ public static class GlbModelLoader
                     RoughnessFactor = pbr.roughnessFactor,
                     BaseColor = pbr.baseColorTexture switch
                     {
-                        TextureInfo baseColor => LoadTexture(state, textures.GetOrThrow(baseColor.index)),
-                        null => Own<Texture2D>.None,
+                        TextureInfo baseColor => LoadTexture(state, textures.GetOrThrow(baseColor.index), TextureFormat.Rgba8UnormSrgb),
+                        null => Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding, ColorByte.Black),
                     },
                     BaseColorSampler = pbr.baseColorTexture switch
                     {
                         TextureInfo baseColor => LoadSampler(state, textures.GetOrThrow(baseColor.index)),
-                        null => Own<Sampler>.None,
+                        null => DefaultSampler(screen),
                     },
                     MetallicRoughness = pbr.metallicRoughnessTexture switch
                     {
-                        TextureInfo metallicRoughness => LoadTexture(state, textures.GetOrThrow(metallicRoughness.index)),
-                        null => Own<Texture2D>.None,
+                        TextureInfo metallicRoughness => LoadTexture(state, textures.GetOrThrow(metallicRoughness.index), TextureFormat.Rgba8Unorm),
+                        null => Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 0, 0, 0)),
                     },
                     MetallicRoughnessSampler = pbr.metallicRoughnessTexture switch
                     {
                         TextureInfo metallicRoughness => LoadSampler(state, textures.GetOrThrow(metallicRoughness.index)),
-                        null => Own<Sampler>.None,
+                        null => DefaultSampler(screen),
                     },
                 },
-                null => MaterialData.PbrData.Default,
+                null => MaterialData.PbrData.CreateDefault(screen),
             },
             Normal = material.normalTexture switch
             {
@@ -282,10 +297,10 @@ public static class GlbModelLoader
                 {
                     Scale = normal.scale,
                     UVIndex = normal.texCoord,
-                    Texture = LoadTexture(state, textures.GetOrThrow(normal.index)),
+                    Texture = LoadTexture(state, textures.GetOrThrow(normal.index), TextureFormat.Rgba8Unorm),
                     Sampler = LoadSampler(state, textures.GetOrThrow(normal.index)),
                 },
-                null => MaterialData.NormalData.Default,
+                null => MaterialData.NormalData.CreateDefault(screen),
             },
             Emissive = material.emissiveTexture switch
             {
@@ -293,10 +308,10 @@ public static class GlbModelLoader
                 {
                     Factor = material.emissiveFactor,
                     UVIndex = emissive.texCoord,
-                    Texture = LoadTexture(state, textures.GetOrThrow(emissive.index)),
+                    Texture = LoadTexture(state, textures.GetOrThrow(emissive.index), TextureFormat.Rgba8Unorm),
                     Sampler = LoadSampler(state, textures.GetOrThrow(emissive.index)),
                 },
-                null => MaterialData.EmissiveData.Default,
+                null => MaterialData.EmissiveData.CreateDefault(screen),
             },
             Occlusion = material.occlusionTexture switch
             {
@@ -304,24 +319,24 @@ public static class GlbModelLoader
                 {
                     Strength = occlusion.strength,
                     UVIndex = occlusion.texCoord,
-                    Texture = LoadTexture(state, textures.GetOrThrow(occlusion.index)),
+                    Texture = LoadTexture(state, textures.GetOrThrow(occlusion.index), TextureFormat.Rgba8Unorm),
                     Sampler = LoadSampler(state, textures.GetOrThrow(occlusion.index)),
                 },
-                null => MaterialData.OcclusionData.Default,
+                null => MaterialData.OcclusionData.CreateDefault(screen),
             },
         };
     }
 
-    private static Own<Texture2D> LoadTexture(in LoaderState state, in Texture tex)
+    private static Own<Texture2D> LoadTexture(in LoaderState state, in Texture tex, TextureFormat format)
     {
         var gltf = state.Gltf;
         using var image = tex.source switch
         {
             uint index => LoadImage(in state, in gltf.images.GetOrThrow(index)),
-            _ => default,
+            _ => HI.Image.Empty,
         };
 
-        return Texture2D.CreateWithAutoMipmap(state.Screen, image, TextureFormat.Rgba8UnormSrgb, TextureUsages.CopySrc | TextureUsages.TextureBinding);
+        return Texture2D.CreateWithAutoMipmap(state.Screen, image, format, TextureUsages.TextureBinding);
     }
 
     private static Own<Sampler> LoadSampler(in LoaderState state, in Texture tex)
@@ -544,13 +559,26 @@ public static class GlbModelLoader
         public required EmissiveData Emissive;
         public required OcclusionData Occlusion;
 
-        public static MaterialData Default => new()
+        public static MaterialData CreateDefault(Screen screen) => new()
         {
-            Pbr = PbrData.Default,
-            Normal = NormalData.Default,
-            Emissive = EmissiveData.Default,
-            Occlusion = OcclusionData.Default,
+            Pbr = PbrData.CreateDefault(screen),
+            Normal = NormalData.CreateDefault(screen),
+            Emissive = EmissiveData.CreateDefault(screen),
+            Occlusion = OcclusionData.CreateDefault(screen),
         };
+
+        private static Own<Sampler> DefaultSampler(Screen screen)
+        {
+            return Sampler.Create(screen, new SamplerDescriptor
+            {
+                AddressModeU = AddressMode.ClampToEdge,
+                AddressModeV = AddressMode.ClampToEdge,
+                AddressModeW = AddressMode.ClampToEdge,
+                MagFilter = FilterMode.Linear,
+                MinFilter = FilterMode.Linear,
+                MipmapFilter = FilterMode.Linear,
+            });
+        }
 
         public record struct PbrData
         {
@@ -562,16 +590,24 @@ public static class GlbModelLoader
             public required Own<Texture2D> MetallicRoughness;
             public required Own<Sampler> MetallicRoughnessSampler;
 
-            public static PbrData Default => new PbrData
+            public static PbrData CreateDefault(Screen screen) => new()
             {
-                BaseColorFactor = Vector4.One,
-                MetallicFactor = 1.0f,
-                RoughnessFactor = 1.0f,
-                BaseColor = Own<Texture2D>.None,
-                BaseColorSampler = Own<Sampler>.None,
-                MetallicRoughness = Own<Texture2D>.None,
-                MetallicRoughnessSampler = Own<Sampler>.None,
+                BaseColorFactor = DefaultBaseColorFactor(),
+                MetallicFactor = DefaultMetallicFactor(),
+                RoughnessFactor = DefaultRoughnessFactor(),
+                BaseColor = DefaultBaseColor(screen),
+                BaseColorSampler = DefaultBaseColorSampler(screen),
+                MetallicRoughness = DefaultMetallicRoughness(screen),
+                MetallicRoughnessSampler = DefaultMetallicRoughnessSampler(screen),
             };
+
+            public static Vector4 DefaultBaseColorFactor() => Vector4.One;
+            public static float DefaultMetallicFactor() => 1.0f;
+            public static float DefaultRoughnessFactor() => 1.0f;
+            public static Own<Texture2D> DefaultBaseColor(Screen screen) => Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding, ColorByte.Black);
+            public static Own<Sampler> DefaultBaseColorSampler(Screen screen) => DefaultSampler(screen);
+            public static Own<Texture2D> DefaultMetallicRoughness(Screen screen) => Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 0, 0, 0));
+            public static Own<Sampler> DefaultMetallicRoughnessSampler(Screen screen) => DefaultSampler(screen);
         }
 
         public record struct NormalData
@@ -581,12 +617,12 @@ public static class GlbModelLoader
             public required float Scale;
             public required uint UVIndex;
 
-            public static NormalData Default => new()
+            public static NormalData CreateDefault(Screen screen) => new()
             {
                 Scale = 1.0f,
                 UVIndex = 0,
-                Texture = Own<Texture2D>.None,
-                Sampler = Own<Sampler>.None,
+                Texture = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 0, 0, 0)),
+                Sampler = DefaultSampler(screen),
             };
         }
         public record struct EmissiveData
@@ -596,12 +632,12 @@ public static class GlbModelLoader
             public required Vector3 Factor;
             public required uint UVIndex;
 
-            public static EmissiveData Default => new()
+            public static EmissiveData CreateDefault(Screen screen) => new()
             {
                 Factor = Vector3.Zero,
                 UVIndex = 0,
-                Texture = Own<Texture2D>.None,
-                Sampler = Own<Sampler>.None,
+                Texture = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 0, 0, 0)),
+                Sampler = DefaultSampler(screen),
             };
         }
 
@@ -612,12 +648,12 @@ public static class GlbModelLoader
             public required float Strength;
             public required uint UVIndex;
 
-            public static OcclusionData Default => new()
+            public static OcclusionData CreateDefault(Screen screen) => new()
             {
                 Strength = 1.0f,
                 UVIndex = 0,
-                Texture = Own<Texture2D>.None,
-                Sampler = Own<Sampler>.None,
+                Texture = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 0, 0, 0)),
+                Sampler = DefaultSampler(screen),
             };
         }
     }

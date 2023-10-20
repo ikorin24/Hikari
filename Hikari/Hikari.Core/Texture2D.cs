@@ -4,6 +4,7 @@ using Hikari.Imaging;
 using Hikari.NativeBind;
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Hikari;
@@ -167,6 +168,45 @@ public sealed class Texture2D : ITexture2DProvider, IScreenManaged
             }
         }
         return Own.New(texture, static x => SafeCast.As<Texture2D>(x).Release());
+    }
+
+    public static Own<Texture2D> Create1x1Rgba8Unorm(Screen screen, TextureUsages usage, ColorByte value)
+    {
+        var desc = new Texture2DDescriptor
+        {
+            Format = TextureFormat.Rgba8Unorm,
+            MipLevelCount = 1,
+            Size = new Vector2u(1, 1),
+            SampleCount = 1,
+            Usage = usage,
+        };
+
+        if(value == default) {
+            return Create(screen, desc);
+        }
+        else {
+            var data = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.As<ColorByte, byte>(ref value), Unsafe.SizeOf<ColorByte>());
+            return CreateFromRawData(screen, desc, data);
+        }
+    }
+
+    public static Own<Texture2D> Create1x1Rgba8UnormSrgb(Screen screen, TextureUsages usage, ColorByte value)
+    {
+        var desc = new Texture2DDescriptor
+        {
+            Format = TextureFormat.Rgba8UnormSrgb,
+            MipLevelCount = 1,
+            Size = new Vector2u(1, 1),
+            SampleCount = 1,
+            Usage = usage,
+        };
+        if(value == default) {
+            return Create(screen, desc);
+        }
+        else {
+            var data = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.As<ColorByte, byte>(ref value), Unsafe.SizeOf<ColorByte>());
+            return CreateFromRawData(screen, desc, data);
+        }
     }
 
     public unsafe void Write<TPixel>(u32 mipLevel, ReadOnlySpan<TPixel> pixelData) where TPixel : unmanaged

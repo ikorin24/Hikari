@@ -7,7 +7,6 @@ namespace Hikari;
 
 public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
 {
-    //private readonly Own<Sampler> _sampler;
     private readonly MaybeOwn<Texture2D> _albedo;
     private readonly MaybeOwn<Texture2D> _metallicRoughness;
     private readonly MaybeOwn<Texture2D> _normal;
@@ -24,31 +23,14 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
     public Texture2D MetallicRoughness => _metallicRoughness.AsValue();
     public Texture2D Normal => _normal.AsValue();
 
+    public Sampler AlbedoSampler => _albedoSampler.AsValue();
+    public Sampler MetallicRoughnessSampler => _metallicRoughnessSampler.AsValue();
+    public Sampler NormalSampler => _normalSampler.AsValue();
+
     internal BindGroup BindGroup0 => _bindGroup0.AsValue();
     internal BindGroup BindGroup1 => _bindGroup1;
 
     internal BindGroup ShadowBindGroup0 => _shadowBindGroup0.AsValue();
-
-    //private PbrMaterial(
-    //    PbrShader shader,
-    //    Own<Buffer> uniformBuffer,
-    //    Own<Sampler> sampler,
-    //    MaybeOwn<Texture2D> albedo,
-    //    MaybeOwn<Texture2D> metallicRoughness,
-    //    MaybeOwn<Texture2D> normal,
-    //    Own<BindGroup> bindGroup0,
-    //    Own<BindGroup> shadowBindGroup0)
-    //    : base(shader)
-    //{
-    //    _modelUniform = uniformBuffer;
-    //    _sampler = sampler;
-    //    _albedo = albedo;
-    //    _metallicRoughness = metallicRoughness;
-    //    _normal = normal;
-    //    _bindGroup0 = bindGroup0;
-    //    _bindGroup1 = Screen.Camera.CameraDataBindGroup;
-    //    _shadowBindGroup0 = shadowBindGroup0;
-    //}
 
     private PbrMaterial(
         PbrShader shader,
