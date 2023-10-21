@@ -24,7 +24,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikari.Imaging", "Hikari.Im
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikari.Events", "Hikari.Events\Hikari.Events.csproj", "{DC33670A-880A-4EBB-B633-DEEC9A420CD3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hikari.Gltf", "Hikari.Gltf\Hikari.Gltf.csproj", "{19558EE6-A634-4425-94DF-655F62C127C6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikari.Gltf", "Hikari.Gltf\Hikari.Gltf.csproj", "{19558EE6-A634-4425-94DF-655F62C127C6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hikari.Generator", "Hikari.Generator\Hikari.Generator.csproj", "{F5DBD850-94A3-4ED9-8024-40967D25DFC3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -68,6 +70,10 @@ Global
 		{19558EE6-A634-4425-94DF-655F62C127C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{19558EE6-A634-4425-94DF-655F62C127C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{19558EE6-A634-4425-94DF-655F62C127C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F5DBD850-94A3-4ED9-8024-40967D25DFC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F5DBD850-94A3-4ED9-8024-40967D25DFC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F5DBD850-94A3-4ED9-8024-40967D25DFC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F5DBD850-94A3-4ED9-8024-40967D25DFC3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
