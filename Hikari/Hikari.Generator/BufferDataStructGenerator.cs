@@ -66,8 +66,10 @@ namespace Hikari
 
             int currentOffset = 0;
             var fields = new List<(string Name, string Type, int Alignment, int Size, int Offset)>();
+
+            var fieldDataList = new List<FieldData>();
             foreach(var field in typeSymbol.GetMembers().OfType<IFieldSymbol>()) {
-                if(TryGetTypeAlignmentAndSize(field.Type, out var fieldAlign, out var fieldSize) == false) {
+                if(TryGetFieldData(field, out var fieldData) == false) {
                     context.ReportDiagnostic(
                         Diagnostic.Create(
                             DiagnosticDescriptors.NotSupportedFieldType,
@@ -75,18 +77,30 @@ namespace Hikari
                             field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
                     continue;
                 }
-                var typeName = field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                var o = (currentOffset + fieldAlign - 1) / fieldAlign * fieldAlign;
-
-                fields.Add((
-                    Name: field.Name,
-                    Type: typeName,
-                    Alignment: fieldAlign,
-                    Size: fieldSize,
-                    Offset: o));
-                currentOffset = o + fieldSize;
+                fieldDataList.Add(fieldData);
             }
-            var structSize = (currentOffset == 0) ? 1 : currentOffset;
+
+            var structAlignment = 1;
+            foreach(var field in typeSymbol.GetMembers().OfType<IFieldSymbol>()) {
+                if(TryGetFieldData(field, out var fieldData) == false) {
+                    context.ReportDiagnostic(
+                        Diagnostic.Create(
+                            DiagnosticDescriptors.NotSupportedFieldType,
+                            field.DeclaringSyntaxReferences[0].GetSyntax(context.CancellationToken).GetLocation(),
+                            field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
+                    continue;
+                }
+                var o = RoundUp(fieldData.Alignment, currentOffset);
+                fields.Add((
+                    Name: fieldData.FieldName,
+                    Type: fieldData.TypeName,
+                    Alignment: fieldData.Alignment,
+                    Size: fieldData.Size,
+                    Offset: o));
+                currentOffset = o + fieldData.Size;
+                structAlignment = Math.Max(structAlignment, fieldData.Alignment);
+            }
+            var structSize = (currentOffset == 0) ? 1 : RoundUp(structAlignment, currentOffset);
 
             var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace
                 ? ""
@@ -131,23 +145,31 @@ partial {{(typeSymbol.IsRecord ? "record" : "")}} struct {{typeSymbol.Name}}
         });
     }
 
-    private static bool TryGetTypeAlignmentAndSize(ITypeSymbol type, out int alignment, out int size)
+    private static bool TryGetFieldData(IFieldSymbol field, out FieldData data)
     {
-        var fullname = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        (var isSupported, alignment, size) = fullname switch
+        var typeName = field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        bool isSupported;
+        (isSupported, data) = typeName switch
         {
-            "int" or "uint" or "float" => (true, 4, 4),
-            "global::System.Half" => (true, 2, 2),
-            "global::Hikari.Vector2" or "global::Hikari.Vector2i" or "global::Hikari.Vector2u" => (true, 8, 8),
-            "global::Hikari.Vector3" or "global::Hikari.Vector3i" or "global::Hikari.Vector3u" => (true, 16, 12),
-            "global::Hikari.Vector4" or "global::Hikari.Vector4i" or "global::Hikari.Vector4u" => (true, 16, 16),
-            "global::Hikari.Matrix2" => (true, 8, 16),
-            "global::Hikari.Matrix3" => (true, 16, 48),
-            "global::Hikari.Matrix4" => (true, 16, 64),
-            _ => (false, 1, 1),
+            "int" or "uint" or "float" => (true, new FieldData(field.Name, typeName, 4, 4)),
+            "global::System.Half" => (true, new FieldData(field.Name, typeName, 2, 2)),
+            "global::Hikari.Vector2" or "global::Hikari.Vector2i" or "global::Hikari.Vector2u" => (true, new FieldData(field.Name, typeName, 8, 8)),
+            "global::Hikari.Vector3" or "global::Hikari.Vector3i" or "global::Hikari.Vector3u" => (true, new FieldData(field.Name, typeName, 16, 12)),
+            "global::Hikari.Vector4" or "global::Hikari.Vector4i" or "global::Hikari.Vector4u" => (true, new FieldData(field.Name, typeName, 16, 16)),
+            "global::Hikari.Matrix2" => (true, new FieldData(field.Name, typeName, 8, 16)),
+            "global::Hikari.Matrix3" => (true, new FieldData(field.Name, typeName, 16, 48)),
+            "global::Hikari.Matrix4" => (true, new FieldData(field.Name, typeName, 16, 64)),
+            _ => (false, new FieldData(field.Name, typeName, 1, 1)),
         };
         return isSupported;
     }
+
+    private static int RoundUp(int k, int n)
+    {
+        return (n + k - 1) / k * k;
+    }
+
+    private record struct FieldData(string FieldName, string TypeName, int Alignment, int Size);
 }
 
 #pragma warning disable RS2008
