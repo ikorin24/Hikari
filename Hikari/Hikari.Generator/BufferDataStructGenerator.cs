@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace Hikari.Generator;
 
@@ -23,6 +24,7 @@ internal class BufferDataStructGenerator : IIncrementalGenerator
 
 namespace Hikari
 {
+    [global::System.Diagnostics.Conditional("COMPILE_TIME_ONLY")]
     [global::System.AttributeUsage(System.AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
     internal sealed class BufferDataStructAttribute : global::System.Attribute
     {
@@ -106,6 +108,8 @@ namespace Hikari
                 ? ""
                 : $"namespace {typeSymbol.ContainingNamespace};";
 
+            var (beginSource, endSource) = GetContainingType(typeSymbol);
+
             var offsets = fields.Select(x => $$"""
         /// <summary>
         /// <see cref="{{x.Type}}"/> = (alignment: {{x.Alignment}}, size: {{x.Size}})
@@ -123,15 +127,18 @@ namespace Hikari
 #pragma warning disable CS8604
 
 {{ns}}
+{{beginSource}}
 
 [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Explicit, Size = {{structSize}})]
-partial {{(typeSymbol.IsRecord ? "record" : "")}} struct {{typeSymbol.Name}}
+partial {{(typeSymbol.IsRecord ? "record struct" : "struct")}} {{typeSymbol.Name}}
 {
     private static class OffsetOf
     {
 {{string.Join(Environment.NewLine, offsets)}}
     }
 }
+
+{{endSource}}
 
 """;
 
@@ -143,6 +150,34 @@ partial {{(typeSymbol.IsRecord ? "record" : "")}} struct {{typeSymbol.Name}}
                 + ".g.cs";
             context.AddSource(filename, code);
         });
+    }
+
+    private static (string BeginSource, string EndSource) GetContainingType(INamedTypeSymbol typeSymbol)
+    {
+        var current = typeSymbol;
+        var begin = new StringBuilder();
+        var end = new StringBuilder();
+        while(true) {
+            if(current.ContainingType is INamedTypeSymbol containingTypeSymbol == false) {
+                break;
+            }
+            var typeKind = (containingTypeSymbol.TypeKind, containingTypeSymbol.IsRecord) switch
+            {
+                (TypeKind.Class, true) => "record",
+                (TypeKind.Class, false) => "class",
+                (TypeKind.Struct, true) => "record struct",
+                (TypeKind.Struct, false) => "struct",
+                (TypeKind.Interface, _) => "interface",
+                _ => "_",
+            };
+            begin.AppendLine($$"""
+partial {{typeKind}} {{containingTypeSymbol.Name}}
+{
+""");
+            end.AppendLine("}");
+            current = containingTypeSymbol;
+        }
+        return (begin.ToString(), end.ToString());
     }
 
     private static bool TryGetFieldData(IFieldSymbol field, out FieldData data)
