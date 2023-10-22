@@ -5,6 +5,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Hikari;
@@ -25,7 +26,7 @@ public sealed class Screen
     private readonly Mouse _mouse;
     private Own<RenderTextureProvider> _depthStencil;
     private readonly Surface _surface;
-    private readonly Own<Buffer> _info;
+    private readonly Own<Buffer> _info;     // ScreenInfo
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
     private readonly Operations _operations;
@@ -373,11 +374,13 @@ public sealed class Screen
             static void Throw() => throw new InvalidOperationException("not initialized");
         }
     }
+}
 
-    private struct ScreenInfo
-    {
-        public Vector2u Size;
-    }
+[BufferDataStruct]
+internal partial record struct ScreenInfo
+{
+    [FieldOffset(OffsetOf.Size)]
+    public required Vector2u Size;
 }
 
 public sealed class ScreenClosingState

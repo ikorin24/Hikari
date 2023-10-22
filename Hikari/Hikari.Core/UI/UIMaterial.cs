@@ -8,7 +8,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
     private readonly Own<BindGroup> _bindGroup0;
     private Own<BindGroup> _bindGroup1;
     private Own<BindGroup> _bindGroup2;
-    private readonly Own<Buffer> _buffer;
+    private readonly Own<Buffer> _buffer;   // UIShaderSource.BufferData
     private UIShaderSource.BufferData? _bufferData;
     private Own<Buffer> _backgroundBuffer;
     private Brush? _background;

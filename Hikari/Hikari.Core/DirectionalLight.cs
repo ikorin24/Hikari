@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed class DirectionalLight : IScreenManaged
+public sealed partial class DirectionalLight : IScreenManaged
 {
     private const uint CascadeCountConst = 4;       // 2 ~
 
@@ -182,10 +182,13 @@ public sealed class DirectionalLight : IScreenManaged
         }
     }
 
-    [StructLayout(LayoutKind.Sequential, Pack = 16)]
-    private readonly struct DirectionalLightData
+    //[StructLayout(LayoutKind.Sequential, Pack = 16)]
+    [BufferDataStruct]
+    private readonly partial struct DirectionalLightData
     {
+        [FieldOffset(OffsetOf._direction)]
         private readonly Vector4 _direction;    // (x, y, z, _)
+        [FieldOffset(OffsetOf._color)]
         private readonly Color4 _color;        // (r, g, b, _)
 
         public Vector3 Direction => _direction.Xyz;

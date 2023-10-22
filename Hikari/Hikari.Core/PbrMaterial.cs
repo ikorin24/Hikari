@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
+public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
 {
     private readonly MaybeOwn<Texture2D> _albedo;
     private readonly MaybeOwn<Texture2D> _metallicRoughness;
@@ -170,10 +170,12 @@ public sealed class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
         _modelUniform.AsValue().WriteData(0, value);
     }
 
-    [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_mat4x4_f32, Size = 80)]
-    internal struct UniformValue
+    [BufferDataStruct]
+    internal partial struct UniformValue
     {
+        [FieldOffset(OffsetOf.Model)]
         public required Matrix4 Model;
+        [FieldOffset(OffsetOf.IsUniformScale)]
         public required int IsUniformScale;  // true: 1, false: 0
     }
 }

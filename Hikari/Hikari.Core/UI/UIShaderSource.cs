@@ -4,26 +4,39 @@ using System.Runtime.InteropServices;
 
 namespace Hikari.UI;
 
-internal static class UIShaderSource
+internal static partial class UIShaderSource
 {
-    [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_mat4x4_f32)]
-    public readonly record struct BufferData
+    [BufferDataStruct]
+    public readonly partial record struct BufferData
     {
+        [field: FieldOffset(OffsetOf.Mvp)]
         public required Matrix4 Mvp { get; init; }
+        [field: FieldOffset(OffsetOf.Rect)]
         public required RectF Rect { get; init; }
+        [field: FieldOffset(OffsetOf.BorderWidth)]
         public required Vector4 BorderWidth { get; init; }
+        [field: FieldOffset(OffsetOf.BorderRadius)]
         public required Vector4 BorderRadius { get; init; }
+        [field: FieldOffset(OffsetOf.BorderSolidColor)]
         public required Color4 BorderSolidColor { get; init; }
 
         // (offsetX, offsetY, inset_blurRadius, spreadRadius),
         // blurRadius = abs(inset_blurRadius)
         // inset = inset_blurRadius < 0
+        [field: FieldOffset(OffsetOf.BoxShadowValues)]
         public required Vector4 BoxShadowValues { get; init; }
+        [field: FieldOffset(OffsetOf.BoxShadowColor)]
         public required Color4 BoxShadowColor { get; init; }
     }
 
-    [StructLayout(LayoutKind.Sequential, Pack = WgslConst.AlignOf_vec4_f32, Size = 32)]
-    public readonly record struct ColorPoint(Color4 Color, float Offset);
+    [BufferDataStruct]
+    public readonly partial record struct ColorPoint
+    {
+        [field: FieldOffset(OffsetOf.Color)]
+        public required Color4 Color { get; init; }
+        [field: FieldOffset(OffsetOf.Offset)]
+        public required float Offset { get; init; }
+    }
 
     public static ReadOnlySpan<byte> TypeDef => """
         struct Vin {

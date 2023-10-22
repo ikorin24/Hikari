@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Hikari.Events\Hikari.Events.csproj" />
     <ProjectReference Include="..\Hikari.Imaging\Hikari.Imaging.csproj" />
+    <ProjectReference Include="..\Hikari.Generator\Hikari.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\Hikari.InternalTools\Hikari.InternalTools.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\EnumMapper\EnumMapper.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>

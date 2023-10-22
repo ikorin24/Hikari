@@ -6,12 +6,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Hikari.Generator;
 
 [Generator(LanguageNames.CSharp)]
 internal class BufferDataStructGenerator : IIncrementalGenerator
 {
+    private static readonly Regex _backingFieldRegex = new(@"^<(.+)>k__BackingField$", RegexOptions.Compiled);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         context.RegisterPostInitializationOutput(static context =>
@@ -182,19 +185,23 @@ partial {{typeKind}} {{containingTypeSymbol.Name}}
 
     private static bool TryGetFieldData(IFieldSymbol field, out FieldData data)
     {
+        // backing field to name
+        // (ex)
+        // <Foo>k__BackingField -> Foo
+        var name = _backingFieldRegex.Replace(field.Name, "$1");
         var typeName = field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         bool isSupported;
         (isSupported, data) = typeName switch
         {
-            "int" or "uint" or "float" => (true, new FieldData(field.Name, typeName, 4, 4)),
-            "global::System.Half" => (true, new FieldData(field.Name, typeName, 2, 2)),
-            "global::Hikari.Vector2" or "global::Hikari.Vector2i" or "global::Hikari.Vector2u" => (true, new FieldData(field.Name, typeName, 8, 8)),
-            "global::Hikari.Vector3" or "global::Hikari.Vector3i" or "global::Hikari.Vector3u" => (true, new FieldData(field.Name, typeName, 16, 12)),
-            "global::Hikari.Vector4" or "global::Hikari.Vector4i" or "global::Hikari.Vector4u" => (true, new FieldData(field.Name, typeName, 16, 16)),
-            "global::Hikari.Matrix2" => (true, new FieldData(field.Name, typeName, 8, 16)),
-            "global::Hikari.Matrix3" => (true, new FieldData(field.Name, typeName, 16, 48)),
-            "global::Hikari.Matrix4" => (true, new FieldData(field.Name, typeName, 16, 64)),
-            _ => (false, new FieldData(field.Name, typeName, 1, 1)),
+            "int" or "uint" or "float" => (true, new FieldData(name, typeName, 4, 4)),
+            "global::System.Half" => (true, new FieldData(name, typeName, 2, 2)),
+            "global::Hikari.Vector2" or "global::Hikari.Vector2i" or "global::Hikari.Vector2u" => (true, new FieldData(name, typeName, 8, 8)),
+            "global::Hikari.Vector3" or "global::Hikari.Vector3i" or "global::Hikari.Vector3u" => (true, new FieldData(name, typeName, 16, 12)),
+            "global::Hikari.Vector4" or "global::Hikari.Vector4i" or "global::Hikari.Vector4u" or "global::Hikari.Color4" or "global::Hikari.RectF" => (true, new FieldData(name, typeName, 16, 16)),
+            "global::Hikari.Matrix2" => (true, new FieldData(name, typeName, 8, 16)),
+            "global::Hikari.Matrix3" => (true, new FieldData(name, typeName, 16, 48)),
+            "global::Hikari.Matrix4" => (true, new FieldData(name, typeName, 16, 64)),
+            _ => (false, new FieldData(name, typeName, 1, 1)),
         };
         return isSupported;
     }
