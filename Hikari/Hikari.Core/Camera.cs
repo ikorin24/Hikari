@@ -7,47 +7,20 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed class Camera
+public sealed partial class Camera
 {
-    [StructLayout(LayoutKind.Explicit)]
-    internal struct CameraMatrix
-    {
-        [FieldOffset(0)]    // 0 ~ 63   (size: 64)
-        public Matrix4 Projection;
-        [FieldOffset(64)]   // 64 ~ 127 (size: 64)
-        public Matrix4 View;
-        [FieldOffset(128)]  // 128 ~ 191 (size: 64)
-        public Matrix4 InvProjection;
-        [FieldOffset(192)]  // 192 ~ 255 (size: 64)
-        public Matrix4 InvView;
-    }
-
-    internal struct CameraState
-    {
-        public CameraMatrix Matrix;
-        public Vector3 Position;
-        public Quaternion Rotation;
-        public CameraProjectionMode ProjectionMode;
-        public float Aspect;    // Aspect ratio (width / height).
-        public float Near;
-        public float Far;
-
-        public Vector3 GetDirection() => Rotation * InitialDirection;
-        public Vector3 GetUp() => Rotation * InitialUp;
-    }
-
-    private static Vector3 InitialPos => new Vector3(0, 0, 10);
-    private static Vector3 InitialDirection => new Vector3(0, 0, -1);
-    private static Vector3 InitialUp => Vector3.UnitY;
-
     private readonly Screen _screen;
-    private readonly Own<Buffer> _cameraMatrixBuffer;
+    private BufferCached<CameraMatrix> _cameraMatrix;
     private readonly Own<BindGroupLayout> _bindGroupLayout;
     private readonly Own<BindGroup> _bindGroup;
     private readonly object _sync = new object();
     private CameraState _state;
     private bool _isCameraMatrixChanged;
     private EventSource<Camera> _matrixChanged;
+
+    private static Vector3 InitialPos => new Vector3(0, 0, 10);
+    private static Vector3 InitialDirection => new Vector3(0, 0, -1);
+    private static Vector3 InitialUp => Vector3.UnitY;
 
     public Event<Camera> MatrixChanged => _matrixChanged.Event;
 
@@ -225,10 +198,7 @@ public sealed class Camera
             Far = far,
             ProjectionMode = mode,
         };
-        _cameraMatrixBuffer = Buffer.CreateInitData(
-            screen,
-            _state.Matrix,
-            BufferUsages.Uniform | BufferUsages.CopyDst);
+        _cameraMatrix = new(screen, _state.Matrix, BufferUsages.Uniform | BufferUsages.CopyDst);
         _bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
         {
             Entries = new[]
@@ -249,7 +219,7 @@ public sealed class Camera
             Layout = _bindGroupLayout.AsValue(),
             Entries = new[]
             {
-                BindGroupEntry.Buffer(0, _cameraMatrixBuffer.AsValue()),
+                BindGroupEntry.Buffer(0, _cameraMatrix.AsBuffer()),
             },
         });
     }
@@ -258,7 +228,7 @@ public sealed class Camera
     {
         _bindGroup.Dispose();
         _bindGroupLayout.Dispose();
-        _cameraMatrixBuffer.Dispose();
+        _cameraMatrix.Dispose();
     }
 
     public void SetNearFar(float near, float far)
@@ -348,24 +318,14 @@ public sealed class Camera
 
     internal void UpdateUniformBuffer()
     {
-        var uniformBuffer = _cameraMatrixBuffer.AsValue();
         lock(_sync) {
             if(_isCameraMatrixChanged) {
                 _isCameraMatrixChanged = false;
-                uniformBuffer.WriteData(0, _state.Matrix);
+                _cameraMatrix.WriteData(in _state.Matrix);
             }
         }
     }
 
-    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-    //private static Matrix4 CalcView(in Vector3 pos, in Quaternion rotation)
-    //{
-    //    var dir = rotation * InitialDirection;
-    //    if(Matrix4.LookAt(pos, pos + dir, Vector3.UnitY, out var result) == false) {
-    //        result = Matrix4.Identity;
-    //    }
-    //    return result;
-    //}
     private static bool CalcView(in Vector3 pos, in Quaternion rotation, out Matrix4 view)
     {
         var dir = rotation * InitialDirection;
@@ -397,6 +357,33 @@ public sealed class Camera
 
     [DoesNotReturn]
     private static void ThrowOutOfRange(string message) => throw new ArgumentOutOfRangeException(message);
+
+    [BufferDataStruct]
+    internal partial record struct CameraMatrix
+    {
+        [FieldOffset(OffsetOf.Projection)]
+        public Matrix4 Projection;
+        [FieldOffset(OffsetOf.View)]
+        public Matrix4 View;
+        [FieldOffset(OffsetOf.InvProjection)]
+        public Matrix4 InvProjection;
+        [FieldOffset(OffsetOf.InvView)]
+        public Matrix4 InvView;
+    }
+
+    internal struct CameraState
+    {
+        public CameraMatrix Matrix;
+        public Vector3 Position;
+        public Quaternion Rotation;
+        public CameraProjectionMode ProjectionMode;
+        public float Aspect;    // Aspect ratio (width / height).
+        public float Near;
+        public float Far;
+
+        public readonly Vector3 GetDirection() => Rotation * InitialDirection;
+        public readonly Vector3 GetUp() => Rotation * InitialUp;
+    }
 }
 
 public readonly struct CameraProjectionMode : IEquatable<CameraProjectionMode>
