@@ -2,7 +2,7 @@
 
 namespace Hikari;
 
-public sealed class Lights
+public sealed partial class Lights
 {
     private readonly Screen _screen;
     private readonly DirectionalLight _dirLight;
@@ -16,10 +16,10 @@ public sealed class Lights
 
     public float AmbientStrength
     {
-        get => _buffer.Value.AmbientStrength;
+        get => _buffer.Data.AmbientStrength;
         set
         {
-            _buffer.WriteValue(new BufferData
+            _buffer.WriteData(new BufferData
             {
                 AmbientStrength = value,
             });
@@ -57,7 +57,7 @@ public sealed class Lights
             Entries = new BindGroupEntry[]
             {
                 BindGroupEntry.Buffer(0, _dirLight.DataBuffer),
-                BindGroupEntry.Buffer(1, _buffer.Buffer),
+                BindGroupEntry.Buffer(1, _buffer.AsBuffer()),
             },
         });
     }
@@ -70,7 +70,7 @@ public sealed class Lights
         _bindGroup.Dispose();
     }
 
-    private record struct BufferData
+    private partial record struct BufferData
     {
         public float AmbientStrength;
     }

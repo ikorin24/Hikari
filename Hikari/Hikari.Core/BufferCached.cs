@@ -8,15 +8,15 @@ internal struct BufferCached<T> : IDisposable where T : unmanaged
 {
     private Own<Buffer> _buffer;
     private FastSpinLock _lock;
-    private T _value;
+    private T _data;
 
-    public readonly T Value
+    public readonly T Data
     {
         get
         {
             try {
                 _lock.Enter();
-                return _value;
+                return _data;
             }
             finally {
                 _lock.Exit();
@@ -24,20 +24,24 @@ internal struct BufferCached<T> : IDisposable where T : unmanaged
         }
     }
 
-    public readonly Buffer Buffer => _buffer.AsValue();
+    public readonly Buffer? Buffer => _buffer.TryAsValue(out var buffer) ? buffer : null;
 
     public BufferCached(Screen screen, in T data, BufferUsages usage)
     {
         _buffer = Buffer.CreateInitData(screen, data, usage);
-        _value = data;
+        _data = data;
     }
 
-    public void WriteValue(in T value)
+    public readonly bool TryAsBuffer(out Buffer buffer) => _buffer.TryAsValue(out buffer);
+
+    public readonly Buffer AsBuffer() => _buffer.AsValue();
+
+    public void WriteData(in T data)
     {
         try {
             _lock.Enter();
-            _buffer.AsValue().WriteData(0, value);
-            _value = value;
+            _buffer.AsValue().WriteData(0, data);
+            _data = data;
         }
         finally {
             _lock.Exit();
@@ -50,7 +54,7 @@ internal struct BufferCached<T> : IDisposable where T : unmanaged
             _lock.Enter();
             _buffer.Dispose();
             _buffer = Own<Buffer>.None;
-            _value = default;
+            _data = default;
         }
         finally {
             _lock.Exit();

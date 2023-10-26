@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Hikari.Threading;
 
@@ -37,6 +38,13 @@ public struct FastSpinLock
         Volatile.Write(ref _syncFlag, SYNC_EXIT);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [UnscopedRef]
+    public LockedScope Scope()
+    {
+        return new LockedScope(ref this);
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void SpinWait()
     {
@@ -44,6 +52,22 @@ public struct FastSpinLock
         spinner.SpinOnce();
         while(Interlocked.CompareExchange(ref _syncFlag, SYNC_ENTER, SYNC_EXIT) == SYNC_ENTER) {
             spinner.SpinOnce();
+        }
+    }
+
+    public ref struct LockedScope
+    {
+        private ref FastSpinLock _locker;
+
+        public LockedScope(ref FastSpinLock locker)
+        {
+            locker.Enter();
+            _locker = ref locker;
+        }
+
+        public void Dispose()
+        {
+            _locker.Exit();
         }
     }
 }
