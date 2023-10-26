@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Hikari;
@@ -14,7 +13,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
     private readonly MaybeOwn<Sampler> _metallicRoughnessSampler;
     private readonly MaybeOwn<Sampler> _normalSampler;
 
-    private readonly Own<Buffer> _modelUniform;     // UniformValue
+    private BufferCached<UniformValue> _modelUniform;
     private readonly Own<BindGroup> _bindGroup0;
     private readonly BindGroup _bindGroup1;
     private readonly Own<BindGroup> _shadowBindGroup0;
@@ -34,7 +33,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
 
     private PbrMaterial(
         PbrShader shader,
-        Own<Buffer> uniformBuffer,
+        BufferCached<UniformValue> uniform,
         MaybeOwn<Texture2D> albedo,
         MaybeOwn<Sampler> albedoSampler,
         MaybeOwn<Texture2D> metallicRoughness,
@@ -45,7 +44,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
         Own<BindGroup> shadowBindGroup0)
         : base(shader)
     {
-        _modelUniform = uniformBuffer;
+        _modelUniform = uniform;
         _albedo = albedo;
         _albedoSampler = albedoSampler;
         _metallicRoughness = metallicRoughness;
@@ -124,13 +123,13 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
 
         var screen = shader.Screen;
         var lights = screen.Lights;
-        var uniformBuffer = Buffer.Create(screen, (usize)Unsafe.SizeOf<UniformValue>(), BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
+        var uniformBuffer = new BufferCached<UniformValue>(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
         var bindGroup0 = BindGroup.Create(screen, new()
         {
             Layout = shader.Operation.BindGroupLayout0,
             Entries = new BindGroupEntry[]
             {
-                BindGroupEntry.Buffer(0, uniformBuffer.AsValue()),
+                BindGroupEntry.Buffer(0, uniformBuffer.AsBuffer()),
                 BindGroupEntry.TextureView(1, albedo.AsValue().View),
                 BindGroupEntry.Sampler(2, albedoSampler.AsValue()),
                 BindGroupEntry.TextureView(3, metallicRoughness.AsValue().View),
@@ -145,7 +144,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
             Layout = shader.Operation.ShadowBindGroupLayout0,
             Entries = new[]
             {
-                BindGroupEntry.Buffer(0, uniformBuffer.AsValue()),
+                BindGroupEntry.Buffer(0, uniformBuffer.AsBuffer()),
                 BindGroupEntry.Buffer(1, lights.DirectionalLight.LightMatricesBuffer),
             },
         });
@@ -167,7 +166,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
 
     internal void WriteModelUniform(in UniformValue value)
     {
-        _modelUniform.AsValue().WriteData(0, value);
+        _modelUniform.WriteData(value);
     }
 
     [BufferDataStruct]
