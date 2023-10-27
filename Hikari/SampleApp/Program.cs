@@ -6,6 +6,7 @@ using Hikari.UI;
 using System;
 using System.Diagnostics;
 using System.IO;
+using Hikari.Gltf;
 
 namespace SampleApp;
 
@@ -33,24 +34,26 @@ internal class Program
 
         var app = App.BuildPipelines(screen);
 
-        app.UI.RenderRoot($$"""
-        {
-            "@type": {{typeof(Counter)}},
-            "Width": "600px",
-            "Height": "300px"
-        }
-        """);
+        //app.UI.RenderRoot($$"""
+        //{
+        //    "@type": {{typeof(Counter)}},
+        //    "Width": "600px",
+        //    "Height": "300px"
+        //}
+        //""");
+
+        var model = GlbModelLoader.LoadGlbFile(app.PbrLayer, @"D:\private\source\Elffy\src\Sandbox\Resources\AntiqueCamera.glb");
 
         var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
         var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
         var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
 
-        var plane = new PbrModel(Shapes.Plane(screen, true), PbrMaterial.Create(app.PbrShader, albedo, mr, normal));
+        var plane = new PbrModel(Shapes.Plane(screen, true), PbrMaterial.Create(PbrBasicShader.CreateOrCached(app.PbrLayer), albedo, mr, normal));
 
         plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
         plane.Scale = new Vector3(10);
         var material = plane.Material;
-        var cube = new PbrModel(Shapes.Cube(screen, true), PbrMaterial.Create(app.PbrShader, material.Albedo, material.MetallicRoughness, material.Normal));
+        var cube = new PbrModel(Shapes.Cube(screen, true), PbrMaterial.Create(PbrBasicShader.CreateOrCached(app.PbrLayer), material.Albedo, material.MetallicRoughness, material.Normal));
 
         cube.Scale = new Vector3(0.3f);
         cube.Position = new Vector3(0, 0.2f, 0);

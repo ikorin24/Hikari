@@ -11,15 +11,10 @@ public sealed class App
     private readonly DeferredProcess _deferredProcess;
     private readonly UITree _ui;
 
-    private readonly PbrShader _pbrShader;
-
     public Screen Screen => _screen;
     public PbrLayer PbrLayer => _pbrLayer;
     public DeferredProcess DeferredProcess => _deferredProcess;
     public UITree UI => _ui;
-
-    public PbrShader PbrShader => _pbrShader;
-
 
     private App(Screen screen, PbrLayer pbrLayer, DeferredProcess deferredProcess, UITree ui)
     {
@@ -27,7 +22,6 @@ public sealed class App
         _pbrLayer = pbrLayer;
         _deferredProcess = deferredProcess;
         _ui = ui;
-        _pbrShader = PbrShader.Create(screen, pbrLayer).DisposeOn(pbrLayer.Dead);
     }
 
     public static App BuildPipelines(Screen screen)
