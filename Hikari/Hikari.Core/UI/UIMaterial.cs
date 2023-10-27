@@ -8,7 +8,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
     private readonly Own<BindGroup> _bindGroup0;
     private Own<BindGroup> _bindGroup1;
     private Own<BindGroup> _bindGroup2;
-    private BufferCached<UIShaderSource.BufferData> _buffer;
+    private readonly CachedOwnBuffer<UIShaderSource.BufferData> _buffer;
 
     private Own<Buffer> _backgroundBuffer;
     private Brush? _background;
@@ -42,7 +42,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
             Entries = new[]
             {
                 BindGroupEntry.Buffer(0, screen.InfoBuffer),
-                BindGroupEntry.Buffer(1, _buffer.AsBuffer()),
+                BindGroupEntry.Buffer(1, _buffer),
             },
         });
         _bindGroup1 = BindGroup.Create(screen, new()

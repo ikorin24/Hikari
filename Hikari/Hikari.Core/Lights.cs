@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System.Runtime.InteropServices;
 
 namespace Hikari;
 
@@ -6,7 +7,7 @@ public sealed partial class Lights
 {
     private readonly Screen _screen;
     private readonly DirectionalLight _dirLight;
-    private BufferCached<BufferData> _buffer;
+    private readonly CachedOwnBuffer<BufferData> _lightData;
     private readonly Own<BindGroupLayout> _bindGroupLayout;
     private readonly Own<BindGroup> _bindGroup;
 
@@ -16,10 +17,10 @@ public sealed partial class Lights
 
     public float AmbientStrength
     {
-        get => _buffer.Data.AmbientStrength;
+        get => _lightData.Data.AmbientStrength;
         set
         {
-            _buffer.WriteData(new BufferData
+            _lightData.WriteData(new BufferData
             {
                 AmbientStrength = value,
             });
@@ -33,7 +34,7 @@ public sealed partial class Lights
     {
         _screen = screen;
         _dirLight = new DirectionalLight(screen);
-        _buffer = new(screen, new BufferData
+        _lightData = new(screen, new BufferData
         {
             AmbientStrength = 0.2f,
         }, BufferUsages.Storage | BufferUsages.CopyDst);
@@ -57,7 +58,7 @@ public sealed partial class Lights
             Entries = new BindGroupEntry[]
             {
                 BindGroupEntry.Buffer(0, _dirLight.DataBuffer),
-                BindGroupEntry.Buffer(1, _buffer.AsBuffer()),
+                BindGroupEntry.Buffer(1, _lightData),
             },
         });
     }
@@ -65,13 +66,15 @@ public sealed partial class Lights
     internal void DisposeInternal()
     {
         _dirLight.DisposeInternal();
-        _buffer.Dispose();
+        _lightData.Dispose();
         _bindGroupLayout.Dispose();
         _bindGroup.Dispose();
     }
 
+    [BufferDataStruct]
     private partial record struct BufferData
     {
+        [FieldOffset(OffsetOf.AmbientStrength)]
         public float AmbientStrength;
     }
 }

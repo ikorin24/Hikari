@@ -13,22 +13,22 @@ public sealed partial class DirectionalLight : IScreenManaged
     private const u32 ShadowMapHeight = 1024;
 
     private readonly Screen _screen;
-    private BufferCached<DirectionalLightData> _lightData;
-    private BufferCached<LightMatrixArray> _lightMatrices;
-    private BufferCached<CascadeFarArray> _cascadeFars;
+    private readonly CachedOwnBuffer<DirectionalLightData> _lightData;
+    private TypedOwnBuffer<LightMatrixArray> _lightMatrices;
+    private TypedOwnBuffer<CascadeFarArray> _cascadeFars;
     private readonly Own<Texture2D> _shadowMap;
     private readonly SubscriptionBag _subscriptionBag = new();
 
     public Screen Screen => _screen;
 
-    public bool IsManaged => _lightData.Buffer == null;
+    public bool IsManaged => _lightData.IsNone == false;
 
     public void Validate() => IScreenManaged.DefaultValidate(this);
 
     public Texture2D ShadowMap => _shadowMap.AsValue();
 
-    public Buffer LightMatricesBuffer => _lightMatrices.AsBuffer();
-    public Buffer CascadeFarsBuffer => _cascadeFars.AsBuffer();
+    internal Buffer LightMatricesBuffer => _lightMatrices.AsBuffer();
+    internal Buffer CascadeFarsBuffer => _cascadeFars.AsBuffer();
 
     public uint CascadeCount => CascadeCountConst;
 
@@ -36,7 +36,7 @@ public sealed partial class DirectionalLight : IScreenManaged
 
     public Color3 Color => _lightData.Data.Color;
 
-    public BufferSlice DataBuffer => _lightData.AsBuffer().Slice();
+    internal Buffer DataBuffer => _lightData.AsBuffer();
 
     public void SetLightData(in Vector3 direction, in Color3 color)
     {

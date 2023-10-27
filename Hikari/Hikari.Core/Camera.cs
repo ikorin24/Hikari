@@ -10,7 +10,7 @@ namespace Hikari;
 public sealed partial class Camera
 {
     private readonly Screen _screen;
-    private BufferCached<CameraMatrix> _cameraMatrix;
+    private TypedOwnBuffer<CameraMatrix> _cameraMatrix;
     private readonly Own<BindGroupLayout> _bindGroupLayout;
     private readonly Own<BindGroup> _bindGroup;
     private readonly object _sync = new object();
@@ -219,7 +219,7 @@ public sealed partial class Camera
             Layout = _bindGroupLayout.AsValue(),
             Entries = new[]
             {
-                BindGroupEntry.Buffer(0, _cameraMatrix.AsBuffer()),
+                BindGroupEntry.Buffer(0, _cameraMatrix),
             },
         });
     }

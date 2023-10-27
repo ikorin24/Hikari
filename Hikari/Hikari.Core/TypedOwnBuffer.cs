@@ -7,6 +7,8 @@ internal readonly record struct TypedOwnBuffer<T> : IDisposable where T : unmana
 {
     private readonly Own<Buffer> _buffer;
 
+    public bool IsNone => _buffer.IsNone;
+
     public static TypedOwnBuffer<T> None => new(Own<Buffer>.None);
 
     private TypedOwnBuffer(Own<Buffer> buffer)
