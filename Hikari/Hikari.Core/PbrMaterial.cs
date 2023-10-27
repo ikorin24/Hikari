@@ -129,7 +129,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
             Layout = shader.Operation.BindGroupLayout0,
             Entries = new BindGroupEntry[]
             {
-                BindGroupEntry.Buffer(0, uniformBuffer.AsBuffer()),
+                BindGroupEntry.Buffer(0, uniformBuffer),
                 BindGroupEntry.TextureView(1, albedo.AsValue().View),
                 BindGroupEntry.Sampler(2, albedoSampler.AsValue()),
                 BindGroupEntry.TextureView(3, metallicRoughness.AsValue().View),
@@ -144,7 +144,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
             Layout = shader.Operation.ShadowBindGroupLayout0,
             Entries = new[]
             {
-                BindGroupEntry.Buffer(0, uniformBuffer.AsBuffer()),
+                BindGroupEntry.Buffer(0, uniformBuffer),
                 BindGroupEntry.Buffer(1, lights.DirectionalLight.LightMatricesBuffer),
             },
         });

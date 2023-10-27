@@ -111,6 +111,10 @@ public readonly struct BindGroupEntry
         };
     }
 
+    internal static BindGroupEntry Buffer<T>(u32 binding, TypedOwnBuffer<T> buffer)
+        where T : unmanaged
+        => Buffer(binding, buffer.AsBuffer());
+
     public static BindGroupEntry Buffer(u32 binding, Buffer buffer) => Buffer(binding, buffer, 0, buffer.ByteLength);
 
     public static BindGroupEntry Buffer(u32 binding, Buffer buffer, u64 offset, u64 size)
