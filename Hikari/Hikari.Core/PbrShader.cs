@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Hikari.Internal;
 using System;
+using System.Collections.Concurrent;
 using V = Hikari.Vertex;
 
 namespace Hikari;
@@ -14,6 +15,7 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
             Source);
         return sb.Utf8String.ToArray();
     });
+    private static readonly ConcurrentDictionary<PbrLayer, PbrShader> _cache = new();
 
     private static T ShadowShaderSource<TArg, T>(uint cascade, TArg arg, ReadOnlySpanFunc<byte, TArg, T> func)
     {
@@ -136,6 +138,11 @@ public sealed class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
         }
         _shadowPipeline = shadowPipeline;
         _shadowModules = shadowModules;
+    }
+
+    public static PbrShader CreateOrCached(PbrLayer operation)
+    {
+        return _cache.GetOrAdd(operation, static op => Create(op.Screen, op).DisposeOn(op.Dead));
     }
 
     public static Own<PbrShader> Create(Screen screen, PbrLayer operation)

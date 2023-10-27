@@ -28,6 +28,4 @@ public abstract class RenderOperation<TSelf, TShader, TMaterial>
     protected abstract OwnRenderPass CreateRenderPass(in OperationContext context);
 
     protected abstract void Render(in RenderPass pass);
-
-    public abstract TShader GetDefaultShader();
 }

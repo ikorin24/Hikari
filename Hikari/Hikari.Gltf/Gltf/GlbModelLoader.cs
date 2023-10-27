@@ -256,7 +256,7 @@ public static class GlbModelLoader
 
             var mesh = Mesh.Create(state.Screen, (TVertex*)vertices.Ptr, vertexCount, (uint*)indices.Ptr, indexCount, (Vector3*)tangents.Ptr, vertexCount);
             var material = PbrMaterial.Create(
-                state.Layer.GetDefaultShader(),
+                PbrShader.CreateOrCached(state.Layer),
                 materialData.Pbr.BaseColor,
                 materialData.Pbr.BaseColorSampler,
                 materialData.Pbr.MetallicRoughness,

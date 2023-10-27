@@ -211,11 +211,6 @@ internal sealed class UILayer : ObjectLayer<UILayer, VertexSlim, UIShader, UIMat
             },
         });
     }
-
-    public override UIShader GetDefaultShader()
-    {
-        throw new NotSupportedException();  // TODO:
-    }
 }
 
 public readonly record struct UIDescriptor
