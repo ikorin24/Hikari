@@ -8,8 +8,8 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
     private readonly Own<BindGroup> _bindGroup0;
     private Own<BindGroup> _bindGroup1;
     private Own<BindGroup> _bindGroup2;
-    private readonly Own<Buffer> _buffer;   // UIShaderSource.BufferData
-    private UIShaderSource.BufferData? _bufferData;
+    private BufferCached<UIShaderSource.BufferData> _buffer;
+
     private Own<Buffer> _backgroundBuffer;
     private Brush? _background;
     private MaybeOwn<Texture2D> _texture;
@@ -20,9 +20,6 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
     public BindGroup BindGroup0 => _bindGroup0.AsValue();
     public BindGroup BindGroup1 => _bindGroup1.AsValue();
     public BindGroup BindGroup2 => _bindGroup2.AsValue();
-
-    protected Buffer DataBuffer => _buffer.AsValue();
-    protected Buffer BackgroundBuffer => _backgroundBuffer.AsValue();
 
     public Texture2D? Texture => _texture.TryAsValue(out var texture) ? texture : null;
 
@@ -37,7 +34,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         _texture = texture;
         _sampler = sampler;
 
-        _buffer = Buffer.Create(Screen, (nuint)Unsafe.SizeOf<UIShaderSource.BufferData>(), BufferUsages.Uniform | BufferUsages.CopyDst);
+        _buffer = new(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst);
         _texContentSizeBuffer = Buffer.Create(Screen, (nuint)Unsafe.SizeOf<Vector2u>(), BufferUsages.Uniform | BufferUsages.CopyDst);
         _bindGroup0 = BindGroup.Create(screen, new()
         {
@@ -45,7 +42,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
             Entries = new[]
             {
                 BindGroupEntry.Buffer(0, screen.InfoBuffer),
-                BindGroupEntry.Buffer(1, _buffer.AsValue()),
+                BindGroupEntry.Buffer(1, _buffer.AsBuffer()),
             },
         });
         _bindGroup1 = BindGroup.Create(screen, new()
@@ -103,9 +100,8 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
             },
             BoxShadowColor = result.AppliedInfo.BoxShadow.Color,
         };
-        if(_bufferData != bufferData) {
-            _bufferData = bufferData;
-            _buffer.AsValue().WriteData(0, bufferData);
+        if(_buffer.Data == bufferData) {
+            _buffer.WriteData(bufferData);
         }
         UpdateBackground(result.AppliedInfo.Background);
     }

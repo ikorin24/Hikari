@@ -13,7 +13,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
     private readonly MaybeOwn<Sampler> _metallicRoughnessSampler;
     private readonly MaybeOwn<Sampler> _normalSampler;
 
-    private BufferCached<UniformValue> _modelUniform;
+    private readonly TypedOwnBuffer<UniformValue> _modelUniform;
     private readonly Own<BindGroup> _bindGroup0;
     private readonly BindGroup _bindGroup1;
     private readonly Own<BindGroup> _shadowBindGroup0;
@@ -33,7 +33,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
 
     private PbrMaterial(
         PbrShader shader,
-        BufferCached<UniformValue> uniform,
+        TypedOwnBuffer<UniformValue> uniform,
         MaybeOwn<Texture2D> albedo,
         MaybeOwn<Sampler> albedoSampler,
         MaybeOwn<Texture2D> metallicRoughness,
@@ -123,7 +123,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
 
         var screen = shader.Screen;
         var lights = screen.Lights;
-        var uniformBuffer = new BufferCached<UniformValue>(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
+        var uniformBuffer = new TypedOwnBuffer<UniformValue>(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
         var bindGroup0 = BindGroup.Create(screen, new()
         {
             Layout = shader.Operation.BindGroupLayout0,
