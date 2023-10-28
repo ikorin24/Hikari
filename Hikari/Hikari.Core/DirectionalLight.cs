@@ -119,7 +119,8 @@ public sealed partial class DirectionalLight : IScreenManaged
             var cascadedCenter = (cascadeNearPoint + cascadeFarPoint) / 2;
 
             if(camera.ProjectionMode.IsPerspective(out var fovy)) {
-                var cascadedProj = Matrix4.ReversedZ.PerspectiveProjection(fovy, camera.Aspect, n * float.Cos(fovy * 0.5f), f);
+                var fovx = 2f * float.Atan(camera.Aspect * float.Tan(fovy / 2f));
+                var cascadedProj = Matrix4.ReversedZ.PerspectiveProjection(fovy, camera.Aspect, n * float.Cos(fovx * 0.5f), f);
                 Frustum.FromMatrix(cascadedProj, camera.Matrix.View, out var cascadedFrustum);
                 var lview = Matrix4.LookAt(cascadedCenter - lightDir, cascadedCenter, lUp);
 

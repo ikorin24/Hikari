@@ -117,25 +117,21 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                     -p.y * 0.5 + 0.5,
                     p.z);
                 let bias = 0.005 / (f32(cascade) + 1.0);       // TODO:
-                //let slope_scaled_bias = bias * acos(cos(dot_nl)) / ((f32(cascade) + 1.0) * 0.5);
-                //let slope_scaled_bias = 0.005 / (f32(cascade) + 1.0);
                 var vis: f32 = 0.0;
 
                 let shadowmap_size: vec2<i32> = textureDimensions(shadowmap, 0);
                 let shadowmap_size_inv: vec2<f32> = vec2<f32>(1.0, 1.0) / vec2<f32>(shadowmap_size);
 
                 // PCF
-                var seed: vec2<u32> = random_vec2_u32(in.uv);
-                let sample_count: i32 = 2;
+                let random: vec2<f32> = random_vec2_f32(in.uv);
+                let sample_count: i32 = 1;
                 let ref_z = shadowmap_pos.z + bias;
                 let R: f32 = 6.0 / (f32(cascade + 1u) * 2.5);        // TODO:
-                let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
                 for(var i: i32 = 0; i < sample_count; i++) {
-                    seed ^= (seed << 13u); seed ^= (seed >> 17u); seed ^= (seed << 5u);
-                    let r = R * sqrt(f32(seed.x) * u32_max_inv);
+                    let r = R * sqrt(random.x);
                     let offset = vec2<f32>(
-                        r * cos(2.0 * PI * f32(seed.y) * u32_max_inv),
-                        r * sin(2.0 * PI * f32(seed.y) * u32_max_inv),
+                        r * cos(2.0 * PI * random.y),
+                        r * sin(2.0 * PI * random.y),
                     );
                     if(shadowmap_pos.x < 0.0 || shadowmap_pos.x > 1.0 || shadowmap_pos.y < 0.0 || shadowmap_pos.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
                         vis += 1.0;
@@ -228,6 +224,13 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             n ^= (n.yx << 1u);
             n *= K;
             return n;
+        }
+
+        // Return random vec2<f32> in [0, 1]
+        fn random_vec2_f32(p: vec2<f32>) -> vec2<f32> {
+            let a: vec2<u32> = random_vec2_u32(p);
+            let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
+            return vec2<f32>(f32(a.x) * u32_max_inv, f32(a.y) * u32_max_inv);
         }
         """u8;
 
