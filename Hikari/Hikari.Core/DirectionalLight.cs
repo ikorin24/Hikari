@@ -102,7 +102,7 @@ public sealed partial class DirectionalLight : IScreenManaged
         var lightMatrices = lightMatrixArray.AsSpan();
         var cascadeFars = cascadeFarArray.AsSpan();
 
-        const float MaxShadowMapFar = 500;
+        const float MaxShadowMapFar = 200;
 
         float logNear = float.Log(camera.Near);
         float logFar = float.Log(MaxShadowMapFar);
@@ -134,7 +134,7 @@ public sealed partial class DirectionalLight : IScreenManaged
                 var lproj = Matrix4.ReversedZ.OrthographicProjection(
                 aabbInLightSpace.Min.X, aabbInLightSpace.Max.X,
                 aabbInLightSpace.Min.Y, aabbInLightSpace.Max.Y,
-                -(aabbInLightSpace.Max.Z + float.Clamp(aabbInLightSpace.Size.Z * 2.0f, 10, 200)),  // TODO:
+                -(aabbInLightSpace.Max.Z + float.Clamp(aabbInLightSpace.Size.Z * 2.0f, 10, 100)),  // TODO:
                 -aabbInLightSpace.Min.Z);
                 lightMatrices[i] = lproj * lview;
             }

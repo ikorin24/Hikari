@@ -116,21 +116,19 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                     p.x * 0.5 + 0.5,
                     -p.y * 0.5 + 0.5,
                     p.z);
-                let bias = 0.001;       // TODO:
-                let slope_scaled_bias = bias * acos(cos(dot_nl)) / ((f32(cascade) + 1.0) * 0.5);
+                let bias = 0.005 / (f32(cascade) + 1.0);       // TODO:
+                //let slope_scaled_bias = bias * acos(cos(dot_nl)) / ((f32(cascade) + 1.0) * 0.5);
+                //let slope_scaled_bias = 0.005 / (f32(cascade) + 1.0);
                 var vis: f32 = 0.0;
 
                 let shadowmap_size: vec2<i32> = textureDimensions(shadowmap, 0);
-                let sm_size_inv = vec2<f32>(
-                    1.0 / f32(shadowmap_size.x) / f32(cascade_count),
-                    1.0 / f32(shadowmap_size.y),
-                );
+                let shadowmap_size_inv: vec2<f32> = vec2<f32>(1.0, 1.0) / vec2<f32>(shadowmap_size);
 
                 // PCF
                 var seed: vec2<u32> = random_vec2_u32(in.uv);
-                let sample_count: i32 = 4;
-                let ref_z = shadowmap_pos.z + slope_scaled_bias;
-                let R = 2.0;
+                let sample_count: i32 = 2;
+                let ref_z = shadowmap_pos.z + bias;
+                let R: f32 = 6.0 / (f32(cascade + 1u) * 2.5);        // TODO:
                 let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
                 for(var i: i32 = 0; i < sample_count; i++) {
                     seed ^= (seed << 13u); seed ^= (seed >> 17u); seed ^= (seed << 5u);
@@ -139,12 +137,14 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                         r * cos(2.0 * PI * f32(seed.y) * u32_max_inv),
                         r * sin(2.0 * PI * f32(seed.y) * u32_max_inv),
                     );
-                    var shadow_uv = shadowmap_pos.xy + offset * sm_size_inv;
-                    if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
+                    if(shadowmap_pos.x < 0.0 || shadowmap_pos.x > 1.0 || shadowmap_pos.y < 0.0 || shadowmap_pos.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
                         vis += 1.0;
                     }
                     else {
-                        shadow_uv.x = shadow_uv.x / f32(cascade_count) + f32(cascade) / f32(cascade_count);
+                        var shadow_uv = vec2<f32>(
+                            shadowmap_pos.x / f32(cascade_count) + f32(cascade) / f32(cascade_count),
+                            shadowmap_pos.y,
+                        ) + offset * shadowmap_size_inv;
                         vis += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
                     }
                 }

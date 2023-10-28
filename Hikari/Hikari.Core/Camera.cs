@@ -371,7 +371,7 @@ public sealed partial class Camera
         public Matrix4 InvView;
     }
 
-    internal struct CameraState
+    internal record struct CameraState
     {
         public CameraMatrix Matrix;
         public Vector3 Position;
