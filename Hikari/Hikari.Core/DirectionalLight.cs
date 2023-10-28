@@ -118,9 +118,25 @@ public sealed partial class DirectionalLight : IScreenManaged
             var cascadeFarPoint = camera.Position + cameraDir * f;
             var cascadedCenter = (cascadeNearPoint + cascadeFarPoint) / 2;
 
-            Matrix4 cascadedProj;
             if(camera.ProjectionMode.IsPerspective(out var fovy)) {
-                cascadedProj = Matrix4.ReversedZ.PerspectiveProjection(fovy, camera.Aspect, n, f);
+                var cascadedProj = Matrix4.ReversedZ.PerspectiveProjection(fovy, camera.Aspect, n * float.Cos(fovy * 0.5f), f);
+                Frustum.FromMatrix(cascadedProj, camera.Matrix.View, out var cascadedFrustum);
+                var lview = Matrix4.LookAt(cascadedCenter - lightDir, cascadedCenter, lUp);
+
+                var min = Vector3.MaxValue;
+                var max = Vector3.MinValue;
+                foreach(var corner in cascadedFrustum.Corners) {
+                    var p = lview.Transform(corner);
+                    min = Vector3.Min(min, p);
+                    max = Vector3.Max(max, p);
+                }
+                var aabbInLightSpace = Bounds.FromMinMax(min, max);
+                var lproj = Matrix4.ReversedZ.OrthographicProjection(
+                aabbInLightSpace.Min.X, aabbInLightSpace.Max.X,
+                aabbInLightSpace.Min.Y, aabbInLightSpace.Max.Y,
+                -(aabbInLightSpace.Max.Z + float.Clamp(aabbInLightSpace.Size.Z * 2.0f, 10, 200)),  // TODO:
+                -aabbInLightSpace.Min.Z);
+                lightMatrices[i] = lproj * lview;
             }
             else if(camera.ProjectionMode.IsOrthographic(out var height)) {
                 throw new NotImplementedException();        // TODO:
@@ -128,23 +144,6 @@ public sealed partial class DirectionalLight : IScreenManaged
             else {
                 throw new NotSupportedException();
             }
-            Frustum.FromMatrix(cascadedProj, camera.Matrix.View, out var cascadedFrustum);
-            var lview = Matrix4.LookAt(cascadedCenter - lightDir, cascadedCenter, lUp);
-
-            var min = Vector3.MaxValue;
-            var max = Vector3.MinValue;
-            foreach(var corner in cascadedFrustum.Corners) {
-                var p = lview.Transform(corner);
-                min = Vector3.Min(min, p);
-                max = Vector3.Max(max, p);
-            }
-            var aabbInLightSpace = Bounds.FromMinMax(min, max);
-            var lproj = Matrix4.ReversedZ.OrthographicProjection(
-                aabbInLightSpace.Min.X, aabbInLightSpace.Max.X,
-                aabbInLightSpace.Min.Y, aabbInLightSpace.Max.Y,
-                -(aabbInLightSpace.Max.Z + float.Clamp(aabbInLightSpace.Size.Z * 2.0f, 10, 200)),  // TODO:
-                -aabbInLightSpace.Min.Z);
-            lightMatrices[i] = lproj * lview;
         }
     }
 
