@@ -17,6 +17,7 @@ public sealed class Screen
     private readonly SubscriptionBag _subscriptions;
     private readonly Camera _camera;
     private readonly Lights _lights;
+    private readonly ObjectStore _objectStore;
     private readonly Timing _earlyUpdate;
     private readonly Timing _update;
     private readonly Timing _lateUpdate;
@@ -64,6 +65,8 @@ public sealed class Screen
 
     internal BufferSlice InfoBuffer => _info.AsValue().Slice();
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
+
+    internal ObjectStore Store => _objectStore;
     public Mouse Mouse => _mouse;
     public Keyboard Keyboard => _keyboard;
     public ulong FrameNum => _frameNum;
@@ -158,6 +161,7 @@ public sealed class Screen
         _mouse = new Mouse(this);
         _surface = new Surface(this);
         _keyboard = new Keyboard(this);
+        _objectStore = new ObjectStore(this);
         _info = Buffer.CreateInitData(this, new ScreenInfo
         {
             Size = Vector2u.Zero,
@@ -266,6 +270,7 @@ public sealed class Screen
     {
         Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
         var operations = _operations;
+        var store = _objectStore;
         _mouse.InitFrame();
 
         if(_frameNum == 0) {
@@ -273,6 +278,7 @@ public sealed class Screen
         }
 
         operations.ApplyAdd();
+        store.ApplyAdd();
 
         // frame init
         operations.FrameInit();
@@ -296,6 +302,7 @@ public sealed class Screen
         // frame end
         operations.FrameEnd();
 
+        store.ApplyRemove();
         operations.ApplyRemove();
         _keyboard.PrepareNextFrame();
         _mouse.PrepareNextFrame();
@@ -345,6 +352,7 @@ public sealed class Screen
 
     internal Rust.OptionBox<CH.Screen> OnClosed()
     {
+        _objectStore.OnClosed();
         _operations.OnClosed();
         _closed.Invoke(this);
 

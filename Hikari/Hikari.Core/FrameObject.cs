@@ -8,9 +8,10 @@ public abstract class FrameObject : IScreenManaged
 {
     private readonly Screen _screen;
     private string? _name;
+    private LifeState _state;
 
     public Screen Screen => _screen;
-    public abstract LifeState LifeState { get; }
+    public LifeState LifeState => _state;
 
     public string? Name
     {
@@ -22,13 +23,58 @@ public abstract class FrameObject : IScreenManaged
 
     public bool IsManaged => LifeState != LifeState.Dead;
 
-    protected FrameObject(Screen screen)
+    private protected FrameObject(Screen screen)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _screen = screen;
+        _state = LifeState.New;
+        screen.Store.Add(this);
     }
 
     public virtual void Validate() => IScreenManaged.DefaultValidate(this);
+
+    internal void SetLifeStateAlive()
+    {
+        Debug.Assert(_state == LifeState.New);
+        _state = LifeState.Alive;
+    }
+
+    public void Terminate()
+    {
+        if(Screen.MainThread.IsCurrentThread) {
+            Terminate(this);
+        }
+        else {
+            Screen.Update.Post(static x =>
+            {
+                var self = SafeCast.NotNullAs<FrameObject>(x);
+                Terminate(self);
+            }, this);
+        }
+        return;
+
+        static void Terminate(FrameObject self)
+        {
+            Debug.Assert(self.Screen.MainThread.IsCurrentThread);
+            if(self._state == LifeState.Alive || self._state == LifeState.New) {
+                self._state = LifeState.Terminating;
+                self.Screen.Store.Remove(self);
+                self.OnTerminated();
+            }
+        }
+    }
+
+    internal abstract void OnAlive();
+
+    internal abstract void OnTerminated();
+
+    internal void SetLifeStateDead()
+    {
+        Debug.Assert(_state == LifeState.Terminating);
+        _state = LifeState.Dead;
+    }
+
+    internal abstract void OnDead();
 }
 
 public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
@@ -51,7 +97,6 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     private EventSource<TSelf> _terminated;
     private EventSource<TSelf> _dead;
 
-    private LifeState _state;
     private bool _isFrozen;
 
     public TLayer Layer => _layer;
@@ -59,7 +104,6 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     public TMaterial Material => _material.AsValue();
     public Mesh<TVertex> Mesh => _mesh.AsValue();
     public bool IsOwnMesh => _mesh.IsOwn(out _);
-    public sealed override LifeState LifeState => _state;
     public sealed override SubscriptionRegister Subscriptions => _subscriptions.Register;
 
     public Event<TSelf> Alive => _alive.Event;
@@ -88,7 +132,6 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
         _mesh = mesh;
         _layer = material.AsValue().Operation;
         _isFrozen = false;
-        _state = LifeState.New;
 
         // `this` must be of type `TSelf`.
         // This is true as long as a derived class is implemented correctly.
@@ -100,60 +143,19 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
         }
     }
 
-    public void Terminate()
+    internal sealed override void OnAlive()
     {
-        if(Screen.MainThread.IsCurrentThread) {
-            Terminate(This);
-        }
-        else {
-            Screen.Update.Post(static x =>
-            {
-                var self = SafeCast.NotNullAs<TSelf>(x);
-                Terminate(self);
-            }, This);
-        }
-        return;
-
-        static void Terminate(TSelf self)
-        {
-            Debug.Assert(self.Screen.MainThread.IsCurrentThread);
-            if(self._state == LifeState.Alive || self._state == LifeState.New) {
-                self._state = LifeState.Terminating;
-                self._layer.Remove(self);
-                self._terminated.Invoke(self);
-            }
-        }
-    }
-
-    internal void OnRender(in RenderPass pass)
-    {
-        pass.SetPipeline(Shader.Pipeline);
-        Render(pass, _material.AsValue(), _mesh.AsValue());
-    }
-
-    public virtual void InvokeEarlyUpdate() => _earlyUpdate.Invoke(This);
-    public virtual void InvokeUpdate() => _update.Invoke(This);
-    public virtual void InvokeLateUpdate() => _lateUpdate.Invoke(This);
-
-    internal void SetLifeStateAlive()
-    {
-        Debug.Assert(_state == LifeState.New);
-        _state = LifeState.Alive;
-    }
-
-    internal void OnAlive()
-    {
-        Debug.Assert(_state == LifeState.Alive);
+        Debug.Assert(LifeState == LifeState.Alive);
         _alive.Invoke(This);
     }
 
-    internal void SetLifeStateDead()
+    internal sealed override void OnTerminated()
     {
-        Debug.Assert(_state == LifeState.Terminating);
-        _state = LifeState.Dead;
+        Debug.Assert(LifeState == LifeState.Terminating);
+        _terminated.Invoke(This);
     }
 
-    internal void OnDead()
+    internal sealed override void OnDead()
     {
         _dead.Invoke(This);
         _material.Dispose();
@@ -167,6 +169,16 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
         _terminated.Clear();
         _dead.Clear();
     }
+
+    internal void OnRender(in RenderPass pass)
+    {
+        pass.SetPipeline(Shader.Pipeline);
+        Render(pass, _material.AsValue(), _mesh.AsValue());
+    }
+
+    public virtual void InvokeEarlyUpdate() => _earlyUpdate.Invoke(This);
+    public virtual void InvokeUpdate() => _update.Invoke(This);
+    public virtual void InvokeLateUpdate() => _lateUpdate.Invoke(This);
 
     protected abstract void Render(in RenderPass pass, TMaterial material, Mesh<TVertex> mesh);
 }
