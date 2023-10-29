@@ -135,7 +135,7 @@ public sealed partial class DirectionalLight : IScreenManaged
                 var lproj = Matrix4.ReversedZ.OrthographicProjection(
                 aabbInLightSpace.Min.X, aabbInLightSpace.Max.X,
                 aabbInLightSpace.Min.Y, aabbInLightSpace.Max.Y,
-                -(aabbInLightSpace.Max.Z + float.Clamp(aabbInLightSpace.Size.Z * 2.0f, 10, 100)),  // TODO:
+                -(aabbInLightSpace.Max.Z + aabbInLightSpace.Size.Z * 10.0f),  // TODO:
                 -aabbInLightSpace.Min.Z);
                 lightMatrices[i] = lproj * lview;
             }

@@ -116,35 +116,30 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                     p.x * 0.5 + 0.5,
                     -p.y * 0.5 + 0.5,
                     p.z);
-                let bias = 0.005 / (f32(cascade) + 1.0);       // TODO:
-                var vis: f32 = 0.0;
+                let bias = 0.005 / (f32(cascade + 1u) * 5.0);
 
                 let shadowmap_size: vec2<i32> = textureDimensions(shadowmap, 0);
                 let shadowmap_size_inv: vec2<f32> = vec2<f32>(1.0, 1.0) / vec2<f32>(shadowmap_size);
 
-                // PCF
                 let random: vec2<f32> = random_vec2_f32(in.uv);
-                let sample_count: i32 = 1;
                 let ref_z = shadowmap_pos.z + bias;
                 let R: f32 = 6.0 / (f32(cascade + 1u) * 2.5);        // TODO:
-                for(var i: i32 = 0; i < sample_count; i++) {
-                    let r = R * sqrt(random.x);
-                    let offset = vec2<f32>(
-                        r * cos(2.0 * PI * random.y),
-                        r * sin(2.0 * PI * random.y),
-                    );
-                    if(shadowmap_pos.x < 0.0 || shadowmap_pos.x > 1.0 || shadowmap_pos.y < 0.0 || shadowmap_pos.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
-                        vis += 1.0;
-                    }
-                    else {
-                        var shadow_uv = vec2<f32>(
-                            shadowmap_pos.x / f32(cascade_count) + f32(cascade) / f32(cascade_count),
-                            shadowmap_pos.y,
-                        ) + offset * shadowmap_size_inv;
-                        vis += textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
-                    }
+                let r = R * sqrt(random.x);
+                let offset = vec2<f32>(
+                    r * cos(2.0 * PI * random.y),
+                    r * sin(2.0 * PI * random.y),
+                );
+                if(shadowmap_pos.x < 0.0 || shadowmap_pos.x > 1.0 || shadowmap_pos.y < 0.0 || shadowmap_pos.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
+                    visibility = 1.0;
                 }
-                visibility = vis / f32(sample_count) + light.ambient_strength;
+                else {
+                    var shadow_uv = vec2<f32>(
+                        shadowmap_pos.x / f32(cascade_count) + f32(cascade) / f32(cascade_count),
+                        shadowmap_pos.y,
+                    ) + offset * shadowmap_size_inv;
+                    visibility = textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
+                }
+                visibility += light.ambient_strength;
             }
 
             if (cascade == cascade_count - 1u) {
