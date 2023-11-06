@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -60,10 +61,7 @@ public sealed class Button : UIElement, IFromJson<Button>
     static Button()
     {
         Serializer.RegisterConstructor(FromJson);
-        UILayer.RegisterShader<Button>(static layer =>
-        {
-            return ButtonShader.Create(layer).Cast<UIShader>();
-        });
+        UITree.RegisterShader<Button>(ButtonShader.CreateOrCached);
     }
 
     public static Button FromJson(in ObjectSource source) => new Button(source);
@@ -200,11 +198,22 @@ internal record struct ButtonInfo
 
 file sealed class ButtonShader : UIShader
 {
-    private ButtonShader(UILayer operation) : base(operation)
+    private static readonly ConcurrentDictionary<Screen, ButtonShader> _cache = new();
+
+    private ButtonShader(Screen screen) : base(screen)
     {
     }
 
-    public static Own<ButtonShader> Create(UILayer layer) => CreateOwn(new ButtonShader(layer));
+    public static ButtonShader CreateOrCached(Screen screen)
+    {
+        return _cache.GetOrAdd(screen, static screen => Create(screen).DisposeOn(screen.Closed));
+    }
+
+    private static Own<ButtonShader> Create(Screen screen)
+    {
+        var self = new ButtonShader(screen);
+        return CreateOwn(self);
+    }
 
     public override Own<UIMaterial> CreateMaterial()
     {

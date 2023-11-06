@@ -1,10 +1,11 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace Hikari.UI;
 
-internal sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShader, UIMaterial>
+internal sealed class UIModel : FrameObject<UIModel, VertexSlim, UIShader, UIMaterial>
 {
     private readonly UIElement _element;
 
@@ -16,17 +17,25 @@ internal sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShad
             shader.CreateMaterial())
     {
         _element = element;
-        //IsFrozen = true;
     }
 
-    protected override void Render(in RenderPass pass, UIMaterial material, Mesh<VertexSlim> mesh)
+    protected override void Render(in RenderPass renderPass, ShaderPass shaderPass)
     {
-        pass.SetVertexBuffer(0, mesh.VertexBuffer);
-        pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
-        pass.SetBindGroup(0, material.BindGroup0);
-        pass.SetBindGroup(1, material.BindGroup1);
-        pass.SetBindGroup(2, material.BindGroup2);
-        pass.DrawIndexed(mesh.IndexCount);
+        switch(shaderPass.Index) {
+            case 0: {
+                var mesh = Mesh;
+                var material = Material;
+                renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+                renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+                renderPass.SetBindGroups(material.Passes[0].BindGroups);
+                renderPass.DrawIndexed(mesh.IndexCount);
+                return;
+            }
+            default: {
+                Debug.Fail("unreachable");
+                return;
+            }
+        }
     }
 
     private static Mesh<VertexSlim> GetMesh(Screen screen)
@@ -42,7 +51,12 @@ internal sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShad
             };
             ReadOnlySpan<ushort> indices = stackalloc ushort[6] { 0, 1, 2, 2, 3, 0 };
             var mesh = Hikari.Mesh.Create(screen, vertices, indices);
-            screen.Closed.Subscribe(static screen => _cache.TryRemove(screen, out _));
+            screen.Closed.Subscribe(static screen =>
+            {
+                if(_cache.TryRemove(screen, out var cache)) {
+                    cache.Dispose();
+                }
+            });
             return new MeshCache(mesh);
         });
         return cache.Mesh;
@@ -50,15 +64,21 @@ internal sealed class UIModel : FrameObject<UIModel, UILayer, VertexSlim, UIShad
 
     private static readonly ConcurrentDictionary<Screen, MeshCache> _cache = new();
 
-    private sealed class MeshCache
+    private sealed class MeshCache : IDisposable
     {
-        private readonly Own<Mesh<VertexSlim>> _mesh;
+        private Own<Mesh<VertexSlim>> _mesh;
 
         public Mesh<VertexSlim> Mesh => _mesh.AsValue();
 
         public MeshCache(Own<Mesh<VertexSlim>> mesh)
         {
             _mesh = mesh;
+        }
+
+        public void Dispose()
+        {
+            _mesh.Dispose();
+            _mesh = Own<Mesh<VertexSlim>>.None;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace Hikari.UI;
@@ -33,10 +34,7 @@ public sealed class Panel : UIElement, IFromJson<Panel>
     static Panel()
     {
         Serializer.RegisterConstructor(FromJson);
-        UILayer.RegisterShader<Panel>(static layer =>
-        {
-            return PanelShader.Create(layer).Cast<UIShader>();
-        });
+        UITree.RegisterShader<Panel>(PanelShader.CreateOrCached);
     }
 
     public static Panel FromJson(in ObjectSource source) => new Panel(source);
@@ -103,13 +101,20 @@ public sealed record PanelPseudoInfo
 
 file sealed class PanelShader : UIShader
 {
-    private PanelShader(UILayer operation) : base(operation)
+    private static readonly ConcurrentDictionary<Screen, PanelShader> _cache = new();
+
+    private PanelShader(Screen screen) : base(screen)
     {
     }
 
-    public static Own<PanelShader> Create(UILayer layer)
+    public static PanelShader CreateOrCached(Screen screen)
     {
-        return CreateOwn(new PanelShader(layer));
+        return _cache.GetOrAdd(screen, static screen => Create(screen).DisposeOn(screen.Closed));
+    }
+
+    private static Own<PanelShader> Create(Screen screen)
+    {
+        return CreateOwn(new PanelShader(screen));
     }
 
     public override Own<UIMaterial> CreateMaterial()

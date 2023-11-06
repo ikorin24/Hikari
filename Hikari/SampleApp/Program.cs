@@ -34,7 +34,7 @@ internal class Program
 
         var app = App.BuildPipelines(screen);
 
-        //app.UI.RenderRoot($$"""
+        //screen.UITree.RenderRoot($$"""
         //{
         //    "@type": {{typeof(Counter)}},
         //    "Width": "600px",
@@ -42,27 +42,37 @@ internal class Program
         //}
         //""");
 
-        var model = GlbModelLoader.LoadGlbFile(app.PbrLayer, @"D:\private\source\Elffy\src\Sandbox\Resources\AntiqueCamera.glb");
+        var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"D:\private\source\Elffy\src\Sandbox\Resources\AntiqueCamera.glb");
 
         var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
         var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
         var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
 
-        var plane = new PbrModel(Shapes.Plane(screen, true), PbrMaterial.Create(PbrBasicShader.CreateOrCached(app.PbrLayer), albedo, mr, normal));
+        var plane = new PbrModel(Shapes.Plane(screen, true), PbrMaterial.Create(app.PbrBasicShader, albedo, mr, normal));
 
         plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
-        plane.Scale = new Vector3(10);
+        plane.Scale = new Vector3(60);
         var material = plane.Material;
-        var cube = new PbrModel(Shapes.Cube(screen, true), PbrMaterial.Create(PbrBasicShader.CreateOrCached(app.PbrLayer), material.Albedo, material.MetallicRoughness, material.Normal));
+        var cube = new PbrModel(Shapes.Cube(screen, true), PbrMaterial.Create(app.PbrBasicShader, material.Albedo, material.MetallicRoughness, material.Normal));
 
-        cube.Scale = new Vector3(0.3f);
-        cube.Position = new Vector3(0, 0.2f, 0);
+        //cube.Scale = new Vector3(0.3f);
+        //cube.Position = new Vector3(0, 0.2f, 0);
+
+
+        var cubeMesh = Shapes.Cube(screen, true);
+        for(int i = 0; i < 300; i++) {
+            var a = new PbrModel(cubeMesh, PbrMaterial.Create(app.PbrBasicShader, material.Albedo, material.MetallicRoughness, material.Normal));
+            a.Scale = new Vector3(0.5f);
+            //a.Position = new Vector3(0.2f, 1.2f, i * 1.5f);
+            a.Position = new Vector3(i * 1.5f, 1.2f, 0.2f);
+        }
 
         var camera = screen.Camera;
         camera.SetNearFar(0.5f, 1000);
         camera.LookAt(Vector3.Zero, new Vector3(0, 2f, 3) * 0.6f);
 
-        screen.Lights.DirectionalLight.SetLightData(new Vector3(-0.5f, -1, 0), Color3.White);
+        //screen.Lights.DirectionalLight.SetLightData(new Vector3(-0.5f, -1, 0), Color3.White);
+        screen.Lights.DirectionalLight.SetLightData(new Vector3(0, -1, 0), Color3.White);
 
         var sw = new Stopwatch();
         sw.Start();
@@ -83,7 +93,7 @@ internal class Program
 
             var a = (screen.FrameNum * 10f / 360f).ToRadian();
             //var a = (360 * (float)delta.TotalSeconds).ToRadian();
-            cube.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, a);
+            //cube.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, a);
             //model.Rotation = Quaternion.FromAxisAngle(Vector3.UnitY, -a) * Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
         });
 
@@ -98,20 +108,20 @@ internal class Program
             //image.SaveAsPng("test.png");
         });
 
-        cube.Mesh.VertexBuffer.ReadCallback((bytes, _) =>
-        {
-            var vertices = bytes.MarshalCast<byte, Vertex>();
-            return;
-        });
+        //cube.Mesh.VertexBuffer.ReadCallback((bytes, _) =>
+        //{
+        //    var vertices = bytes.MarshalCast<byte, Vertex>();
+        //    return;
+        //});
 
-        var mesh = cube.Mesh;
-        cube.Mesh.IndexBuffer.ReadCallback((bytes, _) =>
-        {
-            var indices = bytes.MarshalCast<byte, ushort>();
-            for(int i = 0; i < indices.Length / 3; i++) {
-                Debug.WriteLine($"{indices[i * 3 + 0]}, {indices[i * 3 + 1]}, {indices[i * 3 + 2]}");
-            }
-        });
+        //var mesh = cube.Mesh;
+        //cube.Mesh.IndexBuffer.ReadCallback((bytes, _) =>
+        //{
+        //    var indices = bytes.MarshalCast<byte, ushort>();
+        //    for(int i = 0; i < indices.Length / 3; i++) {
+        //        Debug.WriteLine($"{indices[i * 3 + 0]}, {indices[i * 3 + 1]}, {indices[i * 3 + 2]}");
+        //    }
+        //});
     }
 
     private static Own<Texture2D> LoadTexture(Screen screen, string filepath, bool isSrgb)

@@ -9,6 +9,8 @@ public abstract class FrameObject : IScreenManaged
     private readonly Screen _screen;
     private string? _name;
     private LifeState _state;
+    private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
+    private bool _isFrozen;
 
     public Screen Screen => _screen;
     public LifeState LifeState => _state;
@@ -19,19 +21,31 @@ public abstract class FrameObject : IScreenManaged
         set => _name = value;
     }
 
-    public abstract SubscriptionRegister Subscriptions { get; }
+    public bool IsFrozen
+    {
+        get => _isFrozen;
+        set => _isFrozen = value;
+    }
+
+    public SubscriptionRegister Subscriptions => _subscriptions.Register;
 
     public bool IsManaged => LifeState != LifeState.Dead;
 
-    private protected FrameObject(Screen screen)
+    private protected FrameObject(Screen screen, Action<FrameObject> typeCheck)
     {
         ArgumentNullException.ThrowIfNull(screen);
+        typeCheck(this);
         _screen = screen;
         _state = LifeState.New;
+        _isFrozen = false;
         screen.Store.Add(this);
     }
 
     public virtual void Validate() => IScreenManaged.DefaultValidate(this);
+
+    internal void OnRender(in RenderPass renderPass, ShaderPass shaderPass) => Render(renderPass, shaderPass);
+
+    protected abstract void Render(in RenderPass renderPass, ShaderPass shaderPass);
 
     internal void SetLifeStateAlive()
     {
@@ -64,6 +78,10 @@ public abstract class FrameObject : IScreenManaged
         }
     }
 
+    internal abstract void InvokeEarlyUpdate();
+    internal abstract void InvokeUpdate();
+    internal abstract void InvokeLateUpdate();
+
     internal abstract void OnAlive();
 
     internal abstract void OnTerminated();
@@ -74,21 +92,21 @@ public abstract class FrameObject : IScreenManaged
         _state = LifeState.Dead;
     }
 
-    internal abstract void OnDead();
+    internal virtual void OnDead()
+    {
+        _subscriptions.Dispose();
+    }
 }
 
-public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
+public abstract class FrameObject<TSelf, TVertex, TShader, TMaterial>
     : FrameObject
-    where TSelf : FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
-    where TLayer : ObjectLayer<TLayer, TVertex, TShader, TMaterial, TSelf>
+    where TSelf : FrameObject<TSelf, TVertex, TShader, TMaterial>
     where TVertex : unmanaged, IVertex
-    where TShader : Shader<TShader, TMaterial, TLayer>
-    where TMaterial : Material<TMaterial, TShader, TLayer>
+    where TShader : Shader<TShader, TMaterial>
+    where TMaterial : Material<TMaterial, TShader>
 {
-    private readonly TLayer _layer;
     private readonly Own<TMaterial> _material;
     private readonly MaybeOwn<Mesh<TVertex>> _mesh;
-    private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
 
     private EventSource<TSelf> _update;
     private EventSource<TSelf> _lateUpdate;
@@ -97,14 +115,10 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     private EventSource<TSelf> _terminated;
     private EventSource<TSelf> _dead;
 
-    private bool _isFrozen;
-
-    public TLayer Layer => _layer;
     public TShader Shader => _material.AsValue().Shader;
     public TMaterial Material => _material.AsValue();
     public Mesh<TVertex> Mesh => _mesh.AsValue();
     public bool IsOwnMesh => _mesh.IsOwn(out _);
-    public sealed override SubscriptionRegister Subscriptions => _subscriptions.Register;
 
     public Event<TSelf> Alive => _alive.Event;
     public Event<TSelf> Terminated => _terminated.Event;
@@ -113,32 +127,29 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
     public Event<TSelf> LateUpdate => _lateUpdate.Event;
     public Event<TSelf> Update => _update.Event;
 
-    public bool IsFrozen
-    {
-        get => _isFrozen;
-        set => _isFrozen = value;
-    }
-
-    /// <summary>Strong typed `this`</summary>
+    /// <summary>Strong typed <see langword="this"/></summary>
     protected TSelf This => SafeCast.As<TSelf>(this);
 
     protected FrameObject(
         MaybeOwn<Mesh<TVertex>> mesh,
-        Own<TMaterial> material) : base(material.AsValue().Screen)
+        Own<TMaterial> material) : base(material.AsValue().Screen, TypeCheck)
     {
-        material.ThrowArgumentExceptionIfNone();
+        var screen = Screen;
+        var shader = material.AsValue().Shader;
         mesh.ThrowArgumentExceptionIfNone();
         _material = material;
         _mesh = mesh;
-        _layer = material.AsValue().Operation;
-        _isFrozen = false;
 
+        foreach(var pipeline in shader.Passes) {
+            pipeline.Register(this);
+        }
+    }
+
+    private static void TypeCheck(FrameObject self)
+    {
         // `this` must be of type `TSelf`.
         // This is true as long as a derived class is implemented correctly.
-        if(this is TSelf self) {
-            _layer.Add(self);
-        }
-        else {
+        if(self is not TSelf) {
             ThrowHelper.ThrowInvalidOperation("Invalid self type.");
         }
     }
@@ -160,7 +171,6 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
         _dead.Invoke(This);
         _material.Dispose();
         _mesh.Dispose();
-        _subscriptions.Dispose();
 
         _update.Clear();
         _lateUpdate.Clear();
@@ -170,15 +180,7 @@ public abstract class FrameObject<TSelf, TLayer, TVertex, TShader, TMaterial>
         _dead.Clear();
     }
 
-    internal void OnRender(in RenderPass pass)
-    {
-        pass.SetPipeline(Shader.Pipeline);
-        Render(pass, _material.AsValue(), _mesh.AsValue());
-    }
-
-    public virtual void InvokeEarlyUpdate() => _earlyUpdate.Invoke(This);
-    public virtual void InvokeUpdate() => _update.Invoke(This);
-    public virtual void InvokeLateUpdate() => _lateUpdate.Invoke(This);
-
-    protected abstract void Render(in RenderPass pass, TMaterial material, Mesh<TVertex> mesh);
+    internal sealed override void InvokeEarlyUpdate() => _earlyUpdate.Invoke(This);
+    internal sealed override void InvokeUpdate() => _update.Invoke(This);
+    internal sealed override void InvokeLateUpdate() => _lateUpdate.Invoke(This);
 }

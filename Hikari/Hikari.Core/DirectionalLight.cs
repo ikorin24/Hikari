@@ -8,9 +8,9 @@ namespace Hikari;
 
 public sealed partial class DirectionalLight : IScreenManaged
 {
-    private const uint CascadeCountConst = 4;       // 2 ~
-    private const u32 ShadowMapWidth = 1024;
-    private const u32 ShadowMapHeight = 1024;
+    internal const uint CascadeCountConst = 4;       // 2 ~
+    internal const u32 ShadowMapWidth = 1024;
+    internal const u32 ShadowMapHeight = 1024;
 
     private readonly Screen _screen;
     private readonly CachedOwnBuffer<DirectionalLightData> _lightData;
@@ -37,6 +37,22 @@ public sealed partial class DirectionalLight : IScreenManaged
     public Color3 Color => _lightData.Data.Color;
 
     internal Buffer DataBuffer => _lightData.AsBuffer();
+
+    public OwnRenderPass CreateShadowRenderPass()
+    {
+        return RenderPass.Create(
+            Screen,
+            null,
+            new DepthStencilAttachment
+            {
+                Target = ShadowMap.View,
+                LoadOp = new DepthStencilBufferLoadOp
+                {
+                    Depth = DepthBufferLoadOp.Clear(0f),
+                    Stencil = null,
+                }
+            });
+    }
 
     public void SetLightData(in Vector3 direction, in Color3 color)
     {

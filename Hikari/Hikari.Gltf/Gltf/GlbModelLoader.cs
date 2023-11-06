@@ -14,53 +14,53 @@ namespace Hikari.Gltf;
 
 public static class GlbModelLoader
 {
-    public static ITreeModel LoadGlbFile(PbrLayer layer, string filePath, CancellationToken ct = default)
+    public static ITreeModel LoadGlbFile(PbrBasicShader shader, string filePath, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(layer);
+        ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlbFile(filePath, ct);
         var state = new LoaderState
         {
             Glb = glb,
-            Layer = layer,
+            Shader = shader,
             Ct = ct,
         };
         return LoadRoot(state);
     }
 
-    public static ITreeModel LoadGlb(PbrLayer layer, ResourceFile file, CancellationToken ct = default)
+    public static ITreeModel LoadGlb(PbrBasicShader shader, ResourceFile file, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(layer);
+        ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(file, ct);
         var state = new LoaderState
         {
             Glb = glb,
-            Layer = layer,
+            Shader = shader,
             Ct = ct,
         };
         return LoadRoot(state);
     }
 
-    public static ITreeModel LoadGlb(PbrLayer layer, ReadOnlySpan<byte> data, CancellationToken ct = default)
+    public static ITreeModel LoadGlb(PbrBasicShader shader, ReadOnlySpan<byte> data, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(layer);
+        ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(data, ct);
         var state = new LoaderState
         {
             Glb = glb,
-            Layer = layer,
+            Shader = shader,
             Ct = ct,
         };
         return LoadRoot(state);
     }
 
-    public unsafe static ITreeModel LoadGlb(PbrLayer layer, void* data, nuint length, CancellationToken ct = default)
+    public unsafe static ITreeModel LoadGlb(PbrBasicShader shader, void* data, nuint length, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(layer);
+        ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(data, length, ct);
         var state = new LoaderState
         {
             Glb = glb,
-            Layer = layer,
+            Shader = shader,
             Ct = ct,
         };
         return LoadRoot(state);
@@ -256,7 +256,7 @@ public static class GlbModelLoader
 
             var mesh = Mesh.Create(state.Screen, (TVertex*)vertices.Ptr, vertexCount, (uint*)indices.Ptr, indexCount, (Vector3*)tangents.Ptr, vertexCount);
             var material = PbrMaterial.Create(
-                PbrBasicShader.CreateOrCached(state.Layer),
+                state.Shader,
                 materialData.Pbr.BaseColor,
                 materialData.Pbr.BaseColorSampler,
                 materialData.Pbr.MetallicRoughness,
@@ -574,10 +574,10 @@ public static class GlbModelLoader
     private readonly record struct LoaderState
     {
         public required GlbObject Glb { get; init; }
-        public required PbrLayer Layer { get; init; }
         public required CancellationToken Ct { get; init; }
+        public required PbrBasicShader Shader { get; init; }
 
-        public Screen Screen => Layer.Screen;
+        public Screen Screen => Shader.Screen;
 
         public readonly GltfObject Gltf => Glb.Gltf;
     }

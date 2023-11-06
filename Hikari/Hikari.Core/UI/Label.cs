@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -76,10 +77,7 @@ public sealed class Label : UIElement, IFromJson<Label>
     static Label()
     {
         Serializer.RegisterConstructor(FromJson);
-        UILayer.RegisterShader<Label>(static layer =>
-        {
-            return LabelShader.Create(layer).Cast<UIShader>();
-        });
+        UITree.RegisterShader<Label>(LabelShader.CreateOrCached);
     }
 
     public static Label FromJson(in ObjectSource source) => new Label(source);
@@ -200,11 +198,18 @@ internal record struct LabelInfo
 
 file sealed class LabelShader : UIShader
 {
-    private LabelShader(UILayer operation) : base(operation)
+    private static readonly ConcurrentDictionary<Screen, LabelShader> _cache = new();
+
+    private LabelShader(Screen screen) : base(screen)
     {
     }
 
-    public static Own<LabelShader> Create(UILayer layer) => CreateOwn(new LabelShader(layer));
+    public static LabelShader CreateOrCached(Screen screen)
+    {
+        return _cache.GetOrAdd(screen, static screen => Create(screen).DisposeOn(screen.Closed));
+    }
+
+    private static Own<LabelShader> Create(Screen screen) => CreateOwn(new LabelShader(screen));
 
     public override Own<UIMaterial> CreateMaterial()
     {

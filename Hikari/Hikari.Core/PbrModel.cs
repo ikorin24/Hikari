@@ -1,13 +1,14 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using V = Hikari.Vertex;
 
 namespace Hikari;
 
 public sealed class PbrModel
-    : FrameObject<PbrModel, PbrLayer, V, PbrShader, PbrMaterial>,
+    : FrameObject<PbrModel, V, PbrShader, PbrMaterial>,
       ITreeModel
 {
     private TreeModelImpl _treeModelImpl;
@@ -44,6 +45,7 @@ public sealed class PbrModel
         if(Mesh.TryGetOptionalTangent(out var tangent) == false) {
             throw new ArgumentException("The mesh does not have Tangent vertex buffer", nameof(mesh));
         }
+        _treeModelImpl = new();
         _tangent = tangent;
     }
 
@@ -59,41 +61,37 @@ public sealed class PbrModel
 
     public Matrix4 GetSelfModel(out bool isUniformScale) => _treeModelImpl.GetSelfModel(out isUniformScale);
 
-    protected override void Render(in RenderPass pass, PbrMaterial material, Mesh<V> mesh)
+    protected override void Render(in RenderPass renderPass, ShaderPass shaderPass)
     {
-        material.WriteModelUniform(new()
-        {
-            Model = GetModel(out var isUniformScale),
-            IsUniformScale = isUniformScale ? 1 : 0,
-        });
-        pass.SetBindGroup(0, material.BindGroup0);
-        pass.SetBindGroup(1, material.BindGroup1);
-        pass.SetVertexBuffer(0, mesh.VertexBuffer);
-        pass.SetVertexBuffer(1, _tangent);
-        pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
-        pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
-    }
-
-    internal void RenderShadowMap(in RenderPass pass, uint cascade, Lights lights, PbrMaterial material, Mesh<V> mesh)
-    {
-        var directionalLight = lights.DirectionalLight;
-        var shadowMapSize = directionalLight.ShadowMap.Size;
-        var cascadeCount = directionalLight.CascadeCount;
-
-        var size = new Vector2u(shadowMapSize.X / cascadeCount, shadowMapSize.Y);
-        var viewPort = (
-            X: size.X * cascade,
-            Y: 0,
-            Width: size.X,
-            Height: size.Y,
-            MinDepth: 0,
-            MaxDepth: 1);
-
-        pass.SetPipeline(Shader.ShadowPipeline(cascade));
-        pass.SetBindGroup(0, material.ShadowBindGroup0);
-        pass.SetVertexBuffer(0, mesh.VertexBuffer);
-        pass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
-        pass.SetViewport(viewPort.X, viewPort.Y, viewPort.Width, viewPort.Height, viewPort.MinDepth, viewPort.MaxDepth);
-        pass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
+        switch(shaderPass.Index) {
+            case 0: {
+                var material = Material;
+                var mesh = Mesh;
+                material.WriteModelUniform(new()
+                {
+                    Model = GetModel(out var isUniformScale),
+                    IsUniformScale = isUniformScale ? 1 : 0,
+                });
+                renderPass.SetBindGroups(material.Passes[0].BindGroups);
+                renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+                renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+                renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, Screen.Lights.DirectionalLight.CascadeCount);
+                return;
+            }
+            case 1: {
+                var material = Material;
+                var mesh = Mesh;
+                renderPass.SetBindGroups(material.Passes[1].BindGroups);
+                renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+                renderPass.SetVertexBuffer(1, _tangent);
+                renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+                renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
+                return;
+            }
+            default: {
+                Debug.Fail("unreachable");
+                return;
+            }
+        }
     }
 }

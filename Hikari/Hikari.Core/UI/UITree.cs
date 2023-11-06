@@ -1,25 +1,59 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Hikari.UI;
 
 public sealed class UITree
 {
-    private readonly UILayer _uiLayer;
+    private readonly Screen _screen;
+    //    private readonly UIDescriptor _desc;
+    private UIElement? _rootElement;
+    //    private bool _isLayoutDirty = false;
+
     private IReactive? _root;
 
-    public Screen Screen => _uiLayer.Screen;
+    private static readonly ConcurrentDictionary<Type, Func<Screen, UIShader>> _shaderProviders = new();
 
-    internal UITree(UILayer uiLayer)
+    public Screen Screen => _screen;
+
+    internal UITree(Screen screen)
     {
-        _uiLayer = uiLayer;
+        _screen = screen;
     }
+
+    internal static bool RegisterShader<T>(Func<Screen, UIShader> provider) where T : UIElement
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        return _shaderProviders.TryAdd(typeof(T), provider);
+    }
+
+    internal UIShader GetRegisteredShader(Type type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        var provider = _shaderProviders[type];
+        return provider.Invoke(_screen);
+    }
+
+    //public void SetRoot(UIElement element)
+    //{
+    //    ArgumentNullException.ThrowIfNull(element);
+    //    _uiLayer.SetRoot(element);
+    //}
 
     public void SetRoot(UIElement element)
     {
         ArgumentNullException.ThrowIfNull(element);
-        _uiLayer.SetRoot(element);
+        if(element.Parent != null) {
+            throw new ArgumentException("the element is already in UI tree");
+        }
+        element.CreateModel(this);
+        element.ModelAlive.Subscribe(model =>
+        {
+            _rootElement?.Model?.Terminate();
+            _rootElement = model.Element;
+        });
     }
 
     public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] ObjectSourceBuilder builder)
@@ -30,12 +64,12 @@ public sealed class UITree
             case ApplySourceResult.InstanceReplaced: {
                 switch(root) {
                     case UIElement element: {
-                        _uiLayer.SetRoot(element);
+                        SetRoot(element);
                         break;
                     }
                     case IReactComponent component: {
                         var element = component.BuildUIElement();
-                        _uiLayer.SetRoot(element);
+                        SetRoot(element);
                         break;
                     }
                     default: {
@@ -51,10 +85,5 @@ public sealed class UITree
                 break;
             }
         }
-    }
-
-    public void Terminate()
-    {
-        _uiLayer.Terminate();
     }
 }

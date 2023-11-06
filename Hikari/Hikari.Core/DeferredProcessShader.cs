@@ -1,10 +1,11 @@
 ﻿#nullable enable
+using Hikari.Internal;
 using System;
 using V = Hikari.VertexSlim;
 
 namespace Hikari;
 
-public sealed class DeferredProcessShader : Shader<DeferredProcessShader, DeferredProcessMaterial, DeferredProcess>
+public sealed class DeferredProcessShader : Shader<DeferredProcessShader, DeferredProcessMaterial>
 {
     private static ReadOnlySpan<byte> ShaderSource => """
         struct Vin {
@@ -155,6 +156,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
 
             var out: Fout;
             out.color = vec4<f32>(fragColor, 1.0);
+            //out.color = vec4<f32>(albedo, 1.0);
             let pos_dnc = camera.proj * vec4(pos_camera_coord, 1.0);
             out.depth = (pos_dnc.z / pos_dnc.w) * 0.5 + 0.5;
             return out;
@@ -229,96 +231,56 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         }
         """u8;
 
-    private DeferredProcessShader(DeferredProcess operation)
-        : base(
-            ShaderSource,
-            operation,
-            Desc)
+    private DeferredProcessShader(Screen screen)
+        : base(screen, new ShaderPassDescriptorArray1
+        {
+            Pass0 = new()
+            {
+                Source = ShaderSource,
+                SortOrder = 2000,
+                LayoutDescriptor = BuildPipelineLayout(screen, out var disposable),
+                PipelineDescriptorFactory = PipelineFactory,
+                RenderPassFactory = new()
+                {
+                    Arg = null,
+                    Factory = static (screen, _) =>
+                    {
+                        return RenderPass.Create(
+                            screen,
+                            new ColorAttachment
+                            {
+                                Target = screen.Surface,
+                                LoadOp = ColorBufferLoadOp.Clear(),
+                            },
+                            new DepthStencilAttachment
+                            {
+                                Target = screen.DepthStencil,
+                                LoadOp = new DepthStencilBufferLoadOp
+                                {
+                                    Depth = DepthBufferLoadOp.Clear(0f),
+                                    Stencil = null,
+                                },
+                            });
+                    }
+                }
+            },
+        })
     {
+        disposable.DisposeOn(Disposed);
     }
 
-    internal static Own<DeferredProcessShader> Create(DeferredProcess operation)
+    public static Own<DeferredProcessShader> Create(Screen screen)
     {
-        var shader = new DeferredProcessShader(operation);
+        var shader = new DeferredProcessShader(screen);
         return CreateOwn(shader);
     }
 
-    protected override void Release(bool manualRelease)
+    private static RenderPipelineDescriptor PipelineFactory(ShaderModule module, PipelineLayout layout)
     {
-        base.Release(manualRelease);
-        if(manualRelease) {
-        }
-    }
-
-    internal BindGroup[] CreateBindGroups(GBuffer gBuffer, out IDisposable[] disposables)
-    {
-        var screen = Screen;
-        var directionalLight = screen.Lights.DirectionalLight;
-
-        var bindGroups = new BindGroup[]
-        {
-            // [0]
-            BindGroup.Create(screen, new()
-            {
-                Layout = Operation.BindGroupLayout0,
-                Entries = new BindGroupEntry[]
-                {
-                    BindGroupEntry.Sampler(0, Sampler.Create(screen, new()
-                    {
-                        AddressModeU = AddressMode.ClampToEdge,
-                        AddressModeV = AddressMode.ClampToEdge,
-                        AddressModeW = AddressMode.ClampToEdge,
-                        MagFilter = FilterMode.Nearest,
-                        MinFilter = FilterMode.Nearest,
-                        MipmapFilter = FilterMode.Nearest,
-                    }).AsValue(out var sampler)),
-                    BindGroupEntry.TextureView(1, gBuffer[0].View),
-                    BindGroupEntry.TextureView(2, gBuffer[1].View),
-                    BindGroupEntry.TextureView(3, gBuffer[2].View),
-                    BindGroupEntry.TextureView(4, gBuffer[3].View),
-                },
-            }).AsValue(out var bindGroup0),
-            // [1]
-            screen.Camera.CameraDataBindGroup,
-            // [2]
-            screen.Lights.DataBindGroup,
-            // [3]
-            BindGroup.Create(screen, new()
-            {
-                Layout = Operation.BindGroupLayout3,
-                Entries = new[]
-                {
-                    BindGroupEntry.TextureView(0, directionalLight.ShadowMap.View),
-                    BindGroupEntry.Sampler(1, Sampler.Create(screen, new()
-                    {
-                        AddressModeU = AddressMode.ClampToEdge,
-                        AddressModeV = AddressMode.ClampToEdge,
-                        AddressModeW = AddressMode.ClampToEdge,
-                        MagFilter = FilterMode.Nearest,
-                        MinFilter = FilterMode.Nearest,
-                        MipmapFilter = FilterMode.Nearest,
-                        Compare = CompareFunction.Greater,
-                    }).AsValue(out var shadowSampler)),
-                    BindGroupEntry.Buffer(2, directionalLight.LightMatricesBuffer),
-                    BindGroupEntry.Buffer(3, directionalLight.CascadeFarsBuffer),
-                },
-            }).AsValue(out var bindGroup3),
-        };
-        disposables = new IDisposable[]
-        {
-            sampler,
-            bindGroup0,
-            shadowSampler,
-            bindGroup3
-        };
-        return bindGroups;
-    }
-
-    private static RenderPipelineDescriptor Desc(DeferredProcess operation, ShaderModule module)
-    {
+        var screen = module.Screen;
         return new RenderPipelineDescriptor
         {
-            Layout = operation.PipelineLayout,
+            Layout = layout,
             Vertex = new VertexState
             {
                 Module = module,
@@ -340,7 +302,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                 {
                     new ColorTargetState
                     {
-                        Format = operation.ColorFormat,
+                        Format = screen.Surface.Format,
                         Blend = null,
                         WriteMask = ColorWrites.All,
                     }
@@ -356,7 +318,7 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             },
             DepthStencil = new DepthStencilState
             {
-                Format = operation.DepthStencilFormat,
+                Format = screen.DepthStencil.Format,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Greater,
                 Stencil = StencilState.Default,
@@ -364,6 +326,65 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             },
             Multisample = MultisampleState.Default,
             Multiview = 0,
+        };
+    }
+
+    private static PipelineLayoutDescriptor BuildPipelineLayout(Screen screen, out DisposableBag disposable)
+    {
+        disposable = new DisposableBag();
+        return new()
+        {
+            BindGroupLayouts = new[]
+            {
+                BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new BindGroupLayoutEntry[]
+                    {
+                        BindGroupLayoutEntry.Sampler(0, ShaderStages.Fragment, SamplerBindingType.NonFiltering),
+                        BindGroupLayoutEntry.Texture(1, ShaderStages.Fragment, new()
+                        {
+                            Multisampled = false,
+                            ViewDimension = TextureViewDimension.D2,
+                            SampleType = TextureSampleType.FloatNotFilterable,
+                        }),
+                        BindGroupLayoutEntry.Texture(2, ShaderStages.Fragment, new()
+                        {
+                            Multisampled = false,
+                            ViewDimension = TextureViewDimension.D2,
+                            SampleType = TextureSampleType.FloatNotFilterable,
+                        }),
+                        BindGroupLayoutEntry.Texture(3, ShaderStages.Fragment, new()
+                        {
+                            Multisampled = false,
+                            ViewDimension = TextureViewDimension.D2,
+                            SampleType = TextureSampleType.FloatNotFilterable,
+                        }),
+                        BindGroupLayoutEntry.Texture(4, ShaderStages.Fragment, new()
+                        {
+                            Multisampled = false,
+                            ViewDimension = TextureViewDimension.D2,
+                            SampleType = TextureSampleType.FloatNotFilterable,
+                        }),
+                    }
+                }).AddTo(disposable),
+                screen.Camera.CameraDataBindGroupLayout,
+                screen.Lights.DataBindGroupLayout,
+                BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new[]
+                    {
+                        BindGroupLayoutEntry.Texture(0, ShaderStages.Fragment, new()
+                        {
+                            ViewDimension = TextureViewDimension.D2,
+                            Multisampled = false,
+                            SampleType = TextureSampleType.Depth,
+                        }),
+                        BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Comparison),
+                        BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
+                        BindGroupLayoutEntry.Buffer(3, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
+                    },
+                }).AddTo(disposable),
+            },
         };
     }
 }

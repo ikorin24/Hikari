@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Hikari.NativeBind;
+using Hikari.UI;
 using System;
 using System.Buffers;
 using System.Diagnostics;
@@ -17,7 +18,9 @@ public sealed class Screen
     private readonly SubscriptionBag _subscriptions;
     private readonly Camera _camera;
     private readonly Lights _lights;
+    private readonly UITree _uiTree;
     private readonly ObjectStore _objectStore;
+    private readonly ShaderPassList _shaderPasses;
     private readonly Timing _earlyUpdate;
     private readonly Timing _update;
     private readonly Timing _lateUpdate;
@@ -30,7 +33,6 @@ public sealed class Screen
     private readonly Own<Buffer> _info;     // ScreenInfo
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
-    private readonly Operations _operations;
     private readonly Action<Screen>? _onPrepare;
     private RunningState _state;
     private EventSource<ScreenClosingState> _closing;
@@ -66,11 +68,12 @@ public sealed class Screen
     internal BufferSlice InfoBuffer => _info.AsValue().Slice();
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
 
+    internal ShaderPassList ShaderPasses => _shaderPasses;
     internal ObjectStore Store => _objectStore;
+    public UITree UITree => _uiTree;
     public Mouse Mouse => _mouse;
     public Keyboard Keyboard => _keyboard;
     public ulong FrameNum => _frameNum;
-    public Operations Operations => _operations;
 
     public Timing EarlyUpdate => _earlyUpdate;
     public Timing Update => _update;
@@ -152,7 +155,6 @@ public sealed class Screen
         _onPrepare = onPrepare;
         _state = RunningState.Running;
         _subscriptions = new SubscriptionBag();
-        _operations = new Operations(this);
         _camera = new Camera(this);
         _lights = new Lights(this);
         _earlyUpdate = new Timing(this);
@@ -162,6 +164,8 @@ public sealed class Screen
         _surface = new Surface(this);
         _keyboard = new Keyboard(this);
         _objectStore = new ObjectStore(this);
+        _uiTree = new UITree(this);
+        _shaderPasses = new ShaderPassList(this);
         _info = Buffer.CreateInitData(this, new ScreenInfo
         {
             Size = Vector2u.Zero,
@@ -269,41 +273,57 @@ public sealed class Screen
     private void Render()
     {
         Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
-        var operations = _operations;
         var store = _objectStore;
+        var shaderPasses = _shaderPasses;
         _mouse.InitFrame();
 
         if(_frameNum == 0) {
             _onPrepare?.Invoke(this);
         }
 
-        operations.ApplyAdd();
         store.ApplyAdd();
-
-        // frame init
-        operations.FrameInit();
+        shaderPasses.ApplyAdd();
+        // ----------------------------
 
         // early update
         _earlyUpdate.DoQueuedEvents();
-        operations.EarlyUpdate();
+        store.UseObjects(static objects =>
+        {
+            foreach(var obj in objects) {
+                if(obj.IsFrozen) { continue; }
+                obj.InvokeEarlyUpdate();
+            }
+        });
 
         // update
         _update.DoQueuedEvents();
-        operations.Update();
+        store.UseObjects(static objects =>
+        {
+            foreach(var obj in objects) {
+                if(obj.IsFrozen) { continue; }
+                obj.InvokeUpdate();
+            }
+        });
 
         // late update
         _lateUpdate.DoQueuedEvents();
-        operations.LateUpdate();
+        store.UseObjects(static objects =>
+        {
+            foreach(var obj in objects) {
+                if(obj.IsFrozen) { continue; }
+                obj.InvokeLateUpdate();
+            }
+        });
 
         // render
         _camera.UpdateUniformBuffer();
-        operations.Execute();
+        shaderPasses.Execute();
 
-        // frame end
-        operations.FrameEnd();
-
+        shaderPasses.ApplyRemove();
         store.ApplyRemove();
-        operations.ApplyRemove();
+
+        // ----------------------------
+
         _keyboard.PrepareNextFrame();
         _mouse.PrepareNextFrame();
 
@@ -353,7 +373,7 @@ public sealed class Screen
     internal Rust.OptionBox<CH.Screen> OnClosed()
     {
         _objectStore.OnClosed();
-        _operations.OnClosed();
+        _shaderPasses.OnClosed();
         _closed.Invoke(this);
 
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CH.Screen>.None);

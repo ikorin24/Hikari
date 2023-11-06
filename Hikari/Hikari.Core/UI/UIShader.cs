@@ -4,7 +4,7 @@ using System;
 
 namespace Hikari.UI;
 
-internal abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
+internal abstract class UIShader : Shader<UIShader, UIMaterial>
 {
     private static readonly Lazy<byte[]> _defaultShaderSource = new(() =>
     {
@@ -50,34 +50,42 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
     public Texture2D EmptyTexture => _emptyTexture.AsValue();
     public Sampler EmptySampler => _emptyTextureSampler.AsValue();
 
-    protected UIShader(UILayer operation)
-    : this(_defaultShaderSource.Value, operation, DefaultPipelineDescCreator)
-    {
-    }
-
-    protected UIShader(
-        ReadOnlySpan<byte> shaderSource,
-        UILayer operation,
-        Func<UILayer, ShaderModule, RenderPipelineDescriptor> getPipelineDesc)
-        : base(shaderSource, operation, getPipelineDesc)
-    {
-        _emptyTexture = Texture2D.Create(operation.Screen, new()
+    protected UIShader(Screen screen)
+        : base(screen, new ShaderPassDescriptorArray1
         {
-            Format = TextureFormat.Rgba8UnormSrgb,
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Size = new Vector2u(1, 1),
-            Usage = TextureUsages.TextureBinding,
-        });
-        _emptyTextureSampler = Sampler.Create(operation.Screen, new SamplerDescriptor
-        {
-            AddressModeU = AddressMode.ClampToEdge,
-            AddressModeV = AddressMode.ClampToEdge,
-            AddressModeW = AddressMode.ClampToEdge,
-            MagFilter = FilterMode.Nearest,
-            MinFilter = FilterMode.Nearest,
-            MipmapFilter = FilterMode.Nearest,
-        });
+            Pass0 = new()
+            {
+                Source = _defaultShaderSource.Value,
+                SortOrder = 2000,
+                LayoutDescriptor = PipelineLayoutFactory(screen, out var diposable),
+                PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
+                RenderPassFactory = new()
+                {
+                    Arg = null,
+                    Factory = static (screen, _) =>
+                    {
+                        return RenderPass.Create(
+                            screen,
+                            new ColorAttachment
+                            {
+                                Target = screen.Surface,
+                                LoadOp = ColorBufferLoadOp.Load(),      // TODO: avoid 'load'. it's slow in mobile.
+                            },
+                            new DepthStencilAttachment
+                            {
+                                Target = screen.DepthStencil,
+                                LoadOp = new DepthStencilBufferLoadOp
+                                {
+                                    Depth = DepthBufferLoadOp.Clear(0f),
+                                    Stencil = null,
+                                },
+                            });
+                    }
+                },
+            },
+        })
+    {
+        diposable.DisposeOn(Disposed);
     }
 
     protected override void Release(bool manualRelease)
@@ -89,11 +97,53 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
 
     public abstract Own<UIMaterial> CreateMaterial();
 
-    private static RenderPipelineDescriptor DefaultPipelineDescCreator(UILayer layer, ShaderModule module)
+    private static PipelineLayoutDescriptor PipelineLayoutFactory(
+        Screen screen,
+        out DisposableBag disposable)
+    {
+        disposable = new DisposableBag();
+        return new()
+        {
+            BindGroupLayouts = new[]
+            {
+                BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new[]
+                    {
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
+                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
+                    },
+                }).AddTo(disposable),
+                BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new[]
+                    {
+                        BindGroupLayoutEntry.Texture(0, ShaderStages.Vertex | ShaderStages.Fragment, new TextureBindingData
+                        {
+                            ViewDimension = TextureViewDimension.D2,
+                            Multisampled = false,
+                            SampleType = TextureSampleType.FloatNotFilterable,
+                        }),
+                        BindGroupLayoutEntry.Sampler(1, ShaderStages.Vertex | ShaderStages.Fragment, SamplerBindingType.NonFiltering),
+                        BindGroupLayoutEntry.Buffer(2, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
+                    },
+                }).AddTo(disposable),
+                BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new[]
+                    {
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.StorageReadOnly } ),
+                    },
+                }).AddTo(disposable),
+            },
+        };
+    }
+
+    private static RenderPipelineDescriptor PipelineFactory(ShaderModule module, PipelineLayout layout, TextureFormat surfaceFormat, TextureFormat depthStencilFormat)
     {
         return new RenderPipelineDescriptor
         {
-            Layout = layer.PipelineLayout,
+            Layout = layout,
             Vertex = new VertexState()
             {
                 Module = module,
@@ -115,7 +165,7 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
                 {
                     new ColorTargetState
                     {
-                        Format = layer.ColorFormat,
+                        Format = surfaceFormat,
                         Blend = BlendState.AlphaBlending,
                         WriteMask = ColorWrites.All,
                     },
@@ -131,7 +181,7 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial, UILayer>
             },
             DepthStencil = new DepthStencilState
             {
-                Format = layer.DepthStencilFormat,
+                Format = depthStencilFormat,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.GreaterEqual,
                 Stencil = StencilState.Default,

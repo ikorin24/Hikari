@@ -327,10 +327,10 @@ public abstract class UIElement : IToJson, IReactive
         _parent = null;
     }
 
-    internal void CreateModel(UILayer layer)
+    internal void CreateModel(UITree tree)
     {
         Debug.Assert(_model == null);
-        var shader = layer.GetRegisteredShader(GetType());
+        var shader = tree.GetRegisteredShader(GetType());
         var model = new UIModel(this, shader);
         model.Alive
             .Subscribe(static model => model.Element._modelAlive.Invoke(model))
@@ -365,7 +365,7 @@ public abstract class UIElement : IToJson, IReactive
 
         _model = model;
         foreach(var child in _children) {
-            child.CreateModel(layer);
+            child.CreateModel(tree);
         }
     }
 

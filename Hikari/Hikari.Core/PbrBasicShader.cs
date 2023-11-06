@@ -1,24 +1,19 @@
 ﻿#nullable enable
 using Hikari.Internal;
 using System;
-using System.Collections.Concurrent;
 using V = Hikari.Vertex;
 
 namespace Hikari;
 
 public sealed class PbrBasicShader : PbrShader
 {
-    private static readonly ConcurrentDictionary<PbrLayer, PbrBasicShader> _cache = new();
-    private static readonly Lazy<byte[]> _shaderSource = new(() =>
+    private static readonly Lazy<ReadOnlyMemory<byte>> _shaderSource = new(() =>
     {
         using var sb = Utf8StringBuilder.FromLines(
             ShaderSource.Fn_Inverse3x3,
             Source);
         return sb.Utf8String.ToArray();
     });
-
-    private readonly Own<RenderPipeline>[] _shadowPipeline;
-    private readonly Own<ShaderModule>[] _shadowModules;
 
     private static ReadOnlySpan<byte> Source => """
         struct Vin {
@@ -102,63 +97,174 @@ public sealed class PbrBasicShader : PbrShader
         }
         """u8;
 
-    private static readonly ConcurrentDictionary<uint, ReadOnlyMemory<byte>> _shadowShaderSource = new();
-    private static ReadOnlySpan<byte> GetShadowShaderSource(uint cascade)
+    private static readonly Lazy<ReadOnlyMemory<byte>> _shadowShader = new(() =>
     {
-        return _shadowShaderSource.GetOrAdd(cascade, static cascade =>
-        {
-            using var builder = new Utf8StringBuilder(1024);
-            builder.Append("const CASCADE: u32 = "u8);
-            builder.Append(cascade);
-            builder.Append("""
-            u;
+        using var sb = new Utf8StringBuilder();
+        sb.Append("const CASCADE_COUNT: u32 = "u8);
+        sb.Append(DirectionalLight.CascadeCountConst);
+        sb.AppendLine("u;"u8);
+
+        sb.Append("const SM_WIDTH = "u8);
+        sb.Append(DirectionalLight.ShadowMapWidth);
+        sb.AppendLine(";"u8);
+
+        sb.AppendLine("""
+            struct V2F {
+                @builtin(position) clip_pos: vec4<f32>,
+                @location(0) cascade: u32,
+            }
+
             @group(0) @binding(0) var<uniform> model: mat4x4<f32>;
             @group(0) @binding(1) var<storage, read> lightMatrices: array<mat4x4<f32>>;
             @vertex fn vs_main(
                 @location(0) pos: vec3<f32>,
-            ) -> @builtin(position) vec4<f32> {
-                return lightMatrices[CASCADE] * model * vec4<f32>(pos, 1.0);
+                @builtin(instance_index) cascade: u32,
+            ) -> V2F {
+                let p: vec4<f32> = lightMatrices[cascade] * model * vec4<f32>(pos, 1.0);
+                let p3: vec3<f32> = p.xyz / p.w;
+                let x = (p3.x * 0.5 + 0.5 + f32(cascade)) / (f32(CASCADE_COUNT) * 0.5) - 1.0;
+                var v2f: V2F;
+                v2f.clip_pos = vec4<f32>(x, p3.y, p3.z, 1.0);
+                v2f.cascade = cascade;
+                return v2f;
+            }
+
+            @fragment fn fs_main(
+                v2f: V2F,
+            ) -> @builtin(frag_depth) f32 {
+                if(v2f.clip_pos.x < f32(v2f.cascade) * f32(SM_WIDTH)) {
+                    discard;
+                }
+                if(v2f.clip_pos.x >= f32(v2f.cascade + 1u) * f32(SM_WIDTH)) {
+                    discard;
+                }
+                return v2f.clip_pos.z;
             }
             """u8);
-            return builder.Utf8String.ToArray();
-        }).Span;
+        return sb.Utf8String.ToArray();
+    });
+
+    private readonly IGBufferProvider _gbufferProvider;
+    public IGBufferProvider GBufferProvider => _gbufferProvider;
+
+    private PbrBasicShader(Screen screen, IGBufferProvider gBufferProvider)
+        : base(
+            screen,
+            new ShaderPassDescriptorArray2
+            {
+                Pass0 = new()
+                {
+                    Source = _shadowShader.Value.Span,
+                    LayoutDescriptor = GetShadowLayoutDesc(screen, out var disposable),
+                    PipelineDescriptorFactory = GetShadowDescriptor,
+                    SortOrder = -1000,
+                    RenderPassFactory = new()
+                    {
+                        Arg = null,
+                        Factory = static (screen, _) => screen.Lights.DirectionalLight.CreateShadowRenderPass(),
+                    },
+                },
+                Pass1 = new()
+                {
+                    Source = _shaderSource.Value.Span,
+                    LayoutDescriptor = GetLayoutDesc(screen, out var disposable2),
+                    PipelineDescriptorFactory = static (module, layout) => GetDescriptor(module, layout, module.Screen.DepthStencil.Format),
+                    SortOrder = 0,
+                    RenderPassFactory = new()
+                    {
+                        Arg = gBufferProvider,
+                        Factory = static (screen, gBufferProvider) =>
+                        {
+                            return RenderPass.Create(
+                                screen,
+                                SafeCast.NotNullAs<IGBufferProvider>(gBufferProvider),
+                                static (colors, gBuffer) =>
+                                {
+                                    for(int i = 0; i < gBuffer.ColorAttachmentCount; i++) {
+                                        colors[i] = new ColorAttachment
+                                        {
+                                            Target = gBuffer[i],
+                                            LoadOp = ColorBufferLoadOp.Clear(),
+                                        };
+                                    }
+                                },
+                                new DepthStencilAttachment
+                                {
+                                    Target = screen.DepthStencil,
+                                    LoadOp = new DepthStencilBufferLoadOp
+                                    {
+                                        Depth = DepthBufferLoadOp.Clear(0f),
+                                        Stencil = null,
+                                    },
+                                });
+                        }
+                    }
+                },
+            })
+    {
+        _gbufferProvider = gBufferProvider;
+        disposable2.DisposeOn(Disposed);
+        disposable.DisposeOn(Disposed);
     }
 
-    private PbrBasicShader(PbrLayer layer) : base(_shaderSource.Value, layer, GetDescriptor)
+    public static Own<PbrBasicShader> Create(Screen screen, IGBufferProvider gBufferProvider)
     {
-        var screen = Screen;
-        var cascadeCount = screen.Lights.DirectionalLight.CascadeCount;
-        var shadowModules = new Own<ShaderModule>[cascadeCount];
-        for(uint i = 0; i < shadowModules.Length; i++) {
-            shadowModules[i] = ShaderModule.Create(screen, GetShadowShaderSource(i));
-        }
-
-        var shadowPipeline = new Own<RenderPipeline>[cascadeCount];
-        for(var i = 0; i < shadowPipeline.Length; i++) {
-            shadowPipeline[i] = CreateShadowPipeline(layer, shadowModules[i].AsValue());
-        }
-        _shadowPipeline = shadowPipeline;
-        _shadowModules = shadowModules;
-    }
-
-    public static PbrBasicShader CreateOrCached(PbrLayer layer)
-    {
-        return _cache.GetOrAdd(layer, static layer => Create(layer).DisposeOn(layer.Dead));
-    }
-
-    public static Own<PbrBasicShader> Create(PbrLayer operation)
-    {
-        var self = new PbrBasicShader(operation);
+        ArgumentNullException.ThrowIfNull(gBufferProvider);
+        var self = new PbrBasicShader(screen, gBufferProvider);
         return CreateOwn(self);
     }
 
-    public override RenderPipeline ShadowPipeline(uint cascade) => _shadowPipeline[cascade].AsValue();
 
-    private static RenderPipelineDescriptor GetDescriptor(PbrLayer layer, ShaderModule module)
+    private static PipelineLayoutDescriptor GetLayoutDesc(
+        Screen screen,
+        out DisposableBag disposable)
+    {
+        disposable = new DisposableBag();
+        return new PipelineLayoutDescriptor
+        {
+            BindGroupLayouts = new[]
+            {
+                BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new[]
+                    {
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new()
+                        {
+                            Type = BufferBindingType.Uniform,
+                        }),
+                        BindGroupLayoutEntry.Texture(1, ShaderStages.Fragment, new()
+                        {
+                            ViewDimension = TextureViewDimension.D2,
+                            Multisampled = false,
+                            SampleType = TextureSampleType.FloatFilterable,
+                        }),
+                        BindGroupLayoutEntry.Sampler(2, ShaderStages.Fragment, SamplerBindingType.Filtering),
+                        BindGroupLayoutEntry.Texture(3, ShaderStages.Fragment, new()
+                        {
+                            ViewDimension = TextureViewDimension.D2,
+                            Multisampled = false,
+                            SampleType = TextureSampleType.FloatFilterable,
+                        }),
+                        BindGroupLayoutEntry.Sampler(4, ShaderStages.Fragment, SamplerBindingType.Filtering),
+                        BindGroupLayoutEntry.Texture(5, ShaderStages.Fragment, new()
+                        {
+                            ViewDimension = TextureViewDimension.D2,
+                            Multisampled = false,
+                            SampleType = TextureSampleType.FloatFilterable,
+                        }),
+                        BindGroupLayoutEntry.Sampler(6, ShaderStages.Fragment, SamplerBindingType.Filtering),
+                    },
+                }).AddTo(disposable),
+                screen.Camera.CameraDataBindGroupLayout,
+            },
+        };
+    }
+
+    private static RenderPipelineDescriptor GetDescriptor(ShaderModule module, PipelineLayout layout, TextureFormat depthStencilFormat)
     {
         return new RenderPipelineDescriptor
         {
-            Layout = layer.PipelineLayout,
+            Layout = layout,
             Vertex = new VertexState
             {
                 Module = module,
@@ -229,7 +335,7 @@ public sealed class PbrBasicShader : PbrShader
             },
             DepthStencil = new DepthStencilState
             {
-                Format = layer.DepthStencilFormat,
+                Format = depthStencilFormat,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Greater,
                 Stencil = StencilState.Default,
@@ -240,11 +346,33 @@ public sealed class PbrBasicShader : PbrShader
         };
     }
 
-    private static Own<RenderPipeline> CreateShadowPipeline(PbrLayer operation, ShaderModule module)
+    private static PipelineLayoutDescriptor GetShadowLayoutDesc(
+        Screen screen,
+        out DisposableBag disposable)
     {
-        return RenderPipeline.Create(operation.Screen, new()
+        disposable = new DisposableBag();
+        return new()
         {
-            Layout = operation.ShadowPipelineLayout,
+            BindGroupLayouts = new[]
+            {
+                BindGroupLayout.Create(screen, new()
+                {
+                    Entries = new[]
+                    {
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new() { Type = BufferBindingType.Uniform }),
+                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex, new() { Type = BufferBindingType.StorageReadOnly }),
+                    },
+                }).AddTo(disposable),
+            },
+        };
+    }
+
+    private static RenderPipelineDescriptor GetShadowDescriptor(ShaderModule module, PipelineLayout layout)
+    {
+        var screen = module.Screen;
+        return new()
+        {
+            Layout = layout,
             Vertex = new VertexState
             {
                 Module = module,
@@ -257,7 +385,12 @@ public sealed class PbrBasicShader : PbrShader
                     }),
                 },
             },
-            Fragment = null,
+            Fragment = new FragmentState
+            {
+                Module = module,
+                EntryPoint = "fs_main"u8.ToArray(),
+                Targets = null,
+            },
             Primitive = new PrimitiveState
             {
                 Topology = PrimitiveTopology.TriangleList,
@@ -268,7 +401,7 @@ public sealed class PbrBasicShader : PbrShader
             },
             DepthStencil = new DepthStencilState
             {
-                Format = operation.ShadowMapFormat,
+                Format = screen.DepthStencil.Format,
                 DepthWriteEnabled = true,
                 DepthCompare = CompareFunction.Greater,
                 Stencil = StencilState.Default,
@@ -276,24 +409,6 @@ public sealed class PbrBasicShader : PbrShader
             },
             Multisample = MultisampleState.Default,
             Multiview = 0,
-        });
-    }
-
-    protected override void Release(bool manualRelease)
-    {
-        base.Release(manualRelease);
-        if(manualRelease) {
-            foreach(var item in _shadowModules) {
-                item.Dispose();
-            }
-            foreach(var item in _shadowPipeline) {
-                item.Dispose();
-            }
-        }
+        };
     }
 }
-
-//public sealed class GltfPbrShader : PbrShader
-//{
-
-//}

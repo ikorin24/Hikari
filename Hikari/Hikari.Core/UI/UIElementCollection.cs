@@ -29,11 +29,11 @@ public sealed class UIElementCollection
             if(Interlocked.CompareExchange(ref _parent, value, null) != null) {
                 ThrowInvalidInstance();
             }
-            var layer = value.Model?.Layer;
+            var tree = value.Screen?.UITree;
             foreach(var child in _children) {
                 child.SetParent(value);
-                if(layer != null) {
-                    child.CreateModel(layer);
+                if(tree != null) {
+                    child.CreateModel(tree);
                 }
             }
         }
@@ -77,9 +77,9 @@ public sealed class UIElementCollection
         var parent = _parent;
         if(parent != null) {
             element.SetParent(parent);
-            var layer = parent.Model?.Layer;
-            if(layer != null) {
-                element.CreateModel(layer);
+            var tree = parent.Screen?.UITree;
+            if(tree != null) {
+                element.CreateModel(tree);
             }
         }
     }

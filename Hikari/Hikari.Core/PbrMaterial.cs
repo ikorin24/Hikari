@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLayer>
+public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader>
 {
     private readonly MaybeOwn<Texture2D> _albedo;
     private readonly MaybeOwn<Texture2D> _metallicRoughness;
@@ -17,6 +17,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
     private readonly Own<BindGroup> _bindGroup0;
     private readonly BindGroup _bindGroup1;
     private readonly Own<BindGroup> _shadowBindGroup0;
+    private readonly MaterialPassData[] _passes;
 
     public Texture2D Albedo => _albedo.AsValue();
     public Texture2D MetallicRoughness => _metallicRoughness.AsValue();
@@ -26,10 +27,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
     public Sampler MetallicRoughnessSampler => _metallicRoughnessSampler.AsValue();
     public Sampler NormalSampler => _normalSampler.AsValue();
 
-    internal BindGroup BindGroup0 => _bindGroup0.AsValue();
-    internal BindGroup BindGroup1 => _bindGroup1;
-
-    internal BindGroup ShadowBindGroup0 => _shadowBindGroup0.AsValue();
+    public override ReadOnlySpan<MaterialPassData> Passes => _passes;
 
     private PbrMaterial(
         PbrShader shader,
@@ -54,6 +52,30 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
         _bindGroup0 = bindGroup0;
         _bindGroup1 = Screen.Camera.CameraDataBindGroup;
         _shadowBindGroup0 = shadowBindGroup0;
+        _passes = new[]
+        {
+            new MaterialPassData(0, new[]
+            {
+                new BindGroupData
+                {
+                    Index = 0,
+                    BindGroup = shadowBindGroup0.AsValue(),
+                },
+            }),
+            new MaterialPassData(1, new[]
+            {
+                new BindGroupData
+                {
+                    Index = 0,
+                    BindGroup = _bindGroup0.AsValue(),
+                },
+                new BindGroupData
+                {
+                    Index = 1,
+                    BindGroup = _bindGroup1,
+                },
+            }),
+        };
     }
 
     public override void Validate()
@@ -126,7 +148,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
         var uniformBuffer = new TypedOwnBuffer<UniformValue>(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
         var bindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = shader.Operation.BindGroupLayout0,
+            Layout = shader.Passes[1].Layout.BindGroupLayouts[0],
             Entries = new BindGroupEntry[]
             {
                 BindGroupEntry.Buffer(0, uniformBuffer),
@@ -141,7 +163,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader, PbrLa
 
         var shadowBindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = shader.Operation.ShadowBindGroupLayout0,
+            Layout = shader.Passes[0].Layout.BindGroupLayouts[0],
             Entries = new[]
             {
                 BindGroupEntry.Buffer(0, uniformBuffer),

@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Hikari.NativeBind;
 using System;
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -126,6 +127,16 @@ public readonly ref struct RenderPass
         _native.AsMut().SetBindGroup(index, bindGroup.NativeRef);
     }
 
+    public void SetBindGroups(ImmutableArray<BindGroupData> bindGroups) => SetBindGroups(bindGroups.AsSpan());
+
+    public void SetBindGroups(ReadOnlySpan<BindGroupData> bindGroups)
+    {
+        var native = _native.AsMut();
+        foreach(var (index, bindGroup) in bindGroups) {
+            native.SetBindGroup(index, bindGroup.NativeRef);
+        }
+    }
+
     public void SetBindGroups(ReadOnlySpan<BindGroup> bindGroups)
     {
         var native = _native.AsMut();
@@ -179,7 +190,7 @@ public readonly ref struct RenderPass
     }
 }
 
-public delegate OwnRenderPass RenderPassFunc<T>(T arg);
+public delegate OwnRenderPass RenderPassFunc<T>(Screen screen, T arg);
 
 public readonly ref struct OwnRenderPass
 {

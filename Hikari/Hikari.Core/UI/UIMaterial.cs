@@ -1,14 +1,16 @@
 ﻿#nullable enable
+using System;
 using System.Runtime.CompilerServices;
 
 namespace Hikari.UI;
 
-internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
+internal abstract class UIMaterial : Material<UIMaterial, UIShader>
 {
     private readonly Own<BindGroup> _bindGroup0;
     private Own<BindGroup> _bindGroup1;
     private Own<BindGroup> _bindGroup2;
     private readonly CachedOwnBuffer<UIShaderSource.BufferData> _buffer;
+    private MaterialPassData _pass0;
 
     private Own<Buffer> _backgroundBuffer;
     private Brush? _background;
@@ -17,10 +19,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
     private readonly Own<Buffer> _texContentSizeBuffer;
     private Vector2u? _texContentSize;
 
-    public BindGroup BindGroup0 => _bindGroup0.AsValue();
-    public BindGroup BindGroup1 => _bindGroup1.AsValue();
-    public BindGroup BindGroup2 => _bindGroup2.AsValue();
-
+    public sealed override ReadOnlySpan<MaterialPassData> Passes => new(in _pass0);
     public Texture2D? Texture => _texture.TryAsValue(out var texture) ? texture : null;
 
     protected UIMaterial(
@@ -38,7 +37,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         _texContentSizeBuffer = Buffer.Create(Screen, (nuint)Unsafe.SizeOf<Vector2u>(), BufferUsages.Uniform | BufferUsages.CopyDst);
         _bindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = Operation.BindGroupLayout0,
+            Layout = shader.Passes[0].Layout.BindGroupLayouts[0],
             Entries = new[]
             {
                 BindGroupEntry.Buffer(0, screen.InfoBuffer),
@@ -47,7 +46,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         });
         _bindGroup1 = BindGroup.Create(screen, new()
         {
-            Layout = Operation.BindGroupLayout1,
+            Layout = shader.Passes[0].Layout.BindGroupLayouts[1],
             Entries = new[]
             {
                 BindGroupEntry.TextureView(0, texture.AsValue().View),
@@ -56,6 +55,29 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
             },
         });
         _backgroundBuffer = Own<Buffer>.None;
+        _pass0 = CreatePass0(_bindGroup0.AsValue(), _bindGroup1.AsValue(), _bindGroup2.AsValue());
+    }
+
+    private static MaterialPassData CreatePass0(BindGroup bindGroup0, BindGroup bindGroup1, BindGroup bindGroup2)
+    {
+        return new MaterialPassData(0, new[]
+        {
+            new BindGroupData
+            {
+                Index = 0,
+                BindGroup = bindGroup0,
+            },
+            new BindGroupData
+            {
+                Index = 1,
+                BindGroup = bindGroup1,
+            },
+            new BindGroupData
+            {
+                Index = 2,
+                BindGroup = bindGroup2,
+            },
+        });
     }
 
     protected override void Release(bool manualRelease)
@@ -114,7 +136,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         _bindGroup1.Dispose();
         _bindGroup1 = BindGroup.Create(Screen, new()
         {
-            Layout = Operation.BindGroupLayout1,
+            Layout = Shader.Passes[0].Layout.BindGroupLayouts[1],
             Entries = new[]
             {
                 BindGroupEntry.TextureView(0, textureValue.View),
@@ -122,6 +144,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
                 BindGroupEntry.Buffer(2, _texContentSizeBuffer.AsValue()),
             },
         });
+        _pass0 = CreatePass0(_bindGroup0.AsValue(), _bindGroup1.AsValue(), _bindGroup2.AsValue());
     }
 
     internal void UpdateTextureContentSize(Vector2u contentSize)
@@ -157,11 +180,12 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader, UILayer>
         _bindGroup2.Dispose();
         _bindGroup2 = BindGroup.Create(Screen, new()
         {
-            Layout = Operation.BindGroupLayout2,
+            Layout = Shader.Passes[0].Layout.BindGroupLayouts[2],
             Entries = new[]
             {
                 BindGroupEntry.Buffer(0, _backgroundBuffer.AsValue()),
             },
         });
+        _pass0 = CreatePass0(_bindGroup0.AsValue(), _bindGroup1.AsValue(), _bindGroup2.AsValue());
     }
 }

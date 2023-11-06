@@ -1,17 +1,22 @@
 ﻿#nullable enable
-using System;
 
 namespace Hikari;
 
-public abstract class PbrShader : Shader<PbrShader, PbrMaterial, PbrLayer>
+public abstract class PbrShader : Shader<PbrShader, PbrMaterial>
 {
-    protected PbrShader(
-        ReadOnlySpan<byte> source,
-        PbrLayer operation,
-        Func<PbrLayer, ShaderModule, RenderPipelineDescriptor> getPipelineDesc)
-        : base(source, operation, getPipelineDesc)
+    protected PbrShader(Screen screen, in ShaderPassDescriptorArray1 passes) : base(screen, passes)
     {
     }
 
-    public abstract RenderPipeline ShadowPipeline(uint cascade);
+    protected PbrShader(Screen screen, in ShaderPassDescriptorArray2 passes) : base(screen, passes)
+    {
+    }
+
+    protected PbrShader(Screen screen, in ShaderPassDescriptorArray3 passes) : base(screen, passes)
+    {
+    }
+
+    protected PbrShader(Screen screen, in ShaderPassDescriptorArray4 passes) : base(screen, passes)
+    {
+    }
 }
