@@ -13,21 +13,21 @@ public sealed class ShaderPass
     private readonly ShaderModule _module;
     private readonly int _sortOrder;
     private readonly RenderPassFactory _renderPassFactory;
-    private readonly Type _shaderType;
+    private readonly Shader _shader;
     private readonly List<FrameObject> _list;
 
     public Screen Screen => _pipeline.Screen;
     public RenderPipeline Pipeline => _pipeline;
     public PipelineLayout Layout => _layout;
     public ShaderModule Module => _module;
-    public int SortOrder => _sortOrder;
-    public Type ShaderType => _shaderType;
+    public Shader Shader => _shader;
     public int Index => _passIndex;
+    public int SortOrder => _sortOrder;
 
-    internal ShaderPass(int passIndex, in ShaderPassDescriptor info, Type shaderType, RenderPipeline pipeline, PipelineLayout layout, ShaderModule module)
+    internal ShaderPass(int passIndex, in ShaderPassDescriptor info, Shader shader, RenderPipeline pipeline, PipelineLayout layout, ShaderModule module)
     {
         _passIndex = passIndex;
-        _shaderType = shaderType;
+        _shader = shader;
         _pipeline = pipeline;
         _layout = layout;
         _module = module;
