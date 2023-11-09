@@ -18,12 +18,12 @@ namespace Hikari
         public readonly Vector3 FarLeftTop;
         public readonly Vector3 FarRightBottom;
         public readonly Vector3 FarRightTop;
-        public readonly PlainEquation NearClip;
-        public readonly PlainEquation FarClip;
-        public readonly PlainEquation LeftClip;
-        public readonly PlainEquation RightClip;
-        public readonly PlainEquation TopClip;
-        public readonly PlainEquation BottomClip;
+        public readonly PlaneEquation NearClip;
+        public readonly PlaneEquation FarClip;
+        public readonly PlaneEquation LeftClip;
+        public readonly PlaneEquation RightClip;
+        public readonly PlaneEquation TopClip;
+        public readonly PlaneEquation BottomClip;
 
         public Vector3 NearCenterBottom => (NearLeftBottom + NearRightBottom) * 0.5f;
         public Vector3 NearCenterTop => (NearLeftTop + NearRightTop) * 0.5f;
@@ -40,12 +40,12 @@ namespace Hikari
         public Vector3 CenterRightBottom => (NearRightBottom + FarRightBottom) * 0.5f;
         public Vector3 CenterRightTop => (NearRightTop + FarRightTop) * 0.5f;
 
-        public Vector3 NearPlainCenter => (NearLeftBottom + NearLeftTop + NearRightBottom + NearRightTop) * 0.25f;
-        public Vector3 FarPlainCenter => (FarLeftBottom + FarLeftTop + FarRightBottom + FarRightTop) * 0.25f;
-        public Vector3 LeftPlainCenter => (NearLeftBottom + NearLeftTop + FarLeftBottom + FarLeftTop) * 0.25f;
-        public Vector3 RightPlainCenter => (NearRightBottom + NearRightTop + FarRightBottom + FarRightTop) * 0.25f;
-        public Vector3 BottomPlainCenter => (NearLeftBottom + NearRightBottom + FarLeftBottom + FarRightBottom) * 0.25f;
-        public Vector3 TopPlainCenter => (NearLeftTop + NearRightTop + FarLeftTop + FarRightTop) * 0.25f;
+        public Vector3 NearPlaneCenter => (NearLeftBottom + NearLeftTop + NearRightBottom + NearRightTop) * 0.25f;
+        public Vector3 FarPlaneCenter => (FarLeftBottom + FarLeftTop + FarRightBottom + FarRightTop) * 0.25f;
+        public Vector3 LeftPlaneCenter => (NearLeftBottom + NearLeftTop + FarLeftBottom + FarLeftTop) * 0.25f;
+        public Vector3 RightPlaneCenter => (NearRightBottom + NearRightTop + FarRightBottom + FarRightTop) * 0.25f;
+        public Vector3 BottomPlaneCenter => (NearLeftBottom + NearRightBottom + FarLeftBottom + FarRightBottom) * 0.25f;
+        public Vector3 TopPlaneCenter => (NearLeftTop + NearRightTop + FarLeftTop + FarRightTop) * 0.25f;
 
         public Vector3 Center => (NearLeftBottom + NearLeftTop + NearRightBottom + NearRightTop + FarLeftBottom + FarLeftTop + FarRightBottom + FarRightTop) * 0.125f;
 
@@ -55,7 +55,7 @@ namespace Hikari
             get => MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in NearLeftBottom), 8);
         }
 
-        public ReadOnlySpan<PlainEquation> ClipPlains
+        public ReadOnlySpan<PlaneEquation> ClipPlanes
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in NearClip), 6);
@@ -81,12 +81,12 @@ namespace Hikari
             FarRightBottom = farRightBottom;
             FarRightTop = farRightTop;
 
-            NearClip = PlainEquation.FromTriangle(NearLeftBottom, NearLeftTop, NearRightTop);
-            FarClip = PlainEquation.FromTriangle(FarRightTop, FarLeftTop, FarLeftBottom);
-            LeftClip = PlainEquation.FromTriangle(FarLeftBottom, FarLeftTop, NearLeftTop);
-            RightClip = PlainEquation.FromTriangle(NearRightBottom, NearRightTop, FarRightTop);
-            TopClip = PlainEquation.FromTriangle(NearRightTop, NearLeftTop, FarLeftTop);
-            BottomClip = PlainEquation.FromTriangle(FarLeftBottom, NearLeftBottom, NearRightBottom);
+            NearClip = PlaneEquation.FromTriangle(NearLeftBottom, NearLeftTop, NearRightTop);
+            FarClip = PlaneEquation.FromTriangle(FarRightTop, FarLeftTop, FarLeftBottom);
+            LeftClip = PlaneEquation.FromTriangle(FarLeftBottom, FarLeftTop, NearLeftTop);
+            RightClip = PlaneEquation.FromTriangle(NearRightBottom, NearRightTop, FarRightTop);
+            TopClip = PlaneEquation.FromTriangle(NearRightTop, NearLeftTop, FarLeftTop);
+            BottomClip = PlaneEquation.FromTriangle(FarLeftBottom, NearLeftBottom, NearRightBottom);
         }
 
         [SkipLocalsInit]
@@ -108,11 +108,11 @@ namespace Hikari
         private static unsafe bool ContainsAny(in Frustum frustum, ReadOnlySpan<Vector3> positions)
         {
             // [NOTE]
-            // Layout of PlainEquation is (float nx, float ny, float nz, float d).
+            // Layout of PlaneEquation is (float nx, float ny, float nz, float d).
             // So I consider it as Vector4 (float x, float y, float z, float w).
 
             if(Avx.IsSupported) {
-                fixed(PlainEquation* clips = frustum.ClipPlains) {
+                fixed(PlaneEquation* clips = frustum.ClipPlanes) {
                     Vector4* c = (Vector4*)clips;
                     var clip01 = Vector256.Load((float*)&c[0]);      // <c0x, c0y, c0z, c0w, c1x, c1y, c1z, c1w>
                     var clip23 = Vector256.Load((float*)&c[2]);      // <c2x, c2y, c2z, c2w, c3x, c3y, c3z, c3w>
@@ -214,5 +214,9 @@ namespace Hikari
             hash.Add(BottomClip);
             return hash.ToHashCode();
         }
+
+        public static bool operator ==(Frustum left, Frustum right) => left.Equals(right);
+
+        public static bool operator !=(Frustum left, Frustum right) => !(left == right);
     }
 }

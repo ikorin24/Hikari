@@ -1,28 +1,39 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Hikari
 {
-    public readonly struct PlainEquation : IEquatable<PlainEquation>
+    [DebuggerDisplay("{DebuggerDisplay}")]
+    public readonly struct PlaneEquation : IEquatable<PlaneEquation>
     {
-        // [equation of plain]
+        // [equation of plane]
         // nx*x + ny*y + nz*z + d = 0
 
         // Don't change layout of fileds. It must have same layout as Vector4 for SIMD.
         public readonly Vector3 Normal; // normalized
         public readonly float D;
 
-        private PlainEquation(in Vector3 normal, float d)
+        private string DebuggerDisplay
+        {
+            get
+            {
+                var d = (D < 0) ? $"- {-D}" : $"+ {D}";
+                return $"plane: {Normal.X}X + {Normal.Y}Y + {Normal.Z}Z {d} = 0";
+            }
+        }
+
+        private PlaneEquation(in Vector3 normal, float d)
         {
             Normal = normal;
             D = d;
         }
 
-        public static PlainEquation FromTriangle(in Vector3 p0, in Vector3 p1, in Vector3 p2)
+        public static PlaneEquation FromTriangle(in Vector3 p0, in Vector3 p1, in Vector3 p2)
         {
             var n = Vector3.Cross(p2 - p1, p0 - p1).Normalized();
-            return new PlainEquation(n, -n.Dot(p1));
+            return new PlaneEquation(n, -n.Dot(p1));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -40,16 +51,14 @@ namespace Hikari
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetAbsDistance(in Vector3 pos) => MathF.Abs(Normal.Dot(pos) + D);
 
-        public override string ToString()
-        {
-            var d = (D < 0) ? $"- {-D}" : $"+ {D}";
-            return $"plain: {Normal.X}X + {Normal.Y}Y + {Normal.Z}Z {d} = 0";
-        }
+        public override bool Equals(object? obj) => obj is PlaneEquation equation && Equals(equation);
 
-        public override bool Equals(object? obj) => obj is PlainEquation equation && Equals(equation);
-
-        public bool Equals(PlainEquation other) => Normal.Equals(other.Normal) && D == other.D;
+        public bool Equals(PlaneEquation other) => Normal.Equals(other.Normal) && D == other.D;
 
         public override int GetHashCode() => HashCode.Combine(Normal, D);
+
+        public static bool operator ==(PlaneEquation left, PlaneEquation right) => left.Equals(right);
+
+        public static bool operator !=(PlaneEquation left, PlaneEquation right) => !(left == right);
     }
 }
