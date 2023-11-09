@@ -25,6 +25,8 @@ public sealed class GBufferProvider : IScreenManaged, IGBufferProvider
 
     public Event<IGBufferProvider> GBufferChanged => _gBufferChanged.Event;
 
+    public ReadOnlySpan<TextureFormat> Formats => _formats;
+
     private GBufferProvider(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
         _screen = screen;

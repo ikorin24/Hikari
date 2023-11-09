@@ -180,10 +180,11 @@ public sealed class PbrBasicShader : PbrShader
                                 SafeCast.NotNullAs<IGBufferProvider>(gBufferProvider),
                                 static (colors, gBuffer) =>
                                 {
-                                    for(int i = 0; i < gBuffer.ColorAttachmentCount; i++) {
+                                    var textures = gBuffer.Textures;
+                                    for(int i = 0; i < textures.Length; i++) {
                                         colors[i] = new ColorAttachment
                                         {
-                                            Target = gBuffer[i],
+                                            Target = textures[i],
                                             LoadOp = ColorBufferLoadOp.Clear(),
                                         };
                                     }

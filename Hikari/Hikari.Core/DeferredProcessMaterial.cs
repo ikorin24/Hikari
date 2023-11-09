@@ -36,6 +36,7 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
     {
         var screen = shader.Screen;
         var directionalLight = screen.Lights.DirectionalLight;
+        var gTextures = gBuffer.Textures;
         disposable = new DisposableBag();
         return new MaterialPassData(0, new[]
         {
@@ -56,10 +57,10 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
                             MinFilter = FilterMode.Nearest,
                             MipmapFilter = FilterMode.Nearest,
                         }).AddTo(disposable)),
-                        BindGroupEntry.TextureView(1, gBuffer[0].View),
-                        BindGroupEntry.TextureView(2, gBuffer[1].View),
-                        BindGroupEntry.TextureView(3, gBuffer[2].View),
-                        BindGroupEntry.TextureView(4, gBuffer[3].View),
+                        BindGroupEntry.TextureView(1, gTextures[0].View),
+                        BindGroupEntry.TextureView(2, gTextures[1].View),
+                        BindGroupEntry.TextureView(3, gTextures[2].View),
+                        BindGroupEntry.TextureView(4, gTextures[3].View),
                     },
                 }).AddTo(disposable)
             },

@@ -77,7 +77,7 @@ public readonly ref struct RenderPass
         scoped in DepthStencilAttachment? depthStencil)
     {
         var gBuffer = gBufferProvider.GetCurrentGBuffer();
-        Span<ColorAttachment?> colors = stackalloc ColorAttachment?[gBuffer.ColorAttachmentCount];
+        Span<ColorAttachment?> colors = stackalloc ColorAttachment?[gBuffer.Textures.Length];
         action.Invoke(colors, gBuffer);
         return Create(screen, colors, depthStencil);
     }

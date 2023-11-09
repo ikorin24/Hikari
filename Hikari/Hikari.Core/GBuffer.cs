@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Hikari.NativeBind;
 using System;
 using System.Threading;
 
@@ -9,36 +8,39 @@ public sealed class GBuffer : IScreenManaged
 {
     private readonly Screen _screen;
     private readonly Vector2u _size;
-    private Own<Texture2D>[] _colors;
-    private readonly CH.Opt<CH.RenderPassColorAttachment>[] _colorsNative;
-    private readonly int _colorAttachmentCount;
+    private Texture2D[]? _colors;
+    private EventSource<GBuffer> _disposed;
 
-    public int ColorAttachmentCount => _colorAttachmentCount;
+    public Event<GBuffer> Disposed => _disposed.Event;
     public Screen Screen => _screen;
-    public bool IsManaged => _colors.Length != 0;
+    public bool IsManaged => _colors != null;
     public Vector2u Size => _size;
+    public ReadOnlySpan<Texture2D> Textures => _colors;
 
     private GBuffer(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
-        var colors = new Own<Texture2D>[formats.Length];
-        var colorsNative = new CH.Opt<CH.RenderPassColorAttachment>[formats.Length];
-        Prepare(screen, size, formats, colors, colorsNative);
+        var colors = new Texture2D[formats.Length];
+        for(int i = 0; i < colors.Length; i++) {
+            colors[i] = Texture2D.Create(screen, new()
+            {
+                Size = size,
+                MipLevelCount = 1,
+                SampleCount = 1,
+                Format = formats[i],
+                Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding | TextureUsages.CopySrc,
+            }).DisposeOn(Disposed);
+        }
         _size = size;
-        _colorAttachmentCount = formats.Length;
         _screen = screen;
         _colors = colors;
-        _colorsNative = colorsNative;
     }
 
     private void Release()
     {
-        var colors = Interlocked.Exchange(ref _colors, Array.Empty<Own<Texture2D>>());
-        if(colors.Length == 0) {
+        if(Interlocked.Exchange(ref _colors, null) is null) {
             return;
         }
-        foreach(var color in colors) {
-            color.Dispose();
-        }
+        _disposed.Invoke(this);
     }
 
     public void Validate()
@@ -54,37 +56,5 @@ public sealed class GBuffer : IScreenManaged
 
         var gbuffer = new GBuffer(screen, size, formats);
         return Own.New(gbuffer, static x => SafeCast.As<GBuffer>(x).Release());
-    }
-
-    public Texture2D this[int index]
-    {
-        get
-        {
-            this.ThrowIfNotScreenManaged();
-            return _colors[index].AsValue();
-        }
-    }
-
-    private static void Prepare(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats, Span<Own<Texture2D>> colors, Span<CH.Opt<CH.RenderPassColorAttachment>> colorsNative)
-    {
-        for(int i = 0; i < formats.Length; i++) {
-            colors[i] = Texture2D.Create(screen, new()
-            {
-                Size = size,
-                MipLevelCount = 1,
-                SampleCount = 1,
-                Format = formats[i],
-                Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding | TextureUsages.CopySrc,
-            });
-            colorsNative[i] = new(new()
-            {
-                view = colors[i].AsValue().View.NativeRef,
-                init = new CH.RenderPassColorBufferInit
-                {
-                    mode = CH.RenderPassBufferInitMode.Clear,
-                    value = new Wgpu.Color(0, 0, 0, 0),
-                },
-            });
-        }
     }
 }
