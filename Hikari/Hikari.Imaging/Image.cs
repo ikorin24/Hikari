@@ -204,27 +204,27 @@ namespace Hikari.Imaging
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ImageRef AsImageRef()
+        public ImageViewMut AsViewMut()
         {
             var source = _source;
             if(source is null || source.Token != _token) {
-                return ImageRef.Empty;
+                return ImageViewMut.Empty;
             }
             Debug.Assert(source.Height > 0 && source.Height > 0);
             var firstRowLine = MemoryMarshal.CreateSpan(ref *source.Pixels, source.Width);
-            return ImageRef.CreateUnsafe(firstRowLine, source.Height);
+            return ImageViewMut.CreateUnsafe(firstRowLine, source.Height);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyImageRef AsReadOnlyImageRef()
+        public ImageView AsView()
         {
             var source = _source;
             if(source is null || source.Token != _token) {
-                return ImageRef.Empty;
+                return ImageViewMut.Empty;
             }
             Debug.Assert(source.Height > 0 && source.Height > 0);
             var firstRowLine = MemoryMarshal.CreateSpan(ref *source.Pixels, source.Width);
-            return ReadOnlyImageRef.CreateUnsafe(firstRowLine, source.Height);
+            return ImageView.CreateUnsafe(firstRowLine, source.Height);
         }
 
         public static ImageType GetTypeFromExt(string ext) => GetTypeFromExt(ext.AsSpan());
@@ -242,9 +242,9 @@ namespace Hikari.Imaging
         public static bool operator !=(Image left, Image right) => !(left == right);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator ImageRef(Image image) => image.AsImageRef();
+        public static implicit operator ImageViewMut(Image image) => image.AsViewMut();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator ReadOnlyImageRef(Image image) => image.AsReadOnlyImageRef();
+        public static implicit operator ImageView(Image image) => image.AsView();
     }
 }

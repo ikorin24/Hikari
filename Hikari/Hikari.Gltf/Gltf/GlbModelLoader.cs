@@ -136,20 +136,6 @@ public static class GlbModelLoader
             null => MaterialData.CreateDefault(state.Screen),
         };
 
-
-        //materialData.Pbr.BaseColor.AsValue().ReadCallback((span, texture) =>
-        //{
-        //    var s = span.MarshalCast<byte, ColorByte>();
-        //    var image = new HI.ReadOnlyImageRef(s, (int)texture.Width, (int)texture.Height);
-        //    HI.ImageExtensions.SaveAsPng(image, "basecolor.png");
-        //});
-        //materialData.Pbr.MetallicRoughness.AsValue().ReadCallback((span, texture) =>
-        //{
-        //    var s = span.MarshalCast<byte, ColorByte>();
-        //    var image = new HI.ReadOnlyImageRef(s, (int)texture.Width, (int)texture.Height);
-        //    HI.ImageExtensions.SaveAsPng(image, "MetallicRoughness.png");
-        //});
-
         if(meshPrimitive.mode != MeshPrimitiveMode.Triangles) {
             throw new NotImplementedException();
         }

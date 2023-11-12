@@ -101,7 +101,7 @@ internal static class TextDrawer
         var bitmap = new SKBitmap(info, SKBitmapAllocFlags.None);
         var canvas = new SKCanvas(bitmap);
         try {
-            var image = new ImageRef((ColorByte*)bitmap.GetPixels(), info.Width, info.Height);
+            var image = new ImageViewMut((ColorByte*)bitmap.GetPixels(), info.Width, info.Height);
             image.GetPixels().Fill(options.Background);
 
             using(var textBlob = builder.Build()) {
@@ -132,7 +132,7 @@ internal static class TextDrawer
         public required SKBitmap? Bitmap { private get; init; }
         [DisallowNull]
         public required SKCanvas? Canvas { private get; init; }
-        public required ReadOnlyImageRef Image { get; init; }
+        public required ImageView Image { get; init; }
         public required Vector2u TextBounds { get; init; }
 
         public bool IsNone => Image.IsEmpty;
@@ -150,7 +150,7 @@ internal delegate void TextDrawerCallback<T>(TextDrawerResult<T> result);
 internal readonly ref struct TextDrawerResult<T>
 {
     public required T Arg { get; init; }
-    public required ReadOnlyImageRef Image { get; init; }
+    public required ImageView Image { get; init; }
     public required Vector2u TextBoundsSize { get; init; }
 }
 

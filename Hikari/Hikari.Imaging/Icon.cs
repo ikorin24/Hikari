@@ -47,7 +47,7 @@ namespace Hikari.Imaging
 
         public delegate void IconCreateAction<in TArg>(Span<Image> images, TArg arg);
 
-        public ImageRef GetImage(int index)
+        public ImageViewMut GetImage(int index)
         {
             if(_images is null || (uint)index >= _images.Length) {
                 ThrowHelper.ThrowArgOutOfRange(nameof(index));

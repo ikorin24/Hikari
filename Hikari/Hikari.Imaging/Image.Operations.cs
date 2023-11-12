@@ -18,10 +18,11 @@ namespace Hikari.Imaging
         public static Image Resized(IImageSource baseImage, Vector2i size)
         {
             if(baseImage == null) { throw new ArgumentNullException(nameof(baseImage)); }
-            return Resized(baseImage.AsImageRef(), size);
+            var view = new ImageView(baseImage.Pixels, baseImage.Width, baseImage.Height);
+            return Resized(view, size);
         }
 
-        public static Image Resized(ReadOnlyImageRef image, Vector2i size)
+        public static Image Resized(ImageView image, Vector2i size)
         {
             var info = new SKImageInfo
             {
@@ -55,9 +56,9 @@ namespace Hikari.Imaging
             }
         }
 
-        public void ResizeTo(ImageRef dest) => Resize(this, dest);
+        public void ResizeTo(ImageViewMut dest) => Resize(this, dest);
 
-        public static void Resize(ReadOnlyImageRef source, ImageRef dest)
+        public static void Resize(ImageView source, ImageViewMut dest)
         {
             const int BytePerPix = 4;
 

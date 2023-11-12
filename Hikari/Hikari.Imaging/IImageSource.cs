@@ -11,12 +11,4 @@ namespace Hikari.Imaging
         short Token { get; }
         Span<ColorByte> GetPixels();
     }
-
-    public static class ImageSourceExtensions
-    {
-        public unsafe static ImageRef AsImageRef(this IImageSource source)
-        {
-            return new ImageRef(source.Pixels, source.Width, source.Height);
-        }
-    }
 }

@@ -104,7 +104,7 @@ internal class Program
 
         material.Albedo.ReadCallback((data, texture) =>
         {
-            var image = new ReadOnlyImageRef(data.MarshalCast<byte, ColorByte>(), (int)texture.Width, (int)texture.Height);
+            var image = new ImageView(data.MarshalCast<byte, ColorByte>(), (int)texture.Width, (int)texture.Height);
             //image.SaveAsPng("test.png");
         });
 

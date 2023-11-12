@@ -93,7 +93,7 @@ public sealed class Texture2D : ITexture2DProvider, IScreenManaged
         }
     }
 
-    public unsafe static Own<Texture2D> CreateWithAutoMipmap(Screen screen, ReadOnlyImageRef image, TextureFormat format, TextureUsages usage, uint? mipLevelCount = null)
+    public unsafe static Own<Texture2D> CreateWithAutoMipmap(Screen screen, ImageView image, TextureFormat format, TextureUsages usage, uint? mipLevelCount = null)
     {
         var desc = new Texture2DDescriptor
         {
@@ -144,14 +144,14 @@ public sealed class Texture2D : ITexture2DProvider, IScreenManaged
                     var ((width0, height0, _), mip0Bytelen) = mipData[0];
                     Debug.Assert(width0 == image.Size.X);
                     Debug.Assert(height0 == image.Size.Y);
-                    var mipmap0 = new ImageRef((ColorByte*)p, (int)width0, (int)height0);
+                    var mipmap0 = new ImageViewMut((ColorByte*)p, (int)width0, (int)height0);
                     image.GetPixels().CopyTo(mipmap0.GetPixels());
 
                     usize byteOffset = mip0Bytelen;
                     var mipmapBefore = mipmap0.AsReadOnly();
                     for(int level = 1; level < desc.MipLevelCount; level++) {
                         var ((w, h, _), mipBytelen) = mipData[level];
-                        var mipmap = new ImageRef((ColorByte*)(p + byteOffset), (int)w, (int)h);
+                        var mipmap = new ImageViewMut((ColorByte*)(p + byteOffset), (int)w, (int)h);
                         mipmapBefore.ResizeTo(mipmap);
                         byteOffset += mipBytelen;
                         mipmapBefore = mipmap;

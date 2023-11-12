@@ -14,7 +14,7 @@ namespace Hikari.Imaging
     /// The layout of pixels is (R8, G8, B8, A8) which is similar to <see cref="ColorByte"/>.
     /// </remarks>
     [DebuggerDisplay("{DebugView,nq}")]
-    public unsafe readonly ref struct ReadOnlyImageRef
+    public unsafe readonly ref struct ImageView
     {
         private readonly ReadOnlySpan<ColorByte> _firstRowLine;     // (ref ColorByte head, int width)
         private readonly int _height;
@@ -37,11 +37,11 @@ namespace Hikari.Imaging
             get => _firstRowLine.Length == 0 || _height == 0;
         }
 
-        /// <summary>Get an empty instance of type <see cref="ReadOnlyImageRef"/>.</summary>
-        public static ReadOnlyImageRef Empty => default;
+        /// <summary>Get an empty instance of type <see cref="ImageView"/>.</summary>
+        public static ImageView Empty => default;
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private string DebugView => $"{nameof(ReadOnlyImageRef)} ({Width}x{Height})";
+        private string DebugView => $"{nameof(ImageView)} ({Width}x{Height})";
 
         /// <summary>Get pixel of specified (x, y)</summary>
         /// <param name="x">x index (column line)</param>
@@ -63,16 +63,16 @@ namespace Hikari.Imaging
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyImageRef(ColorByte* pixels, uint width, uint height) : this(pixels, checked((int)width), checked((int)height))
+        public ImageView(ColorByte* pixels, uint width, uint height) : this(pixels, checked((int)width), checked((int)height))
         {
         }
 
-        /// <summary>Create <see cref="ReadOnlyImageRef"/> from a pointer, width, and height.</summary>
+        /// <summary>Create <see cref="ImageView"/> from a pointer, width, and height.</summary>
         /// <param name="pixels">pointer of the head pixel</param>
         /// <param name="width">image width</param>
         /// <param name="height">image height</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyImageRef(ColorByte* pixels, int width, int height)
+        public ImageView(ColorByte* pixels, int width, int height)
         {
             if(width <= 0) {
                 if(width == 0) {
@@ -97,16 +97,16 @@ namespace Hikari.Imaging
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyImageRef(in ColorByte pixels, uint width, uint height) : this(in pixels, checked((int)width), checked((int)height))
+        public ImageView(in ColorByte pixels, uint width, uint height) : this(in pixels, checked((int)width), checked((int)height))
         {
         }
 
-        /// <summary>Create <see cref="ReadOnlyImageRef"/> from a reference, width, and height.</summary>
+        /// <summary>Create <see cref="ImageView"/> from a reference, width, and height.</summary>
         /// <param name="pixels">reference to the head pixel</param>
         /// <param name="width">image width</param>
         /// <param name="height">image height</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyImageRef(in ColorByte pixels, int width, int height)
+        public ImageView(in ColorByte pixels, int width, int height)
         {
             if(width <= 0) {
                 if(width == 0) {
@@ -131,16 +131,16 @@ namespace Hikari.Imaging
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyImageRef(ReadOnlySpan<ColorByte> pixels, uint width, uint height) : this(pixels, checked((int)width), checked((int)height))
+        public ImageView(ReadOnlySpan<ColorByte> pixels, uint width, uint height) : this(pixels, checked((int)width), checked((int)height))
         {
         }
 
-        /// <summary>Create <see cref="ReadOnlyImageRef"/> from whole pixels data, width, and height.</summary>
+        /// <summary>Create <see cref="ImageView"/> from whole pixels data, width, and height.</summary>
         /// <param name="pixels">whole pixels data</param>
         /// <param name="width">image width</param>
         /// <param name="height">image height</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyImageRef(ReadOnlySpan<ColorByte> pixels, int width, int height)
+        public ImageView(ReadOnlySpan<ColorByte> pixels, int width, int height)
         {
             if(width < 0) {
                 ThrowHelper.ThrowArgOutOfRange(nameof(width));
@@ -156,7 +156,7 @@ namespace Hikari.Imaging
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ReadOnlyImageRef(ReadOnlySpan<ColorByte> firstRowLine, int height)
+        private ImageView(ReadOnlySpan<ColorByte> firstRowLine, int height)
         {
             // Create an instance without any check.
             Debug.Assert(
@@ -167,13 +167,13 @@ namespace Hikari.Imaging
             _height = height;
         }
 
-        /// <summary>Create <see cref="ReadOnlyImageRef"/> without any check.</summary>
+        /// <summary>Create <see cref="ImageView"/> without any check.</summary>
         /// <remarks>[Caution] Arguments are not checked.</remarks>
         /// <param name="firstRowLine">pixels span of first row line</param>
         /// <param name="height">height of image</param>
-        /// <returns><see cref="ReadOnlyImageRef"/> instance</returns>
+        /// <returns><see cref="ImageView"/> instance</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static ReadOnlyImageRef CreateUnsafe(ReadOnlySpan<ColorByte> firstRowLine, int height)
+        internal static ImageView CreateUnsafe(ReadOnlySpan<ColorByte> firstRowLine, int height)
         {
             return new(firstRowLine, height);
         }
@@ -213,7 +213,7 @@ namespace Hikari.Imaging
             }
         }
 
-        public void ResizeTo(ImageRef dest) => Image.Resize(this, dest);
+        public void ResizeTo(ImageViewMut dest) => Image.Resize(this, dest);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref readonly ColorByte GetReference()
@@ -241,13 +241,13 @@ namespace Hikari.Imaging
 #pragma warning restore 0809
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator ==(ReadOnlyImageRef left, ReadOnlyImageRef right)
+        public static bool operator ==(ImageView left, ImageView right)
         {
             return left._firstRowLine == right._firstRowLine && left._height == right._height;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator !=(ReadOnlyImageRef left, ReadOnlyImageRef right)
+        public static bool operator !=(ImageView left, ImageView right)
         {
             return !(left == right);
         }

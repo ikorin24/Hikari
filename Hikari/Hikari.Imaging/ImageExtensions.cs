@@ -10,21 +10,21 @@ namespace Hikari.Imaging
     public static class ImageExtensions
     {
         public static Image ToSubimage(in this Image source, in RectI rect)
-            => ToSubimage(source.AsReadOnlyImageRef(), rect.X, rect.Y, rect.Width, rect.Height);
+            => ToSubimage(source.AsView(), rect.X, rect.Y, rect.Width, rect.Height);
 
         public static Image ToSubimage(in this Image source, int x, int y, int width, int height)
-            => ToSubimage(source.AsReadOnlyImageRef(), x, y, width, height);
+            => ToSubimage(source.AsView(), x, y, width, height);
 
-        public static Image ToSubimage(in this ImageRef source, in RectI rect)
+        public static Image ToSubimage(in this ImageViewMut source, in RectI rect)
             => ToSubimage(source.AsReadOnly(), rect.X, rect.Y, rect.Width, rect.Height);
 
-        public static Image ToSubimage(in this ImageRef source, int x, int y, int width, int height)
+        public static Image ToSubimage(in this ImageViewMut source, int x, int y, int width, int height)
             => ToSubimage(source.AsReadOnly(), x, y, width, height);
 
-        public static Image ToSubimage(in this ReadOnlyImageRef source, in RectI rect)
+        public static Image ToSubimage(in this ImageView source, in RectI rect)
             => ToSubimage(source, rect.X, rect.Y, rect.Width, rect.Height);
 
-        public static Image ToSubimage(in this ReadOnlyImageRef source, int x, int y, int width, int height)
+        public static Image ToSubimage(in this ImageView source, int x, int y, int width, int height)
         {
             if((uint)x > source.Width) { ThrowHelper.ThrowArgOutOfRange(nameof(x)); }
             if((uint)y > source.Height) { ThrowHelper.ThrowArgOutOfRange(nameof(y)); }
@@ -54,14 +54,14 @@ namespace Hikari.Imaging
         /// <param name="dest">destination image</param>
         /// <param name="posX">position x in the destination</param>
         /// <param name="posY">position y in the destination</param>
-        public static void CopyTo(in this Image source, in ImageRef dest, int posX, int posY) => source.AsReadOnlyImageRef().CopyTo(dest, new Vector2i(posX, posY));
+        public static void CopyTo(in this Image source, in ImageViewMut dest, int posX, int posY) => source.AsView().CopyTo(dest, new Vector2i(posX, posY));
 
         /// <summary>Copy the source image to the position in the destination image.</summary>
         /// <remarks>If outside of range of the dest, only the copyable part would be copied. No exceptions will be thrown.</remarks>
         /// <param name="source">source image</param>
         /// <param name="dest">destination image</param>
         /// <param name="pos">position in the destination</param>
-        public static void CopyTo(in this Image source, in Image dest, in Vector2i pos) => source.AsReadOnlyImageRef().CopyTo(dest, pos);
+        public static void CopyTo(in this Image source, in Image dest, in Vector2i pos) => source.AsView().CopyTo(dest, pos);
 
         /// <summary>Copy the source image to the position in the destination image.</summary>
         /// <remarks>If outside of range of the dest, only the copyable part would be copied. No exceptions will be thrown.</remarks>
@@ -69,14 +69,14 @@ namespace Hikari.Imaging
         /// <param name="dest">destination image</param>
         /// <param name="posX">position x in the destination</param>
         /// <param name="posY">position y in the destination</param>
-        public static void CopyTo(in this ImageRef source, in ImageRef dest, int posX, int posY) => source.AsReadOnly().CopyTo(dest, new Vector2i(posX, posY));
+        public static void CopyTo(in this ImageViewMut source, in ImageViewMut dest, int posX, int posY) => source.AsReadOnly().CopyTo(dest, new Vector2i(posX, posY));
 
         /// <summary>Copy the source image to the position in the destination image.</summary>
         /// <remarks>If outside of range of the dest, only the copyable part would be copied. No exceptions will be thrown.</remarks>
         /// <param name="source">source image</param>
         /// <param name="dest">destination image</param>
         /// <param name="pos">position in the destination</param>
-        public static void CopyTo(in this ImageRef source, in ImageRef dest, in Vector2i pos) => source.AsReadOnly().CopyTo(dest, pos);
+        public static void CopyTo(in this ImageViewMut source, in ImageViewMut dest, in Vector2i pos) => source.AsReadOnly().CopyTo(dest, pos);
 
         /// <summary>Copy the source image to the position in the destination image.</summary>
         /// <remarks>If outside of range of the dest, only the copyable part would be copied. No exceptions will be thrown.</remarks>
@@ -84,14 +84,14 @@ namespace Hikari.Imaging
         /// <param name="dest">destination image</param>
         /// <param name="posX">position x in the destination</param>
         /// <param name="posY">position y in the destination</param>
-        public static void CopyTo(in this ReadOnlyImageRef source, in ImageRef dest, int posX, int posY) => source.CopyTo(dest, new Vector2i(posX, posY));
+        public static void CopyTo(in this ImageView source, in ImageViewMut dest, int posX, int posY) => source.CopyTo(dest, new Vector2i(posX, posY));
 
         /// <summary>Copy the source image to the position in the destination image.</summary>
         /// <remarks>If outside of range of the dest, only the copyable part would be copied. No exceptions will be thrown.</remarks>
         /// <param name="source">source image</param>
         /// <param name="dest">destination image</param>
         /// <param name="pos">position in the destination</param>
-        public static void CopyTo(in this ReadOnlyImageRef source, in ImageRef dest, in Vector2i pos)
+        public static void CopyTo(in this ImageView source, in ImageViewMut dest, in Vector2i pos)
         {
             // +---------------+
             // |      dest     |
@@ -120,11 +120,11 @@ namespace Hikari.Imaging
             }
         }
 
-        public static void EncodeAsPng(this Image source, Stream streamToWrite) => EncodeAsPng(source.AsReadOnlyImageRef(), streamToWrite);
+        public static void EncodeAsPng(this Image source, Stream streamToWrite) => EncodeAsPng(source.AsView(), streamToWrite);
 
-        public static void EncodeAsPng(this ImageRef source, Stream streamToWrite) => EncodeAsPng(source.AsReadOnly(), streamToWrite);
+        public static void EncodeAsPng(this ImageViewMut source, Stream streamToWrite) => EncodeAsPng(source.AsReadOnly(), streamToWrite);
 
-        public static void EncodeAsPng(this ReadOnlyImageRef source, Stream streamToWrite)
+        public static void EncodeAsPng(this ImageView source, Stream streamToWrite)
         {
             _ = EncodeImage(source, SKEncodedImageFormat.Png, streamToWrite, static (span, stream) =>
             {
@@ -133,11 +133,11 @@ namespace Hikari.Imaging
             });
         }
 
-        public static void EncodeAsPng(this Image source, IBufferWriter<byte> writer) => EncodeAsPng(source.AsReadOnlyImageRef(), writer);
+        public static void EncodeAsPng(this Image source, IBufferWriter<byte> writer) => EncodeAsPng(source.AsView(), writer);
 
-        public static void EncodeAsPng(this ImageRef source, IBufferWriter<byte> writer) => EncodeAsPng(source.AsReadOnly(), writer);
+        public static void EncodeAsPng(this ImageViewMut source, IBufferWriter<byte> writer) => EncodeAsPng(source.AsReadOnly(), writer);
 
-        public static void EncodeAsPng(this ReadOnlyImageRef source, IBufferWriter<byte> writer)
+        public static void EncodeAsPng(this ImageView source, IBufferWriter<byte> writer)
         {
             _ = EncodeImage(source, SKEncodedImageFormat.Png, writer, static (span, writer) =>
             {
@@ -146,18 +146,18 @@ namespace Hikari.Imaging
             });
         }
 
-        public static byte[] EncodeAsPng(this Image source) => EncodeAsPng(source.AsReadOnlyImageRef());
-        public static byte[] EncodeAsPng(this ImageRef source) => EncodeAsPng(source.AsReadOnly());
+        public static byte[] EncodeAsPng(this Image source) => EncodeAsPng(source.AsView());
+        public static byte[] EncodeAsPng(this ImageViewMut source) => EncodeAsPng(source.AsReadOnly());
 
-        public static byte[] EncodeAsPng(this ReadOnlyImageRef source)
+        public static byte[] EncodeAsPng(this ImageView source)
         {
             return EncodeImage<object?, byte[]>(source, SKEncodedImageFormat.Png, null, (span, _) => span.ToArray());
         }
 
-        public static unsafe void SaveAsPng(this Image source, string filePath) => SaveAsPng(source.AsReadOnlyImageRef(), filePath);
-        public static unsafe void SaveAsPng(this ImageRef source, string filePath) => SaveAsPng(source.AsReadOnly(), filePath);
+        public static unsafe void SaveAsPng(this Image source, string filePath) => SaveAsPng(source.AsView(), filePath);
+        public static unsafe void SaveAsPng(this ImageViewMut source, string filePath) => SaveAsPng(source.AsReadOnly(), filePath);
 
-        public static unsafe void SaveAsPng(this ReadOnlyImageRef source, string filePath)
+        public static unsafe void SaveAsPng(this ImageView source, string filePath)
         {
             EncodeImage(source, SKEncodedImageFormat.Png, filePath, static (span, filePath) =>
             {
@@ -170,7 +170,7 @@ namespace Hikari.Imaging
             });
         }
 
-        private static unsafe TResult EncodeImage<TState, TResult>(ReadOnlyImageRef source, SKEncodedImageFormat format, TState state, ReadOnlySpanFunc<byte, TState, TResult> func)
+        private static unsafe TResult EncodeImage<TState, TResult>(ImageView source, SKEncodedImageFormat format, TState state, ReadOnlySpanFunc<byte, TState, TResult> func)
         {
             fixed(void* ptr = source) {
                 var info = new SKImageInfo(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
