@@ -63,6 +63,11 @@ namespace Hikari.Imaging
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ImageRef(ColorByte* pixels, uint width, uint height) : this(pixels, checked((int)width), checked((int)height))
+        {
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ImageRef(ColorByte* pixels, int width, int height)
         {
             if(width <= 0) {
@@ -88,6 +93,11 @@ namespace Hikari.Imaging
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ImageRef(ref ColorByte pixels, uint width, uint height) : this(ref pixels, checked((int)width), checked((int)height))
+        {
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ImageRef(ref ColorByte pixels, int width, int height)
         {
             if(width <= 0) {
@@ -110,6 +120,11 @@ namespace Hikari.Imaging
             }
             _firstRowLine = MemoryMarshal.CreateSpan(ref pixels, width);
             _height = height;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ImageRef(Span<ColorByte> pixels, uint width, uint height) : this(pixels, checked((int)width), checked((int)height))
+        {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

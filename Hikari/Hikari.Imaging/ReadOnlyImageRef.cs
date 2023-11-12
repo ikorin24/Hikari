@@ -62,6 +62,11 @@ namespace Hikari.Imaging
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlyImageRef(ColorByte* pixels, uint width, uint height) : this(pixels, checked((int)width), checked((int)height))
+        {
+        }
+
         /// <summary>Create <see cref="ReadOnlyImageRef"/> from a pointer, width, and height.</summary>
         /// <param name="pixels">pointer of the head pixel</param>
         /// <param name="width">image width</param>
@@ -91,12 +96,17 @@ namespace Hikari.Imaging
             _height = height;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlyImageRef(in ColorByte pixels, uint width, uint height) : this(in pixels, checked((int)width), checked((int)height))
+        {
+        }
+
         /// <summary>Create <see cref="ReadOnlyImageRef"/> from a reference, width, and height.</summary>
         /// <param name="pixels">reference to the head pixel</param>
         /// <param name="width">image width</param>
         /// <param name="height">image height</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlyImageRef(ref ColorByte pixels, int width, int height)
+        public ReadOnlyImageRef(in ColorByte pixels, int width, int height)
         {
             if(width <= 0) {
                 if(width == 0) {
@@ -116,8 +126,13 @@ namespace Hikari.Imaging
                     ThrowHelper.ThrowArgOutOfRange(nameof(height));
                 }
             }
-            _firstRowLine = MemoryMarshal.CreateSpan(ref pixels, width);
+            _firstRowLine = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in pixels), width);
             _height = height;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlyImageRef(ReadOnlySpan<ColorByte> pixels, uint width, uint height) : this(pixels, checked((int)width), checked((int)height))
+        {
         }
 
         /// <summary>Create <see cref="ReadOnlyImageRef"/> from whole pixels data, width, and height.</summary>
