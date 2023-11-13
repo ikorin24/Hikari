@@ -54,8 +54,12 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader>
                 BindGroupEntry.Buffer(2, _texContentSizeBuffer.AsValue()),
             },
         });
-        _backgroundBuffer = Own<Buffer>.None;
-        _pass0 = CreatePass0(_bindGroup0.AsValue(), _bindGroup1.AsValue(), _bindGroup2.AsValue());
+        Brush.Transparent.GetBufferData(this, static (span, self) =>
+        {
+            self._backgroundBuffer.Dispose();
+            self._backgroundBuffer = Buffer.CreateInitSpan(self.Screen, span, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
+            self.SetBindGroup2();
+        });
     }
 
     private static MaterialPassData CreatePass0(BindGroup bindGroup0, BindGroup bindGroup1, BindGroup bindGroup2)

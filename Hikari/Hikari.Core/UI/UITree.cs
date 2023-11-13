@@ -36,12 +36,6 @@ public sealed class UITree
         return provider.Invoke(_screen);
     }
 
-    //public void SetRoot(UIElement element)
-    //{
-    //    ArgumentNullException.ThrowIfNull(element);
-    //    _uiLayer.SetRoot(element);
-    //}
-
     public void SetRoot(UIElement element)
     {
         ArgumentNullException.ThrowIfNull(element);

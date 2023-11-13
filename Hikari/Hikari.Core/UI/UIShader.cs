@@ -56,7 +56,7 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial>
             Pass0 = new()
             {
                 Source = _defaultShaderSource.Value,
-                SortOrder = 2000,
+                SortOrder = 3000,
                 LayoutDescriptor = PipelineLayoutFactory(screen, out var diposable),
                 PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
                 RenderPassFactory = new()
@@ -86,6 +86,23 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial>
         })
     {
         diposable.DisposeOn(Disposed);
+        _emptyTexture = Texture2D.Create(screen, new()
+        {
+            Size = new(1, 1),
+            Format = TextureFormat.Rgba8Unorm,
+            MipLevelCount = 1,
+            Usage = TextureUsages.TextureBinding | TextureUsages.CopySrc,
+            SampleCount = 1,
+        });
+        _emptyTextureSampler = Sampler.Create(screen, new()
+        {
+            AddressModeU = AddressMode.ClampToEdge,
+            AddressModeV = AddressMode.ClampToEdge,
+            AddressModeW = AddressMode.ClampToEdge,
+            MinFilter = FilterMode.Nearest,
+            MagFilter = FilterMode.Nearest,
+            MipmapFilter = FilterMode.Nearest,
+        });
     }
 
     protected override void Release(bool manualRelease)
