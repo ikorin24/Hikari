@@ -126,7 +126,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader>
             },
             BoxShadowColor = result.AppliedInfo.BoxShadow.Color,
         };
-        if(_buffer.Data == bufferData) {
+        if(_buffer.Data != bufferData) {
             _buffer.WriteData(bufferData);
         }
         UpdateBackground(result.AppliedInfo.Background);
