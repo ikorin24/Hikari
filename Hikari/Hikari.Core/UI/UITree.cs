@@ -8,10 +8,8 @@ namespace Hikari.UI;
 public sealed class UITree
 {
     private readonly Screen _screen;
-    //    private readonly UIDescriptor _desc;
     private UIElement? _rootElement;
-    //    private bool _isLayoutDirty = false;
-
+    private bool _isLayoutDirty = false;
     private IReactive? _root;
 
     private static readonly ConcurrentDictionary<Type, Func<Screen, UIShader>> _shaderProviders = new();
@@ -21,6 +19,33 @@ public sealed class UITree
     internal UITree(Screen screen)
     {
         _screen = screen;
+        screen.Resized.Subscribe(arg =>
+        {
+            _isLayoutDirty = true;
+        });
+        screen.EarlyUpdate.Subscribe(screen =>
+        {
+            var rootElement = _rootElement;
+            if(rootElement == null) {
+                return;
+            }
+
+            var isLayoutDirty = _isLayoutDirty;
+            _isLayoutDirty = false;
+            var mouse = screen.Mouse;
+            var dummyInfo = UIElementInfo.Default;
+            var screenSize = screen.ClientSize;
+            var scaleFactor = screen.ScaleFactor;
+            var contentArea = new RectF
+            {
+                X = 0,
+                Y = 0,
+                Width = screenSize.X,
+                Height = screenSize.Y,
+            };
+            var childrenFlowInfo = dummyInfo.Flow.NewChildrenFlowInfo(contentArea);
+            rootElement.UpdateLayout(isLayoutDirty, dummyInfo, contentArea, ref childrenFlowInfo, mouse, scaleFactor);
+        });
     }
 
     internal static bool RegisterShader<T>(Func<Screen, UIShader> provider) where T : UIElement

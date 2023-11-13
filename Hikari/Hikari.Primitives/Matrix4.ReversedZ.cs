@@ -13,25 +13,46 @@ partial struct Matrix4
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Matrix4 OrthographicProjection(float left, float right, float bottom, float top, float depthNear, float depthFar)
         {
-            return RemapRangeMatrix * DefaultZ.OrthographicProjection(left, right, bottom, top, depthNear, depthFar);
+            var mat = DefaultZ.OrthographicProjection(left, right, bottom, top, depthNear, depthFar);
+            mat.M20 = -mat.M20 + mat.M30;
+            mat.M21 = -mat.M21 + mat.M31;
+            mat.M22 = -mat.M22 + mat.M32;
+            mat.M23 = -mat.M23 + mat.M33;
+            return mat;
+
+            //return RemapRangeMatrix * DefaultZ.OrthographicProjection(left, right, bottom, top, depthNear, depthFar);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Matrix4 PerspectiveProjection(float left, float right, float bottom, float top, float depthNear, float depthFar)
         {
-            return RemapRangeMatrix * DefaultZ.PerspectiveProjection(left, right, bottom, top, depthNear, depthFar);
+            var mat = DefaultZ.PerspectiveProjection(left, right, bottom, top, depthNear, depthFar);
+            mat.M20 = -mat.M20 + mat.M30;
+            mat.M21 = -mat.M21 + mat.M31;
+            mat.M22 = -mat.M22 + mat.M32;
+            mat.M23 = -mat.M23 + mat.M33;
+            return mat;
+
+            //return RemapRangeMatrix * DefaultZ.PerspectiveProjection(left, right, bottom, top, depthNear, depthFar);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Matrix4 PerspectiveProjection(float fovy, float aspect, float depthNear, float depthFar)
         {
-            return RemapRangeMatrix * DefaultZ.PerspectiveProjection(fovy, aspect, depthNear, depthFar);
+            var mat = DefaultZ.PerspectiveProjection(fovy, aspect, depthNear, depthFar);
+            mat.M20 = -mat.M20 + mat.M30;
+            mat.M21 = -mat.M21 + mat.M31;
+            mat.M22 = -mat.M22 + mat.M32;
+            mat.M23 = -mat.M23 + mat.M33;
+            return mat;
+
+            //return RemapRangeMatrix * DefaultZ.PerspectiveProjection(fovy, aspect, depthNear, depthFar);
         }
 
-        private static Matrix4 RemapRangeMatrix => new Matrix4(
-                new Vector4(1, 0, 0, 0),
-                new Vector4(0, 1, 0, 0),
-                new Vector4(0, 0, -1, 0),
-                new Vector4(0, 0, 1, 1));
+        //private static Matrix4 RemapRangeMatrix => new Matrix4(
+        //        new Vector4(1, 0, 0, 0),
+        //        new Vector4(0, 1, 0, 0),
+        //        new Vector4(0, 0, -1, 0),
+        //        new Vector4(0, 0, 1, 1));
     }
 }

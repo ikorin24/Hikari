@@ -23,6 +23,12 @@ internal sealed class UIModel : FrameObject<UIModel, VertexSlim, UIShader, UIMat
     {
         switch(shaderPass.Index) {
             case 0: {
+                var screen = Screen;
+                var screenSize = screen.ClientSize;
+                var scaleFactor = screen.ScaleFactor;
+                var uiProjection = Matrix4.ReversedZ.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
+                _element.UpdateMaterial(screenSize, scaleFactor, uiProjection, 0);
+
                 var mesh = Mesh;
                 var material = Material;
                 renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
