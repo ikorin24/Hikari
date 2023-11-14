@@ -178,6 +178,9 @@ public static class GlbModelLoader
 
             if(meshPrimitive.indices == null) {
                 // if not indexed, generate indices
+                Debug.Assert(indices.Ptr == null);
+                indices.Dispose();
+                indices = new NativeBuffer(vertexCount * (nuint)sizeof(uint), false);
                 uint* p = (uint*)indices.Ptr;
                 for(uint i = 0; i < vertexCount; i++) {
                     p[i] = i;
