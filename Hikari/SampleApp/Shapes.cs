@@ -101,8 +101,8 @@ public static class Shapes
         };
 #pragma warning restore IDE0055 // auto code formatting
         return useTangent ?
-            Mesh.CreateWithTangent(screen, vertices, indices) :
-            Mesh.Create(screen, vertices, indices);
+            Mesh.CreateWithTangent<Vertex, ushort>(screen, vertices, indices) :
+            Mesh.Create<Vertex, ushort>(screen, vertices, indices);
     }
 
     public static Own<Mesh<Vertex>> Plane(Screen screen, bool useTangent)
@@ -117,10 +117,10 @@ public static class Shapes
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
         if(useTangent) {
-            return Mesh.CreateWithTangent(screen, vertices, indices);
+            return Mesh.CreateWithTangent<Vertex, ushort>(screen, vertices, indices);
         }
         else {
-            return Mesh.Create(screen, vertices, indices);
+            return Mesh.Create<Vertex, ushort>(screen, vertices, indices);
         }
     }
 
@@ -169,6 +169,6 @@ public static class Shapes
         };
 #pragma warning restore IDE0055 // auto code formatting
 
-        return Mesh.Create(screen, vertices, indices);
+        return Mesh.Create<VertexPosNormal, ushort>(screen, vertices, indices);
     }
 }

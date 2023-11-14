@@ -14,4 +14,8 @@ internal static class ThrowHelper
     [DebuggerHidden]
     [DoesNotReturn]
     public static void ThrowArgument(string message) => throw new ArgumentException(message);
+
+    [DebuggerHidden]
+    [DoesNotReturn]
+    public static void ThrowArgumentOutOfRange(string message) => throw new ArgumentOutOfRangeException(message);
 }

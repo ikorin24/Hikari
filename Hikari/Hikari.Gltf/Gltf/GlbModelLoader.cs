@@ -240,7 +240,12 @@ public static class GlbModelLoader
                 }
             }
 
-            var mesh = Mesh.Create(state.Screen, (TVertex*)vertices.Ptr, vertexCount, (uint*)indices.Ptr, indexCount, (Vector3*)tangents.Ptr, vertexCount);
+            var mesh = Mesh.CreateWithTangent(
+                state.Screen,
+                new ReadOnlySpanU32<TVertex>(vertices.Ptr, vertexCount),
+                new ReadOnlySpanU32<uint>(indices.Ptr, indexCount),
+                new ReadOnlySpanU32<Vector3>(tangents.Ptr, vertexCount));
+
             var material = PbrMaterial.Create(
                 state.Shader,
                 materialData.Pbr.BaseColor,

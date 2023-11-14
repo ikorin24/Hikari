@@ -22,7 +22,7 @@ public sealed class DeferredPlane
             new(new(-1, 1, Z), new(0, 0)),
         };
         ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
-        return Hikari.Mesh.Create(screen, vertices, indices);
+        return Hikari.Mesh.Create<VertexSlim, ushort>(screen, vertices, indices);
     }
 
     protected override void Render(in RenderPass renderPass, ShaderPass shaderPass)

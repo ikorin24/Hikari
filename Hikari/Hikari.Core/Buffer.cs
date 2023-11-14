@@ -177,6 +177,20 @@ public readonly struct BufferSlice : IEquatable<BufferSlice>, IReadBuffer<Buffer
         _length = length;
     }
 
+    public BufferSlice Slice(u64 byteOffset, u64 byteLength)
+    {
+        if(byteOffset >= _length) {
+            ThrowHelper.ThrowArgumentOutOfRange(nameof(byteOffset));
+        }
+        if(byteOffset + byteLength > _length) {
+            ThrowHelper.ThrowArgumentOutOfRange(nameof(byteLength));
+        }
+        if(_buffer is null) {
+            ThrowHelper.ThrowInvalidOperation("buffer should not be null");
+        }
+        return new BufferSlice(_buffer, _offset + byteOffset, byteLength);
+    }
+
     public static BufferSlice Full(Buffer buffer)
     {
         ArgumentNullException.ThrowIfNull(buffer);

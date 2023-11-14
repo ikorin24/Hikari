@@ -56,7 +56,7 @@ internal sealed class UIModel : FrameObject<UIModel, VertexSlim, UIShader, UIMat
                 new VertexSlim(1, 1, 0, 1, 0),
             };
             ReadOnlySpan<ushort> indices = stackalloc ushort[6] { 0, 1, 2, 2, 3, 0 };
-            var mesh = Hikari.Mesh.Create(screen, vertices, indices);
+            var mesh = Hikari.Mesh.Create<VertexSlim, ushort>(screen, vertices, indices);
             screen.Closed.Subscribe(static screen =>
             {
                 if(_cache.TryRemove(screen, out var cache)) {
