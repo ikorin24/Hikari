@@ -140,7 +140,6 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                     ) + offset * shadowmap_size_inv;
                     visibility = textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
                 }
-                visibility += light.ambient_strength;
             }
 
             if (cascade == cascade_count - 1u) {
@@ -148,9 +147,9 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                 visibility = 1.0 - (1.0 - visibility) * coeff;
             }
 
-            fragColor = (diffuse + specular) * visibility;
+            fragColor = (diffuse + specular) * visibility + albedo * light.ambient_strength;
 
-            fragColor *= c3.r;  // ao
+            //fragColor *= c3.r;  // ao
             let ssao: f32 = 1.0;
             fragColor *= ssao;
 
