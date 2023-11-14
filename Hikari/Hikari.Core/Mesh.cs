@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -11,46 +12,31 @@ public sealed class Mesh<TVertex>
     where TVertex : unmanaged, IVertex
 {
     private readonly Screen _screen;
-    private readonly Own<Buffer> _vertexBuffer;
-    private readonly Own<Buffer> _indexBuffer;
-    private readonly Own<Buffer> _optTangent;
-    private readonly uint _vertexCount;
-    private readonly uint _indexCount;
-    private readonly IndexFormat _indexFormat;
+    private readonly MeshData _data;
+    private readonly ReadOnlyMemory<SubmeshData> _submeshes;
     private bool _isReleased;
 
-    public BufferSlice VertexBuffer => _vertexBuffer.AsValue().Slice();
-    public BufferSlice IndexBuffer => _indexBuffer.AsValue();
-    public IndexFormat IndexFormat => _indexFormat;
+    public BufferSlice VertexBuffer => _data.VertexBuffer.AsValue();
+    public BufferSlice IndexBuffer => _data.IndexBuffer.AsValue();
+    public BufferSlice? TangentBuffer => _data.OptTangentBuffer.TryAsValue(out var buf) ? buf.Slice() : (BufferSlice?)null;
 
-    public uint IndexCount => _indexCount;
-    public uint VertexCount => _vertexCount;
+    public ReadOnlySpan<SubmeshData> Submeshes => _submeshes.Span;
 
-    public bool TryGetOptionalTangent(out BufferSlice tangent)
-    {
-        if(_optTangent.TryAsValue(out var tan)) {
-            tangent = tan.Slice();
-            return true;
-        }
-        tangent = default;
-        return false;
-    }
+    public IndexFormat IndexFormat => _data.IndexFormat;
 
-    public bool HasOptionalTangent => TryGetOptionalTangent(out _);
+    public uint IndexCount => _data.IndexCount;
+    public uint VertexCount => _data.VertexCount;
 
     public Screen Screen => _screen;
 
     public bool IsManaged => _isReleased == false;
 
-    private Mesh(Screen screen, Own<Buffer> vertexBuffer, uint vertexCount, Own<Buffer> indexBuffer, uint indexCount, IndexFormat indexFormat, Own<Buffer> optTangent)
+    private Mesh(Screen screen, in MeshData data, ReadOnlyMemory<SubmeshData> submeshes)
     {
+        Debug.Assert(submeshes.IsEmpty == false);
         _screen = screen;
-        _vertexBuffer = vertexBuffer;
-        _indexBuffer = indexBuffer;
-        _vertexCount = vertexCount;
-        _indexCount = indexCount;
-        _indexFormat = indexFormat;
-        _optTangent = optTangent;
+        _data = data;
+        _submeshes = submeshes;
         _isReleased = false;
     }
 
@@ -64,19 +50,14 @@ public sealed class Mesh<TVertex>
         if(_isReleased) {
             return;
         }
-        _vertexBuffer.Dispose();
-        _indexBuffer.Dispose();
-        _optTangent.Dispose();
+        _data.VertexBuffer.Dispose();
+        _data.IndexBuffer.Dispose();
+        _data.OptTangentBuffer.Dispose();
         _isReleased = true;
     }
 
-    internal unsafe static Own<Mesh<TVertex>> Create<TIndex>(
-        Screen screen,
-        ReadOnlySpanU32<TVertex> vertices,
-        ReadOnlySpanU32<TIndex> indices,
-        ReadOnlySpanU32<Vector3> tangents,
-        BufferUsages usages)
-        where TIndex : unmanaged
+    internal unsafe static Own<Mesh<TVertex>> Create<TIndex>(Screen screen, in MeshDescriptor<TVertex, TIndex> desc)
+        where TIndex : unmanaged, INumberBase<TIndex>
     {
         ArgumentNullException.ThrowIfNull(screen);
         IndexFormat indexFormat;
@@ -87,30 +68,100 @@ public sealed class Mesh<TVertex>
             indexFormat = IndexFormat.Uint16;
         }
         else {
-            throw new ArgumentException("index type should be u32 or u16.");
+            throw new ArgumentException("index type should be uint or ushort.");
         }
-
         Own<Buffer> vertexBuffer;
         Own<Buffer> indexBuffer;
-        fixed(void* v = vertices)
-        fixed(void* ind = indices) {
-            vertexBuffer = Buffer.CreateInitBytes(screen, (u8*)v, vertices.ByteLength, usages | BufferUsages.Vertex);
-            indexBuffer = Buffer.CreateInitBytes(screen, (u8*)ind, indices.ByteLength, usages | BufferUsages.Index);
+        fixed(void* v = desc.Vertices.Data)
+        fixed(void* ind = desc.Indices.Data) {
+            vertexBuffer = Buffer.CreateInitBytes(screen, (u8*)v, desc.Vertices.Data.ByteLength, desc.Vertices.Usages | BufferUsages.Vertex);
+            indexBuffer = Buffer.CreateInitBytes(screen, (u8*)ind, desc.Indices.Data.ByteLength, desc.Indices.Usages | BufferUsages.Index);
         }
-
         Own<Buffer> tangentBuffer;
-        if(tangents.IsEmpty) {
+        if(desc.Tangents.Data.IsEmpty) {
             tangentBuffer = Own<Buffer>.None;
         }
         else {
-            fixed(void* t = tangents) {
-                tangentBuffer = Buffer.CreateInitBytes(screen, (u8*)t, tangents.ByteLength, usages | BufferUsages.Vertex);
+            fixed(void* t = desc.Tangents.Data) {
+                tangentBuffer = Buffer.CreateInitBytes(screen, (u8*)t, desc.Tangents.Data.ByteLength, desc.Tangents.Usages | BufferUsages.Vertex);
             }
         }
-
-        var mesh = new Mesh<TVertex>(screen, vertexBuffer, vertices.Length, indexBuffer, indices.Length, indexFormat, tangentBuffer);
+        var meshData = new MeshData
+        {
+            VertexBuffer = vertexBuffer,
+            VertexCount = desc.Vertices.Data.Length,
+            IndexBuffer = indexBuffer,
+            IndexCount = desc.Indices.Data.Length,
+            IndexFormat = indexFormat,
+            OptTangentBuffer = tangentBuffer,
+        };
+        var submeshes = desc.Submeshes switch
+        {
+            { IsEmpty: true } => new SubmeshData[1]
+            {
+                new()
+                {
+                    VertexOffset = 0,
+                    IndexOffset = 0,
+                    IndexCount = desc.Indices.Data.Length,
+                }
+            },
+            _ => desc.Submeshes,
+        };
+        var mesh = new Mesh<TVertex>(screen, meshData, submeshes);
         return Own.New(mesh, static x => SafeCast.As<Mesh<TVertex>>(x).Release());
     }
+
+    internal static Own<Mesh<TVertex>> Create<TIndex>(
+        Screen screen,
+        ReadOnlySpanU32<TVertex> vertices,
+        ReadOnlySpanU32<TIndex> indices,
+        ReadOnlySpanU32<Vector3> tangents,
+        BufferUsages usages)
+        where TIndex : unmanaged, INumberBase<TIndex>
+    {
+        return Create(screen, new MeshDescriptor<TVertex, TIndex>
+        {
+            Vertices = new() { Data = vertices, Usages = usages },
+            Indices = new() { Data = indices, Usages = usages },
+            Tangents = new() { Data = tangents, Usages = usages },
+        });
+    }
+
+    private readonly record struct MeshData
+    {
+        public Own<Buffer> VertexBuffer { get; init; }
+        public uint VertexCount { get; init; }
+        public Own<Buffer> IndexBuffer { get; init; }
+        public uint IndexCount { get; init; }
+        public IndexFormat IndexFormat { get; init; }
+        public Own<Buffer> OptTangentBuffer { get; init; }
+    }
+}
+
+public readonly ref struct MeshDescriptor<TVertex, TIndex>
+    where TVertex : unmanaged, IVertex
+    where TIndex : unmanaged, INumberBase<TIndex>
+{
+    public required MeshBufferDataDescriptor<TVertex> Vertices { get; init; }
+    public required MeshBufferDataDescriptor<TIndex> Indices { get; init; }
+    public MeshBufferDataDescriptor<Vector3> Tangents { get; init; }
+    public ReadOnlyMemory<SubmeshData> Submeshes { get; init; }
+}
+
+public readonly record struct SubmeshData
+{
+    public int VertexOffset { get; init; }
+    public uint IndexOffset { get; init; }
+    public uint IndexCount { get; init; }
+}
+
+
+public readonly ref struct MeshBufferDataDescriptor<T>
+    where T : unmanaged
+{
+    public required ReadOnlySpanU32<T> Data { get; init; }
+    public required BufferUsages Usages { get; init; }
 }
 
 public static class Mesh

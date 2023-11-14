@@ -42,7 +42,7 @@ public sealed class PbrModel
     public PbrModel(MaybeOwn<Mesh<V>> mesh, Own<PbrMaterial> material)
         : base(mesh, material)
     {
-        if(Mesh.TryGetOptionalTangent(out var tangent) == false) {
+        if(Mesh.TangentBuffer is not BufferSlice tangent) {
             throw new ArgumentException("The mesh does not have Tangent vertex buffer", nameof(mesh));
         }
         _treeModelImpl = new();
@@ -75,7 +75,10 @@ public sealed class PbrModel
                 renderPass.SetBindGroups(material.Passes[0].BindGroups);
                 renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
                 renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
-                renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, Screen.Lights.DirectionalLight.CascadeCount);
+                var cascadeCount = Screen.Lights.DirectionalLight.CascadeCount;
+                foreach(var submesh in mesh.Submeshes) {
+                    renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, cascadeCount);
+                }
                 return;
             }
             case 1: {
@@ -85,7 +88,9 @@ public sealed class PbrModel
                 renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
                 renderPass.SetVertexBuffer(1, _tangent);
                 renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
-                renderPass.DrawIndexed(0, mesh.IndexCount, 0, 0, 1);
+                foreach(var submesh in mesh.Submeshes) {
+                    renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
+                }
                 return;
             }
             default: {
