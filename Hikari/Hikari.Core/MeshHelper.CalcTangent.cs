@@ -70,9 +70,7 @@ partial class MeshHelper
         var counter = (u32*)NativeMemory.AllocZeroed(sizeof(u32), tangentsLen);
         try {
             for(u32 i = 0; i < trianglesLen; i++) {
-                var i0 = usize.CreateTruncating(triangles[i].X);
-                var i1 = usize.CreateTruncating(triangles[i].Y);
-                var i2 = usize.CreateTruncating(triangles[i].Z);
+                var (i0, i1, i2) = triangles[i].ToUsize();
                 ref readonly var p0 = ref VertexAccessor.Position(vertices[i0]);
                 ref readonly var uv0 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i0], uvOffset);
                 ref readonly var p1 = ref VertexAccessor.Position(vertices[i1]);
@@ -107,8 +105,13 @@ partial class MeshHelper
 
     private readonly record struct IndexTriangle<TIndex> where TIndex : unmanaged, INumberBase<TIndex>
     {
-        public readonly TIndex X;
-        public readonly TIndex Y;
-        public readonly TIndex Z;
+        public readonly TIndex I0;
+        public readonly TIndex I1;
+        public readonly TIndex I2;
+
+        public (usize I0, usize I1, usize i2) ToUsize()
+        {
+            return (usize.CreateTruncating(I0), usize.CreateTruncating(I1), usize.CreateTruncating(I2));
+        }
     }
 }
