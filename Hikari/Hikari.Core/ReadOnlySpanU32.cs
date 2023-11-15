@@ -109,7 +109,7 @@ public readonly ref struct ReadOnlySpanU32<T> where T : unmanaged
 
     public ReadOnlySpanU32<byte> AsBytes()
     {
-        return new ReadOnlySpanU32<byte>(in Unsafe.As<T, byte>(ref Unsafe.AsRef(in _head)), _len * (u32)Unsafe.SizeOf<T>());
+        return new ReadOnlySpanU32<byte>(in Unsafe.As<T, byte>(ref Unsafe.AsRef(in _head)), checked(_len * (u32)Unsafe.SizeOf<T>()));
     }
 
     public ReadOnlySequence<T> AsSequence()

@@ -107,7 +107,7 @@ public readonly ref struct SpanU32<T> where T : unmanaged
 
     public SpanU32<byte> AsBytes()
     {
-        return new SpanU32<byte>(ref Unsafe.As<T, byte>(ref _head), _len * (u32)Unsafe.SizeOf<T>());
+        return new SpanU32<byte>(ref Unsafe.As<T, byte>(ref _head), checked(_len * (u32)Unsafe.SizeOf<T>()));
     }
 
     public ReadOnlySpanU32<T> AsReadOnly() => this;

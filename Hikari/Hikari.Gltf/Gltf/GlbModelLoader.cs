@@ -84,7 +84,7 @@ public static class GlbModelLoader
         return root;
     }
 
-    private static ITreeModel LoadNode(in LoaderState state, in Node node)
+    private unsafe static ITreeModel LoadNode(in LoaderState state, in Node node)
     {
         state.Ct.ThrowIfCancellationRequested();
         var gltf = state.Gltf;
@@ -92,13 +92,58 @@ public static class GlbModelLoader
         ITreeModel model;
         if(node.mesh is uint meshNum) {
             var meshPrimitives = gltf.meshes.GetOrThrow(meshNum).primitives.AsSpan();
-            if(meshPrimitives.Length != 1) {
-                throw new NotImplementedException();        // TODO:
+
+            var (vc, ic) = GetMeshInfo(state, meshPrimitives);
+            using var verticesBuf = new NativeBuffer(vc * (nuint)Unsafe.SizeOf<Vertex>(), true);
+            using var tangentsBuf = new NativeBuffer(vc * (nuint)Unsafe.SizeOf<Vector3>(), true);
+            using var indicesBuf = new NativeBuffer(ic * (nuint)Unsafe.SizeOf<uint>(), true);
+            var submeshes = new SubmeshData[meshPrimitives.Length];
+            var vertices = new SpanU32<Vertex>(verticesBuf.Ptr, vc);
+            var tangents = new SpanU32<Vector3>(tangentsBuf.Ptr, vc);
+            var indices = new SpanU32<uint>(indicesBuf.Ptr, ic);
+
+            MaterialData matData = default; // TODO: for each submesh
+
+            uint vPos = 0;
+            uint iPos = 0;
+            for(int i = 0; i < meshPrimitives.Length; i++) {
+                var materialData = meshPrimitives[i].material switch
+                {
+                    uint index => LoadMaterialData(in state, in state.Gltf.materials.GetOrThrow(index)),
+                    null => MaterialData.CreateDefault(state.Screen),
+                };
+                var (vConsumed, iConsumed) = LoadPartMesh(state, meshPrimitives[i], vertices.Slice(vPos), indices.Slice(iPos), tangents.Slice(vPos));
+                submeshes[i] = new SubmeshData
+                {
+                    VertexOffset = (int)vPos,
+                    IndexOffset = iPos,
+                    IndexCount = iConsumed,
+                };
+                vPos += vConsumed;
+                iPos += iConsumed;
+                if(i == 0) {
+                    matData = materialData; // TODO:
+                }
             }
-            //for(int i = 0; i < meshPrimitives.Length; i++) {
-            //    var (mesh, material) = LoadMeshAndMaterial<Vertex>(in state, in meshPrimitives[i]);
-            //}
-            var (mesh, material) = LoadMeshAndMaterial<Vertex>(in state, in meshPrimitives[0]);
+            Debug.Assert(vPos == vc);
+            Debug.Assert(iPos == ic);
+            var mesh = Mesh.Create(state.Screen, new MeshDescriptor<Vertex, uint>
+            {
+                Indices = new() { Data = indices, Usages = BufferUsages.Index | BufferUsages.CopySrc | BufferUsages.Storage },
+                Vertices = new() { Data = vertices, Usages = BufferUsages.Vertex | BufferUsages.CopySrc | BufferUsages.Storage },
+                Tangents = new() { Data = tangents, Usages = BufferUsages.Vertex | BufferUsages.CopySrc | BufferUsages.Storage },
+                Submeshes = submeshes,
+            });
+            var material = PbrMaterial.Create(
+                state.Shader,
+                matData.Pbr.BaseColor,
+                matData.Pbr.BaseColorSampler,
+                matData.Pbr.MetallicRoughness,
+                matData.Pbr.MetallicRoughnessSampler,
+                matData.Normal.Texture,
+                matData.Normal.Sampler);
+
+            //var (mesh, material) = LoadMeshAndMaterial<Vertex>(in state, in meshPrimitives[0]);
             model = new PbrModel(mesh, material)
             {
                 Name = node.name?.ToString(),
@@ -124,7 +169,61 @@ public static class GlbModelLoader
         return model;
     }
 
+    private static (uint VertexCount, uint IndexCount) GetMeshInfo(in LoaderState state, ReadOnlySpan<MeshPrimitive> meshPrimitives)
+    {
+        var accessors = state.Gltf.accessors;
+        nuint vertexCount = 0;
+        nuint indexCount = 0;
+        foreach(var meshPrimitive in meshPrimitives) {
+            if(meshPrimitive.mode != MeshPrimitiveMode.Triangles) {
+                throw new NotImplementedException();
+            }
+            uint posAttr = meshPrimitive.attributes.POSITION ?? throw new NotSupportedException("no position attribute");
+            ref readonly var position = ref accessors.GetOrThrow(posAttr);
+            vertexCount += position.count;
+
+            if(meshPrimitive.indices is uint indicesNum) {
+                indexCount += accessors.GetOrThrow(indicesNum).count;
+            }
+            else {
+                indexCount += position.count;
+            }
+        }
+        checked {
+            return ((uint)vertexCount, (uint)indexCount);
+        }
+    }
+
     private unsafe static (Own<Mesh<TVertex>>, Own<PbrMaterial>) LoadMeshAndMaterial<TVertex>(in LoaderState state, in MeshPrimitive meshPrimitive)
+        where TVertex : unmanaged, IVertex, IVertexPosition, IVertexUV, IVertexNormal
+    {
+        return LoadMeshAndMaterial<TVertex, (Own<Mesh<TVertex>>, Own<PbrMaterial>)>(in state, in meshPrimitive, &CreateMeshAndMaterial);
+
+        static (Own<Mesh<TVertex>>, Own<PbrMaterial>) CreateMeshAndMaterial(
+            in LoaderState state,
+            ReadOnlySpanU32<TVertex> vertices,
+            ReadOnlySpanU32<uint> indices,
+            ReadOnlySpanU32<Vector3> tangents,
+            in MaterialData materialData)
+        {
+            var mesh = Mesh.CreateWithTangent(state.Screen, vertices, indices, tangents);
+
+            var material = PbrMaterial.Create(
+                state.Shader,
+                materialData.Pbr.BaseColor,
+                materialData.Pbr.BaseColorSampler,
+                materialData.Pbr.MetallicRoughness,
+                materialData.Pbr.MetallicRoughnessSampler,
+                materialData.Normal.Texture,
+                materialData.Normal.Sampler);
+            return (mesh, material);
+        }
+    }
+
+    private unsafe static TResult LoadMeshAndMaterial<TVertex, TResult>(
+        in LoaderState state,
+        in MeshPrimitive meshPrimitive,
+        delegate*<in LoaderState, ReadOnlySpanU32<TVertex>, ReadOnlySpanU32<uint>, ReadOnlySpanU32<Vector3>, in MaterialData, TResult> converter)
         where TVertex : unmanaged, IVertex, IVertexPosition, IVertexUV, IVertexNormal
     {
         state.Ct.ThrowIfCancellationRequested();
@@ -225,7 +324,7 @@ public static class GlbModelLoader
 
             var needToCalcTangent =
                 //materialData.Normal.Texture.IsNone == false &&
-                attrs.POSITION.HasValue &&
+                //attrs.POSITION.HasValue &&
                 //attrs.NORMAL.HasValue &&
                 attrs.TEXCOORD_0.HasValue &&
                 attrs.TANGENT.HasValue == false;
@@ -238,27 +337,134 @@ public static class GlbModelLoader
                 }
             }
 
-            var mesh = Mesh.CreateWithTangent(
-                state.Screen,
+            return converter(
+                in state,
                 new ReadOnlySpanU32<TVertex>(vertices.Ptr, vertexCount),
                 new ReadOnlySpanU32<uint>(indices.Ptr, indexCount),
-                new ReadOnlySpanU32<Vector3>(tangents.Ptr, vertexCount));
-
-            var material = PbrMaterial.Create(
-                state.Shader,
-                materialData.Pbr.BaseColor,
-                materialData.Pbr.BaseColorSampler,
-                materialData.Pbr.MetallicRoughness,
-                materialData.Pbr.MetallicRoughnessSampler,
-                materialData.Normal.Texture,
-                materialData.Normal.Sampler);
-            return (mesh, material);
+                new ReadOnlySpanU32<Vector3>(tangents.Ptr, vertexCount),
+                in materialData);
         }
         finally {
             vertices.Dispose();
             indices.Dispose();
         }
     }
+
+
+
+    private unsafe static (uint VertexConsumedCount, uint IndexConsumedCount) LoadPartMesh<TVertex>(
+        in LoaderState state,
+        in MeshPrimitive meshPrimitive,
+        SpanU32<TVertex> vertices,
+        SpanU32<uint> indices,
+        SpanU32<Vector3> tangents)
+        where TVertex : unmanaged, IVertex, IVertexPosition, IVertexUV, IVertexNormal
+    {
+        state.Ct.ThrowIfCancellationRequested();
+        var materials = state.Gltf.materials;
+        var accessors = state.Gltf.accessors;
+        var materialData = meshPrimitive.material switch
+        {
+            uint index => LoadMaterialData(in state, in materials.GetOrThrow(index)),
+            null => MaterialData.CreateDefault(state.Screen),
+        };
+
+        if(meshPrimitive.mode != MeshPrimitiveMode.Triangles) {
+            throw new NotImplementedException();
+        }
+        ref readonly var attrs = ref meshPrimitive.attributes;
+        uint vertexCount;
+
+        // position
+        if(attrs.POSITION is not uint posAttr) {
+            throw new NotSupportedException("no position attribute");
+        }
+        else {
+            ref readonly var position = ref accessors.GetOrThrow(posAttr);
+            if(position is not { type: AccessorType.Vec3, componentType: AccessorComponentType.Float }) {
+                ThrowHelper.ThrowInvalidGlb();
+            }
+            var data = AccessData(state, position);
+            vertexCount = (uint)data.Count;
+            fixed(TVertex* vp = vertices) {
+                data.CopyToVertexField<TVertex, Vector3>(vp, TVertex.PositionOffset);
+            }
+        }
+
+        // indices
+        var indexCount = 0u;
+        if(meshPrimitive.indices is uint indicesNum) {
+            ref readonly var indexAccessor = ref accessors.GetOrThrow(indicesNum);
+            if(indexAccessor is not
+                {
+                    type: AccessorType.Scalar,
+                    componentType: AccessorComponentType.UnsignedByte or AccessorComponentType.UnsignedShort or AccessorComponentType.UnsignedInt
+                }) {
+                ThrowHelper.ThrowInvalidGlb();
+            }
+            var data = AccessData(state, indexAccessor);
+            indexCount = (uint)data.Count;
+            fixed(uint* ip = indices) {
+                data.StoreIndicesAsUInt32(ip);
+            }
+        }
+        else {
+            // if not indexed, generate indices
+            for(uint i = 0; i < vertexCount; i++) {
+                indices.UnsafeAt(i) = i;
+            }
+            indexCount = vertexCount;
+        }
+
+        // normal
+        if(attrs.NORMAL is uint normalAttr) {
+            ref readonly var normal = ref accessors.GetOrThrow(normalAttr);
+            if(normal is not { type: AccessorType.Vec3, componentType: AccessorComponentType.Float }) {
+                ThrowHelper.ThrowInvalidGlb();
+            }
+            var data = AccessData(state, normal);
+            fixed(TVertex* vp = vertices) {
+                data.CopyToVertexField<TVertex, Vector3>(vp, TVertex.NormalOffset);
+            }
+        }
+        else {
+            MeshHelper.CalcNormal<TVertex, uint>(vertices.Slice(0, vertexCount), indices.Slice(0, indexCount));
+        }
+
+        // uv
+        if(attrs.TEXCOORD_0 is uint uv0Attr) {
+            ref readonly var uv0 = ref accessors.GetOrThrow(uv0Attr);
+            if(uv0 is not { type: AccessorType.Vec2, componentType: AccessorComponentType.Float }) {
+                ThrowHelper.ThrowInvalidGlb();
+            }
+            var data = AccessData(state, uv0);
+            fixed(TVertex* vp = vertices) {
+                data.CopyToVertexField<TVertex, Vector2>(vp, TVertex.UVOffset);
+            }
+        }
+
+        // tangent
+        if(attrs.TANGENT is uint tangentAttr) {
+            ref readonly var tangent = ref accessors.GetOrThrow(tangentAttr);
+            if(tangent is not { type: AccessorType.Vec4, componentType: AccessorComponentType.Float }) {
+                ThrowHelper.ThrowInvalidGlb();
+            }
+            var data = AccessData(state, tangent);
+            fixed(Vector3* vp = tangents) {
+                data.CopyToVertexField<Vector3, Vector4, Vector3>(vp, 0, &ConvertData);
+            }
+
+            static Vector3 ConvertData(in Vector4 d) => new Vector3(d.X, d.Y, d.Z) * d.W;   // W is -1 or 1 (left-hand or right-hand)
+        }
+        else {
+            if(attrs.TEXCOORD_0 != null) {
+                MeshHelper.CalcTangent<TVertex, uint>(vertices, indices, tangents, true);
+            }
+        }
+
+        return (vertexCount, indexCount);
+    }
+
 
     private static MaterialData LoadMaterialData(in LoaderState state, in Material material)
     {

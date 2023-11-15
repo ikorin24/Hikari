@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -135,9 +136,17 @@ public readonly ref struct MeshDescriptor<TVertex, TIndex>
 
 public readonly record struct SubmeshData
 {
-    public int VertexOffset { get; init; }
-    public uint IndexOffset { get; init; }
-    public uint IndexCount { get; init; }
+    public required int VertexOffset { get; init; }
+    public required uint IndexOffset { get; init; }
+    public required uint IndexCount { get; init; }
+
+    [SetsRequiredMembers]
+    public SubmeshData(int vertexOffset, uint indexOffset, uint indexCount)
+    {
+        VertexOffset = vertexOffset;
+        IndexOffset = indexOffset;
+        IndexCount = indexCount;
+    }
 }
 
 
