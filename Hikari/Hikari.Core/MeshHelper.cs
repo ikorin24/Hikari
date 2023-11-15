@@ -2,214 +2,29 @@
 using Hikari.Collections;
 using System;
 using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
-using System.Numerics;
-using System.Runtime.InteropServices;
 
 namespace Hikari;
 
 public static partial class MeshHelper
 {
-    public unsafe static void CalcTangent<TVertex, TIndex>(
-        ReadOnlySpanU32<TVertex> vertices,
-        ReadOnlySpanU32<TIndex> indices,
-        SpanU32<Vector3> tangentsUninit,
-        bool skipTangentsClear = false)
-        where TVertex : unmanaged, IVertex, IVertexUV
-        where TIndex : unmanaged, INumberBase<TIndex>
-    {
-        fixed(TVertex* vp = vertices)
-        fixed(TIndex* ip = indices)
-        fixed(Vector3* tp = tangentsUninit) {
-            CalcTangent(vp, vertices.Length, ip, indices.Length, tp, tangentsUninit.Length, TVertex.UVOffset, skipTangentsClear);
-        }
-    }
-
-    public unsafe static void CalcTangent<TVertex, TIndex>(
-        ReadOnlySpanU32<TVertex> vertices,
-        ReadOnlySpanU32<TIndex> indices,
-        SpanU32<Vector3> tangentsUninit,
-        uint uvOffset,
-        bool skipTangentsClear = false)
-        where TVertex : unmanaged, IVertex
-        where TIndex : unmanaged, INumberBase<TIndex>
-    {
-        fixed(TVertex* vp = vertices)
-        fixed(TIndex* ip = indices)
-        fixed(Vector3* tp = tangentsUninit) {
-            CalcTangent(vp, vertices.Length, ip, indices.Length, tp, tangentsUninit.Length, uvOffset, skipTangentsClear);
-        }
-    }
-
-    public unsafe static void CalcTangent<TVertex, TIndex>(
-        TVertex* vertices, u32 verticesLen,
-        TIndex* indices, u32 indicesLen,
-        Vector3* tangents, u32 tangentsLen,
-        uint uvOffset,
-        bool skipTangentsClear = false)
-        where TVertex : unmanaged, IVertex
-        where TIndex : unmanaged, INumberBase<TIndex>
-    {
-        if(verticesLen != tangentsLen) {
-            throw new ArgumentException(nameof(tangentsLen));
-        }
-
-        IndexTriangle<TIndex>* triangles = (IndexTriangle<TIndex>*)indices;
-        u32 trianglesLen = indicesLen / 3;
-
-        if(skipTangentsClear == false) {
-            // Clear tangentsUninit[0] to tangentsUninit[tangentsLen - 1]
-            if(tangentsLen <= int.MaxValue) {
-                new Span<Vector3>(tangents, (int)tangentsLen).Clear();
-            }
-            else {
-                new Span<Vector3>(tangents, int.MaxValue).Clear();
-                tangents[int.MaxValue] = default;
-                const uint O = (u32)int.MaxValue + 1;
-                new Span<Vector3>(tangents + O, (int)(tangentsLen - O)).Clear();
-            }
-        }
-
-        var counter = (u32*)NativeMemory.AllocZeroed(sizeof(u32), tangentsLen);
-        try {
-            for(u32 i = 0; i < trianglesLen; i++) {
-                var i0 = usize.CreateTruncating(triangles[i].X);
-                var i1 = usize.CreateTruncating(triangles[i].Y);
-                var i2 = usize.CreateTruncating(triangles[i].Z);
-                ref readonly var p0 = ref VertexAccessor.Position(vertices[i0]);
-                ref readonly var uv0 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i0], uvOffset);
-                ref readonly var p1 = ref VertexAccessor.Position(vertices[i1]);
-                ref readonly var uv1 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i1], uvOffset);
-                ref readonly var p2 = ref VertexAccessor.Position(vertices[i2]);
-                ref readonly var uv2 = ref VertexAccessor.GetField<TVertex, Vector2>(vertices[i2], uvOffset);
-
-                var deltaUV1 = uv1 - uv0;
-                var deltaUV2 = uv2 - uv0;
-                var deltaPos1 = p1 - p0;
-                var deltaPos2 = p2 - p0;
-                var d = 1f / (deltaUV1.X * deltaUV2.Y - deltaUV1.Y * deltaUV2.X);
-                var tangent = d * (deltaUV2.Y * deltaPos1 - deltaUV1.Y * deltaPos2);
-                tangents[i0] += tangent;
-                tangents[i1] += tangent;
-                tangents[i2] += tangent;
-                counter[i0]++;
-                counter[i1]++;
-                counter[i2]++;
-#if DEBUG
-                var bitangent = d * (deltaUV1.X * deltaPos2 - deltaUV2.X * deltaPos1);
-#endif
-            }
-            for(u32 i = 0; i < tangentsLen; i++) {
-                tangents[i] /= (float)counter[i];
-            }
-        }
-        finally {
-            NativeMemory.Free(counter);
-        }
-    }
-
-    private readonly record struct IndexTriangle<TIndex> where TIndex : unmanaged, INumberBase<TIndex>
-    {
-        public readonly TIndex X;
-        public readonly TIndex Y;
-        public readonly TIndex Z;
-    }
-}
-
-partial class MeshHelper
-{
-    public static void CalcNormal<TBufferWriter>(
-        ReadOnlySpan<Vector3> positions,
-        ReadOnlySpan<int> indices,
-        TBufferWriter normalsBuffer) where TBufferWriter : IBufferWriter<Vector3>
-    {
-        var normals = normalsBuffer.GetSpan(positions.Length);
-        CalcNormal(positions, indices, normals);
-        normalsBuffer.Advance(normals.Length);
-        return;
-    }
-
-    public static void CalcNormal(
-        ReadOnlySpan<Vector3> positions,
-        ReadOnlySpan<int> indices,
-        Span<Vector3> normals)
-    {
-        if(indices.Length % 3 != 0) {
-            ThrowArgumentIndicesLengthInvalid();
-        }
-
-        // [NOTE]
-        // Sharp edge is not supported.
-
-        normals.Clear();
-
-        using var countsBuf = new ValueTypeRentMemory<int>(positions.Length, true);
-        var counts = countsBuf.AsSpan();
-
-        var faces = indices.MarshalCast<int, Face>();
-        foreach(var f in faces) {
-            var n = Vector3.Cross(positions[f.I1] - positions[f.I0], positions[f.I2] - positions[f.I0]).Normalized();
-            normals[f.I0] += n;
-            normals[f.I1] += n;
-            normals[f.I2] += n;
-            counts[f.I0] += 1;
-            counts[f.I1] += 1;
-            counts[f.I2] += 1;
-        }
-        for(int i = 0; i < positions.Length; i++) {
-            normals[i] /= counts[i];
-        }
-    }
-
-    public static void CalcNormal<TVertex>(Span<TVertex> vertices, ReadOnlySpan<int> indices)  // TODO: something wrong
-        where TVertex : unmanaged, IVertex, IVertexNormal
-    {
-        if(indices.Length % 3 != 0) {
-            ThrowArgumentIndicesLengthInvalid();
-        }
-
-        for(int i = 0; i < vertices.Length; i++) {
-            VertexAccessor.RefNormal(ref vertices[i]) = default;
-        }
-
-        using var counts = new ValueTypeRentMemory<int>(vertices.Length, true);
-        var faces = indices.MarshalCast<int, Face>();
-        foreach(var f in faces) {
-            var n = Vector3.Cross(
-                VertexAccessor.RefPosition(ref vertices[f.I1]) - VertexAccessor.RefPosition(ref vertices[f.I0]),
-                VertexAccessor.RefPosition(ref vertices[f.I2]) - VertexAccessor.RefPosition(ref vertices[f.I0])).Normalized();
-
-            VertexAccessor.RefNormal(ref vertices[f.I0]) += n;
-            VertexAccessor.RefNormal(ref vertices[f.I1]) += n;
-            VertexAccessor.RefNormal(ref vertices[f.I2]) += n;
-            counts[f.I0] += 1;
-            counts[f.I1] += 1;
-            counts[f.I2] += 1;
-        }
-
-        for(int i = 0; i < vertices.Length; i++) {
-            VertexAccessor.RefNormal(ref vertices[i]) /= counts[i];
-        }
-    }
-
-    public static (Vertex[] vertices, int[] indices) CreateInterleavedVertices(
+    public static (Vertex[] vertices, int[] indices) CreateInterleaved(
         ReadOnlySpan<Vector3> positions, ReadOnlySpan<int> positionIndices,
         ReadOnlySpan<Vector3> normals, ReadOnlySpan<int> normalIndices,
         ReadOnlySpan<Vector2> uvs, ReadOnlySpan<int> uvIndices)
     {
         using var vertices = new UnsafeRawArray<Vertex>(positionIndices.Length, false);
         using var indices = new UnsafeRawArray<int>(positionIndices.Length, false);
-        var (vLen, iLen) = CreateInterleavedVertices(positions, positionIndices, normals, normalIndices, uvs, uvIndices, vertices.AsSpan(), indices.AsSpan());
+        var (vLen, iLen) = CreateInterleaved(positions, positionIndices, normals, normalIndices, uvs, uvIndices, vertices.AsSpan(), indices.AsSpan());
         return (vertices.AsSpan(0, vLen).ToArray(), indices.AsSpan(0, iLen).ToArray());
     }
 
-    public static void CreateInterleavedVertices(
+    public static void CreateInterleaved(
         ReadOnlySpan<Vector3> positions, ReadOnlySpan<int> positionIndices,
         ReadOnlySpan<Vector3> normals, ReadOnlySpan<int> normalIndices,
         ReadOnlySpan<Vector2> uvs, ReadOnlySpan<int> uvIndices,
         IBufferWriter<Vertex> verticesWriter, IBufferWriter<int> indicesWriter)
     {
-        var (vLen, iLen) = CreateInterleavedVertices(
+        var (vLen, iLen) = CreateInterleaved(
             positions, positionIndices,
             normals, normalIndices,
             uvs, uvIndices,
@@ -218,7 +33,7 @@ partial class MeshHelper
         indicesWriter.Advance(iLen);
     }
 
-    public static (int VertexCount, int IndexCount) CreateInterleavedVertices(
+    public static (int VertexCount, int IndexCount) CreateInterleaved(
         ReadOnlySpan<Vector3> positions, ReadOnlySpan<int> positionIndices,
         ReadOnlySpan<Vector3> normals, ReadOnlySpan<int> normalIndices,
         ReadOnlySpan<Vector2> uvs, ReadOnlySpan<int> uvIndices,
@@ -250,10 +65,6 @@ partial class MeshHelper
         }
         return (vertexCount, indexCount);
     }
-
-    private record struct Face(int I0, int I1, int I2);
-    private record struct Key_PNT(int P, int N, int T);
-
-    [DoesNotReturn]
-    private static void ThrowArgumentIndicesLengthInvalid() => throw new ArgumentException();
 }
+
+file record struct Key_PNT(int P, int N, int T);
