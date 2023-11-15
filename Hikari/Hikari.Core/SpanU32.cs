@@ -42,6 +42,18 @@ public readonly ref struct SpanU32<T> where T : unmanaged
         }
     }
 
+    public ref T this[usize index]
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get
+        {
+            if(index >= _len) {
+                ThrowHelper.ThrowArgumentOutOfRange(nameof(index));
+            }
+            return ref Unsafe.Add(ref _head, index);
+        }
+    }
+
     public u32 Length => _len;
     public usize ByteLength => _len * (usize)Unsafe.SizeOf<T>();
     public bool IsEmpty => _len == 0;

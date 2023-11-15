@@ -144,6 +144,21 @@ public static class GlbModelLoader
         var indices = NativeBuffer.Empty;
         uint vertexCount;
         try {
+            // position
+            if(attrs.POSITION is not uint posAttr) {
+                throw new NotSupportedException("no position attribute");
+            }
+            else {
+                ref readonly var position = ref accessors.GetOrThrow(posAttr);
+                if(position is not { type: AccessorType.Vec3, componentType: AccessorComponentType.Float }) {
+                    ThrowHelper.ThrowInvalidGlb();
+                }
+                var data = AccessData(state, position);
+                vertices = new NativeBuffer(data.Count * TVertex.VertexSize, true);
+                vertexCount = (uint)data.Count;
+                data.CopyToVertexField<TVertex, Vector3>((TVertex*)vertices.Ptr, TVertex.PositionOffset);
+            }
+
             // indices
             var indexCount = 0u;
             if(meshPrimitive.indices is uint indicesNum) {
@@ -160,26 +175,8 @@ public static class GlbModelLoader
                 indexCount = (uint)data.Count;
                 data.StoreIndicesAsUInt32((uint*)indices.Ptr);
             }
-
-            // position
-            if(attrs.POSITION is uint posAttr) {
-                ref readonly var position = ref accessors.GetOrThrow(posAttr);
-                if(position is not { type: AccessorType.Vec3, componentType: AccessorComponentType.Float }) {
-                    ThrowHelper.ThrowInvalidGlb();
-                }
-                var data = AccessData(state, position);
-                vertices = new NativeBuffer(data.Count * TVertex.VertexSize, true);
-                vertexCount = (uint)data.Count;
-                data.CopyToVertexField<TVertex, Vector3>((TVertex*)vertices.Ptr, TVertex.PositionOffset);
-            }
             else {
-                throw new NotSupportedException();
-            }
-
-            if(meshPrimitive.indices == null) {
                 // if not indexed, generate indices
-                Debug.Assert(indices.Ptr == null);
-                indices.Dispose();
                 indices = new NativeBuffer(vertexCount * (nuint)sizeof(uint), false);
                 uint* p = (uint*)indices.Ptr;
                 for(uint i = 0; i < vertexCount; i++) {
@@ -198,11 +195,9 @@ public static class GlbModelLoader
                 data.CopyToVertexField<TVertex, Vector3>((TVertex*)vertices.Ptr, TVertex.NormalOffset);
             }
             else {
-                // TODO: Avoid using span for the case that the length is longer than int.MaxValue
-
-                var verticesSpan = new Span<TVertex>(vertices.Ptr, checked((int)vertexCount));
-                var indicesSpan = new Span<int>(indices.Ptr, checked((int)indexCount));
-                MeshHelper.CalcNormal(verticesSpan, indicesSpan);
+                var verticesSpan = new SpanU32<TVertex>(vertices.Ptr, vertexCount);
+                var indicesSpan = new SpanU32<uint>(indices.Ptr, indexCount);
+                MeshHelper.CalcNormal<TVertex, uint>(verticesSpan, indicesSpan);
             }
 
             // uv
