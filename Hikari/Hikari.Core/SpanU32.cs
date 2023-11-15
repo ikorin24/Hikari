@@ -1,15 +1,22 @@
 ﻿#nullable enable
 using System;
+using System.Buffers;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Hikari;
 
+[DebuggerDisplay("{DebuggerView,nq}")]
+[DebuggerTypeProxy(typeof(SpanU32<>.DebuggerProxy))]
 public readonly ref struct SpanU32<T> where T : unmanaged
 {
     private readonly ref T _head;
     private readonly u32 _len;
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebuggerView => $"{typeof(T).Name}[{_len}]";
 
     public ref T this[u32 index]
     {
@@ -91,6 +98,10 @@ public readonly ref struct SpanU32<T> where T : unmanaged
         return new SpanU32<byte>(ref Unsafe.As<T, byte>(ref _head), _len * (u32)Unsafe.SizeOf<T>());
     }
 
+    public ReadOnlySpanU32<T> AsReadOnly() => this;
+
+    public ReadOnlySequence<T> AsSequence() => AsReadOnly().AsSequence();
+
     public Enumerator GetEnumerator() => new Enumerator(this);
 
     public static implicit operator SpanU32<T>(Span<T> span)
@@ -124,5 +135,18 @@ public readonly ref struct SpanU32<T> where T : unmanaged
             }
             return false;
         }
+    }
+
+    private sealed class DebuggerProxy
+    {
+        private readonly ReadOnlySequence<T> _items;
+
+        public DebuggerProxy(SpanU32<T> span)
+        {
+            _items = span.AsSequence();
+        }
+
+        [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+        public ReadOnlySequence<T> Items => _items;
     }
 }

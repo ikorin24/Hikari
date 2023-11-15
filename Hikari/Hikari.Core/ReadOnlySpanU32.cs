@@ -1,15 +1,22 @@
 ﻿#nullable enable
 using System;
+using System.Buffers;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Hikari;
 
+[DebuggerDisplay("{DebuggerView,nq}")]
+[DebuggerTypeProxy(typeof(ReadOnlySpanU32<>.DebuggerProxy))]
 public readonly ref struct ReadOnlySpanU32<T> where T : unmanaged
 {
     private readonly ref readonly T _head;
     private readonly u32 _len;
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebuggerView => $"{typeof(T).Name}[{_len}]";
 
     public ref readonly T this[u32 index]
     {
@@ -93,6 +100,33 @@ public readonly ref struct ReadOnlySpanU32<T> where T : unmanaged
         return new ReadOnlySpanU32<byte>(in Unsafe.As<T, byte>(ref Unsafe.AsRef(in _head)), _len * (u32)Unsafe.SizeOf<T>());
     }
 
+    public ReadOnlySequence<T> AsSequence()
+    {
+        if(IsEmpty) {
+            return ReadOnlySequence<T>.Empty;
+        }
+        CustomSegment? head = null;
+        long index = 0;
+        uint len = Length;
+        CustomSegment? prev = null;
+
+        while(true) {
+            uint l = uint.Min(len, int.MaxValue);
+            var part = Slice(0, l);
+            var partCopy = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in part.GetReference()), (int)l).ToArray();
+            var segment = new CustomSegment(partCopy, index);
+            prev?.SetNext(segment);
+            prev = segment;
+            index += l;
+            len -= l;
+            head ??= segment;
+            if(len == 0) {
+                break;
+            }
+        }
+        return new ReadOnlySequence<T>(head, 0, prev, prev.Memory.Length);
+    }
+
     public Enumerator GetEnumerator() => new Enumerator(this);
 
     public static implicit operator ReadOnlySpanU32<T>(Span<T> span)
@@ -132,5 +166,32 @@ public readonly ref struct ReadOnlySpanU32<T> where T : unmanaged
             }
             return false;
         }
+    }
+
+    private sealed class CustomSegment : ReadOnlySequenceSegment<T>
+    {
+        public CustomSegment(ReadOnlyMemory<T> memory, long runningIndex)
+        {
+            Memory = memory;
+            RunningIndex = runningIndex;
+        }
+
+        public void SetNext(CustomSegment segment)
+        {
+            Next = segment;
+        }
+    }
+
+    private sealed class DebuggerProxy
+    {
+        private readonly ReadOnlySequence<T> _items;
+
+        public DebuggerProxy(ReadOnlySpanU32<T> span)
+        {
+            _items = span.AsSequence();
+        }
+
+        [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+        public ReadOnlySequence<T> Items => _items;
     }
 }
