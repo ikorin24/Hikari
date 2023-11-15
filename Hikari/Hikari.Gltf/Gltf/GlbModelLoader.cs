@@ -447,7 +447,7 @@ public static class GlbModelLoader
         var bin = ReadBufferView(in state, in bufferView);
         return new BufferData
         {
-            P = (IntPtr)bin.Ptr,
+            P = (IntPtr)(bin.Ptr + accessor.byteOffset),
             ByteLength = bin.ByteLength,
             ByteStride = bufferView.byteStride,
             Count = accessor.count,
