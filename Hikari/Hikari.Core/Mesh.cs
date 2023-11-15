@@ -112,22 +112,6 @@ public sealed class Mesh<TVertex>
         return Own.New(mesh, static x => SafeCast.As<Mesh<TVertex>>(x).Release());
     }
 
-    internal static Own<Mesh<TVertex>> Create<TIndex>(
-        Screen screen,
-        ReadOnlySpanU32<TVertex> vertices,
-        ReadOnlySpanU32<TIndex> indices,
-        ReadOnlySpanU32<Vector3> tangents,
-        BufferUsages usages)
-        where TIndex : unmanaged, INumberBase<TIndex>
-    {
-        return Create(screen, new MeshDescriptor<TVertex, TIndex>
-        {
-            Vertices = new() { Data = vertices, Usages = usages },
-            Indices = new() { Data = indices, Usages = usages },
-            Tangents = new() { Data = tangents, Usages = usages },
-        });
-    }
-
     private readonly record struct MeshData
     {
         public Own<Buffer> VertexBuffer { get; init; }
@@ -160,6 +144,8 @@ public readonly record struct SubmeshData
 public readonly ref struct MeshBufferDataDescriptor<T>
     where T : unmanaged
 {
+    public static MeshBufferDataDescriptor<T> None => default;
+
     public required ReadOnlySpanU32<T> Data { get; init; }
     public required BufferUsages Usages { get; init; }
 }
@@ -176,7 +162,11 @@ public static class Mesh
         where TVertex : unmanaged, IVertex
         where TIndex : unmanaged, INumberBase<TIndex>
     {
-        return Mesh<TVertex>.Create(screen, vertices, indices, ReadOnlySpanU32<Vector3>.Empty, usages);
+        return Mesh<TVertex>.Create(screen, new MeshDescriptor<TVertex, TIndex>
+        {
+            Vertices = new() { Data = vertices, Usages = usages },
+            Indices = new() { Data = indices, Usages = usages },
+        });
     }
 
     public unsafe static Own<Mesh<TVertex>> CreateWithTangent<TVertex, TIndex>(
@@ -192,7 +182,12 @@ public static class Mesh
         try {
             var tangents = new SpanU32<Vector3>(tp, tangentLen);
             MeshHelper.CalcTangent(vertices, indices, tangents);
-            return Mesh<TVertex>.Create(screen, vertices, indices, tangents, usages);
+            return Mesh<TVertex>.Create(screen, new MeshDescriptor<TVertex, TIndex>
+            {
+                Vertices = new() { Data = vertices, Usages = usages },
+                Indices = new() { Data = indices, Usages = usages },
+                Tangents = new() { Data = tangents, Usages = usages },
+            });
         }
         finally {
             NativeMemory.Free(tp);
@@ -208,6 +203,18 @@ public static class Mesh
         where TVertex : unmanaged, IVertex
         where TIndex : unmanaged, INumberBase<TIndex>
     {
-        return Mesh<TVertex>.Create(screen, vertices, indices, tangents, usages);
+        return Mesh<TVertex>.Create(screen, new MeshDescriptor<TVertex, TIndex>
+        {
+            Vertices = new() { Data = vertices, Usages = usages },
+            Indices = new() { Data = indices, Usages = usages },
+            Tangents = new() { Data = tangents, Usages = usages },
+        });
+    }
+
+    public static Own<Mesh<TVertex>> Create<TVertex, TIndex>(Screen screen, in MeshDescriptor<TVertex, TIndex> desc)
+        where TVertex : unmanaged, IVertex
+        where TIndex : unmanaged, INumberBase<TIndex>
+    {
+        return Mesh<TVertex>.Create(screen, desc);
     }
 }

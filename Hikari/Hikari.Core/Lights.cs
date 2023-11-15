@@ -36,7 +36,7 @@ public sealed partial class Lights
         _dirLight = new DirectionalLight(screen);
         _lightData = new(screen, new BufferData
         {
-            AmbientStrength = 0.1f,
+            AmbientStrength = 0.06f,
         }, BufferUsages.Storage | BufferUsages.CopyDst);
         _bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
         {
