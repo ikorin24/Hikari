@@ -221,9 +221,9 @@ namespace Hikari
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3 operator *(in Matrix3 matrix, in Vector3 vec)
         {
-            return Unsafe.As<float, Vector3>(ref Unsafe.AsRef(matrix.M00)) * vec.X +
-                   Unsafe.As<float, Vector3>(ref Unsafe.AsRef(matrix.M01)) * vec.Y +
-                   Unsafe.As<float, Vector3>(ref Unsafe.AsRef(matrix.M02)) * vec.Z;
+            return Unsafe.As<float, Vector3>(ref Unsafe.AsRef(in matrix.M00)) * vec.X +
+                   Unsafe.As<float, Vector3>(ref Unsafe.AsRef(in matrix.M01)) * vec.Y +
+                   Unsafe.As<float, Vector3>(ref Unsafe.AsRef(in matrix.M02)) * vec.Z;
 
             //return new Vector3(matrix.M00 * vec.X + matrix.M01 * vec.Y + matrix.M02 * vec.Z,
             //                   matrix.M10 * vec.X + matrix.M11 * vec.Y + matrix.M12 * vec.Z,

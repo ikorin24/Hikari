@@ -325,10 +325,10 @@ namespace Hikari
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ref readonly NVec3 AsNVec3(in Vector3 vec) => ref Unsafe.As<Vector3, NVec3>(ref Unsafe.AsRef(vec));
+        private static ref readonly NVec3 AsNVec3(in Vector3 vec) => ref Unsafe.As<Vector3, NVec3>(ref Unsafe.AsRef(in vec));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ref readonly Vector3 AsVector3(in NVec3 vec) => ref Unsafe.As<NVec3, Vector3>(ref Unsafe.AsRef(vec));
+        private static ref readonly Vector3 AsVector3(in NVec3 vec) => ref Unsafe.As<NVec3, Vector3>(ref Unsafe.AsRef(in vec));
     }
 
     public static class VectorExtension

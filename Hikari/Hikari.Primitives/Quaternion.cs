@@ -183,12 +183,12 @@ namespace Hikari
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static explicit operator Vector4(in Quaternion quaternion) => Unsafe.As<Quaternion, Vector4>(ref Unsafe.AsRef(quaternion));
+        public static explicit operator Vector4(in Quaternion quaternion) => Unsafe.As<Quaternion, Vector4>(ref Unsafe.AsRef(in quaternion));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ref readonly TTo UnsafeAs<TFrom, TTo>(in TFrom source)
         {
-            return ref Unsafe.As<TFrom, TTo>(ref Unsafe.AsRef(source));
+            return ref Unsafe.As<TFrom, TTo>(ref Unsafe.AsRef(in source));
         }
     }
 }

@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <Nullable>enable</Nullable>
-    <WarningsAsErrors>Nullable</WarningsAsErrors>
-    <LangVersion>11</LangVersion>
+    <WarningsAsErrors>Nullable,CS9193,CS9191</WarningsAsErrors>
+    <LangVersion>12</LangVersion>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 

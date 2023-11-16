@@ -112,6 +112,6 @@ namespace Hikari
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ref readonly NVec4 AsNVec4(in Color4 vec) => ref Unsafe.As<Color4, NVec4>(ref Unsafe.AsRef(vec));
+        private static ref readonly NVec4 AsNVec4(in Color4 vec) => ref Unsafe.As<Color4, NVec4>(ref Unsafe.AsRef(in vec));
     }
 }

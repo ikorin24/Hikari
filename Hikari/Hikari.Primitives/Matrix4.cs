@@ -253,7 +253,7 @@ namespace Hikari
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator !=(in Matrix4 left, in Matrix4 right) => !(left == right);
 
-        
+
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         //public static Matrix4 PerspectiveProjectionInfReversedZ(float fovy, float aspect, float depthNear, float _depthFar)
@@ -334,13 +334,13 @@ namespace Hikari
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ref readonly NMat4 AsNMat4(in Matrix4 m) => ref Unsafe.As<Matrix4, NMat4>(ref Unsafe.AsRef(m));
+        private static ref readonly NMat4 AsNMat4(in Matrix4 m) => ref Unsafe.As<Matrix4, NMat4>(ref Unsafe.AsRef(in m));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ref readonly Matrix4 AsMatrix4(in NMat4 m) => ref Unsafe.As<NMat4, Matrix4>(ref Unsafe.AsRef(m));
+        private static ref readonly Matrix4 AsMatrix4(in NMat4 m) => ref Unsafe.As<NMat4, Matrix4>(ref Unsafe.AsRef(in m));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ref readonly NVec3 AsNVec3(in Vector3 vec) => ref Unsafe.As<Vector3, NVec3>(ref Unsafe.AsRef(vec));
+        private static ref readonly NVec3 AsNVec3(in Vector3 vec) => ref Unsafe.As<Vector3, NVec3>(ref Unsafe.AsRef(in vec));
     }
 
     public static class MatrixExtensions
