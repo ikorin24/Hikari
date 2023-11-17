@@ -11,16 +11,23 @@ public sealed class RenderPipeline : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.RenderPipeline> _native;
+    private readonly RenderPipelineDescriptor _desc;
+
     internal Rust.Ref<Wgpu.RenderPipeline> NativeRef => _native.Unwrap();
 
     public Screen Screen => _screen;
 
+    public RenderPipelineDescriptor Descriptor => _desc;
+
+    public PipelineLayout Layout => _desc.Layout;
+
     public bool IsManaged => _native.IsNone == false;
 
-    private RenderPipeline(Screen screen, Rust.Box<Wgpu.RenderPipeline> native)
+    private RenderPipeline(Screen screen, Rust.Box<Wgpu.RenderPipeline> native, in RenderPipelineDescriptor desc)
     {
         _screen = screen;
         _native = native;
+        _desc = desc;
     }
 
     ~RenderPipeline() => Release(false);
@@ -47,8 +54,8 @@ public sealed class RenderPipeline : IScreenManaged
         var pins = new PinHandleHolder();
         try {
             var descNative = desc.ToNative(pins);
-            var renderPipelineNative = screen.AsRefChecked().CreateRenderPipeline(descNative);
-            var renderPipeline = new RenderPipeline(screen, renderPipelineNative);
+            var native = screen.AsRefChecked().CreateRenderPipeline(descNative);
+            var renderPipeline = new RenderPipeline(screen, native, in desc);
             return Own.New(renderPipeline, static x => SafeCast.As<RenderPipeline>(x).Release());
         }
         finally {
