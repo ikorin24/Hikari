@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Immutable;
 
 namespace Hikari;
 
@@ -46,10 +47,10 @@ public abstract class Shader<TSelf, TMaterial>
     where TSelf : Shader<TSelf, TMaterial>
     where TMaterial : Material<TMaterial, TSelf>
 {
-    private readonly ShaderPass[] _passes;
+    private readonly ImmutableArray<ShaderPass> _passes;
     private EventSource<TSelf> _disposed;
 
-    public sealed override ReadOnlySpan<ShaderPass> Passes => _passes;
+    public sealed override ReadOnlySpan<ShaderPass> Passes => _passes.AsSpan();
     public Event<TSelf> Disposed => _disposed.Event;
 
     protected Shader(Screen screen, in ShaderPassDescriptorArray1 passes) : base(screen)
@@ -57,11 +58,11 @@ public abstract class Shader<TSelf, TMaterial>
         if(this is not TSelf) {
             throw new InvalidOperationException("invalid type");
         }
-        _passes = new ShaderPass[1]
-        {
+        _passes =
+        [
             passes.Pass0.CreateShaderPass(this, 0, Disposed),
-        };
-        screen.ShaderPasses.Add(_passes);
+        ];
+        screen.ShaderPasses.Add(_passes.AsSpan());
     }
 
     protected Shader(Screen screen, in ShaderPassDescriptorArray2 passes) : base(screen)
@@ -70,12 +71,12 @@ public abstract class Shader<TSelf, TMaterial>
             throw new InvalidOperationException("invalid type");
         }
         ArgumentNullException.ThrowIfNull(screen);
-        _passes = new ShaderPass[2]
-        {
+        _passes =
+        [
             passes.Pass0.CreateShaderPass(this, 0, Disposed),
             passes.Pass1.CreateShaderPass(this, 1, Disposed),
-        };
-        screen.ShaderPasses.Add(_passes);
+        ];
+        screen.ShaderPasses.Add(_passes.AsSpan());
     }
 
     protected Shader(Screen screen, in ShaderPassDescriptorArray3 passes) : base(screen)
@@ -84,13 +85,13 @@ public abstract class Shader<TSelf, TMaterial>
             throw new InvalidOperationException("invalid type");
         }
         ArgumentNullException.ThrowIfNull(screen);
-        _passes = new ShaderPass[3]
-        {
+        _passes =
+        [
             passes.Pass0.CreateShaderPass(this, 0, Disposed),
             passes.Pass1.CreateShaderPass(this, 1, Disposed),
             passes.Pass2.CreateShaderPass(this, 2, Disposed),
-        };
-        screen.ShaderPasses.Add(_passes);
+        ];
+        screen.ShaderPasses.Add(_passes.AsSpan());
     }
 
     protected Shader(Screen screen, in ShaderPassDescriptorArray4 passes) : base(screen)
@@ -99,21 +100,21 @@ public abstract class Shader<TSelf, TMaterial>
             throw new InvalidOperationException("invalid type");
         }
         ArgumentNullException.ThrowIfNull(screen);
-        _passes = new ShaderPass[4]
-        {
+        _passes =
+        [
             passes.Pass0.CreateShaderPass(this, 0, Disposed),
             passes.Pass1.CreateShaderPass(this, 1, Disposed),
             passes.Pass2.CreateShaderPass(this, 2, Disposed),
             passes.Pass3.CreateShaderPass(this, 3, Disposed),
-        };
-        screen.ShaderPasses.Add(_passes);
+        ];
+        screen.ShaderPasses.Add(_passes.AsSpan());
     }
 
     protected override void Release(bool manualRelease)
     {
         base.Release(manualRelease);
         if(manualRelease) {
-            Screen.ShaderPasses.Remove(_passes);
+            Screen.ShaderPasses.Remove(_passes.AsSpan());
             _disposed.Invoke(SafeCast.As<TSelf>(this));
         }
     }
