@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Hikari.NativeBind;
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -20,13 +21,13 @@ public sealed class BindGroup : IScreenManaged
     public bool IsManaged => _native.IsNone == false;
 
     public BindGroupLayout Layout => _desc.Layout;
-    public ReadOnlyMemory<BindGroupEntry> Entries => _desc.Entries;
+    public ImmutableArray<BindGroupEntry> Entries => _desc.Entries;
 
     public void Validate()
     {
         IScreenManaged.DefaultValidate(this);
         _desc.Layout.Validate();
-        foreach(var entry in _desc.Entries.Span) {
+        foreach(var entry in _desc.Entries) {
             entry.Resource.Validate();
         }
     }
@@ -68,7 +69,7 @@ public sealed class BindGroup : IScreenManaged
 public readonly struct BindGroupDescriptor
 {
     public required BindGroupLayout Layout { get; init; }
-    public required ReadOnlyMemory<BindGroupEntry> Entries { get; init; }
+    public required ImmutableArray<BindGroupEntry> Entries { get; init; }
 
     internal CH.BindGroupDescriptor ToNative(PinHandleHolder pins)
     {

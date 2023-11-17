@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Hikari.NativeBind;
 using System;
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -56,9 +57,9 @@ public sealed class BindGroupLayout : IScreenManaged
 
 public readonly struct BindGroupLayoutDescriptor
 {
-    public required ReadOnlyMemory<BindGroupLayoutEntry> Entries { get; init; }
+    public required ImmutableArray<BindGroupLayoutEntry> Entries { get; init; }
 
-    internal unsafe CH.BindGroupLayoutDescriptor ToNative(PinHandleHolder pins)
+    internal CH.BindGroupLayoutDescriptor ToNative(PinHandleHolder pins)
     {
         return new CH.BindGroupLayoutDescriptor
         {

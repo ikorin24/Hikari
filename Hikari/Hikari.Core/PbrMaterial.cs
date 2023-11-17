@@ -52,30 +52,18 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader>
         _bindGroup0 = bindGroup0;
         _bindGroup1 = Screen.Camera.CameraDataBindGroup;
         _shadowBindGroup0 = shadowBindGroup0;
-        _passes = new[]
-        {
-            new MaterialPassData(0, new[]
-            {
-                new BindGroupData
-                {
-                    Index = 0,
-                    BindGroup = shadowBindGroup0.AsValue(),
-                },
-            }),
-            new MaterialPassData(1, new[]
-            {
-                new BindGroupData
-                {
-                    Index = 0,
-                    BindGroup = _bindGroup0.AsValue(),
-                },
-                new BindGroupData
-                {
-                    Index = 1,
-                    BindGroup = _bindGroup1,
-                },
-            }),
-        };
+        _passes =
+        [
+            new(0,
+            [
+                new(0, shadowBindGroup0.AsValue()),
+            ]),
+            new(1,
+            [
+                new(0, _bindGroup0.AsValue()),
+                new(1, _bindGroup1),
+            ]),
+        ];
     }
 
     public override void Validate()
@@ -149,8 +137,8 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader>
         var bindGroup0 = BindGroup.Create(screen, new()
         {
             Layout = shader.Passes[1].Layout.BindGroupLayouts[0],
-            Entries = new BindGroupEntry[]
-            {
+            Entries =
+            [
                 BindGroupEntry.Buffer(0, uniformBuffer),
                 BindGroupEntry.TextureView(1, albedo.AsValue().View),
                 BindGroupEntry.Sampler(2, albedoSampler.AsValue()),
@@ -158,17 +146,17 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader>
                 BindGroupEntry.Sampler(4, metallicRoughnessSampler.AsValue()),
                 BindGroupEntry.TextureView(5, normal.AsValue().View),
                 BindGroupEntry.Sampler(6, normalSampler.AsValue()),
-            },
+            ],
         });
 
         var shadowBindGroup0 = BindGroup.Create(screen, new()
         {
             Layout = shader.Passes[0].Layout.BindGroupLayouts[0],
-            Entries = new[]
-            {
+            Entries =
+            [
                 BindGroupEntry.Buffer(0, uniformBuffer),
                 BindGroupEntry.Buffer(1, lights.DirectionalLight.LightMatricesBuffer),
-            },
+            ],
         });
 
         var material = new PbrMaterial(

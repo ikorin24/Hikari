@@ -40,8 +40,8 @@ public sealed partial class Lights
         }, BufferUsages.Storage | BufferUsages.CopyDst);
         _bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
         {
-            Entries = new BindGroupLayoutEntry[]
-            {
+            Entries =
+            [
                 BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment | ShaderStages.Compute, new()
                 {
                     Type = BufferBindingType.StorageReadOnly,
@@ -50,16 +50,16 @@ public sealed partial class Lights
                 {
                     Type = BufferBindingType.StorageReadOnly,
                 }),
-            },
+            ],
         });
         _bindGroup = BindGroup.Create(screen, new BindGroupDescriptor
         {
             Layout = _bindGroupLayout.AsValue(),
-            Entries = new BindGroupEntry[]
-            {
+            Entries =
+            [
                 BindGroupEntry.Buffer(0, _dirLight.DataBuffer),
                 BindGroupEntry.Buffer(1, _lightData),
-            },
+            ],
         });
     }
 

@@ -201,8 +201,8 @@ public sealed partial class Camera
         _cameraMatrix = new(screen, _state.Matrix, BufferUsages.Uniform | BufferUsages.CopyDst);
         _bindGroupLayout = BindGroupLayout.Create(screen, new BindGroupLayoutDescriptor
         {
-            Entries = new[]
-            {
+            Entries =
+            [
                 BindGroupLayoutEntry.Buffer(
                     0,
                     ShaderStages.Vertex | ShaderStages.Fragment | ShaderStages.Compute,
@@ -212,15 +212,15 @@ public sealed partial class Camera
                         HasDynamicOffset = false,
                         MinBindingSize = null,
                     }),
-            },
+            ],
         });
         _bindGroup = BindGroup.Create(screen, new BindGroupDescriptor
         {
             Layout = _bindGroupLayout.AsValue(),
-            Entries = new[]
-            {
+            Entries =
+            [
                 BindGroupEntry.Buffer(0, _cameraMatrix),
-            },
+            ],
         });
     }
 

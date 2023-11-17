@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Hikari.NativeBind;
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -15,6 +16,12 @@ internal static class InternalExtensions
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public unsafe static CH.Slice<T> AsFixedSlice<T>(this ImmutableArray<T> array, PinHandleHolder pins) where T : unmanaged
+    {
+        return array.AsMemory().AsFixedSlice(pins);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe static CH.Slice<T> AsFixedSlice<T>(this ReadOnlyMemory<T> memory, PinHandleHolder pins) where T : unmanaged
     {
         var handle = memory.Pin();
@@ -22,9 +29,9 @@ internal static class InternalExtensions
         return new CH.Slice<T>((T*)handle.Pointer, memory.Length);
     }
 
-    public static TResult[] SelectToArray<T, TResult>(this ReadOnlyMemory<T> self, Func<T, TResult> selector)
+    public static TResult[] SelectToArray<T, TResult>(this ImmutableArray<T> self, Func<T, TResult> selector)
     {
-        var span = self.Span;
+        var span = self.AsSpan();
         var result = new TResult[span.Length];
         for(int i = 0; i < span.Length; i++) {
             result[i] = selector(span[i]);
@@ -32,9 +39,9 @@ internal static class InternalExtensions
         return result;
     }
 
-    public static TResult[] SelectToArray<T, TArg, TResult>(this ReadOnlyMemory<T> self, TArg arg, Func<T, TArg, TResult> selector)
+    public static TResult[] SelectToArray<T, TArg, TResult>(this ImmutableArray<T> self, TArg arg, Func<T, TArg, TResult> selector)
     {
-        var span = self.Span;
+        var span = self.AsSpan();
         var result = new TResult[span.Length];
         for(int i = 0; i < span.Length; i++) {
             result[i] = selector(span[i], arg);

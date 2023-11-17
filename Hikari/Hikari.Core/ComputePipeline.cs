@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Hikari.NativeBind;
 using System;
+using System.Collections.Immutable;
 
 namespace Hikari;
 
@@ -55,7 +56,7 @@ public readonly struct ComputePipelineDescriptor
 {
     public PipelineLayout Layout { get; init; }
     public ShaderModule Module { get; init; }
-    public required ReadOnlyMemory<byte> EntryPoint { get; init; }
+    public required ImmutableArray<byte> EntryPoint { get; init; }
 
 
     internal CH.ComputePipelineDescriptor ToNative(PinHandleHolder pins)

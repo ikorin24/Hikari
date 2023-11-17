@@ -1,17 +1,18 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Immutable;
 
 namespace Hikari;
 
 public readonly record struct MaterialPassData
 {
     private readonly int _index;
-    private readonly BindGroupData[] _bindGroups;
+    private readonly ImmutableArray<BindGroupData> _bindGroups;
 
     public int Index => _index;
-    public ReadOnlySpan<BindGroupData> BindGroups => _bindGroups;
+    public ReadOnlySpan<BindGroupData> BindGroups => _bindGroups.AsSpan();
 
-    public MaterialPassData(int index, BindGroupData[] bindGroups)
+    public MaterialPassData(int index, ImmutableArray<BindGroupData> bindGroups)
     {
         _index = index;
         _bindGroups = bindGroups;
@@ -20,6 +21,6 @@ public readonly record struct MaterialPassData
     public void Deconstruct(out int index, out ReadOnlySpan<BindGroupData> bindGroups)
     {
         index = _index;
-        bindGroups = _bindGroups;
+        bindGroups = _bindGroups.AsSpan();
     }
 }

@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Hikari.Internal;
 using System;
+using System.Collections.Immutable;
 using V = Hikari.VertexSlim;
 
 namespace Hikari;
@@ -283,29 +284,29 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
             Vertex = new VertexState
             {
                 Module = module,
-                EntryPoint = "vs_main"u8.ToArray(),
-                Buffers = new VertexBufferLayout[]
-                {
-                    VertexBufferLayout.FromVertex<V>(stackalloc[]
-                    {
+                EntryPoint = "vs_main"u8.ToImmutableArray(),
+                Buffers =
+                [
+                    VertexBufferLayout.FromVertex<V>(
+                    [
                         (0, VertexFieldSemantics.Position),
                         (1, VertexFieldSemantics.UV),
-                    }),
-                },
+                    ]),
+                ],
             },
             Fragment = new FragmentState
             {
                 Module = module,
-                EntryPoint = "fs_main"u8.ToArray(),
-                Targets = new ColorTargetState?[]
-                {
+                EntryPoint = "fs_main"u8.ToImmutableArray(),
+                Targets =
+                [
                     new ColorTargetState
                     {
                         Format = screen.Surface.Format,
                         Blend = null,
                         WriteMask = ColorWrites.All,
                     }
-                },
+                ],
             },
             Primitive = new PrimitiveState
             {
@@ -333,12 +334,12 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
         disposable = new DisposableBag();
         return new()
         {
-            BindGroupLayouts = new[]
-            {
+            BindGroupLayouts =
+            [
                 BindGroupLayout.Create(screen, new()
                 {
-                    Entries = new BindGroupLayoutEntry[]
-                    {
+                    Entries =
+                    [
                         BindGroupLayoutEntry.Sampler(0, ShaderStages.Fragment, SamplerBindingType.NonFiltering),
                         BindGroupLayoutEntry.Texture(1, ShaderStages.Fragment, new()
                         {
@@ -364,14 +365,14 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                             ViewDimension = TextureViewDimension.D2,
                             SampleType = TextureSampleType.FloatNotFilterable,
                         }),
-                    }
+                    ]
                 }).AddTo(disposable),
                 screen.Camera.CameraDataBindGroupLayout,
                 screen.Lights.DataBindGroupLayout,
                 BindGroupLayout.Create(screen, new()
                 {
-                    Entries = new[]
-                    {
+                    Entries =
+                    [
                         BindGroupLayoutEntry.Texture(0, ShaderStages.Fragment, new()
                         {
                             ViewDimension = TextureViewDimension.D2,
@@ -381,9 +382,9 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                         BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Comparison),
                         BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
                         BindGroupLayoutEntry.Buffer(3, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
-                    },
+                    ],
                 }).AddTo(disposable),
-            },
+            ],
         };
     }
 }

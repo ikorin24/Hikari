@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -198,12 +199,12 @@ public interface IVertexTangent
 
 public sealed class VertexFields
 {
-    private readonly VertexField[] _fields;
+    private readonly ImmutableArray<VertexField> _fields;
 
     public VertexFields(ReadOnlySpan<VertexField> fields)
     {
         Validate(fields);
-        _fields = fields.ToArray();
+        _fields = fields.ToImmutableArray();
     }
 
     private static void Validate(ReadOnlySpan<VertexField> fields)
@@ -258,8 +259,8 @@ public sealed class VertexFields
         return TryGetField(semantics, out _);
     }
 
-    public ReadOnlyMemory<VertexField> AsMemory() => _fields;
-    public ReadOnlySpan<VertexField> AsSpan() => _fields;
+    public ImmutableArray<VertexField> AsImmutableArray() => _fields;
+    public ReadOnlySpan<VertexField> AsSpan() => _fields.AsSpan();
 }
 
 public enum VertexFieldSemantics
@@ -291,12 +292,12 @@ public struct Vertex : IEquatable<Vertex>, IVertex, IVertexPosition, IVertexNorm
 
     public static uint VertexSize => 32;
 
-    public static VertexFields Fields { get; } = new VertexFields(stackalloc[]
-    {
+    public static VertexFields Fields { get; } = new VertexFields(
+    [
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
         new VertexField(12, 12, VertexFormat.Float32x3, VertexFieldSemantics.Normal),
         new VertexField(24, 8, VertexFormat.Float32x2, VertexFieldSemantics.UV),
-    });
+    ]);
 
     public static uint PositionOffset => 0;
 
@@ -343,11 +344,11 @@ public struct VertexSlim
 
     public static uint VertexSize => 20;
 
-    public static VertexFields Fields { get; } = new VertexFields(stackalloc[]
-    {
+    public static VertexFields Fields { get; } = new VertexFields(
+    [
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
         new VertexField(12, 8, VertexFormat.Float32x2, VertexFieldSemantics.UV),
-    });
+    ]);
 
     public static uint PositionOffset => 0;
 
@@ -390,11 +391,11 @@ public struct VertexPosNormal
 
     public static uint VertexSize => 24;
 
-    public static VertexFields Fields { get; } = new VertexFields(stackalloc[]
-    {
+    public static VertexFields Fields { get; } = new VertexFields(
+    [
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
         new VertexField(12, 12, VertexFormat.Float32x3, VertexFieldSemantics.Normal),
-    });
+    ]);
 
     public static uint PositionOffset => 0;
 
@@ -436,10 +437,10 @@ public struct VertexPosOnly
 
     public static uint VertexSize => 12;
 
-    public static VertexFields Fields { get; } = new VertexFields(stackalloc[]
-    {
+    public static VertexFields Fields { get; } = new VertexFields(
+    [
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
-    });
+    ]);
 
     public static uint PositionOffset => 0;
 
@@ -474,15 +475,15 @@ public struct SkinnedVertex
 
     public static uint VertexSize => 68;
 
-    public static VertexFields Fields { get; } = new VertexFields(stackalloc[]
-    {
+    public static VertexFields Fields { get; } = new VertexFields(
+    [
         new VertexField(0, 12, VertexFormat.Float32x3, VertexFieldSemantics.Position),
         new VertexField(12, 12, VertexFormat.Float32x3, VertexFieldSemantics.Normal),
         new VertexField(24, 8, VertexFormat.Float32x2, VertexFieldSemantics.UV),
         new VertexField(32, 16, VertexFormat.Uint32x4, VertexFieldSemantics.Bone),
         new VertexField(48, 16, VertexFormat.Float32x4, VertexFieldSemantics.Weight),
         new VertexField(64, 4, VertexFormat.Uint32, VertexFieldSemantics.TextureIndex),
-    });
+    ]);
 
     public static uint PositionOffset => 0;
     public static uint NormalOffset => 12;

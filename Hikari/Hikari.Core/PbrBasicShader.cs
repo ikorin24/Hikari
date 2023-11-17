@@ -1,18 +1,19 @@
 ﻿#nullable enable
 using Hikari.Internal;
 using System;
+using System.Collections.Immutable;
 using V = Hikari.Vertex;
 
 namespace Hikari;
 
 public sealed class PbrBasicShader : PbrShader
 {
-    private static readonly Lazy<ReadOnlyMemory<byte>> _shaderSource = new(() =>
+    private static readonly Lazy<ImmutableArray<byte>> _shaderSource = new(() =>
     {
         using var sb = Utf8StringBuilder.FromLines(
             ShaderSource.Fn_Inverse3x3,
             Source);
-        return sb.Utf8String.ToArray();
+        return sb.Utf8String.ToImmutableArray();
     });
 
     private static ReadOnlySpan<byte> Source => """
@@ -97,7 +98,7 @@ public sealed class PbrBasicShader : PbrShader
         }
         """u8;
 
-    private static readonly Lazy<ReadOnlyMemory<byte>> _shadowShader = new(() =>
+    private static readonly Lazy<ImmutableArray<byte>> _shadowShader = new(() =>
     {
         using var sb = new Utf8StringBuilder();
         sb.Append("const CASCADE_COUNT: u32 = "u8);
@@ -141,7 +142,7 @@ public sealed class PbrBasicShader : PbrShader
                 return v2f.clip_pos.z;
             }
             """u8);
-        return sb.Utf8String.ToArray();
+        return sb.Utf8String.ToImmutableArray();
     });
 
     private readonly IGBufferProvider _gbufferProvider;
@@ -154,7 +155,7 @@ public sealed class PbrBasicShader : PbrShader
             {
                 Pass0 = new()
                 {
-                    Source = _shadowShader.Value.Span,
+                    Source = _shadowShader.Value.AsSpan(),
                     LayoutDescriptor = GetShadowLayoutDesc(screen, out var disposable),
                     PipelineDescriptorFactory = GetShadowDescriptor,
                     SortOrder = -1000,
@@ -166,7 +167,7 @@ public sealed class PbrBasicShader : PbrShader
                 },
                 Pass1 = new()
                 {
-                    Source = _shaderSource.Value.Span,
+                    Source = _shaderSource.Value.AsSpan(),
                     LayoutDescriptor = GetLayoutDesc(screen, out var disposable2),
                     PipelineDescriptorFactory = static (module, layout) => GetDescriptor(module, layout, module.Screen.DepthStencil.Format),
                     SortOrder = 0,
@@ -223,12 +224,11 @@ public sealed class PbrBasicShader : PbrShader
         disposable = new DisposableBag();
         return new PipelineLayoutDescriptor
         {
-            BindGroupLayouts = new[]
-            {
+            BindGroupLayouts = [
                 BindGroupLayout.Create(screen, new()
                 {
-                    Entries = new[]
-                    {
+                    Entries =
+                    [
                         BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new()
                         {
                             Type = BufferBindingType.Uniform,
@@ -254,10 +254,10 @@ public sealed class PbrBasicShader : PbrShader
                             SampleType = TextureSampleType.FloatFilterable,
                         }),
                         BindGroupLayoutEntry.Sampler(6, ShaderStages.Fragment, SamplerBindingType.Filtering),
-                    },
+                    ],
                 }).AddTo(disposable),
                 screen.Camera.CameraDataBindGroupLayout,
-            },
+            ],
         };
     }
 
@@ -269,37 +269,37 @@ public sealed class PbrBasicShader : PbrShader
             Vertex = new VertexState
             {
                 Module = module,
-                EntryPoint = "vs_main"u8.ToArray(),
-                Buffers = new VertexBufferLayout[]
-                {
-                    VertexBufferLayout.FromVertex<V>(stackalloc[]
-                    {
+                EntryPoint = "vs_main"u8.ToImmutableArray(),
+                Buffers =
+                [
+                    VertexBufferLayout.FromVertex<V>(
+                    [
                         (0, VertexFieldSemantics.Position),
                         (1, VertexFieldSemantics.Normal),
                         (2, VertexFieldSemantics.UV),
-                    }),
+                    ]),
                     new VertexBufferLayout
                     {
                         ArrayStride = (ulong)Vector3.SizeInBytes,
-                        Attributes = new VertexAttr[]
-                        {
-                            new VertexAttr
+                        Attributes =
+                        [
+                            new()
                             {
                                 Format = VertexFormat.Float32x3,
                                 Offset = 0,
                                 ShaderLocation = 3,
                             },
-                        },
+                        ],
                         StepMode = VertexStepMode.Vertex,
                     },
-                },
+                ],
             },
             Fragment = new FragmentState
             {
                 Module = module,
-                EntryPoint = "fs_main"u8.ToArray(),
-                Targets = new ColorTargetState?[]
-                {
+                EntryPoint = "fs_main"u8.ToImmutableArray(),
+                Targets =
+                [
                     new ColorTargetState
                     {
                         Format = TextureFormat.Rgba32Float,
@@ -324,7 +324,7 @@ public sealed class PbrBasicShader : PbrShader
                         Blend = null,
                         WriteMask = ColorWrites.All,
                     },
-                },
+                ],
             },
             Primitive = new PrimitiveState
             {
@@ -354,17 +354,17 @@ public sealed class PbrBasicShader : PbrShader
         disposable = new DisposableBag();
         return new()
         {
-            BindGroupLayouts = new[]
-            {
+            BindGroupLayouts =
+            [
                 BindGroupLayout.Create(screen, new()
                 {
-                    Entries = new[]
-                    {
+                    Entries =
+                    [
                         BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new() { Type = BufferBindingType.Uniform }),
                         BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex, new() { Type = BufferBindingType.StorageReadOnly }),
-                    },
+                    ],
                 }).AddTo(disposable),
-            },
+            ],
         };
     }
 
@@ -377,20 +377,20 @@ public sealed class PbrBasicShader : PbrShader
             Vertex = new VertexState
             {
                 Module = module,
-                EntryPoint = "vs_main"u8.ToArray(),
-                Buffers = new VertexBufferLayout[]
-                {
-                    VertexBufferLayout.FromVertex<V>(stackalloc[]
-                    {
+                EntryPoint = "vs_main"u8.ToImmutableArray(),
+                Buffers =
+                [
+                    VertexBufferLayout.FromVertex<V>(
+                    [
                         (0, VertexFieldSemantics.Position),
-                    }),
-                },
+                    ]),
+                ],
             },
             Fragment = new FragmentState
             {
                 Module = module,
-                EntryPoint = "fs_main"u8.ToArray(),
-                Targets = null,
+                EntryPoint = "fs_main"u8.ToImmutableArray(),
+                Targets = [],
             },
             Primitive = new PrimitiveState
             {

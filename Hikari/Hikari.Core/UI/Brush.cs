@@ -7,6 +7,8 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 
 namespace Hikari.UI;
 
@@ -67,10 +69,14 @@ public readonly struct Brush
         return _type == BrushType.Solid;
     }
 
-    public bool TryGetLinearGradient(out ReadOnlyMemory<GradientStop> gradientStops)
+    public bool TryGetLinearGradient(out ImmutableArray<GradientStop> gradientStops)
     {
-        gradientStops = _gradientStops;
-        return _type == BrushType.LinearGradient;
+        if(_type != BrushType.LinearGradient) {
+            gradientStops = default;
+            return false;
+        }
+        gradientStops = ImmutableCollectionsMarshal.AsImmutableArray(_gradientStops);
+        return true;
     }
 
     public Color4 SolidColor
@@ -84,14 +90,14 @@ public readonly struct Brush
         }
     }
 
-    public ReadOnlyMemory<GradientStop> GradientStops
+    public ImmutableArray<GradientStop> GradientStops
     {
         get
         {
             if(_type != BrushType.LinearGradient) {
                 ThrowHelper.ThrowInvalidOperation($"{nameof(Type)} is not {nameof(BrushType.LinearGradient)}");
             }
-            return _gradientStops;
+            return ImmutableCollectionsMarshal.AsImmutableArray(_gradientStops);
         }
     }
 

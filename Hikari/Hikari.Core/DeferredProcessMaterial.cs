@@ -38,16 +38,16 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
         var directionalLight = screen.Lights.DirectionalLight;
         var gTextures = gBuffer.Textures;
         disposable = new DisposableBag();
-        return new MaterialPassData(0, new[]
-        {
+        return new MaterialPassData(0,
+        [
             new BindGroupData
             {
                 Index = 0,
                 BindGroup = BindGroup.Create(screen, new()
                 {
                     Layout = shader.Passes[0].Layout.BindGroupLayouts[0],
-                    Entries = new BindGroupEntry[]
-                    {
+                    Entries =
+                    [
                         BindGroupEntry.Sampler(0, Sampler.Create(screen, new()
                         {
                             AddressModeU = AddressMode.ClampToEdge,
@@ -61,7 +61,7 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
                         BindGroupEntry.TextureView(2, gTextures[1].View),
                         BindGroupEntry.TextureView(3, gTextures[2].View),
                         BindGroupEntry.TextureView(4, gTextures[3].View),
-                    },
+                    ],
                 }).AddTo(disposable)
             },
             new BindGroupData
@@ -80,8 +80,8 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
                 BindGroup = BindGroup.Create(screen, new()
                 {
                     Layout = shader.Passes[0].Layout.BindGroupLayouts[3],
-                    Entries = new[]
-                    {
+                    Entries =
+                    [
                         BindGroupEntry.TextureView(0, directionalLight.ShadowMap.View),
                         BindGroupEntry.Sampler(1, Sampler.Create(screen, new()
                         {
@@ -95,9 +95,9 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
                         }).AddTo(disposable)),
                         BindGroupEntry.Buffer(2, directionalLight.LightMatricesBuffer),
                         BindGroupEntry.Buffer(3, directionalLight.CascadeFarsBuffer),
-                    },
+                    ],
                 }).AddTo(disposable)
             },
-        });
+        ]);
     }
 }

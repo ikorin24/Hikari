@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Hikari.NativeBind;
 using System;
+using System.Collections.Immutable;
 
 namespace Hikari;
 
@@ -16,7 +17,7 @@ public sealed class PipelineLayout : IScreenManaged
 
     public PipelineLayoutDescriptor Descriptor => _desc;
 
-    public ReadOnlySpan<BindGroupLayout> BindGroupLayouts => _desc.BindGroupLayouts.Span;
+    public ReadOnlySpan<BindGroupLayout> BindGroupLayouts => _desc.BindGroupLayouts.AsSpan();
 
     public bool IsManaged => _native.IsNone == false;
 
@@ -48,7 +49,7 @@ public sealed class PipelineLayout : IScreenManaged
 
     public unsafe static Own<PipelineLayout> Create(Screen screen, in PipelineLayoutDescriptor desc)
     {
-        var bindGroupLayouts = desc.BindGroupLayouts.Span;
+        var bindGroupLayouts = desc.BindGroupLayouts.AsSpan();
         var bindGroupLayoutsNative = stackalloc Rust.Ref<Wgpu.BindGroupLayout>[bindGroupLayouts.Length];
         for(int i = 0; i < bindGroupLayouts.Length; i++) {
             bindGroupLayoutsNative[i] = bindGroupLayouts[i].NativeRef;
@@ -63,5 +64,5 @@ public sealed class PipelineLayout : IScreenManaged
 
 public readonly struct PipelineLayoutDescriptor
 {
-    public required ReadOnlyMemory<BindGroupLayout> BindGroupLayouts { get; init; }
+    public required ImmutableArray<BindGroupLayout> BindGroupLayouts { get; init; }
 }

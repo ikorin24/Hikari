@@ -132,7 +132,7 @@ public static class GlbModelLoader
                 Indices = new() { Data = indices, Usages = BufferUsages.Index | BufferUsages.CopySrc | BufferUsages.Storage },
                 Vertices = new() { Data = vertices, Usages = BufferUsages.Vertex | BufferUsages.CopySrc | BufferUsages.Storage },
                 Tangents = new() { Data = tangents, Usages = BufferUsages.Vertex | BufferUsages.CopySrc | BufferUsages.Storage },
-                Submeshes = submeshes,
+                Submeshes = submeshes.AsImmutableArray(),
             });
             var material = PbrMaterial.Create(
                 state.Shader,

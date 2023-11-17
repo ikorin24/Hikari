@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Hikari.Internal;
 using System;
+using System.Collections.Immutable;
 
 namespace Hikari.UI;
 
@@ -121,20 +122,20 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial>
         disposable = new DisposableBag();
         return new()
         {
-            BindGroupLayouts = new[]
-            {
+            BindGroupLayouts =
+            [
                 BindGroupLayout.Create(screen, new()
                 {
-                    Entries = new[]
-                    {
-                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
-                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
-                    },
+                    Entries =
+                    [
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform }),
+                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform }),
+                    ],
                 }).AddTo(disposable),
                 BindGroupLayout.Create(screen, new()
                 {
-                    Entries = new[]
-                    {
+                    Entries =
+                    [
                         BindGroupLayoutEntry.Texture(0, ShaderStages.Vertex | ShaderStages.Fragment, new TextureBindingData
                         {
                             ViewDimension = TextureViewDimension.D2,
@@ -142,17 +143,17 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial>
                             SampleType = TextureSampleType.FloatNotFilterable,
                         }),
                         BindGroupLayoutEntry.Sampler(1, ShaderStages.Vertex | ShaderStages.Fragment, SamplerBindingType.NonFiltering),
-                        BindGroupLayoutEntry.Buffer(2, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform } ),
-                    },
+                        BindGroupLayoutEntry.Buffer(2, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform }),
+                    ],
                 }).AddTo(disposable),
                 BindGroupLayout.Create(screen, new()
                 {
-                    Entries = new[]
-                    {
-                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.StorageReadOnly } ),
-                    },
+                    Entries =
+                    [
+                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.StorageReadOnly }),
+                    ],
                 }).AddTo(disposable),
-            },
+            ],
         };
     }
 
@@ -164,29 +165,29 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial>
             Vertex = new VertexState()
             {
                 Module = module,
-                EntryPoint = "vs_main"u8.ToArray(),
-                Buffers = new VertexBufferLayout[]
-                {
-                    VertexBufferLayout.FromVertex<VertexSlim>(stackalloc[]
-                    {
+                EntryPoint = "vs_main"u8.ToImmutableArray(),
+                Buffers =
+                [
+                    VertexBufferLayout.FromVertex<VertexSlim>(
+                    [
                         (0, VertexFieldSemantics.Position),
                         (1, VertexFieldSemantics.UV),
-                    }),
-                },
+                    ]),
+                ],
             },
             Fragment = new FragmentState()
             {
                 Module = module,
-                EntryPoint = "fs_main"u8.ToArray(),
-                Targets = new ColorTargetState?[]
-                {
+                EntryPoint = "fs_main"u8.ToImmutableArray(),
+                Targets =
+                [
                     new ColorTargetState
                     {
                         Format = surfaceFormat,
                         Blend = BlendState.AlphaBlending,
                         WriteMask = ColorWrites.All,
                     },
-                },
+                ],
             },
             Primitive = new PrimitiveState()
             {

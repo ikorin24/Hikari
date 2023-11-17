@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Hikari.NativeBind;
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -94,8 +95,8 @@ public readonly struct RenderPipelineDescriptor
 public readonly struct VertexState
 {
     public required ShaderModule Module { get; init; }
-    public required ReadOnlyMemory<byte> EntryPoint { get; init; }
-    public required ReadOnlyMemory<VertexBufferLayout> Buffers { get; init; }
+    public required ImmutableArray<byte> EntryPoint { get; init; }
+    public required ImmutableArray<VertexBufferLayout> Buffers { get; init; }
 
     internal CH.VertexState ToNative(PinHandleHolder pins)
     {
@@ -111,8 +112,8 @@ public readonly struct VertexState
 public readonly struct FragmentState
 {
     public required ShaderModule Module { get; init; }
-    public required ReadOnlyMemory<byte> EntryPoint { get; init; }
-    public required ReadOnlyMemory<ColorTargetState?> Targets { get; init; }
+    public required ImmutableArray<byte> EntryPoint { get; init; }
+    public required ImmutableArray<ColorTargetState?> Targets { get; init; }
 
     internal CH.FragmentState ToNative(PinHandleHolder pins)
     {
@@ -350,7 +351,7 @@ public readonly struct VertexBufferLayout
 {
     public required u64 ArrayStride { get; init; }
     public required VertexStepMode StepMode { get; init; }
-    public required ReadOnlyMemory<VertexAttr> Attributes { get; init; }
+    public required ImmutableArray<VertexAttr> Attributes { get; init; }
 
     internal CH.VertexBufferLayout ToNative(PinHandleHolder pins)
     {
@@ -360,12 +361,6 @@ public readonly struct VertexBufferLayout
             step_mode = StepMode.MapOrThrow(),
             attributes = Attributes.SelectToArray(static x => x.ToNative()).AsFixedSlice(pins),
         };
-    }
-
-    public static VertexBufferLayout FromVertex<TVertex>(ReadOnlySpan<(int Location, VertexFieldSemantics Semantics)> mapping)
-        where TVertex : unmanaged, IVertex
-    {
-        return FromVertex<TVertex>(mapping.MarshalCast<(int Location, VertexFieldSemantics Semantics), (uint Location, VertexFieldSemantics Semantics)>());
     }
 
     public static VertexBufferLayout FromVertex<TVertex>(ReadOnlySpan<(uint Location, VertexFieldSemantics Semantics)> mapping)
@@ -385,7 +380,7 @@ public readonly struct VertexBufferLayout
         {
             ArrayStride = TVertex.VertexSize,
             StepMode = VertexStepMode.Vertex,
-            Attributes = attrs,
+            Attributes = attrs.AsImmutableArray(),
         };
     }
 }

@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
@@ -14,14 +15,14 @@ public sealed class Mesh<TVertex>
 {
     private readonly Screen _screen;
     private readonly MeshData _data;
-    private readonly ReadOnlyMemory<SubmeshData> _submeshes;
+    private readonly ImmutableArray<SubmeshData> _submeshes;
     private bool _isReleased;
 
     public BufferSlice VertexBuffer => _data.VertexBuffer.AsValue();
     public BufferSlice IndexBuffer => _data.IndexBuffer.AsValue();
     public BufferSlice? TangentBuffer => _data.OptTangentBuffer.TryAsValue(out var buf) ? buf.Slice() : (BufferSlice?)null;
 
-    public ReadOnlySpan<SubmeshData> Submeshes => _submeshes.Span;
+    public ReadOnlySpan<SubmeshData> Submeshes => _submeshes.AsSpan();
 
     public IndexFormat IndexFormat => _data.IndexFormat;
 
@@ -32,7 +33,7 @@ public sealed class Mesh<TVertex>
 
     public bool IsManaged => _isReleased == false;
 
-    private Mesh(Screen screen, in MeshData data, ReadOnlyMemory<SubmeshData> submeshes)
+    private Mesh(Screen screen, in MeshData data, ImmutableArray<SubmeshData> submeshes)
     {
         Debug.Assert(submeshes.IsEmpty == false);
         _screen = screen;
@@ -98,15 +99,14 @@ public sealed class Mesh<TVertex>
         };
         var submeshes = desc.Submeshes switch
         {
-            { IsEmpty: true } => new SubmeshData[1]
-            {
+            { IsDefaultOrEmpty: true } => [
                 new()
                 {
                     VertexOffset = 0,
                     IndexOffset = 0,
                     IndexCount = desc.Indices.Data.Length,
-                }
-            },
+                },
+            ],
             _ => desc.Submeshes,
         };
         var mesh = new Mesh<TVertex>(screen, meshData, submeshes);
@@ -128,10 +128,16 @@ public readonly ref struct MeshDescriptor<TVertex, TIndex>
     where TVertex : unmanaged, IVertex
     where TIndex : unmanaged, INumberBase<TIndex>
 {
+    private static readonly ImmutableArray<SubmeshData> _empty = [];
+
     public required MeshBufferDataDescriptor<TVertex> Vertices { get; init; }
     public required MeshBufferDataDescriptor<TIndex> Indices { get; init; }
     public MeshBufferDataDescriptor<Vector3> Tangents { get; init; }
-    public ReadOnlyMemory<SubmeshData> Submeshes { get; init; }
+    public ImmutableArray<SubmeshData> Submeshes { get; init; } = _empty;
+
+    public MeshDescriptor()
+    {
+    }
 }
 
 public readonly record struct SubmeshData
