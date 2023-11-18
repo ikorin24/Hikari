@@ -175,6 +175,7 @@ public readonly struct BindGroupEntry
 
         internal unsafe CH.BindingResource ToNative(PinHandleHolder pins)
         {
+            _buffer.Validate();
             pins.Add(GCHandle.Alloc(_wrap, GCHandleType.Pinned));
             var payload = (CH.BufferBinding*)Unsafe.AsPointer(ref Unsafe.AsRef(in _wrap.Native));
             return CH.BindingResource.Buffer(payload);
