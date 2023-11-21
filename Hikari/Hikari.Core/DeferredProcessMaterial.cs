@@ -1,51 +1,79 @@
 ﻿#nullable enable
 using Hikari.Internal;
 using System;
+using System.Collections.Immutable;
 
 namespace Hikari;
 
-public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, DeferredProcessShader>
+public sealed class DeferredProcessMaterial : Material
 {
-    private MaterialPassData _pass0;
+    private ImmutableArray<BindGroupData> _pass0BindGroups;
     private DisposableBag? _disposable;
 
-    public override ReadOnlySpan<MaterialPassData> Passes => new ReadOnlySpan<MaterialPassData>(in _pass0);
-
-    private DeferredProcessMaterial(DeferredProcessShader shader, IGBufferProvider gBufferProvider) : base(shader)
+    private DeferredProcessMaterial(Shader shader, IGBufferProvider gBufferProvider) : base(shader)
     {
-        ArgumentNullException.ThrowIfNull(gBufferProvider);
-        _pass0 = CreatePass0BindGroups(Shader, gBufferProvider.GetCurrentGBuffer(), out var disposable);
-        _disposable?.Dispose();
+        _pass0BindGroups = CreatePass0BindGroups(shader, gBufferProvider.GetCurrentGBuffer(), out var disposable);
         _disposable = disposable;
 
         gBufferProvider.GBufferChanged.Subscribe(gBufferProvider =>
         {
-            _pass0 = CreatePass0BindGroups(Shader, gBufferProvider.GetCurrentGBuffer(), out var disposable);
+            _pass0BindGroups = CreatePass0BindGroups(shader, gBufferProvider.GetCurrentGBuffer(), out var disposable);
             _disposable?.Dispose();
             _disposable = disposable;
         }).DisposeOn(Disposed);
     }
 
-    internal static Own<DeferredProcessMaterial> Create(DeferredProcessShader shader, IGBufferProvider gBufferProvider)
+    public override MaterialPassData GetPassData(int passIndex)
     {
-        var material = new DeferredProcessMaterial(shader, gBufferProvider);
-        return CreateOwn(material);
+        return Shader.MaterialPassData[passIndex];
     }
 
-    private static MaterialPassData CreatePass0BindGroups(DeferredProcessShader shader, GBuffer gBuffer, out DisposableBag disposable)
+    public override ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
+    {
+        if(passIndex == 0) {
+            return _pass0BindGroups.AsSpan();
+        }
+        throw new ArgumentOutOfRangeException(nameof(passIndex));
+    }
+
+    //private DeferredProcessMaterial(DeferredProcessShader shader, IGBufferProvider gBufferProvider) : base(shader)
+    //{
+    //    ArgumentNullException.ThrowIfNull(gBufferProvider);
+    //    _pass0 = CreatePass0BindGroups(Shader, gBufferProvider.GetCurrentGBuffer(), out var disposable);
+    //    _disposable?.Dispose();
+    //    _disposable = disposable;
+
+    //    gBufferProvider.GBufferChanged.Subscribe(gBufferProvider =>
+    //    {
+    //        _pass0 = CreatePass0BindGroups(Shader, gBufferProvider.GetCurrentGBuffer(), out var disposable);
+    //        _disposable?.Dispose();
+    //        _disposable = disposable;
+    //    }).DisposeOn(Disposed);
+    //}
+
+    internal static Own<Material> Create(DeferredProcessShader shader, IGBufferProvider gBufferProvider)
+    {
+        ArgumentNullException.ThrowIfNull(gBufferProvider);
+        ArgumentNullException.ThrowIfNull(shader);
+
+        var material = new DeferredProcessMaterial(shader, gBufferProvider);
+        return CreateOwn(material).Cast<Material>();
+    }
+
+    private static ImmutableArray<BindGroupData> CreatePass0BindGroups(Shader shader, GBuffer gBuffer, out DisposableBag disposable)
     {
         var screen = shader.Screen;
+        var passes = shader.MaterialPassData;
         var directionalLight = screen.Lights.DirectionalLight;
         var gTextures = gBuffer.Textures;
         disposable = new DisposableBag();
-        return new MaterialPassData(0,
-        [
+        return [
             new BindGroupData
             {
                 Index = 0,
                 BindGroup = BindGroup.Create(screen, new()
                 {
-                    Layout = shader.Passes[0].Layout.BindGroupLayouts[0],
+                    Layout = passes[0].PipelineLayout.BindGroupLayouts[0],
                     Entries =
                     [
                         BindGroupEntry.Sampler(0, Sampler.Create(screen, new()
@@ -79,7 +107,7 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
                 Index = 3,
                 BindGroup = BindGroup.Create(screen, new()
                 {
-                    Layout = shader.Passes[0].Layout.BindGroupLayouts[3],
+                    Layout = passes[0].PipelineLayout.BindGroupLayouts[3],
                     Entries =
                     [
                         BindGroupEntry.TextureView(0, directionalLight.ShadowMap.View),
@@ -98,6 +126,6 @@ public sealed class DeferredProcessMaterial : Material<DeferredProcessMaterial, 
                     ],
                 }).AddTo(disposable)
             },
-        ]);
+        ];
     }
 }

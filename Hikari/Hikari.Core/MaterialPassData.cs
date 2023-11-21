@@ -1,26 +1,29 @@
 ﻿#nullable enable
-using System;
-using System.Collections.Immutable;
 
 namespace Hikari;
 
 public readonly record struct MaterialPassData
 {
-    private readonly int _index;
-    private readonly ImmutableArray<BindGroupData> _bindGroups;
+    public required int Index { get; init; }
+    public required PassKind PassKind { get; init; }
+    public required int SortOrder { get; init; }
+    public required RenderPipeline Pipeline { get; init; }
+    public required PipelineLayout PipelineLayout { get; init; }
 
-    public int Index => _index;
-    public ReadOnlySpan<BindGroupData> BindGroups => _bindGroups.AsSpan();
+    //public required ImmutableArray<BindGroupData> BindGroups { get; init; }
 
-    public MaterialPassData(int index, ImmutableArray<BindGroupData> bindGroups)
-    {
-        _index = index;
-        _bindGroups = bindGroups;
-    }
+    //public int Index => _index;
+    //public ReadOnlySpan<BindGroupData> BindGroups => _bindGroups.AsSpan();
 
-    public void Deconstruct(out int index, out ReadOnlySpan<BindGroupData> bindGroups)
-    {
-        index = _index;
-        bindGroups = _bindGroups.AsSpan();
-    }
+    //public MaterialPassData(int index, ImmutableArray<BindGroupData> bindGroups)
+    //{
+    //    _index = index;
+    //    _bindGroups = bindGroups;
+    //}
+
+    //public void Deconstruct(out int index, out ReadOnlySpan<BindGroupData> bindGroups)
+    //{
+    //    index = _index;
+    //    bindGroups = _bindGroups.AsSpan();
+    //}
 }

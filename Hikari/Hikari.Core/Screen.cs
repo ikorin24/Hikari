@@ -20,10 +20,11 @@ public sealed class Screen
     private readonly Lights _lights;
     private readonly UITree _uiTree;
     private readonly ObjectStore _objectStore;
-    private readonly ShaderPassList _shaderPasses;
+    private readonly RenderPassScheduler _scheduler;
     private readonly Timing _earlyUpdate;
     private readonly Timing _update;
     private readonly Timing _lateUpdate;
+    private readonly Timing _prepareForRender;
     private GraphicsBackend _backend;
     private bool _initialized;
     private string _title = "";
@@ -68,8 +69,8 @@ public sealed class Screen
     internal BufferSlice InfoBuffer => _info.AsValue().Slice();
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
 
-    internal ShaderPassList ShaderPasses => _shaderPasses;
     internal ObjectStore Store => _objectStore;
+    public RenderPassScheduler Scheduler => _scheduler;
     public UITree UITree => _uiTree;
     public Mouse Mouse => _mouse;
     public Keyboard Keyboard => _keyboard;
@@ -78,6 +79,7 @@ public sealed class Screen
     public Timing EarlyUpdate => _earlyUpdate;
     public Timing Update => _update;
     public Timing LateUpdate => _lateUpdate;
+    public Timing PrepareForRender => _prepareForRender;
 
     public RenderTextureProvider DepthStencil => _depthStencil.AsValue();
 
@@ -160,12 +162,13 @@ public sealed class Screen
         _earlyUpdate = new Timing(this);
         _update = new Timing(this);
         _lateUpdate = new Timing(this);
+        _prepareForRender = new Timing(this);
         _mouse = new Mouse(this);
         _surface = new Surface(this);
         _keyboard = new Keyboard(this);
         _objectStore = new ObjectStore(this);
         _uiTree = new UITree(this);
-        _shaderPasses = new ShaderPassList(this);
+        _scheduler = new RenderPassScheduler(this);
         _info = Buffer.CreateInitData(this, new ScreenInfo
         {
             Size = Vector2u.Zero,
@@ -274,7 +277,7 @@ public sealed class Screen
     {
         Debug.Assert(_state is RunningState.Running or RunningState.CloseRequested);
         var store = _objectStore;
-        var shaderPasses = _shaderPasses;
+        var scheduler = _scheduler;
         _mouse.InitFrame();
 
         if(_frameNum == 0) {
@@ -282,7 +285,6 @@ public sealed class Screen
         }
 
         store.ApplyAdd();
-        shaderPasses.ApplyAdd();
         // ----------------------------
 
         // early update
@@ -315,11 +317,19 @@ public sealed class Screen
             }
         });
 
+        // prepare for render
+        _prepareForRender.DoQueuedEvents();
+        store.UseObjects(static objects =>
+        {
+            foreach(var obj in objects) {
+                obj.InvokePrepareForRender();
+            }
+        });
+
         // render
         _camera.UpdateUniformBuffer();
-        shaderPasses.Execute();
+        scheduler.Execute();
 
-        shaderPasses.ApplyRemove();
         store.ApplyRemove();
 
         // ----------------------------
@@ -373,7 +383,6 @@ public sealed class Screen
     internal Rust.OptionBox<CH.Screen> OnClosed()
     {
         _objectStore.OnClosed();
-        _shaderPasses.OnClosed();
         _closed.Invoke(this);
 
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CH.Screen>.None);

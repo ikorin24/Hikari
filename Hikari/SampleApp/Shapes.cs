@@ -5,7 +5,7 @@ namespace Hikari;
 
 public static class Shapes
 {
-    public static Own<Mesh<Vertex>> Cube(Screen screen, bool useTangent)
+    public static Own<Mesh> Cube(Screen screen, bool useTangent)
     {
         // [indices]
         //             0 ------- 3
@@ -61,8 +61,8 @@ public static class Shapes
         const float c2 = 2f / 3f;
         const float c3 = 1f;
 
-        ReadOnlySpan<Vertex> vertices = stackalloc Vertex[24]
-        {
+        ReadOnlySpan<Vertex> vertices =
+        [
             new Vertex(new(-a, a, -a), new(0, 1, 0), new(b1, c0)),
             new Vertex(new(-a, a, a), new(0, 1, 0), new(b1, c1)),
             new Vertex(new(a, a, a), new(0, 1, 0), new(b2, c1)),
@@ -87,35 +87,35 @@ public static class Shapes
             new Vertex(new(-a, -a, -a), new(0, -1, 0), new(b1, c3)),
             new Vertex(new(a, -a, -a), new(0, -1, 0), new(b2, c3)),
             new Vertex(new(a, -a, a), new(0, -1, 0), new(b2, c2)),
-        };
+        ];
 
 #pragma warning disable IDE0055 // auto code formatting
-        ReadOnlySpan<ushort> indices = stackalloc ushort[36]
-        {
+        ReadOnlySpan<ushort> indices =
+        [
             0, 1, 2, 2, 3, 0,           // up
             4, 5, 6, 6, 7, 4,           // left
             8, 9, 10, 10, 11, 8,        // front
             12, 13, 14, 14, 15, 12,     // right
             16, 17, 18, 18, 19, 16,     // back
             20, 21, 22, 22, 23, 20,     // down
-        };
+        ];
 #pragma warning restore IDE0055 // auto code formatting
         return useTangent ?
             Mesh.CreateWithTangent<Vertex, ushort>(screen, vertices, indices) :
             Mesh.Create<Vertex, ushort>(screen, vertices, indices);
     }
 
-    public static Own<Mesh<Vertex>> Plane(Screen screen, bool useTangent)
+    public static Own<Mesh> Plane(Screen screen, bool useTangent)
     {
         const float A = 0.5f;
-        ReadOnlySpan<Vertex> vertices = stackalloc Vertex[4]
-        {
+        ReadOnlySpan<Vertex> vertices =
+        [
             new Vertex(new(-A, A, 0.0f), new(0, 0, 1), new(0f, 1f)),
             new Vertex(new(-A, -A, 0.0f), new(0, 0, 1), new(0f, 0f)),
             new Vertex(new(A, -A, 0.0f), new(0, 0, 1), new(1f, 0f)),
             new Vertex(new(A, A, 0.0f), new(0, 0, 1), new(1f, 1f)),
-        };
-        ReadOnlySpan<ushort> indices = stackalloc ushort[] { 0, 1, 2, 2, 3, 0 };
+        ];
+        ReadOnlySpan<ushort> indices = [0, 1, 2, 2, 3, 0];
         if(useTangent) {
             return Mesh.CreateWithTangent<Vertex, ushort>(screen, vertices, indices);
         }
@@ -124,13 +124,13 @@ public static class Shapes
         }
     }
 
-    public static Own<Mesh<VertexPosNormal>> RegularIcosahedron(Screen screen)
+    public static Own<Mesh> RegularIcosahedron(Screen screen)
     {
         const float a = 1f;
         const float s = 1.618033988f * a;
 #pragma warning disable IDE0055 // auto code formatting
-        ReadOnlySpan<VertexPosNormal> vertices = stackalloc VertexPosNormal[12]
-        {
+        ReadOnlySpan<VertexPosNormal> vertices =
+        [
             new VertexPosNormal(new(a, s, 0), new()),     // 0
             new VertexPosNormal(new(-a, s, 0), new()),    // 1
             new VertexPosNormal(new(-a, -s, 0), new()),   // 2
@@ -143,9 +143,9 @@ public static class Shapes
             new VertexPosNormal(new(s, 0, -a), new()),    // 9
             new VertexPosNormal(new(-s, 0, -a), new()),   // 10
             new VertexPosNormal(new(-s, 0, a), new()),    // 11
-        };
-        ReadOnlySpan<ushort> indices = stackalloc ushort[60]
-        {
+        ];
+        ReadOnlySpan<ushort> indices =
+        [
             4, 8, 0,
             4, 5, 8,
             4, 11, 5,
@@ -166,7 +166,7 @@ public static class Shapes
             10, 6, 2,
             10, 2, 11,
             2, 5, 11,
-        };
+        ];
 #pragma warning restore IDE0055 // auto code formatting
 
         return Mesh.Create<VertexPosNormal, ushort>(screen, vertices, indices);

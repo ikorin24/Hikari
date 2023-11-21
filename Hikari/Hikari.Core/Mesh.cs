@@ -9,9 +9,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed class Mesh<TVertex>
-    : IScreenManaged
-    where TVertex : unmanaged, IVertex
+public sealed partial class Mesh : IScreenManaged
 {
     private readonly Screen _screen;
     private readonly MeshData _data;
@@ -22,6 +20,7 @@ public sealed class Mesh<TVertex>
     public BufferSlice IndexBuffer => _data.IndexBuffer.AsValue();
     public BufferSlice? TangentBuffer => _data.OptTangentBuffer.TryAsValue(out var buf) ? buf.Slice() : (BufferSlice?)null;
 
+    public ImmutableArray<VertexSlotData> VertexSlots => _data.VertexSlots;
     public ReadOnlySpan<SubmeshData> Submeshes => _submeshes.AsSpan();
 
     public IndexFormat IndexFormat => _data.IndexFormat;
@@ -58,7 +57,83 @@ public sealed class Mesh<TVertex>
         _isReleased = true;
     }
 
-    internal unsafe static Own<Mesh<TVertex>> Create<TIndex>(Screen screen, in MeshDescriptor<TVertex, TIndex> desc)
+    private readonly record struct MeshData
+    {
+        public required Own<Buffer> VertexBuffer { get; init; }
+        public required uint VertexCount { get; init; }
+        public required Own<Buffer> IndexBuffer { get; init; }
+        public required uint IndexCount { get; init; }
+        public required IndexFormat IndexFormat { get; init; }
+        public required Own<Buffer> OptTangentBuffer { get; init; }
+        public required ImmutableArray<VertexSlotData> VertexSlots { get; init; }
+    }
+}
+
+public readonly ref struct MeshDescriptor<TVertex, TIndex>
+    where TVertex : unmanaged, IVertex
+    where TIndex : unmanaged, INumberBase<TIndex>
+{
+    private static readonly ImmutableArray<SubmeshData> _empty = [];
+
+    public required MeshBufferDataDescriptor<TVertex> Vertices { get; init; }
+    public required MeshBufferDataDescriptor<TIndex> Indices { get; init; }
+    public MeshBufferDataDescriptor<Vector3> Tangents { get; init; }
+    public ImmutableArray<SubmeshData> Submeshes { get; init; } = _empty;
+
+    public MeshDescriptor()
+    {
+    }
+}
+
+public readonly record struct SubmeshData
+{
+    public required int VertexOffset { get; init; }
+    public required uint IndexOffset { get; init; }
+    public required uint IndexCount { get; init; }
+
+    [SetsRequiredMembers]
+    public SubmeshData(int vertexOffset, uint indexOffset, uint indexCount)
+    {
+        VertexOffset = vertexOffset;
+        IndexOffset = indexOffset;
+        IndexCount = indexCount;
+    }
+}
+
+public readonly ref struct MeshBufferDataDescriptor<T>
+    where T : unmanaged
+{
+    public static MeshBufferDataDescriptor<T> None => default;
+
+    public required ReadOnlySpanU32<T> Data { get; init; }
+    public required BufferUsages Usages { get; init; }
+}
+
+public readonly record struct VertexSlotData
+{
+    public required uint Slot { get; init; }
+    public required BufferSlice Vertices { get; init; }
+
+    [SetsRequiredMembers]
+    public VertexSlotData(uint slot, BufferSlice vertices)
+    {
+        Slot = slot;
+        Vertices = vertices;
+    }
+
+    public void Deconstruct(out uint slot, out BufferSlice vertices)
+    {
+        slot = Slot;
+        vertices = Vertices;
+    }
+}
+
+partial class Mesh
+{
+    private const BufferUsages DefaultUsages = BufferUsages.Storage | BufferUsages.CopySrc;
+
+    public unsafe static Own<Mesh> Create<TVertex, TIndex>(Screen screen, in MeshDescriptor<TVertex, TIndex> desc)
+        where TVertex : unmanaged, IVertex
         where TIndex : unmanaged, INumberBase<TIndex>
     {
         ArgumentNullException.ThrowIfNull(screen);
@@ -96,6 +171,16 @@ public sealed class Mesh<TVertex>
             IndexCount = desc.Indices.Data.Length,
             IndexFormat = indexFormat,
             OptTangentBuffer = tangentBuffer,
+            VertexSlots = tangentBuffer switch
+            {
+                { IsNone: true } => [
+                    new(0, vertexBuffer.AsValue().Slice()),
+                ],
+                _ => [
+                    new(0, vertexBuffer.AsValue().Slice()),
+                    new(1, tangentBuffer.AsValue().Slice()),
+                ],
+            },
         };
         var submeshes = desc.Submeshes switch
         {
@@ -109,67 +194,11 @@ public sealed class Mesh<TVertex>
             ],
             _ => desc.Submeshes,
         };
-        var mesh = new Mesh<TVertex>(screen, meshData, submeshes);
-        return Own.New(mesh, static x => SafeCast.As<Mesh<TVertex>>(x).Release());
+        var mesh = new Mesh(screen, meshData, submeshes);
+        return Own.New(mesh, static x => SafeCast.As<Mesh>(x).Release());
     }
 
-    private readonly record struct MeshData
-    {
-        public Own<Buffer> VertexBuffer { get; init; }
-        public uint VertexCount { get; init; }
-        public Own<Buffer> IndexBuffer { get; init; }
-        public uint IndexCount { get; init; }
-        public IndexFormat IndexFormat { get; init; }
-        public Own<Buffer> OptTangentBuffer { get; init; }
-    }
-}
-
-public readonly ref struct MeshDescriptor<TVertex, TIndex>
-    where TVertex : unmanaged, IVertex
-    where TIndex : unmanaged, INumberBase<TIndex>
-{
-    private static readonly ImmutableArray<SubmeshData> _empty = [];
-
-    public required MeshBufferDataDescriptor<TVertex> Vertices { get; init; }
-    public required MeshBufferDataDescriptor<TIndex> Indices { get; init; }
-    public MeshBufferDataDescriptor<Vector3> Tangents { get; init; }
-    public ImmutableArray<SubmeshData> Submeshes { get; init; } = _empty;
-
-    public MeshDescriptor()
-    {
-    }
-}
-
-public readonly record struct SubmeshData
-{
-    public required int VertexOffset { get; init; }
-    public required uint IndexOffset { get; init; }
-    public required uint IndexCount { get; init; }
-
-    [SetsRequiredMembers]
-    public SubmeshData(int vertexOffset, uint indexOffset, uint indexCount)
-    {
-        VertexOffset = vertexOffset;
-        IndexOffset = indexOffset;
-        IndexCount = indexCount;
-    }
-}
-
-
-public readonly ref struct MeshBufferDataDescriptor<T>
-    where T : unmanaged
-{
-    public static MeshBufferDataDescriptor<T> None => default;
-
-    public required ReadOnlySpanU32<T> Data { get; init; }
-    public required BufferUsages Usages { get; init; }
-}
-
-public static class Mesh
-{
-    private const BufferUsages DefaultUsages = BufferUsages.Storage | BufferUsages.CopySrc;
-
-    public static Own<Mesh<TVertex>> Create<TVertex, TIndex>(
+    public static Own<Mesh> Create<TVertex, TIndex>(
         Screen screen,
         ReadOnlySpanU32<TVertex> vertices,
         ReadOnlySpanU32<TIndex> indices,
@@ -177,14 +206,14 @@ public static class Mesh
         where TVertex : unmanaged, IVertex
         where TIndex : unmanaged, INumberBase<TIndex>
     {
-        return Mesh<TVertex>.Create(screen, new MeshDescriptor<TVertex, TIndex>
+        return Create(screen, new MeshDescriptor<TVertex, TIndex>
         {
             Vertices = new() { Data = vertices, Usages = usages },
             Indices = new() { Data = indices, Usages = usages },
         });
     }
 
-    public unsafe static Own<Mesh<TVertex>> CreateWithTangent<TVertex, TIndex>(
+    public unsafe static Own<Mesh> CreateWithTangent<TVertex, TIndex>(
         Screen screen,
         ReadOnlySpanU32<TVertex> vertices,
         ReadOnlySpanU32<TIndex> indices,
@@ -197,7 +226,7 @@ public static class Mesh
         try {
             var tangents = new SpanU32<Vector3>(tp, tangentLen);
             MeshHelper.CalcTangent(vertices, indices, tangents);
-            return Mesh<TVertex>.Create(screen, new MeshDescriptor<TVertex, TIndex>
+            return Create(screen, new MeshDescriptor<TVertex, TIndex>
             {
                 Vertices = new() { Data = vertices, Usages = usages },
                 Indices = new() { Data = indices, Usages = usages },
@@ -209,7 +238,7 @@ public static class Mesh
         }
     }
 
-    public static Own<Mesh<TVertex>> CreateWithTangent<TVertex, TIndex>(
+    public static Own<Mesh> CreateWithTangent<TVertex, TIndex>(
         Screen screen,
         ReadOnlySpanU32<TVertex> vertices,
         ReadOnlySpanU32<TIndex> indices,
@@ -218,18 +247,11 @@ public static class Mesh
         where TVertex : unmanaged, IVertex
         where TIndex : unmanaged, INumberBase<TIndex>
     {
-        return Mesh<TVertex>.Create(screen, new MeshDescriptor<TVertex, TIndex>
+        return Create(screen, new MeshDescriptor<TVertex, TIndex>
         {
             Vertices = new() { Data = vertices, Usages = usages },
             Indices = new() { Data = indices, Usages = usages },
             Tangents = new() { Data = tangents, Usages = usages },
         });
-    }
-
-    public static Own<Mesh<TVertex>> Create<TVertex, TIndex>(Screen screen, in MeshDescriptor<TVertex, TIndex> desc)
-        where TVertex : unmanaged, IVertex
-        where TIndex : unmanaged, INumberBase<TIndex>
-    {
-        return Mesh<TVertex>.Create(screen, desc);
     }
 }

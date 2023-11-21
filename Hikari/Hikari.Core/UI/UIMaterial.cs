@@ -1,16 +1,19 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 
 namespace Hikari.UI;
 
-internal abstract class UIMaterial : Material<UIMaterial, UIShader>
+internal abstract class UIMaterial
+    : Material
+//: Material<UIMaterial, UIShader>
 {
     private readonly Own<BindGroup> _bindGroup0;
     private Own<BindGroup> _bindGroup1;
     private Own<BindGroup> _bindGroup2;
     private readonly CachedOwnBuffer<UIShaderSource.BufferData> _buffer;
-    private MaterialPassData _pass0;
+    private ImmutableArray<BindGroupData> _pass0Bindgroups;
 
     private Own<Buffer> _backgroundBuffer;
     private Brush? _background;
@@ -19,7 +22,6 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader>
     private readonly Own<Buffer> _texContentSizeBuffer;
     private Vector2u? _texContentSize;
 
-    public sealed override ReadOnlySpan<MaterialPassData> Passes => new(in _pass0);
     public Texture2D? Texture => _texture.TryAsValue(out var texture) ? texture : null;
 
     protected UIMaterial(
@@ -33,11 +35,12 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader>
         _texture = texture;
         _sampler = sampler;
 
+        var passes = Shader.MaterialPassData;
         _buffer = new(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst);
         _texContentSizeBuffer = Buffer.Create(Screen, (nuint)Unsafe.SizeOf<Vector2u>(), BufferUsages.Uniform | BufferUsages.CopyDst);
         _bindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = shader.Passes[0].Layout.BindGroupLayouts[0],
+            Layout = passes[0].PipelineLayout.BindGroupLayouts[0],
             Entries =
             [
                 BindGroupEntry.Buffer(0, screen.InfoBuffer),
@@ -46,7 +49,7 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader>
         });
         _bindGroup1 = BindGroup.Create(screen, new()
         {
-            Layout = shader.Passes[0].Layout.BindGroupLayouts[1],
+            Layout = passes[0].PipelineLayout.BindGroupLayouts[1],
             Entries =
             [
                 BindGroupEntry.TextureView(0, texture.AsValue().View),
@@ -62,14 +65,18 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader>
         });
     }
 
-    private static MaterialPassData CreatePass0(BindGroup bindGroup0, BindGroup bindGroup1, BindGroup bindGroup2)
+    public sealed override ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
     {
-        return new(0,
-        [
-            new(0, bindGroup0),
-            new(1, bindGroup1),
-            new(2, bindGroup2),
-        ]);
+        return passIndex switch
+        {
+            0 => _pass0Bindgroups.AsSpan(),
+            _ => throw new ArgumentOutOfRangeException(nameof(passIndex)),
+        };
+    }
+
+    public sealed override MaterialPassData GetPassData(int passIndex)
+    {
+        return Shader.MaterialPassData[passIndex];
     }
 
     protected override void Release(bool manualRelease)
@@ -122,13 +129,14 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader>
 
     internal void UpdateTexture(MaybeOwn<Texture2D> texture)
     {
+        var pass0 = Shader.MaterialPassData[0];
         var textureValue = texture.AsValue();
         _texture.Dispose();
         _texture = texture;
         _bindGroup1.Dispose();
         _bindGroup1 = BindGroup.Create(Screen, new()
         {
-            Layout = Shader.Passes[0].Layout.BindGroupLayouts[1],
+            Layout = pass0.PipelineLayout.BindGroupLayouts[1],
             Entries =
             [
                 BindGroupEntry.TextureView(0, textureValue.View),
@@ -136,7 +144,11 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader>
                 BindGroupEntry.Buffer(2, _texContentSizeBuffer.AsValue()),
             ],
         });
-        _pass0 = CreatePass0(_bindGroup0.AsValue(), _bindGroup1.AsValue(), _bindGroup2.AsValue());
+        _pass0Bindgroups = [
+            new(0, _bindGroup0.AsValue()),
+            new(1, _bindGroup1.AsValue()),
+            new(2, _bindGroup2.AsValue()),
+        ];
     }
 
     internal void UpdateTextureContentSize(Vector2u contentSize)
@@ -169,15 +181,20 @@ internal abstract class UIMaterial : Material<UIMaterial, UIShader>
 
     private void SetBindGroup2()
     {
+        var pass0 = Shader.MaterialPassData[0];
         _bindGroup2.Dispose();
         _bindGroup2 = BindGroup.Create(Screen, new()
         {
-            Layout = Shader.Passes[0].Layout.BindGroupLayouts[2],
+            Layout = pass0.PipelineLayout.BindGroupLayouts[2],
             Entries =
             [
                 BindGroupEntry.Buffer(0, _backgroundBuffer.AsValue()),
             ],
         });
-        _pass0 = CreatePass0(_bindGroup0.AsValue(), _bindGroup1.AsValue(), _bindGroup2.AsValue());
+        _pass0Bindgroups = [
+            new(0, _bindGroup0.AsValue()),
+            new(1, _bindGroup1.AsValue()),
+            new(2, _bindGroup2.AsValue()),
+        ];
     }
 }

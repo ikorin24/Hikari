@@ -21,10 +21,14 @@ internal static class TextMaterialHelper
         {
             var material = result.Arg;
             var image = result.Image;
+
+            var uiShader = SafeCast.As<UIShader>(material.Shader);  // TODO: make shader strong typed
+            var emptyTexture = uiShader.EmptyTexture;
+
             if(image.Size.X == 0) {
                 Debug.Assert(image.Size.Y == 0);
-                if(material.Texture != material.Shader.EmptyTexture) {
-                    material.UpdateTexture(material.Shader.EmptyTexture);
+                if(material.Texture != emptyTexture) {
+                    material.UpdateTexture(emptyTexture);
                 }
                 material.UpdateTextureContentSize(Vector2u.One);
             }

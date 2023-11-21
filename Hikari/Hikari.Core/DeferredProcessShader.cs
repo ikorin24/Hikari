@@ -6,7 +6,7 @@ using V = Hikari.VertexSlim;
 
 namespace Hikari;
 
-public sealed class DeferredProcessShader : Shader<DeferredProcessShader, DeferredProcessMaterial>
+public sealed class DeferredProcessShader : Shader
 {
     private static ReadOnlySpan<byte> ShaderSource => """
         struct Vin {
@@ -240,29 +240,30 @@ public sealed class DeferredProcessShader : Shader<DeferredProcessShader, Deferr
                 SortOrder = 2000,
                 LayoutDescriptor = BuildPipelineLayout(screen, out var disposable),
                 PipelineDescriptorFactory = PipelineFactory,
-                RenderPassFactory = new()
-                {
-                    Arg = null,
-                    Factory = static (screen, _) =>
-                    {
-                        return RenderPass.Create(
-                            screen,
-                            new ColorAttachment
-                            {
-                                Target = screen.Surface,
-                                LoadOp = ColorBufferLoadOp.Clear(),
-                            },
-                            new DepthStencilAttachment
-                            {
-                                Target = screen.DepthStencil,
-                                LoadOp = new DepthStencilBufferLoadOp
-                                {
-                                    Depth = DepthBufferLoadOp.Clear(0f),
-                                    Stencil = null,
-                                },
-                            });
-                    }
-                }
+                PassKind = PassKind.Surface,
+                //RenderPassFactory = new()
+                //{
+                //    Arg = null,
+                //    Factory = static (screen, _) =>
+                //    {
+                //        return RenderPass.Create(
+                //            screen,
+                //            new ColorAttachment
+                //            {
+                //                Target = screen.Surface,
+                //                LoadOp = ColorBufferLoadOp.Clear(),
+                //            },
+                //            new DepthStencilAttachment
+                //            {
+                //                Target = screen.DepthStencil,
+                //                LoadOp = new DepthStencilBufferLoadOp
+                //                {
+                //                    Depth = DepthBufferLoadOp.Clear(0f),
+                //                    Stencil = null,
+                //                },
+                //            });
+                //    }
+                //}
             },
         })
     {

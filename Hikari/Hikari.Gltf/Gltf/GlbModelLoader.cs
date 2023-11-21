@@ -194,12 +194,12 @@ public static class GlbModelLoader
         }
     }
 
-    private unsafe static (Own<Mesh<TVertex>>, Own<PbrMaterial>) LoadMeshAndMaterial<TVertex>(in LoaderState state, in MeshPrimitive meshPrimitive)
+    private unsafe static (Own<Mesh>, Own<PbrMaterial>) LoadMeshAndMaterial<TVertex>(in LoaderState state, in MeshPrimitive meshPrimitive)
         where TVertex : unmanaged, IVertex, IVertexPosition, IVertexUV, IVertexNormal
     {
-        return LoadMeshAndMaterial<TVertex, (Own<Mesh<TVertex>>, Own<PbrMaterial>)>(in state, in meshPrimitive, &CreateMeshAndMaterial);
+        return LoadMeshAndMaterial<TVertex, (Own<Mesh>, Own<PbrMaterial>)>(in state, in meshPrimitive, &CreateMeshAndMaterial);
 
-        static (Own<Mesh<TVertex>>, Own<PbrMaterial>) CreateMeshAndMaterial(
+        static (Own<Mesh>, Own<PbrMaterial>) CreateMeshAndMaterial(
             in LoaderState state,
             ReadOnlySpanU32<TVertex> vertices,
             ReadOnlySpanU32<uint> indices,
@@ -466,7 +466,7 @@ public static class GlbModelLoader
     }
 
 
-    private static MaterialData LoadMaterialData(in LoaderState state, in Material material)
+    private static MaterialData LoadMaterialData(in LoaderState state, in Parsing.Material material)
     {
         var textures = state.Gltf.textures;
         var screen = state.Screen;

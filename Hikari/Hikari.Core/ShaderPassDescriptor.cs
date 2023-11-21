@@ -9,16 +9,31 @@ public readonly ref struct ShaderPassDescriptor
     public required PipelineLayoutDescriptor LayoutDescriptor { get; init; }
     public required Func<ShaderModule, PipelineLayout, RenderPipelineDescriptor> PipelineDescriptorFactory { get; init; }
     public required int SortOrder { get; init; }
-    public required RenderPassFactory RenderPassFactory { get; init; }
+    public required PassKind PassKind { get; init; }
 
-    internal ShaderPass CreateShaderPass<_>(Shader shader, int passIndex, Event<_> lifetimeLimit)
+    internal MaterialPassData CreateMaterialPassData<_>(Shader shader, int passIndex, Event<_> lifetimeLimit)
     {
         var screen = shader.Screen;
         var module = ShaderModule.Create(screen, Source).DisposeOn(lifetimeLimit);
         var layout = PipelineLayout.Create(screen, LayoutDescriptor).DisposeOn(lifetimeLimit);
-        var pipeline = RenderPipeline.Create(screen, PipelineDescriptorFactory(module, layout)).DisposeOn(lifetimeLimit);
-        return new ShaderPass(passIndex, this, shader, pipeline, layout, module);
+        return new MaterialPassData
+        {
+            Index = passIndex,
+            PassKind = PassKind,
+            SortOrder = SortOrder,
+            Pipeline = RenderPipeline.Create(screen, PipelineDescriptorFactory(module, layout)).DisposeOn(lifetimeLimit),
+            PipelineLayout = layout,
+        };
     }
+
+    //internal ShaderPass CreateShaderPass<_>(Shader shader, int passIndex, Event<_> lifetimeLimit)
+    //{
+    //    var screen = shader.Screen;
+    //    var module = ShaderModule.Create(screen, Source).DisposeOn(lifetimeLimit);
+    //    var layout = PipelineLayout.Create(screen, LayoutDescriptor).DisposeOn(lifetimeLimit);
+    //    var pipeline = RenderPipeline.Create(screen, PipelineDescriptorFactory(module, layout)).DisposeOn(lifetimeLimit);
+    //    return new ShaderPass(passIndex, this, shader, pipeline, layout, module);
+    //}
 }
 
 public readonly record struct RenderPassFactory

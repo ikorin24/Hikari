@@ -2,7 +2,7 @@
 
 namespace Hikari;
 
-public abstract class PbrShader : Shader<PbrShader, PbrMaterial>
+public abstract class PbrShader : Shader
 {
     protected PbrShader(Screen screen, in ShaderPassDescriptorArray1 passes) : base(screen, passes)
     {

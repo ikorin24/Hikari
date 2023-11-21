@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 
 namespace Hikari.UI;
 
-internal abstract class UIShader : Shader<UIShader, UIMaterial>
+internal abstract class UIShader : Shader
 {
     private static readonly Lazy<byte[]> _defaultShaderSource = new(() =>
     {
@@ -60,29 +60,30 @@ internal abstract class UIShader : Shader<UIShader, UIMaterial>
                 SortOrder = 3000,
                 LayoutDescriptor = PipelineLayoutFactory(screen, out var diposable),
                 PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
-                RenderPassFactory = new()
-                {
-                    Arg = null,
-                    Factory = static (screen, _) =>
-                    {
-                        return RenderPass.Create(
-                            screen,
-                            new ColorAttachment
-                            {
-                                Target = screen.Surface,
-                                LoadOp = ColorBufferLoadOp.Load(),      // TODO: avoid 'load'. it's slow in mobile.
-                            },
-                            new DepthStencilAttachment
-                            {
-                                Target = screen.DepthStencil,
-                                LoadOp = new DepthStencilBufferLoadOp
-                                {
-                                    Depth = DepthBufferLoadOp.Clear(0f),
-                                    Stencil = null,
-                                },
-                            });
-                    }
-                },
+                PassKind = PassKind.Surface,
+                //RenderPassFactory = new()
+                //{
+                //    Arg = null,
+                //    Factory = static (screen, _) =>
+                //    {
+                //        return RenderPass.Create(
+                //            screen,
+                //            new ColorAttachment
+                //            {
+                //                Target = screen.Surface,
+                //                LoadOp = ColorBufferLoadOp.Load(),      // TODO: avoid 'load'. it's slow in mobile.
+                //            },
+                //            new DepthStencilAttachment
+                //            {
+                //                Target = screen.DepthStencil,
+                //                LoadOp = new DepthStencilBufferLoadOp
+                //                {
+                //                    Depth = DepthBufferLoadOp.Clear(0f),
+                //                    Stencil = null,
+                //                },
+                //            });
+                //    }
+                //},
             },
         })
     {

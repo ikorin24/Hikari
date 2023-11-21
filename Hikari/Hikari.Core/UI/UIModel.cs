@@ -5,7 +5,9 @@ using System.Diagnostics;
 
 namespace Hikari.UI;
 
-internal sealed class UIModel : FrameObject<UIModel, VertexSlim, UIShader, UIMaterial>
+internal sealed class UIModel
+    : FrameObject
+//: FrameObject<UIModel, VertexSlim, UIShader, UIMaterial>
 {
     private readonly UIElement _element;
 
@@ -14,49 +16,58 @@ internal sealed class UIModel : FrameObject<UIModel, VertexSlim, UIShader, UIMat
     internal UIModel(UIElement element, UIShader shader)
         : base(
             GetMesh(shader.Screen),
-            shader.CreateMaterial())
+            shader.CreateMaterial().Cast<Material>())
     {
         _element = element;
     }
 
-    protected override void Render(in RenderPass renderPass, ShaderPass shaderPass)
+    protected override void PrepareForRender()
     {
-        switch(shaderPass.Index) {
-            case 0: {
-                var screen = Screen;
-                var screenSize = screen.ClientSize;
-                var scaleFactor = screen.ScaleFactor;
-                var uiProjection = Matrix4.ReversedZ.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
-                _element.UpdateMaterial(screenSize, scaleFactor, uiProjection, 0);
-
-                var mesh = Mesh;
-                var material = Material;
-                renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
-                renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
-                renderPass.SetBindGroups(material.Passes[0].BindGroups);
-                renderPass.DrawIndexed(mesh.IndexCount);
-                return;
-            }
-            default: {
-                Debug.Fail("unreachable");
-                return;
-            }
-        }
+        var screen = Screen;
+        var screenSize = screen.ClientSize;
+        var scaleFactor = screen.ScaleFactor;
+        var uiProjection = Matrix4.ReversedZ.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
+        _element.UpdateMaterial(screenSize, scaleFactor, uiProjection, 0);
     }
 
-    private static Mesh<VertexSlim> GetMesh(Screen screen)
+    //protected override void Render(in RenderPass renderPass, ShaderPass shaderPass)
+    //{
+    //    switch(shaderPass.Index) {
+    //        case 0: {
+    //            var screen = Screen;
+    //            var screenSize = screen.ClientSize;
+    //            var scaleFactor = screen.ScaleFactor;
+    //            var uiProjection = Matrix4.ReversedZ.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
+    //            _element.UpdateMaterial(screenSize, scaleFactor, uiProjection, 0);
+
+    //            var mesh = Mesh;
+    //            var material = Material;
+    //            renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+    //            renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+    //            renderPass.SetBindGroups(material.Passes[0].BindGroups);
+    //            renderPass.DrawIndexed(mesh.IndexCount);
+    //            return;
+    //        }
+    //        default: {
+    //            Debug.Fail("unreachable");
+    //            return;
+    //        }
+    //    }
+    //}
+
+    private static Mesh GetMesh(Screen screen)
     {
         var cache = _cache.GetOrAdd(screen, static screen =>
         {
-            ReadOnlySpan<VertexSlim> vertices = stackalloc VertexSlim[4]
-            {
+            ReadOnlySpan<VertexSlim> vertices =
+            [
                 new VertexSlim(0, 1, 0, 0, 0),
                 new VertexSlim(0, 0, 0, 0, 1),
                 new VertexSlim(1, 0, 0, 1, 1),
                 new VertexSlim(1, 1, 0, 1, 0),
-            };
-            ReadOnlySpan<ushort> indices = stackalloc ushort[6] { 0, 1, 2, 2, 3, 0 };
-            var mesh = Hikari.Mesh.Create<VertexSlim, ushort>(screen, vertices, indices);
+            ];
+            ReadOnlySpan<ushort> indices = [0, 1, 2, 2, 3, 0];
+            var mesh = Mesh.Create<VertexSlim, ushort>(screen, vertices, indices);
             screen.Closed.Subscribe(static screen =>
             {
                 if(_cache.TryRemove(screen, out var cache)) {
@@ -72,11 +83,11 @@ internal sealed class UIModel : FrameObject<UIModel, VertexSlim, UIShader, UIMat
 
     private sealed class MeshCache : IDisposable
     {
-        private Own<Mesh<VertexSlim>> _mesh;
+        private Own<Mesh> _mesh;
 
-        public Mesh<VertexSlim> Mesh => _mesh.AsValue();
+        public Mesh Mesh => _mesh.AsValue();
 
-        public MeshCache(Own<Mesh<VertexSlim>> mesh)
+        public MeshCache(Own<Mesh> mesh)
         {
             _mesh = mesh;
         }
@@ -84,7 +95,7 @@ internal sealed class UIModel : FrameObject<UIModel, VertexSlim, UIShader, UIMat
         public void Dispose()
         {
             _mesh.Dispose();
-            _mesh = Own<Mesh<VertexSlim>>.None;
+            _mesh = Own<Mesh>.None;
         }
     }
 }

@@ -148,7 +148,7 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T : notnul
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private Own<U> CastCore<U>(out bool success) where U : notnull
+    internal Own<U> CastCore<U>(out bool success) where U : notnull
     {
         if(typeof(T) == typeof(U)) {
             // It always succeeds regardless of whether the inner value is None.

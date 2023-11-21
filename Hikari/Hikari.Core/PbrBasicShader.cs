@@ -6,7 +6,7 @@ using V = Hikari.Vertex;
 
 namespace Hikari;
 
-public sealed class PbrBasicShader : PbrShader
+public sealed class PbrBasicShader : PbrShader  // TODO: change PbrShader to Shader
 {
     private static readonly Lazy<ImmutableArray<byte>> _shaderSource = new(() =>
     {
@@ -159,11 +159,12 @@ public sealed class PbrBasicShader : PbrShader
                     LayoutDescriptor = GetShadowLayoutDesc(screen, out var disposable),
                     PipelineDescriptorFactory = GetShadowDescriptor,
                     SortOrder = -1000,
-                    RenderPassFactory = new()
-                    {
-                        Arg = null,
-                        Factory = static (screen, _) => screen.Lights.DirectionalLight.CreateShadowRenderPass(),
-                    },
+                    PassKind = PassKind.ShadowMap,
+                    //RenderPassFactory = new()
+                    //{
+                    //    Arg = null,
+                    //    Factory = static (screen, _) => screen.Lights.DirectionalLight.CreateShadowRenderPass(),
+                    //},
                 },
                 Pass1 = new()
                 {
@@ -171,36 +172,37 @@ public sealed class PbrBasicShader : PbrShader
                     LayoutDescriptor = GetLayoutDesc(screen, out var disposable2),
                     PipelineDescriptorFactory = static (module, layout) => GetDescriptor(module, layout, module.Screen.DepthStencil.Format),
                     SortOrder = 0,
-                    RenderPassFactory = new()
-                    {
-                        Arg = gBufferProvider,
-                        Factory = static (screen, gBufferProvider) =>
-                        {
-                            return RenderPass.Create(
-                                screen,
-                                SafeCast.NotNullAs<IGBufferProvider>(gBufferProvider),
-                                static (colors, gBuffer) =>
-                                {
-                                    var textures = gBuffer.Textures;
-                                    for(int i = 0; i < textures.Length; i++) {
-                                        colors[i] = new ColorAttachment
-                                        {
-                                            Target = textures[i],
-                                            LoadOp = ColorBufferLoadOp.Clear(),
-                                        };
-                                    }
-                                },
-                                new DepthStencilAttachment
-                                {
-                                    Target = screen.DepthStencil,
-                                    LoadOp = new DepthStencilBufferLoadOp
-                                    {
-                                        Depth = DepthBufferLoadOp.Clear(0f),
-                                        Stencil = null,
-                                    },
-                                });
-                        }
-                    }
+                    PassKind = PassKind.GBuffer,
+                    //RenderPassFactory = new()
+                    //{
+                    //    Arg = gBufferProvider,
+                    //    Factory = static (screen, gBufferProvider) =>
+                    //    {
+                    //        return RenderPass.Create(
+                    //            screen,
+                    //            SafeCast.NotNullAs<IGBufferProvider>(gBufferProvider),
+                    //            static (colors, gBuffer) =>
+                    //            {
+                    //                var textures = gBuffer.Textures;
+                    //                for(int i = 0; i < textures.Length; i++) {
+                    //                    colors[i] = new ColorAttachment
+                    //                    {
+                    //                        Target = textures[i],
+                    //                        LoadOp = ColorBufferLoadOp.Clear(),
+                    //                    };
+                    //                }
+                    //            },
+                    //            new DepthStencilAttachment
+                    //            {
+                    //                Target = screen.DepthStencil,
+                    //                LoadOp = new DepthStencilBufferLoadOp
+                    //                {
+                    //                    Depth = DepthBufferLoadOp.Clear(0f),
+                    //                    Stencil = null,
+                    //                },
+                    //            });
+                    //    }
+                    //}
                 },
             })
     {

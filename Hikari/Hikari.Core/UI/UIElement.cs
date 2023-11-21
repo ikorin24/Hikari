@@ -333,30 +333,52 @@ public abstract class UIElement : IToJson, IReactive
         var shader = tree.GetRegisteredShader(GetType());
         var model = new UIModel(this, shader);
         model.Alive
-            .Subscribe(static model => model.Element._modelAlive.Invoke(model))
+            .Subscribe(static self =>
+            {
+                var model = SafeCast.As<UIModel>(self);
+                model.Element._modelAlive.Invoke(model);
+            })
             .AddTo(model.Subscriptions);
         model.EarlyUpdate
-            .Subscribe(static model => model.Element._modelEarlyUpdate.Invoke(model))
+            .Subscribe(static self =>
+            {
+                var model = SafeCast.As<UIModel>(self);
+                model.Element._modelEarlyUpdate.Invoke(model);
+            })
             .AddTo(model.Subscriptions);
         model.Update
-            .Subscribe(static model => model.Element._modelUpdate.Invoke(model))
+            .Subscribe(static self =>
+            {
+                var model = SafeCast.As<UIModel>(self);
+                model.Element._modelUpdate.Invoke(model);
+            })
             .AddTo(model.Subscriptions);
         model.LateUpdate
-            .Subscribe(static model => model.Element._modelLateUpdate.Invoke(model))
+            .Subscribe(static self =>
+            {
+                var model = SafeCast.As<UIModel>(self);
+                model.Element._modelLateUpdate.Invoke(model);
+            })
             .AddTo(model.Subscriptions);
         model.Terminated
-            .Subscribe(static model => model.Element._modelTerminated.Invoke(model))
+            .Subscribe(static self =>
+            {
+                var model = SafeCast.As<UIModel>(self);
+                model.Element._modelTerminated.Invoke(model);
+            })
             .AddTo(model.Subscriptions);
         model.Dead
-            .Subscribe(static model =>
+            .Subscribe(static self =>
             {
+                var model = SafeCast.As<UIModel>(self);
                 model.Element._modelDead.Invoke(model);
                 model.Element._modelSubscriptions.Dispose();
             })
             .AddTo(model.Subscriptions);
 
-        model.Terminated.Subscribe(static model =>
+        model.Terminated.Subscribe(static self =>
         {
+            var model = SafeCast.As<UIModel>(self);
             var element = model.Element;
             foreach(var child in element.Children) {
                 child.Remove();
@@ -586,7 +608,7 @@ public abstract class UIElement : IToJson, IReactive
 
         var polygonRect = cache.Layout.Rect.GetMargedRect(shadowRect);
 
-        var depth = float.Max(0, 1f - (float)index / 100000f);
+        var depth = float.Max(0, 1f - (float)index / 100000f);  // TODO:
         var modelOrigin = new Vector3
         {
             // origin is bottom-left of rect because clip space is bottom-left based
@@ -601,7 +623,9 @@ public abstract class UIElement : IToJson, IReactive
                 new Vector4(0, polygonRect.Size.Y, 0, 0),
                 new Vector4(0, 0, 1, 0),
                 new Vector4(0, 0, 0, 1));
-        model.Material.UpdateMaterial(this, cache, uiProjection * modelMatrix, scaleFactor);
+
+        var material = SafeCast.As<UIMaterial>(model.Material);     // TODO: make material strong typed
+        material.UpdateMaterial(this, cache, uiProjection * modelMatrix, scaleFactor);
     }
 }
 

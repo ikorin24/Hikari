@@ -1,10 +1,12 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader>
+public sealed partial class PbrMaterial : Material
+//: Material<PbrMaterial, PbrShader>
 {
     private readonly MaybeOwn<Texture2D> _albedo;
     private readonly MaybeOwn<Texture2D> _metallicRoughness;
@@ -17,7 +19,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader>
     private readonly Own<BindGroup> _bindGroup0;
     private readonly BindGroup _bindGroup1;
     private readonly Own<BindGroup> _shadowBindGroup0;
-    private readonly MaterialPassData[] _passes;
+    private readonly ImmutableArray<ImmutableArray<BindGroupData>> _passBindGroups;
 
     public Texture2D Albedo => _albedo.AsValue();
     public Texture2D MetallicRoughness => _metallicRoughness.AsValue();
@@ -26,8 +28,6 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader>
     public Sampler AlbedoSampler => _albedoSampler.AsValue();
     public Sampler MetallicRoughnessSampler => _metallicRoughnessSampler.AsValue();
     public Sampler NormalSampler => _normalSampler.AsValue();
-
-    public override ReadOnlySpan<MaterialPassData> Passes => _passes;
 
     private PbrMaterial(
         PbrShader shader,
@@ -52,17 +52,21 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader>
         _bindGroup0 = bindGroup0;
         _bindGroup1 = Screen.Camera.CameraDataBindGroup;
         _shadowBindGroup0 = shadowBindGroup0;
-        _passes =
-        [
-            new(0,
-            [
-                new(0, shadowBindGroup0.AsValue()),
-            ]),
-            new(1,
-            [
-                new(0, _bindGroup0.AsValue()),
-                new(1, _bindGroup1),
-            ]),
+        //_passes =
+        //[
+        //    new(0,
+        //    [
+        //        new(0, shadowBindGroup0.AsValue()),
+        //    ]),
+        //    new(1,
+        //    [
+        //        new(0, _bindGroup0.AsValue()),
+        //        new(1, _bindGroup1),
+        //    ]),
+        //];
+        _passBindGroups = [
+            [new(0, shadowBindGroup0.AsValue())],
+            [new(0, _bindGroup0.AsValue()), new(1, _bindGroup1)],
         ];
     }
 
@@ -73,6 +77,16 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader>
         _metallicRoughness.Validate();
         _normal.Validate();
         _bindGroup1.Validate();
+    }
+
+    public override ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
+    {
+        return _passBindGroups[passIndex].AsSpan();
+    }
+
+    public override MaterialPassData GetPassData(int passIndex)
+    {
+        return Shader.MaterialPassData[passIndex];
     }
 
     protected override void Release(bool manualRelease)
@@ -132,11 +146,12 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader>
         normalSampler.ThrowArgumentExceptionIfNone();
 
         var screen = shader.Screen;
+        var passes = shader.MaterialPassData;
         var lights = screen.Lights;
         var uniformBuffer = new TypedOwnBuffer<UniformValue>(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
         var bindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = shader.Passes[1].Layout.BindGroupLayouts[0],
+            Layout = passes[1].PipelineLayout.BindGroupLayouts[0],
             Entries =
             [
                 BindGroupEntry.Buffer(0, uniformBuffer),
@@ -151,7 +166,7 @@ public sealed partial class PbrMaterial : Material<PbrMaterial, PbrShader>
 
         var shadowBindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = shader.Passes[0].Layout.BindGroupLayouts[0],
+            Layout = passes[0].PipelineLayout.BindGroupLayouts[0],
             Entries =
             [
                 BindGroupEntry.Buffer(0, uniformBuffer),

@@ -33,9 +33,8 @@ internal class Program
 
     private static void OnInitialized(Screen screen)
     {
-        screen.Title = "sample";
-
         var app = App.BuildPipelines(screen);
+        screen.Title = "sample";
 
         //screen.UITree.RenderRoot($$"""
         //{
@@ -44,6 +43,19 @@ internal class Program
         //    "Height": "300px"
         //}
         //""");
+        var button = new Button
+        {
+            Width = 1000,
+            Height = 1000,
+            Text = "hoge",
+            Background = Brush.White,
+        };
+        button.Clicked.Subscribe(button =>
+        {
+            Debug.WriteLine("clicked");
+        });
+        screen.UITree.SetRoot(button);
+        return;
 
         var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"D:\private\source\Elffy\src\Sandbox\Resources\AntiqueCamera.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\2CylinderEngine.glb");
@@ -54,11 +66,11 @@ internal class Program
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\CesiumMan.glb");
 
 
-        var tasks = model.GetDescendants().OfType<PbrModel>().Select(m =>
-        {
-            var task = m.Mesh.VertexBuffer.ReadToArray().ContinueWith(x => x.AsSpan().MarshalCast<byte, Vertex>().ToArray());
-            return task;
-        });
+        //var tasks = model.GetDescendants().OfType<PbrModel>().Select(m =>
+        //{
+        //    var task = m.Mesh.VertexBuffer.ReadToArray().ContinueWith(x => x.AsSpan().MarshalCast<byte, Vertex>().ToArray());
+        //    return task;
+        //});
 
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Avocado.glb");
         model.Scale *= 0.2f;

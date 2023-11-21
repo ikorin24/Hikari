@@ -20,6 +20,8 @@ public readonly struct MaybeOwn<T> : IDisposable, IEquatable<MaybeOwn<T>>
         _inner = inner;
     }
 
+    public bool IsOwn() => IsOwn(out _);
+
     public bool IsOwn(out Own<T> own)
     {
         var isShared = ReferenceEquals(_inner._release, MaybeOwn.GetSharedReleaseFunc<T>());
@@ -46,6 +48,30 @@ public readonly struct MaybeOwn<T> : IDisposable, IEquatable<MaybeOwn<T>>
     public T AsValue() => _inner.AsValue();
 
     public bool TryAsValue(out T value) => _inner.TryAsValue(out value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MaybeOwn<U> Cast<U>() where U : notnull
+    {
+        var casted = _inner.CastCore<U>(out var success);
+        if(success) {
+            return casted;
+        }
+        else {
+            throw new InvalidCastException($"cannot cast MaybeOwn<{typeof(T).Name}> to MaybeOwn<{typeof(U).Name}>");
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MaybeOwn<U> CastOrNone<U>() where U : notnull
+    {
+        var casted = _inner.CastCore<U>(out var success);
+        if(success) {
+            return casted;
+        }
+        else {
+            return MaybeOwn<U>.None;
+        }
+    }
 
     public void Dispose() => _inner.Dispose();
 
