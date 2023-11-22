@@ -160,11 +160,6 @@ public sealed class PbrBasicShader : PbrShader  // TODO: change PbrShader to Sha
                     PipelineDescriptorFactory = GetShadowDescriptor,
                     SortOrder = -1000,
                     PassKind = PassKind.ShadowMap,
-                    //RenderPassFactory = new()
-                    //{
-                    //    Arg = null,
-                    //    Factory = static (screen, _) => screen.Lights.DirectionalLight.CreateShadowRenderPass(),
-                    //},
                 },
                 Pass1 = new()
                 {
@@ -173,36 +168,6 @@ public sealed class PbrBasicShader : PbrShader  // TODO: change PbrShader to Sha
                     PipelineDescriptorFactory = static (module, layout) => GetDescriptor(module, layout, module.Screen.DepthStencil.Format),
                     SortOrder = 0,
                     PassKind = PassKind.GBuffer,
-                    //RenderPassFactory = new()
-                    //{
-                    //    Arg = gBufferProvider,
-                    //    Factory = static (screen, gBufferProvider) =>
-                    //    {
-                    //        return RenderPass.Create(
-                    //            screen,
-                    //            SafeCast.NotNullAs<IGBufferProvider>(gBufferProvider),
-                    //            static (colors, gBuffer) =>
-                    //            {
-                    //                var textures = gBuffer.Textures;
-                    //                for(int i = 0; i < textures.Length; i++) {
-                    //                    colors[i] = new ColorAttachment
-                    //                    {
-                    //                        Target = textures[i],
-                    //                        LoadOp = ColorBufferLoadOp.Clear(),
-                    //                    };
-                    //                }
-                    //            },
-                    //            new DepthStencilAttachment
-                    //            {
-                    //                Target = screen.DepthStencil,
-                    //                LoadOp = new DepthStencilBufferLoadOp
-                    //                {
-                    //                    Depth = DepthBufferLoadOp.Clear(0f),
-                    //                    Stencil = null,
-                    //                },
-                    //            });
-                    //    }
-                    //}
                 },
             })
     {

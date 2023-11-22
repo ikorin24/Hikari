@@ -5,9 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace Hikari.UI;
 
-internal abstract class UIMaterial
-    : Material
-//: Material<UIMaterial, UIShader>
+internal abstract class UIMaterial : Material
 {
     private readonly Own<BindGroup> _bindGroup0;
     private Own<BindGroup> _bindGroup1;

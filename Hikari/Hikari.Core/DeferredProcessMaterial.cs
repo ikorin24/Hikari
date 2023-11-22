@@ -30,26 +30,12 @@ public sealed class DeferredProcessMaterial : Material
 
     public override ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
     {
-        if(passIndex == 0) {
-            return _pass0BindGroups.AsSpan();
-        }
-        throw new ArgumentOutOfRangeException(nameof(passIndex));
+        return passIndex switch
+        {
+            0 => _pass0BindGroups.AsSpan(),
+            _ => throw new ArgumentOutOfRangeException(nameof(passIndex))
+        };
     }
-
-    //private DeferredProcessMaterial(DeferredProcessShader shader, IGBufferProvider gBufferProvider) : base(shader)
-    //{
-    //    ArgumentNullException.ThrowIfNull(gBufferProvider);
-    //    _pass0 = CreatePass0BindGroups(Shader, gBufferProvider.GetCurrentGBuffer(), out var disposable);
-    //    _disposable?.Dispose();
-    //    _disposable = disposable;
-
-    //    gBufferProvider.GBufferChanged.Subscribe(gBufferProvider =>
-    //    {
-    //        _pass0 = CreatePass0BindGroups(Shader, gBufferProvider.GetCurrentGBuffer(), out var disposable);
-    //        _disposable?.Dispose();
-    //        _disposable = disposable;
-    //    }).DisposeOn(Disposed);
-    //}
 
     internal static Own<Material> Create(DeferredProcessShader shader, IGBufferProvider gBufferProvider)
     {

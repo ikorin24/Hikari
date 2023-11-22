@@ -2,7 +2,6 @@
 using Hikari.Internal;
 using System;
 using System.Collections.Immutable;
-using V = Hikari.VertexSlim;
 
 namespace Hikari;
 
@@ -241,29 +240,6 @@ public sealed class DeferredProcessShader : Shader
                 LayoutDescriptor = BuildPipelineLayout(screen, out var disposable),
                 PipelineDescriptorFactory = PipelineFactory,
                 PassKind = PassKind.Surface,
-                //RenderPassFactory = new()
-                //{
-                //    Arg = null,
-                //    Factory = static (screen, _) =>
-                //    {
-                //        return RenderPass.Create(
-                //            screen,
-                //            new ColorAttachment
-                //            {
-                //                Target = screen.Surface,
-                //                LoadOp = ColorBufferLoadOp.Clear(),
-                //            },
-                //            new DepthStencilAttachment
-                //            {
-                //                Target = screen.DepthStencil,
-                //                LoadOp = new DepthStencilBufferLoadOp
-                //                {
-                //                    Depth = DepthBufferLoadOp.Clear(0f),
-                //                    Stencil = null,
-                //                },
-                //            });
-                //    }
-                //}
             },
         })
     {
@@ -288,7 +264,7 @@ public sealed class DeferredProcessShader : Shader
                 EntryPoint = "vs_main"u8.ToImmutableArray(),
                 Buffers =
                 [
-                    VertexBufferLayout.FromVertex<V>(
+                    VertexBufferLayout.FromVertex<VertexSlim>(
                     [
                         (0, VertexFieldSemantics.Position),
                         (1, VertexFieldSemantics.UV),

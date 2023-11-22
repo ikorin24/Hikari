@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 namespace Hikari;
 
 public sealed partial class PbrMaterial : Material
-//: Material<PbrMaterial, PbrShader>
 {
     private readonly MaybeOwn<Texture2D> _albedo;
     private readonly MaybeOwn<Texture2D> _metallicRoughness;
@@ -52,18 +51,6 @@ public sealed partial class PbrMaterial : Material
         _bindGroup0 = bindGroup0;
         _bindGroup1 = Screen.Camera.CameraDataBindGroup;
         _shadowBindGroup0 = shadowBindGroup0;
-        //_passes =
-        //[
-        //    new(0,
-        //    [
-        //        new(0, shadowBindGroup0.AsValue()),
-        //    ]),
-        //    new(1,
-        //    [
-        //        new(0, _bindGroup0.AsValue()),
-        //        new(1, _bindGroup1),
-        //    ]),
-        //];
         _passBindGroups = [
             [new(0, shadowBindGroup0.AsValue())],
             [new(0, _bindGroup0.AsValue()), new(1, _bindGroup1)],

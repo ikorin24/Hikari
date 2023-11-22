@@ -25,28 +25,7 @@ public readonly ref struct ShaderPassDescriptor
             PipelineLayout = layout,
         };
     }
-
-    //internal ShaderPass CreateShaderPass<_>(Shader shader, int passIndex, Event<_> lifetimeLimit)
-    //{
-    //    var screen = shader.Screen;
-    //    var module = ShaderModule.Create(screen, Source).DisposeOn(lifetimeLimit);
-    //    var layout = PipelineLayout.Create(screen, LayoutDescriptor).DisposeOn(lifetimeLimit);
-    //    var pipeline = RenderPipeline.Create(screen, PipelineDescriptorFactory(module, layout)).DisposeOn(lifetimeLimit);
-    //    return new ShaderPass(passIndex, this, shader, pipeline, layout, module);
-    //}
 }
-
-public readonly record struct RenderPassFactory
-{
-    public required object? Arg { get; init; }
-    public required RenderPassFunc<object?> Factory { get; init; }
-
-    public OwnRenderPass Invoke(Screen screen)
-    {
-        return Factory(screen, Arg);
-    }
-}
-
 
 public readonly ref struct ShaderPassDescriptorArray1
 {
