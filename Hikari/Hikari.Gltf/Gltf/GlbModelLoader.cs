@@ -14,7 +14,7 @@ namespace Hikari.Gltf;
 
 public static class GlbModelLoader
 {
-    public static ITreeModel LoadGlbFile(PbrBasicShader shader, string filePath, CancellationToken ct = default)
+    public static ITreeModel LoadGlbFile(PbrShader shader, string filePath, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlbFile(filePath, ct);
@@ -27,7 +27,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public static ITreeModel LoadGlb(PbrBasicShader shader, ResourceFile file, CancellationToken ct = default)
+    public static ITreeModel LoadGlb(PbrShader shader, ResourceFile file, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(file, ct);
@@ -40,7 +40,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public static ITreeModel LoadGlb(PbrBasicShader shader, ReadOnlySpan<byte> data, CancellationToken ct = default)
+    public static ITreeModel LoadGlb(PbrShader shader, ReadOnlySpan<byte> data, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(data, ct);
@@ -53,7 +53,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public unsafe static ITreeModel LoadGlb(PbrBasicShader shader, void* data, nuint length, CancellationToken ct = default)
+    public unsafe static ITreeModel LoadGlb(PbrShader shader, void* data, nuint length, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(data, length, ct);
@@ -770,7 +770,7 @@ public static class GlbModelLoader
     {
         public required GlbObject Glb { get; init; }
         public required CancellationToken Ct { get; init; }
-        public required PbrBasicShader Shader { get; init; }
+        public required PbrShader Shader { get; init; }
 
         public Screen Screen => Shader.Screen;
 
