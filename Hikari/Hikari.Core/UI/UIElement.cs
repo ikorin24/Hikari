@@ -608,13 +608,13 @@ public abstract class UIElement : IToJson, IReactive
 
         var polygonRect = cache.Layout.Rect.GetMargedRect(shadowRect);
 
-        var depth = float.Max(0, 1f - (float)index / 100000f);  // TODO:
+        var depth = float.Min(1, index / 100000f);  // TODO:
         var modelOrigin = new Vector3
         {
             // origin is bottom-left of rect because clip space is bottom-left based
             X = polygonRect.Position.X,
             Y = screenSize.Y - polygonRect.Position.Y - polygonRect.Size.Y,
-            Z = -depth,
+            Z = depth,
         };
         var modelMatrix =
             modelOrigin.ToTranslationMatrix4() *

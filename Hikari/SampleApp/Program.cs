@@ -36,26 +36,25 @@ internal class Program
         var app = App.BuildPipelines(screen);
         screen.Title = "sample";
 
-        //screen.UITree.RenderRoot($$"""
+        screen.UITree.RenderRoot($$"""
+        {
+            "@type": {{typeof(Counter)}},
+            "Width": "600px",
+            "Height": "300px"
+        }
+        """);
+        //var button = new Button
         //{
-        //    "@type": {{typeof(Counter)}},
-        //    "Width": "600px",
-        //    "Height": "300px"
-        //}
-        //""");
-        var button = new Button
-        {
-            Width = 1000,
-            Height = 1000,
-            Text = "hoge",
-            Background = Brush.White,
-        };
-        button.Clicked.Subscribe(button =>
-        {
-            Debug.WriteLine("clicked");
-        });
-        screen.UITree.SetRoot(button);
-        return;
+        //    Width = 100,
+        //    Height = 100,
+        //    Text = "hoge",
+        //    Background = Brush.White,
+        //};
+        //button.Clicked.Subscribe(button =>
+        //{
+        //    Debug.WriteLine("clicked");
+        //});
+        //screen.UITree.SetRoot(button);
 
         var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"D:\private\source\Elffy\src\Sandbox\Resources\AntiqueCamera.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\2CylinderEngine.glb");
