@@ -58,11 +58,13 @@ impl Screen {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: *backends,
             dx12_shader_compiler: wgpu::Dx12Compiler::default(),
+            flags: wgpu::InstanceFlags::empty(), // TODO: set flags for debugging
+            gles_minor_version: wgpu::Gles3MinorVersion::default(),
         });
         let surface = unsafe { instance.create_surface(&window)? };
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::HighPerformance,
+                power_preference: wgpu::PowerPreference::None,
                 compatible_surface: Some(&surface),
                 force_fallback_adapter: false,
             })
@@ -101,7 +103,7 @@ impl Screen {
                 .formats
                 .iter()
                 .copied()
-                .filter(|f| f.describe().srgb)
+                .filter(|f| f.is_srgb())
                 .next()
                 .unwrap_or(surface_caps.formats[0]);
 

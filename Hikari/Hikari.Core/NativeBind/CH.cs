@@ -46,6 +46,12 @@ internal static class CH
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public T? GetOrNull()
+        {
+            return _exists ? _value : null;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T Unwrap()
         {
             if(_exists == false) {
@@ -56,24 +62,11 @@ internal static class CH
         }
     }
 
-    internal readonly struct TextureFormatInfo
-    {
-        public readonly Wgpu.Features required_features;
-        public readonly TextureSampleType sample_type;
-        /// <summary>Dimension of a "block" of texels. This is always (1, 1) on uncompressed textures.</summary>
-        public readonly TupleU8U8 block_dimensions;
-        /// <summary>
-        /// Size in bytes of a "block" of texels. This is the size per pixel on uncompressed textures.
-        /// (For example, 4 if format is 'Rgba8Unorm')
-        /// </summary>
-        public readonly u8 block_size;
-        public readonly u8 components;
-        public readonly bool srgb;
-        public readonly TextureFormatFeatures guaranteed_format_features;
-    }
-
     [StructLayout(LayoutKind.Sequential)]
     internal record struct TupleU8U8(u8 Value1, u8 Value2);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal record struct TupleU32U32(u32 Value1, u32 Value2);
 
     internal struct TextureFormatFeatures
     {
@@ -140,7 +133,7 @@ internal static class CH
         [EnumMapTo(Hikari.TextureFormat.Bc5RgUnorm)] Bc5RgUnorm = 54,
         [EnumMapTo(Hikari.TextureFormat.Bc5RgSnorm)] Bc5RgSnorm = 55,
         [EnumMapTo(Hikari.TextureFormat.Bc6hRgbUfloat)] Bc6hRgbUfloat = 56,
-        [EnumMapTo(Hikari.TextureFormat.Bc6hRgbSfloat)] Bc6hRgbSfloat = 57,
+        [EnumMapTo(Hikari.TextureFormat.Bc6hRgbFloat)] Bc6hRgbFloat = 57,
         [EnumMapTo(Hikari.TextureFormat.Bc7RgbaUnorm)] Bc7RgbaUnorm = 58,
         [EnumMapTo(Hikari.TextureFormat.Bc7RgbaUnormSrgb)] Bc7RgbaUnormSrgb = 59,
         [EnumMapTo(Hikari.TextureFormat.Etc2Rgb8Unorm)] Etc2Rgb8Unorm = 60,
@@ -529,14 +522,14 @@ internal static class CH
         public required Opt<TextureViewDimension> dimension;
         public required TextureAspect aspect;
         public required u32 base_mip_level;
-        public required u32 mip_level_count;
+        public required Opt<u32> mip_level_count;
         public required u32 base_array_layer;
-        public required u32 array_layer_count;
+        public required Opt<u32> array_layer_count;
 
         public static TextureViewDescriptor Default => default;
     }
 
-    internal enum TextureAspect
+    internal enum TextureAspect : u32
     {
         All = 0,
         StencilOnly = 1,
@@ -554,7 +547,7 @@ internal static class CH
         public required f32 lod_min_clamp;
         public required f32 lod_max_clamp;
         public required Opt<Wgpu.CompareFunction> compare;
-        public u8 anisotropy_clamp;     // Option<NonZeroU8> in Rust
+        public u16 anisotropy_clamp;
         public Opt<SamplerBorderColor> border_color;
     }
 
@@ -886,7 +879,7 @@ internal static class CH
         public required bool multisampled;
     }
 
-    internal enum TextureSampleType
+    internal enum TextureSampleType : u32
     {
         [EnumMapTo(Hikari.TextureSampleType.FloatFilterable)] FloatFilterable = 0,
         [EnumMapTo(Hikari.TextureSampleType.FloatNotFilterable)] FloatNotFilterable = 1,

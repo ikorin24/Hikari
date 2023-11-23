@@ -10,12 +10,11 @@ internal static class TextureHelper
         where T : struct, ITextureDescriptor
     {
         totalByteSize = 0;
-        var formatInfo = desc.Format.TextureFormatInfo();
         var arrayLayerCount = desc.ArrayLayerCount();
         for(uint layer = 0; layer < arrayLayerCount; layer++) {
             for(uint mip = 0; mip < desc.MipLevelCount; mip++) {
                 var mipSize = desc.MipLevelSizeRaw(mip).GetOrThrow();
-                var info = formatInfo.MipInfo(mipSize);
+                var info = desc.Format.MipInfo(mipSize);
                 u32 dataSize = info.BytesPerRow * info.RowCount;
                 mipData[(int)mip] = (MipSize: mipSize, ByteLength: dataSize);
                 totalByteSize += dataSize;

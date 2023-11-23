@@ -552,12 +552,57 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static CH.TextureFormatInfo TextureFormatInfo(
+    public static Wgpu.Features TextureFormatRequiredFeatures(
         this CH.TextureFormat format)
     {
-        CH.TextureFormatInfo info_out = default;
-        hikari_texture_format_info(format, ref info_out).Validate();
-        return info_out;
+        return hikari_texture_format_required_features(format).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static CH.Opt<CH.TextureSampleType> TextureFormatSampleType(
+        this CH.TextureFormat format,
+        CH.Opt<CH.TextureAspect> aspect)
+    {
+        return hikari_texture_format_sample_type(format, aspect).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static CH.TupleU32U32 TextureFormatBlockDimensions(
+        this CH.TextureFormat format)
+    {
+        return hikari_texture_format_block_dimensions(format).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static CH.Opt<u32> TextureFormatBlockSize(
+        this CH.TextureFormat format,
+        CH.Opt<CH.TextureAspect> aspect)
+    {
+        return hikari_texture_format_block_size(format, aspect).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static u8 TextureFormatComponents(
+        this CH.TextureFormat format,
+        CH.TextureAspect aspect)
+    {
+        return hikari_texture_format_components(format, aspect).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TextureFormatIsSrgb(
+        this CH.TextureFormat format)
+    {
+        byte isSrgb = hikari_texture_format_is_srgb(format).Validate();
+        return isSrgb != 0;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static CH.TextureFormatFeatures TextureFormatGuaranteedFormatFeatures(
+        this CH.TextureFormat format,
+        Rust.Ref<CH.Screen> screen)
+    {
+        return hikari_texture_format_guaranteed_format_features(screen, format).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -78,18 +78,16 @@ public readonly struct SamplerDescriptor
 
     public CompareFunction? Compare { get; init; }
 
-    private readonly u8? _anisotropyClamp;
-    public u8? AnisotropyClamp
+    private readonly u16 _anisotropyClamp;
+    public u16 AnisotropyClamp
     {
         get => _anisotropyClamp;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         init
         {
-            _anisotropyClamp = value switch
-            {
-                null or 1 or 2 or 4 or 8 or 16 => value,
-                _ => throw new ArgumentException($"{value} is invalid. Valid values are null, 1, 2, 4, 8, and 16."),
-            };
+            if(_anisotropyClamp == 0) {
+                throw new ArgumentOutOfRangeException(nameof(AnisotropyClamp), "AnisotropyClamp must be greater than 0");
+            }
+            _anisotropyClamp = value;
         }
     }
     public SamplerBorderColor? BorderColor { get; init; }
@@ -98,7 +96,7 @@ public readonly struct SamplerDescriptor
     {
         LodMinClamp = 0;
         LodMaxClamp = f32.MaxValue;
-        AnisotropyClamp = null;
+        _anisotropyClamp = 1;
         BorderColor = null;
         Compare = null;
     }
@@ -116,7 +114,7 @@ public readonly struct SamplerDescriptor
             lod_min_clamp = LodMinClamp,
             lod_max_clamp = LodMaxClamp,
             compare = Compare.ToNative(x => x.MapOrThrow()),
-            anisotropy_clamp = (_anisotropyClamp == null) ? (u8)0 : _anisotropyClamp.Value,
+            anisotropy_clamp = AnisotropyClamp,
             border_color = BorderColor.ToNative(x => x.MapOrThrow()),
         };
     }

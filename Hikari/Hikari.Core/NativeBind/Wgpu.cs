@@ -243,14 +243,14 @@ internal static class Wgpu
     [Flags]
     internal enum TextureFormatFeatureFlags : u32
     {
-        FILTERABLE = 1 << 0,
-        MULTISAMPLE_X2 = 1 << 1,
-        MULTISAMPLE_X4 = 1 << 2,
-        MULTISAMPLE_X8 = 1 << 3,
-        MULTISAMPLE_RESOLVE = 1 << 4,
-        STORAGE_READ_WRITE = 1 << 5,
-        STORAGE_ATOMICS = 1 << 6,
-        BLENDABLE = 1 << 7,
+        [EnumMapTo(Hikari.TextureFormatFeatureFlags.Filterable)] FILTERABLE = 1 << 0,
+        [EnumMapTo(Hikari.TextureFormatFeatureFlags.Multisample_x2)] MULTISAMPLE_X2 = 1 << 1,
+        [EnumMapTo(Hikari.TextureFormatFeatureFlags.Multisample_x4)] MULTISAMPLE_X4 = 1 << 2,
+        [EnumMapTo(Hikari.TextureFormatFeatureFlags.Multisample_x8)] MULTISAMPLE_X8 = 1 << 3,
+        [EnumMapTo(Hikari.TextureFormatFeatureFlags.Multisample_resolve)] MULTISAMPLE_RESOLVE = 1 << 4,
+        [EnumMapTo(Hikari.TextureFormatFeatureFlags.Storage_read_write)] STORAGE_READ_WRITE = 1 << 5,
+        [EnumMapTo(Hikari.TextureFormatFeatureFlags.Storage_atomics)] STORAGE_ATOMICS = 1 << 6,
+        [EnumMapTo(Hikari.TextureFormatFeatureFlags.Blendable)] BLENDABLE = 1 << 7,
     }
 
     internal struct VertexAttribute

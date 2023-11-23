@@ -96,6 +96,8 @@ impl<'tex, 'desc> RenderPassDescriptor<'tex, 'desc> {
             .collect();
         let desc = wgpu::RenderPassDescriptor {
             label: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
             color_attachments: &color_attachments,
             depth_stencil_attachment: self
                 .depth_stencil_attachment
@@ -119,7 +121,7 @@ impl<'tex> RenderPassColorAttachment<'tex> {
             resolve_target: None,
             ops: wgpu::Operations {
                 load: self.init.to_wgpu_type(),
-                store: true,
+                store: wgpu::StoreOp::Store,
             },
         }
     }
@@ -138,11 +140,11 @@ impl<'tex> RenderPassDepthStencilAttachment<'tex> {
             view: self.view,
             depth_ops: self.depth.map_to_option(|x| wgpu::Operations {
                 load: x.to_wgpu_type(),
-                store: true,
+                store: wgpu::StoreOp::Store,
             }),
             stencil_ops: self.stencil.map_to_option(|x| wgpu::Operations {
                 load: x.to_wgpu_type(),
-                store: true,
+                store: wgpu::StoreOp::Store,
             }),
         }
     }
@@ -257,9 +259,9 @@ pub(crate) struct TextureViewDescriptor {
     pub dimension: Opt<TextureViewDimension>,
     pub aspect: TextureAspect,
     pub base_mip_level: u32,
-    pub mip_level_count: u32,
+    pub mip_level_count: Opt<u32>,
     pub base_array_layer: u32,
-    pub array_layer_count: u32,
+    pub array_layer_count: Opt<u32>,
 }
 
 impl TextureViewDescriptor {
@@ -270,9 +272,9 @@ impl TextureViewDescriptor {
             dimension: self.dimension.map_to_option(|x| x.to_wgpu_type()),
             aspect: self.aspect.to_wgpu_type(),
             base_mip_level: self.base_mip_level,
-            mip_level_count: num::NonZeroU32::new(self.mip_level_count),
+            mip_level_count: self.mip_level_count.to_option(),
             base_array_layer: self.base_array_layer,
-            array_layer_count: num::NonZeroU32::new(self.array_layer_count),
+            array_layer_count: self.array_layer_count.to_option(),
         }
     }
 }
@@ -307,7 +309,7 @@ pub(crate) struct SamplerDescriptor {
     pub lod_min_clamp: f32,
     pub lod_max_clamp: f32,
     pub compare: Opt<wgpu::CompareFunction>,
-    pub anisotropy_clamp: u8,
+    pub anisotropy_clamp: u16,
     pub border_color: Opt<SamplerBorderColor>,
 }
 
@@ -324,7 +326,7 @@ impl SamplerDescriptor {
             lod_min_clamp: self.lod_min_clamp,
             lod_max_clamp: self.lod_max_clamp,
             compare: self.compare.to_option(),
-            anisotropy_clamp: num::NonZeroU8::new(self.anisotropy_clamp),
+            anisotropy_clamp: self.anisotropy_clamp,
             border_color: self.border_color.map_to_option(|x| x.to_wgpu_type()),
         }
     }
@@ -719,9 +721,10 @@ pub(crate) struct TextureBindingData {
 }
 
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 #[allow(dead_code)] // because values are from FFI
 pub(crate) enum TextureSampleType {
+    #[default]
     FloatFilterable = 0,
     FloatNotFilterable = 1,
     Depth = 2,
@@ -1017,7 +1020,7 @@ pub(crate) enum TextureFormat {
     /// Also known as BPTC (float).
     ///
     /// [`Features::TEXTURE_COMPRESSION_BC`] must be enabled to use this texture format.
-    Bc6hRgbSfloat = 57,
+    Bc6hRgbFloat = 57,
     /// 4x4 block compressed texture. 16 bytes per block (8 bit/px). Variable sized pallet. 8 bit integer RGBA.
     /// [0, 255] converted to/from float [0, 1] in shader.
     ///
@@ -1144,7 +1147,7 @@ impl TextureFormat {
             Self::Bc5RgUnorm => wgpu::TextureFormat::Bc5RgUnorm,
             Self::Bc5RgSnorm => wgpu::TextureFormat::Bc5RgSnorm,
             Self::Bc6hRgbUfloat => wgpu::TextureFormat::Bc6hRgbUfloat,
-            Self::Bc6hRgbSfloat => wgpu::TextureFormat::Bc6hRgbSfloat,
+            Self::Bc6hRgbFloat => wgpu::TextureFormat::Bc6hRgbFloat,
             Self::Bc7RgbaUnorm => wgpu::TextureFormat::Bc7RgbaUnorm,
             Self::Bc7RgbaUnormSrgb => wgpu::TextureFormat::Bc7RgbaUnormSrgb,
             Self::Etc2Rgb8Unorm => wgpu::TextureFormat::Etc2Rgb8Unorm,
@@ -1229,7 +1232,7 @@ impl TryFrom<wgpu::TextureFormat> for TextureFormat {
             wgpu::TextureFormat::Bc5RgUnorm => Ok(Self::Bc5RgUnorm),
             wgpu::TextureFormat::Bc5RgSnorm => Ok(Self::Bc5RgSnorm),
             wgpu::TextureFormat::Bc6hRgbUfloat => Ok(Self::Bc6hRgbUfloat),
-            wgpu::TextureFormat::Bc6hRgbSfloat => Ok(Self::Bc6hRgbSfloat),
+            wgpu::TextureFormat::Bc6hRgbFloat => Ok(Self::Bc6hRgbFloat),
             wgpu::TextureFormat::Bc7RgbaUnorm => Ok(Self::Bc7RgbaUnorm),
             wgpu::TextureFormat::Bc7RgbaUnormSrgb => Ok(Self::Bc7RgbaUnormSrgb),
             wgpu::TextureFormat::Etc2Rgb8Unorm => Ok(Self::Etc2Rgb8Unorm),
@@ -1312,7 +1315,7 @@ mod tests {
         assert_eq!(A::Bc5RgUnorm.to_wgpu_type(), B::Bc5RgUnorm);
         assert_eq!(A::Bc5RgSnorm.to_wgpu_type(), B::Bc5RgSnorm);
         assert_eq!(A::Bc6hRgbUfloat.to_wgpu_type(), B::Bc6hRgbUfloat);
-        assert_eq!(A::Bc6hRgbSfloat.to_wgpu_type(), B::Bc6hRgbSfloat);
+        assert_eq!(A::Bc6hRgbFloat.to_wgpu_type(), B::Bc6hRgbFloat);
         assert_eq!(A::Bc7RgbaUnorm.to_wgpu_type(), B::Bc7RgbaUnorm);
         assert_eq!(A::Bc7RgbaUnormSrgb.to_wgpu_type(), B::Bc7RgbaUnormSrgb);
         assert_eq!(A::Etc2Rgb8Unorm.to_wgpu_type(), B::Etc2Rgb8Unorm);
@@ -1391,7 +1394,7 @@ mod tests {
         assert_eq!(A::Bc5RgUnorm, B::Bc5RgUnorm.try_into().unwrap());
         assert_eq!(A::Bc5RgSnorm, B::Bc5RgSnorm.try_into().unwrap());
         assert_eq!(A::Bc6hRgbUfloat, B::Bc6hRgbUfloat.try_into().unwrap());
-        assert_eq!(A::Bc6hRgbSfloat, B::Bc6hRgbSfloat.try_into().unwrap());
+        assert_eq!(A::Bc6hRgbFloat, B::Bc6hRgbFloat.try_into().unwrap());
         assert_eq!(A::Bc7RgbaUnorm, B::Bc7RgbaUnorm.try_into().unwrap());
         assert_eq!(A::Bc7RgbaUnormSrgb, B::Bc7RgbaUnormSrgb.try_into().unwrap());
         assert_eq!(A::Etc2Rgb8Unorm, B::Etc2Rgb8Unorm.try_into().unwrap());
@@ -1409,39 +1412,23 @@ mod tests {
 }
 
 #[repr(C)]
-pub(crate) struct TextureFormatInfo {
-    pub required_features: wgpu::Features,
-    pub sample_type: TextureSampleType,
-    pub block_dimensions: Tuple<u8, u8>,
-    pub block_size: u8,
-    pub components: u8,
-    pub srgb: bool,
-    pub guaranteed_format_features: TextureFormatFeatures,
-}
-
-impl From<wgpu_types::TextureFormatInfo> for TextureFormatInfo {
-    fn from(value: wgpu_types::TextureFormatInfo) -> Self {
-        Self {
-            required_features: value.required_features,
-            sample_type: value.sample_type.into(),
-            block_dimensions: value.block_dimensions.into(),
-            block_size: value.block_size,
-            components: value.components,
-            srgb: value.srgb,
-            guaranteed_format_features: value.guaranteed_format_features.into(),
-        }
-    }
-}
-
-#[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct TextureFormatFeatures {
     pub allowed_usages: wgpu::TextureUsages,
     pub flags: wgpu::TextureFormatFeatureFlags,
 }
 
-impl From<wgpu_types::TextureFormatFeatures> for TextureFormatFeatures {
-    fn from(value: wgpu_types::TextureFormatFeatures) -> Self {
+impl Default for TextureFormatFeatures {
+    fn default() -> Self {
+        Self {
+            allowed_usages: wgpu::TextureUsages::empty(),
+            flags: wgpu::TextureFormatFeatureFlags::empty(),
+        }
+    }
+}
+
+impl From<wgpu::TextureFormatFeatures> for TextureFormatFeatures {
+    fn from(value: wgpu::TextureFormatFeatures) -> Self {
         Self {
             allowed_usages: value.allowed_usages,
             flags: value.flags,

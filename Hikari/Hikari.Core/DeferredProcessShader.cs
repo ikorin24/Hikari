@@ -119,7 +119,7 @@ public sealed class DeferredProcessShader : Shader
                     p.z);
                 let bias = 0.005 / (f32(cascade + 1u) * 5.0);
 
-                let shadowmap_size: vec2<i32> = textureDimensions(shadowmap, 0);
+                let shadowmap_size: vec2<u32> = textureDimensions(shadowmap, 0);
                 let shadowmap_size_inv: vec2<f32> = vec2<f32>(1.0, 1.0) / vec2<f32>(shadowmap_size);
 
                 let random: vec2<f32> = random_vec2_f32(in.uv);
@@ -214,10 +214,10 @@ public sealed class DeferredProcessShader : Shader
             let K: vec2<u32> = vec2<u32>(0x456789abu, 0x6789ab45u);
 
             var n: vec2<u32> = bitcast<vec2<u32>>(p);
-            n ^= (n.yx << 9u);
-            n ^= (n.yx >> 1u);
+            n ^= (n.yx << vec2<u32>(9u, 9u));
+            n ^= (n.yx >> vec2<u32>(1u, 1u));
             n *= K;
-            n ^= (n.yx << 1u);
+            n ^= (n.yx << vec2<u32>(1u, 1u));
             n *= K;
             return n;
         }

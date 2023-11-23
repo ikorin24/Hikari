@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Hikari.NativeBind;
+using System;
 
 namespace Hikari;
 
@@ -62,7 +63,7 @@ public enum TextureFormat : u32
     [EnumMapTo(CH.TextureFormat.Bc5RgUnorm)] Bc5RgUnorm,
     [EnumMapTo(CH.TextureFormat.Bc5RgSnorm)] Bc5RgSnorm,
     [EnumMapTo(CH.TextureFormat.Bc6hRgbUfloat)] Bc6hRgbUfloat,
-    [EnumMapTo(CH.TextureFormat.Bc6hRgbSfloat)] Bc6hRgbSfloat,
+    [EnumMapTo(CH.TextureFormat.Bc6hRgbFloat)] Bc6hRgbFloat,
     [EnumMapTo(CH.TextureFormat.Bc7RgbaUnorm)] Bc7RgbaUnorm,
     [EnumMapTo(CH.TextureFormat.Bc7RgbaUnormSrgb)] Bc7RgbaUnormSrgb,
     [EnumMapTo(CH.TextureFormat.Etc2Rgb8Unorm)] Etc2Rgb8Unorm,
@@ -79,13 +80,95 @@ public enum TextureFormat : u32
 
 public static class TextureFormatHelper
 {
-    public static TextureFormatInfo TextureFormatInfo(this TextureFormat format)
+    internal static Wgpu.Features RequiredFeatures(this TextureFormat format)
     {
-        var info = format.MapOrThrow().TextureFormatInfo();
-        return new TextureFormatInfo(info);
+        return format.MapOrThrow().TextureFormatRequiredFeatures();
+    }
+
+    public static TextureSampleType? SampleType(this TextureFormat format, TextureAspect? aspect = null)
+    {
+        var aspectNative = aspect switch
+        {
+            TextureAspect a => CH.Opt<CH.TextureAspect>.Some(a.MapOrThrow()),
+            null => CH.Opt<CH.TextureAspect>.None,
+        };
+        var sampleType = format.MapOrThrow().TextureFormatSampleType(aspectNative);
+        return sampleType.TryGetValue(out var value) ? value.MapOrThrow() : null;
+    }
+
+    public static Vector2u BlockDimensions(this TextureFormat format)
+    {
+        var (x, y) = format.MapOrThrow().TextureFormatBlockDimensions();
+        return new Vector2u(x, y);
+    }
+
+    public static bool IsCompressed(this TextureFormat format) => format.BlockDimensions() != new Vector2u(1, 1);
+
+    public static u32? BlockSize(this TextureFormat format, TextureAspect? aspect = null)
+    {
+        var aspectNative = aspect switch
+        {
+            TextureAspect a => CH.Opt<CH.TextureAspect>.Some(a.MapOrThrow()),
+            null => CH.Opt<CH.TextureAspect>.None,
+        };
+        return format.MapOrThrow().TextureFormatBlockSize(aspectNative).GetOrNull();
+    }
+
+    public static u8 ComponentCount(this TextureFormat format, TextureAspect aspect)
+    {
+        return format.MapOrThrow().TextureFormatComponents(aspect.MapOrThrow());
+    }
+
+    public static bool IsSrgb(this TextureFormat format)
+    {
+        return format.MapOrThrow().TextureFormatIsSrgb();
+    }
+
+    public static TextureFormatFeatures GuaranteedFormatFeatures(this TextureFormat format, Screen screen)
+    {
+        var value = format.MapOrThrow().TextureFormatGuaranteedFormatFeatures(screen.AsRefChecked());
+        return new TextureFormatFeatures
+        {
+            AllowedUsages = value.allowed_usages.FlagsMap(),
+            Flags = value.flags.FlagsMap(),
+        };
+    }
+
+    internal static Vector3u PhysicalSize(this TextureFormat format, Vector3u mipSize)
+    {
+        var (blockDimWidth, blockDimHHeight) = format.BlockDimensions();
+        return new Vector3u
+        {
+            X = ((mipSize.X + blockDimWidth - 1) / blockDimWidth) * blockDimWidth,
+            Y = ((mipSize.Y + blockDimHHeight - 1) / blockDimHHeight) * blockDimHHeight,
+            Z = mipSize.Z,
+        };
+    }
+
+    internal static (Vector3u PhysicalSize, u32 BytesPerRow, u32 RowCount) MipInfo(this TextureFormat format, Vector3u mipSize)
+    {
+        if(format.BlockSize() is not u32 blockSize) {
+            throw new ArgumentException($"TextureFormat '{format}' is not available");
+        }
+        var (blockDimWidth, blockDimHHeight) = format.BlockDimensions();
+        var mipPhysicalSize = new Vector3u
+        {
+            X = ((mipSize.X + blockDimWidth - 1) / blockDimWidth) * blockDimWidth,
+            Y = ((mipSize.Y + blockDimHHeight - 1) / blockDimHHeight) * blockDimHHeight,
+            Z = mipSize.Z,
+        };
+
+        u32 widthBlocks = mipPhysicalSize.X / blockDimWidth;
+        u32 bytesPerRow = widthBlocks * blockSize;
+        u32 heightBlocks = mipPhysicalSize.Y / blockDimHHeight;
+        return (
+            PhysicalSize: mipPhysicalSize,
+            BytesPerRow: bytesPerRow,
+            RowCount: heightBlocks * mipSize.Z);
     }
 }
 
+[System.Obsolete("", true)]
 public readonly struct TextureFormatInfo
 {
     public readonly TextureSampleType SampleType { get; init; }
@@ -105,14 +188,14 @@ public readonly struct TextureFormatInfo
 
     public bool IsCompressed => BlockDimensions != new Vector2u(1, 1);
 
-    internal TextureFormatInfo(in CH.TextureFormatInfo info)
-    {
-        SampleType = info.sample_type.MapOrThrow();
-        BlockDimensions = new(info.block_dimensions.Value1, info.block_dimensions.Value2);
-        BlockSize = info.block_size;
-        ComponentCount = info.components;
-        IsSrgb = info.srgb;
-    }
+    //internal TextureFormatInfo(in CH.TextureFormatInfo info)
+    //{
+    //    SampleType = info.sample_type.MapOrThrow();
+    //    BlockDimensions = new(info.block_dimensions.Value1, info.block_dimensions.Value2);
+    //    BlockSize = info.block_size;
+    //    ComponentCount = info.components;
+    //    IsSrgb = info.srgb;
+    //}
 
     private Vector3u PhysicalSize(Vector3u mipSize)
     {

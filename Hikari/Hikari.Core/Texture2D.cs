@@ -258,9 +258,8 @@ public sealed class Texture2D : ITexture2DProvider, IScreenManaged
 
         var mip = 0u;
 
-        var formatInfo = Format.TextureFormatInfo();
         var mipSize = _desc.MipLevelSizeRaw(mip).GetOrThrow();
-        var mipInfo = formatInfo.MipInfo(mipSize);
+        var mipInfo = Format.MipInfo(mipSize);
         var screen = Screen;
         var source = new CH.ImageCopyTexture
         {

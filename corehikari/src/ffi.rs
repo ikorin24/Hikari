@@ -179,8 +179,10 @@ extern "cdecl" fn hikari_destroy_render_pass<'cmd_enc>(
 extern "cdecl" fn hikari_create_compute_pass(
     command_encoder: &mut wgpu::CommandEncoder,
 ) -> ApiBoxResult<wgpu::ComputePass> {
-    let compute_pass =
-        command_encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None });
+    let compute_pass = command_encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+        label: None,
+        timestamp_writes: None,
+    });
     ApiBoxResult::ok(Box::new(compute_pass))
 }
 
@@ -771,16 +773,99 @@ extern "cdecl" fn hikari_destroy_texture(texture: Box<wgpu::Texture>) {
 /// # Thread Safety
 /// ## OK
 /// - called from any thread
-/// ## NG
-/// - called from multiple threads simultaneously with same args with same args
-/// (`info_out` is mutable reference)
+/// - called from multiple threads simultaneously with same args
 #[no_mangle]
-extern "cdecl" fn hikari_texture_format_info(
+extern "cdecl" fn hikari_texture_format_required_features(
     format: TextureFormat,
-    info_out: &mut TextureFormatInfo,
-) -> ApiResult {
-    *info_out = format.to_wgpu_type().describe().into();
-    ApiResult::ok()
+) -> ApiValueResult<wgpu::Features> {
+    let features: wgpu::Features = format.to_wgpu_type().required_features();
+    ApiValueResult::ok(features)
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn hikari_texture_format_sample_type(
+    format: TextureFormat,
+    aspect: Opt<TextureAspect>,
+) -> ApiValueResult<Opt<TextureSampleType>> {
+    let sample_type: Opt<TextureSampleType> = format
+        .to_wgpu_type()
+        .sample_type(aspect.map_to_option(|a| a.to_wgpu_type()))
+        .map(|x| x.into())
+        .into();
+    ApiValueResult::ok(sample_type)
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn hikari_texture_format_block_dimensions(
+    format: TextureFormat,
+) -> ApiValueResult<Tuple<u32, u32>> {
+    let block_dimensions: Tuple<u32, u32> = format.to_wgpu_type().block_dimensions().into();
+    ApiValueResult::ok(block_dimensions)
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn hikari_texture_format_block_size(
+    format: TextureFormat,
+    aspect: Opt<TextureAspect>,
+) -> ApiValueResult<Opt<u32>> {
+    let block_size: Opt<u32> = format
+        .to_wgpu_type()
+        .block_size(aspect.map_to_option(|a| a.to_wgpu_type()))
+        .into();
+    ApiValueResult::ok(block_size)
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn hikari_texture_format_components(
+    format: TextureFormat,
+    aspect: TextureAspect,
+) -> ApiValueResult<u8> {
+    let components: u8 = format
+        .to_wgpu_type()
+        .components_with_aspect(aspect.to_wgpu_type());
+    ApiValueResult::ok(components)
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn hikari_texture_format_is_srgb(format: TextureFormat) -> ApiValueResult<bool> {
+    let is_srgb = format.to_wgpu_type().is_srgb();
+    ApiValueResult::ok(is_srgb)
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn hikari_texture_format_guaranteed_format_features(
+    screen: &Screen,
+    format: TextureFormat,
+) -> ApiValueResult<TextureFormatFeatures> {
+    let features: TextureFormatFeatures = format
+        .to_wgpu_type()
+        .guaranteed_format_features(screen.device.features())
+        .into();
+    ApiValueResult::ok(features)
 }
 
 /// # Thread Safety

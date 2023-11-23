@@ -349,3 +349,29 @@ public enum BufferBindingType
     [EnumMapTo(CH.BufferBindingType.Storage)] Storage = 1,
     [EnumMapTo(CH.BufferBindingType.StorageReadOnly)] StorageReadOnly = 2,
 }
+
+public enum TextureAspect
+{
+    [EnumMapTo(CH.TextureAspect.All)] All = 0,
+    [EnumMapTo(CH.TextureAspect.StencilOnly)] StencilOnly = 1,
+    [EnumMapTo(CH.TextureAspect.DepthOnly)] DepthOnly = 2,
+}
+
+[Flags]
+public enum TextureFormatFeatureFlags : u32
+{
+    [EnumMapTo(Wgpu.TextureFormatFeatureFlags.FILTERABLE)] Filterable = 1 << 0,
+    [EnumMapTo(Wgpu.TextureFormatFeatureFlags.MULTISAMPLE_X2)] Multisample_x2 = 1 << 1,
+    [EnumMapTo(Wgpu.TextureFormatFeatureFlags.MULTISAMPLE_X4)] Multisample_x4 = 1 << 2,
+    [EnumMapTo(Wgpu.TextureFormatFeatureFlags.MULTISAMPLE_X8)] Multisample_x8 = 1 << 3,
+    [EnumMapTo(Wgpu.TextureFormatFeatureFlags.MULTISAMPLE_RESOLVE)] Multisample_resolve = 1 << 4,
+    [EnumMapTo(Wgpu.TextureFormatFeatureFlags.STORAGE_READ_WRITE)] Storage_read_write = 1 << 5,
+    [EnumMapTo(Wgpu.TextureFormatFeatureFlags.STORAGE_ATOMICS)] Storage_atomics = 1 << 6,
+    [EnumMapTo(Wgpu.TextureFormatFeatureFlags.BLENDABLE)] Blendable = 1 << 7,
+}
+
+public readonly record struct TextureFormatFeatures
+{
+    public readonly TextureUsages AllowedUsages { get; init; }
+    public readonly TextureFormatFeatureFlags Flags { get; init; }
+}
