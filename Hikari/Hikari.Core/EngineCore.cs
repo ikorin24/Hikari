@@ -53,7 +53,7 @@ internal unsafe static partial class EngineCore
         return;
 
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static CH.ScreenId OnScreenInit(
             void* screen_,  // Rust.Box<CH.Screen> screen
             CH.ScreenInfo* info
@@ -65,7 +65,7 @@ internal unsafe static partial class EngineCore
             return _config.OnStart(screen, *info);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void OnUnhandledError(byte* message, nuint len)
         {
             try {
@@ -81,74 +81,74 @@ internal unsafe static partial class EngineCore
             }
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void EventCleared(CH.ScreenId id)
         {
             _config.OnCleared(id);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static bool EventRedrawRequested(CH.ScreenId id)
         {
             return _config.OnRedrawRequested(id);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void EventResized(CH.ScreenId id, u32 width, u32 height)
         {
             _config.OnResized(id, width, height);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void EventKeyboard(CH.ScreenId id, Winit.VirtualKeyCode key, bool pressed)
         {
             _config.OnKeyboardInput(id, key, pressed);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void EventCharReceived(CH.ScreenId id, Rune input)
         {
             _config.OnCharReceived(id, input);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void EventMouseButton(CH.ScreenId id, CH.MouseButton button, bool pressed)
         {
             _config.OnMouseButton(id, button, pressed);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void EventIme(CH.ScreenId id, CH.ImeInputData* input)
         {
             _config.OnImeInput(id, in *input);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void EventWheel(CH.ScreenId id, f32 x_delta, f32 y_delta)
         {
             _config.OnWheel(id, x_delta, y_delta);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void EventCursorMoved(CH.ScreenId id, f32 x, f32 y)
         {
             _config.OnCursorMoved(id, x, y);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void EventCursorEnteredLeft(CH.ScreenId id, bool entered)
         {
             _config.OnCursorEnteredLeft(id, entered);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void EventClosing(CH.ScreenId id, bool* mut_cancel)
         {
             ref bool cancel = ref *mut_cancel;
             _config.OnClosing(id, ref cancel);
         }
 
-        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static NativePointer EventClosed(CH.ScreenId id)
         {
             return _config.OnClosed(id).AsPtr();
