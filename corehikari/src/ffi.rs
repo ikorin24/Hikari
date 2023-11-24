@@ -338,12 +338,15 @@ extern "cdecl" fn hikari_write_texture(
     screen: &Screen,
     texture: &ImageCopyTexture,
     data: Slice<u8>,
-    data_layout: &wgpu::ImageDataLayout,
+    data_layout: &ImageDataLayout,
     size: &wgpu::Extent3d,
 ) -> ApiResult {
-    screen
-        .queue
-        .write_texture(texture.to_wgpu_type(), &data, *data_layout, *size);
+    screen.queue.write_texture(
+        texture.to_wgpu_type(),
+        &data,
+        data_layout.to_wgpu_type(),
+        *size,
+    );
     ApiResult::ok()
 }
 
@@ -563,7 +566,7 @@ extern "cdecl" fn hikari_copy_texture_to_buffer(
     source: &ImageCopyTexture,
     copy_size: &wgpu::Extent3d,
     buffer: &wgpu::Buffer,
-    image_layout: &wgpu::ImageDataLayout,
+    image_layout: &ImageDataLayout,
 ) -> ApiResult {
     if !source
         .texture
@@ -598,7 +601,7 @@ extern "cdecl" fn hikari_copy_texture_to_buffer(
         source.to_wgpu_type(),
         wgpu::ImageCopyBuffer {
             buffer,
-            layout: *image_layout,
+            layout: image_layout.to_wgpu_type(),
         },
         *copy_size,
     );

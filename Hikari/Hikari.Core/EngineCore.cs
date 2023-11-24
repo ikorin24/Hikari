@@ -248,7 +248,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Vector2u ScreenGetInnerSize(
         this Rust.Ref<CH.Screen> screen)
     {
@@ -264,7 +263,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void ScreenSetLocation(
         this Rust.Ref<CH.Screen> screen,
         i32 x,
@@ -276,7 +274,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Vector2i ScreenGetLocation(
         this Rust.Ref<CH.Screen> screen,
         MonitorId? monitorId)
@@ -286,7 +283,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static usize MonitorCount(
         this Rust.Ref<CH.Screen> screen)
     {
@@ -294,7 +290,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static usize Monitors(
         this Rust.Ref<CH.Screen> screen,
         Span<CH.MonitorId> buf)
@@ -304,6 +299,7 @@ internal unsafe static partial class EngineCore
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MonitorId? CurrentMonitor(this Rust.Ref<CH.Screen> screen)
     {
         return hikari_current_monitor(screen)
@@ -312,7 +308,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void ScreenSetInnerSize(
         this Rust.Ref<CH.Screen> screen,
         u32 width,
@@ -320,7 +315,6 @@ internal unsafe static partial class EngineCore
         => hikari_screen_set_inner_size(screen, width, height).Validate();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void WriteTexture(
         this Rust.Ref<CH.Screen> screen,
         in CH.ImageCopyTexture texture,
@@ -336,7 +330,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Rust.Box<Wgpu.BindGroupLayout> CreateBindGroupLayout(
         this Rust.Ref<CH.Screen> screen,
         in CH.BindGroupLayoutDescriptor desc)
@@ -347,7 +340,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DestroyBindGroupLayout(
         this Rust.Box<Wgpu.BindGroupLayout> handle)
     {
@@ -356,7 +348,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Rust.Box<Wgpu.BindGroup> CreateBindGroup(
         this Rust.Ref<CH.Screen> screen,
         in CH.BindGroupDescriptor desc)
@@ -367,7 +358,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DestroyBindGroup(
         this Rust.Box<Wgpu.BindGroup> handle)
     {
@@ -376,7 +366,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Rust.Box<Wgpu.PipelineLayout> CreatePipelineLayout(
         this Rust.Ref<CH.Screen> screen,
         in CH.PipelineLayoutDescriptor desc)
@@ -387,7 +376,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DestroyPipelineLayout(
         this Rust.Box<Wgpu.PipelineLayout> handle)
     {
@@ -396,7 +384,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Rust.Box<Wgpu.RenderPipeline> CreateRenderPipeline(
         this Rust.Ref<CH.Screen> screen,
         in CH.RenderPipelineDescriptor desc)
@@ -407,7 +394,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DestroyRenderPipeline(
         this Rust.Box<Wgpu.RenderPipeline> handle)
     {
@@ -416,7 +402,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Rust.Box<Wgpu.ComputePipeline> CreateComputePipeline(
         this Rust.Ref<CH.Screen> screen,
         in CH.ComputePipelineDescriptor desc)
@@ -425,7 +410,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DestroyComputePipeline(
         this Rust.Box<Wgpu.ComputePipeline> handle)
     {
@@ -434,7 +418,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Rust.Box<Wgpu.Buffer> CreateBuffer(
         this Rust.Ref<CH.Screen> screen,
         u64 size,
@@ -442,7 +425,6 @@ internal unsafe static partial class EngineCore
         => hikari_create_buffer(screen, size, usage).Validate();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Rust.Box<Wgpu.Buffer> CreateBufferInit(
         this Rust.Ref<CH.Screen> screen,
         CH.Slice<u8> contents,
@@ -450,7 +432,6 @@ internal unsafe static partial class EngineCore
         => hikari_create_buffer_init(screen, contents, usage).Validate();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DestroyBuffer(
         this Rust.Box<Wgpu.Buffer> handle)
     {
@@ -459,7 +440,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void CopyTextureToBuffer(
         this Rust.Ref<CH.Screen> screen,
         in CH.ImageCopyTexture source,
@@ -471,7 +451,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Rust.Box<Wgpu.Sampler> CreateSampler(
         this Rust.Ref<CH.Screen> screen,
         in CH.SamplerDescriptor desc)
@@ -482,7 +461,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DestroySampler(
         this Rust.Box<Wgpu.Sampler> handle)
     {
@@ -491,7 +469,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    //[DebuggerHidden]
     public static Rust.Box<Wgpu.ShaderModule> CreateShaderModule(
         this Rust.Ref<CH.Screen> screen,
         ReadOnlySpan<byte> shaderSource)
@@ -503,7 +480,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DestroyShaderModule(
         this Rust.Box<Wgpu.ShaderModule> handle)
     {
@@ -512,7 +488,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Rust.Box<Wgpu.Texture> CreateTexture(
     this Rust.Ref<CH.Screen> screen,
     in CH.TextureDescriptor desc)
@@ -531,7 +506,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Rust.Box<Wgpu.Texture> CreateTextureWithData(
         this Rust.Ref<CH.Screen> screen,
         in CH.TextureDescriptor desc,
@@ -543,7 +517,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DestroyTexture(
         this Rust.Box<Wgpu.Texture> handle)
     {
@@ -606,7 +579,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static Rust.Box<Wgpu.TextureView> CreateTextureView(
         this Rust.Ref<Wgpu.Texture> texture,
         in CH.TextureViewDescriptor desc)
@@ -617,7 +589,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DestroyTextureView(
         this Rust.Box<Wgpu.TextureView> handle)
     {
@@ -626,7 +597,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void WriteBuffer(
         this Rust.Ref<CH.Screen> screen,
         Rust.Ref<Wgpu.Buffer> buffer,
@@ -639,7 +609,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void SetPipeline(
         this Rust.MutRef<Wgpu.ComputePass> pass,
         Rust.Ref<Wgpu.ComputePipeline> pipeline)
@@ -650,7 +619,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void SetBindGroup(
         this Rust.MutRef<Wgpu.ComputePass> pass,
         u32 index,
@@ -660,7 +628,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DispatchWorkgroups(
         this Rust.MutRef<Wgpu.ComputePass> pass,
         u32 x,
@@ -671,7 +638,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void SetPipeline(
         this Rust.MutRef<Wgpu.RenderPass> render_pass,
         Rust.Ref<Wgpu.RenderPipeline> render_pipeline)
@@ -681,7 +647,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void SetBindGroup(
         this Rust.MutRef<Wgpu.RenderPass> render_pass,
         u32 index,
@@ -692,7 +657,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void SetVertexBuffer(
         this Rust.MutRef<Wgpu.RenderPass> render_pass,
         u32 slot,
@@ -703,7 +667,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void SetIndexBuffer(
         this Rust.MutRef<Wgpu.RenderPass> render_pass,
         CH.BufferSlice buffer_slice,
@@ -714,7 +677,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void SetViewport(
         this Rust.MutRef<Wgpu.RenderPass> render_pass,
         f32 x,
@@ -728,7 +690,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void Draw(
         Rust.MutRef<Wgpu.RenderPass> render_pass,
         CH.RangeU32 vertices,
@@ -738,7 +699,6 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DebuggerHidden]
     public static void DrawIndexed(
         this Rust.MutRef<Wgpu.RenderPass> render_pass,
         CH.RangeU32 indices,
@@ -791,7 +751,6 @@ internal unsafe static partial class EngineCore
         private readonly bool _success;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DebuggerHidden]
         public void Validate()
         {
             if(_success == false) {
@@ -806,7 +765,6 @@ internal unsafe static partial class EngineCore
         private readonly void* _nativePtr;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //[DebuggerHidden]
         public Rust.Box<T> Validate()
         {
             if(_success == false) {
@@ -825,7 +783,6 @@ internal unsafe static partial class EngineCore
 
         [UnscopedRef]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DebuggerHidden]
         public ref readonly T Validate()
         {
             if(_success == false) {

@@ -254,6 +254,24 @@ impl<'a> ImageCopyTexture<'a> {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct ImageDataLayout {
+    pub offset: u64,
+    pub bytes_per_row: u32,
+    pub rows_per_image: u32,
+}
+
+impl ImageDataLayout {
+    pub fn to_wgpu_type(&self) -> wgpu::ImageDataLayout {
+        wgpu::ImageDataLayout {
+            offset: self.offset,
+            bytes_per_row: Some(self.bytes_per_row),
+            rows_per_image: Some(self.rows_per_image),
+        }
+    }
+}
+
+#[repr(C)]
 pub(crate) struct TextureViewDescriptor {
     pub format: Opt<TextureFormat>,
     pub dimension: Opt<TextureViewDimension>,
