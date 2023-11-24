@@ -624,7 +624,8 @@ public abstract class UIElement : IToJson, IReactive
                 new Vector4(0, 0, 1, 0),
                 new Vector4(0, 0, 0, 1));
 
-        var material = SafeCast.As<UIMaterial>(model.Material);     // TODO: make material strong typed
+        Debug.Assert(model.Renderer.SubrendererCount == 1);
+        var material = model.Renderer.GetMaterial<UIMaterial>(0);
         material.UpdateMaterial(this, cache, uiProjection * modelMatrix, scaleFactor);
     }
 }

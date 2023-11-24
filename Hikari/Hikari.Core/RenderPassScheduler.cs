@@ -59,28 +59,24 @@ public sealed class RenderPassScheduler
         }
     }
 
-    internal void Add(FrameObject obj)
+    internal void Add(Renderer renderer)
     {
-        var mat = obj.Material;
-        var shader = mat.Shader;
-        var passData = shader.MaterialPassData;
-        var mesh = obj.Mesh;
-        for(int i = 0; i < passData.Length; i++) {
-            // It must be copied to local variable
-            var index = i;
-            foreach(var submesh in mesh.Submeshes) {
+        foreach(var (material, mesh, submesh) in renderer.GetSubrenderers()) {
+            var passData = material.Shader.MaterialPassData;
+            for(int i = 0; i < passData.Length; i++) {
+                // It must be copied to local variable
+                var index = i;
                 var data = new RenderData
                 {
                     Kind = passData[i].PassKind,
                     SortOrder = passData[i].SortOrder,
                     Pipeline = passData[i].Pipeline,
-                    BindGroupsProvider = () => mat.GetBindGroups(index),
+                    BindGroupsProvider = () => material.GetBindGroups(index),
                     VertexBuffers = mesh.VertexSlots,
                     Indices = mesh.IndexBuffer,
                     IndexFormat = mesh.IndexFormat,
                     TargetSubmesh = submesh,
                     InstanceCount = 1,
-                    Object = obj,
                 };
                 Add(data);
             }
@@ -161,8 +157,6 @@ internal readonly record struct RenderData
     public required IndexFormat IndexFormat { get; init; }
     public required SubmeshData TargetSubmesh { get; init; }
     public required uint InstanceCount { get; init; }
-
-    public required FrameObject Object { get; init; }   // TODO: remove
 }
 
 internal delegate ReadOnlySpan<BindGroupData> BindGroupsProvider();

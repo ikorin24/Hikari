@@ -6,7 +6,7 @@ namespace Hikari;
 public sealed class DeferredPlane : FrameObject
 {
     public DeferredPlane(DeferredProcessShader shader, IGBufferProvider gBufferProvider)
-        : base(PlaneMesh(shader.Screen), DeferredProcessMaterial.Create(shader, gBufferProvider))
+        : base(PlaneMesh(shader.Screen), [DeferredProcessMaterial.Create(shader, gBufferProvider)])
     {
     }
 

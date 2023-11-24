@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
@@ -35,11 +34,8 @@ public sealed class PbrModel : FrameObject, ITreeModel
     public bool HasChildren => _treeModelImpl.Children.Count > 0;
 
     public PbrModel(MaybeOwn<Mesh> mesh, Own<PbrMaterial> material)
-        : base(mesh, material.Cast<Material>())
+        : base(mesh, [material.Cast<Material>()])
     {
-        if(Mesh.TangentBuffer is not BufferSlice) {
-            throw new ArgumentException("The mesh does not have Tangent vertex buffer", nameof(mesh));
-        }
         _treeModelImpl = new();
     }
 
@@ -57,11 +53,14 @@ public sealed class PbrModel : FrameObject, ITreeModel
 
     protected override void PrepareForRender()
     {
-        var material = SafeCast.As<PbrMaterial>(Material);
-        material.WriteModelUniform(new()
-        {
-            Model = GetModel(out var isUniformScale),
-            IsUniformScale = isUniformScale ? 1 : 0,
-        });
+        var renderer = Renderer;
+        for(int i = 0; i < renderer.SubrendererCount; i++) {
+            var material = renderer.GetMaterial<PbrMaterial>(i);
+            material.WriteModelUniform(new()
+            {
+                Model = GetModel(out var isUniformScale),
+                IsUniformScale = isUniformScale ? 1 : 0,
+            });
+        }
     }
 }

@@ -1,4 +1,6 @@
 ﻿#nullable enable
+using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
 
 namespace Hikari;
@@ -10,8 +12,7 @@ public abstract class FrameObject : IScreenManaged
     private LifeState _state;
     private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
     private bool _isFrozen;
-    private readonly MaybeOwn<Mesh> _mesh;
-    private readonly Own<Material> _material;
+    private readonly Renderer _renderer;
     private EventSource<FrameObject> _update;
     private EventSource<FrameObject> _lateUpdate;
     private EventSource<FrameObject> _earlyUpdate;
@@ -28,8 +29,7 @@ public abstract class FrameObject : IScreenManaged
 
     public Screen Screen => _screen;
     public LifeState LifeState => _state;
-    public Mesh Mesh => _mesh.AsValue();
-    public Material Material => _material.AsValue();
+    public Renderer Renderer => _renderer;
 
     public string? Name
     {
@@ -47,18 +47,16 @@ public abstract class FrameObject : IScreenManaged
 
     public bool IsManaged => LifeState != LifeState.Dead;
 
-    protected FrameObject(MaybeOwn<Mesh> mesh, Own<Material> material)
+    protected FrameObject(MaybeOwn<Mesh> mesh, ImmutableArray<Own<Material>> materials)
     {
-        mesh.ThrowArgumentExceptionIfNone();
-        var meshValue = mesh.AsValue();
-        var screen = meshValue.Screen;
+        var renderer = new Renderer(mesh, materials);
+        var screen = renderer.Screen;
         _screen = screen;
         _state = LifeState.New;
         _isFrozen = false;
-        _mesh = mesh;
-        _material = material;
+        _renderer = renderer;
         screen.Store.Add(this);
-        screen.Scheduler.Add(this);
+        screen.Scheduler.Add(renderer);
     }
 
     public virtual void Validate() => IScreenManaged.DefaultValidate(this);
@@ -122,7 +120,7 @@ public abstract class FrameObject : IScreenManaged
     internal virtual void OnDead()
     {
         _subscriptions.Dispose();
-        _mesh.Dispose();
+        _renderer.DisposeInternal();
         _dead.Invoke(this);
 
         _update.Clear();
