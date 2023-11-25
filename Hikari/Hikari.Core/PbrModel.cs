@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Hikari;
@@ -35,6 +36,12 @@ public sealed class PbrModel : FrameObject, ITreeModel
 
     public PbrModel(MaybeOwn<Mesh> mesh, Own<PbrMaterial> material)
         : base(mesh, [material.Cast<Material>()])
+    {
+        _treeModelImpl = new();
+    }
+
+    public PbrModel(MaybeOwn<Mesh> mesh, ImmutableArray<Own<Material>> materials)
+        : base(mesh, materials)
     {
         _treeModelImpl = new();
     }

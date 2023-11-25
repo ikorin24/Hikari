@@ -33,16 +33,17 @@ internal class Program
 
     private static void OnInitialized(Screen screen)
     {
+        screen.Update.Subscribe(_ => System.Threading.Thread.Sleep(16 * 3));
         var app = App.BuildPipelines(screen);
         screen.Title = "sample";
 
-        screen.UITree.RenderRoot($$"""
-        {
-            "@type": {{typeof(Counter)}},
-            "Width": "600px",
-            "Height": "300px"
-        }
-        """);
+        //screen.UITree.RenderRoot($$"""
+        //{
+        //    "@type": {{typeof(Counter)}},
+        //    "Width": "600px",
+        //    "Height": "300px"
+        //}
+        //""");
         //var button = new Button
         //{
         //    Width = 100,
@@ -56,23 +57,30 @@ internal class Program
         //});
         //screen.UITree.SetRoot(button);
 
-        var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"D:\private\source\Elffy\src\Sandbox\Resources\AntiqueCamera.glb");
+        //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"D:\private\source\Elffy\src\Sandbox\Resources\AntiqueCamera.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\2CylinderEngine.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\BarramundiFish.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\BoomBox.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Buggy.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Fox.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\CesiumMan.glb");
+        var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Avocado.glb");
 
-
-        //var tasks = model.GetDescendants().OfType<PbrModel>().Select(m =>
-        //{
-        //    var task = m.Mesh.VertexBuffer.ReadToArray().ContinueWith(x => x.AsSpan().MarshalCast<byte, Vertex>().ToArray());
-        //    return task;
-        //});
-
-        //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Avocado.glb");
-        model.Scale *= 0.2f;
+        var tasks = model
+            .GetDescendants()
+            .OfType<PbrModel>()
+            .Select(m =>
+            {
+                return m.Renderer.Mesh.VertexBuffer.ReadToArray().ContinueWith(x => x.AsSpan().MarshalCast<byte, Vertex>().ToArray());
+            });
+        UniTask.WhenAll(tasks).ContinueWith(result =>
+        {
+            var vertices = result.SelectMany(v => v).Select(v => v.Position).ToArray();
+            var min = vertices.Aggregate((a, b) => Vector3.Min(a, b));
+            var max = vertices.Aggregate((a, b) => Vector3.Max(a, b));
+            var len = (max - min).Length;
+            model.Scale = new Vector3(1f / len);
+        }).Forget();
 
         //var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
         //var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");

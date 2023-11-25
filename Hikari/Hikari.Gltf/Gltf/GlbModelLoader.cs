@@ -102,8 +102,7 @@ public static class GlbModelLoader
             var tangents = new SpanU32<Vector3>(tangentsBuf.Ptr, vc);
             var indices = new SpanU32<uint>(indicesBuf.Ptr, ic);
 
-            MaterialData matData = default; // TODO: for each submesh
-
+            var materials = new Own<Material>[meshPrimitives.Length];
             uint vPos = 0;
             uint iPos = 0;
             for(int i = 0; i < meshPrimitives.Length; i++) {
@@ -121,9 +120,14 @@ public static class GlbModelLoader
                 };
                 vPos += vConsumed;
                 iPos += iConsumed;
-                if(i == 0) {
-                    matData = materialData; // TODO:
-                }
+                materials[i] = PbrMaterial.Create(
+                    state.Shader,
+                    materialData.Pbr.BaseColor,
+                    materialData.Pbr.BaseColorSampler,
+                    materialData.Pbr.MetallicRoughness,
+                    materialData.Pbr.MetallicRoughnessSampler,
+                    materialData.Normal.Texture,
+                    materialData.Normal.Sampler).Cast<Material>();
             }
             Debug.Assert(vPos == vc);
             Debug.Assert(iPos == ic);
@@ -134,17 +138,8 @@ public static class GlbModelLoader
                 Tangents = new() { Data = tangents, Usages = BufferUsages.Vertex | BufferUsages.CopySrc | BufferUsages.Storage },
                 Submeshes = submeshes.AsImmutableArray(),
             });
-            var material = PbrMaterial.Create(
-                state.Shader,
-                matData.Pbr.BaseColor,
-                matData.Pbr.BaseColorSampler,
-                matData.Pbr.MetallicRoughness,
-                matData.Pbr.MetallicRoughnessSampler,
-                matData.Normal.Texture,
-                matData.Normal.Sampler);
 
-            //var (mesh, material) = LoadMeshAndMaterial<Vertex>(in state, in meshPrimitives[0]);
-            model = new PbrModel(mesh, material)
+            model = new PbrModel(mesh, materials.AsImmutableArray())
             {
                 Name = node.name?.ToString(),
             };
