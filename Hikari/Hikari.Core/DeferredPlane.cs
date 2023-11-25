@@ -3,15 +3,12 @@ using System;
 
 namespace Hikari;
 
-public sealed class DeferredPlane : FrameObject
+public sealed class DeferredPlane
 {
-    public DeferredPlane(DeferredProcessShader shader, IGBufferProvider gBufferProvider)
-        : base(PlaneMesh(shader.Screen), [DeferredProcessMaterial.Create(shader, gBufferProvider)])
+    public static void AddRenderer(DeferredProcessShader shader, IGBufferProvider gBuffer)
     {
-    }
-
-    private static Own<Mesh> PlaneMesh(Screen screen)
-    {
+        var screen = shader.Screen;
+        var material = DeferredProcessMaterial.Create(shader, gBuffer);
         const float Z = 0;
         ReadOnlySpan<VertexSlim> vertices =
         [
@@ -21,11 +18,8 @@ public sealed class DeferredPlane : FrameObject
             new(new(-1, 1, Z), new(0, 0)),
         ];
         ReadOnlySpan<ushort> indices = [0, 1, 2, 2, 3, 0];
-        return Mesh.Create<VertexSlim, ushort>(screen, vertices, indices).Cast<Mesh>();
-    }
-
-    protected override void PrepareForRender()
-    {
-        // nop
+        var mesh = Mesh.Create<VertexSlim, ushort>(screen, vertices, indices).Cast<Mesh>();
+        var renderer = new Renderer(mesh, [material]);
+        screen.Scheduler.Add(renderer);
     }
 }

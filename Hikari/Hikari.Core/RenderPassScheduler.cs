@@ -93,6 +93,11 @@ public sealed class RenderPassScheduler
         list.Sort((a, b) => a.SortOrder - b.SortOrder);
     }
 
+    internal void RemoveRenderer()      // TODO:
+    {
+        throw new NotImplementedException();
+    }
+
     internal void Execute()
     {
         ReadOnlySpan<RenderPassDefinition> passDefs;

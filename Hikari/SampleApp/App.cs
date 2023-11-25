@@ -85,7 +85,7 @@ public sealed class App
             PbrBasicShader = PbrShader.Create(screen, gBuffer).DisposeOn(screen.Closed),
             DeferredProcessShader = DeferredProcessShader.Create(screen).DisposeOn(screen.Closed),
         };
-        _ = new DeferredPlane(app.DeferredProcessShader, gBuffer);
+        DeferredPlane.AddRenderer(app.DeferredProcessShader, gBuffer);
         return app;
     }
 }
