@@ -10,14 +10,11 @@ public sealed class DeferredProcessMaterial : Material
     private ImmutableArray<BindGroupData> _pass0BindGroups;
     private DisposableBag? _disposable;
 
-    private DeferredProcessMaterial(Shader shader, IGBufferProvider gBufferProvider) : base(shader)
+    private DeferredProcessMaterial(Shader shader, IGBufferProvider gBuffer) : base(shader)
     {
-        _pass0BindGroups = CreatePass0BindGroups(shader, gBufferProvider.GetCurrentGBuffer(), out var disposable);
-        _disposable = disposable;
-
-        gBufferProvider.GBufferChanged.Subscribe(gBufferProvider =>
+        gBuffer.ObserveGBuffer(gBuffer =>
         {
-            _pass0BindGroups = CreatePass0BindGroups(shader, gBufferProvider.GetCurrentGBuffer(), out var disposable);
+            _pass0BindGroups = CreatePass0BindGroups(shader, gBuffer, out var disposable);
             _disposable?.Dispose();
             _disposable = disposable;
         }).DisposeOn(Disposed);
