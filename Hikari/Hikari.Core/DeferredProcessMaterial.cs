@@ -12,7 +12,7 @@ public sealed class DeferredProcessMaterial : Material
 
     private DeferredProcessMaterial(Shader shader, IGBufferProvider gBuffer) : base(shader)
     {
-        gBuffer.ObserveGBuffer(gBuffer =>
+        gBuffer.Observe(gBuffer =>
         {
             _pass0BindGroups = CreatePass0BindGroups(shader, gBuffer, out var disposable);
             _disposable?.Dispose();
@@ -34,12 +34,12 @@ public sealed class DeferredProcessMaterial : Material
         };
     }
 
-    internal static Own<Material> Create(DeferredProcessShader shader, IGBufferProvider gBufferProvider)
+    internal static Own<Material> Create(DeferredProcessShader shader, IGBufferProvider gBuffer)
     {
-        ArgumentNullException.ThrowIfNull(gBufferProvider);
+        ArgumentNullException.ThrowIfNull(gBuffer);
         ArgumentNullException.ThrowIfNull(shader);
 
-        var material = new DeferredProcessMaterial(shader, gBufferProvider);
+        var material = new DeferredProcessMaterial(shader, gBuffer);
         return CreateOwn(material).Cast<Material>();
     }
 

@@ -11,7 +11,7 @@ public interface IGBufferProvider
 
 public static class GBufferProviderExtensions
 {
-    public static EventSubscription<IGBufferProvider> ObserveGBuffer(this IGBufferProvider self, Action<GBuffer> observer)
+    public static EventSubscription<IGBufferProvider> Observe(this IGBufferProvider self, Action<GBuffer> observer)
     {
         observer.Invoke(self.GetCurrentGBuffer());
         return self.GBufferChanged.Subscribe(self => observer.Invoke(self.GetCurrentGBuffer()));
