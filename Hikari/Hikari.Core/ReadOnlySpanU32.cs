@@ -10,6 +10,7 @@ namespace Hikari;
 
 [DebuggerDisplay("{DebuggerView,nq}")]
 [DebuggerTypeProxy(typeof(ReadOnlySpanU32<>.DebuggerProxy))]
+[CollectionBuilder(typeof(ReadOnlySpanU32Builder), nameof(ReadOnlySpanU32Builder.Create))]
 public readonly ref struct ReadOnlySpanU32<T> where T : unmanaged
 {
     private readonly ref readonly T _head;
@@ -205,5 +206,13 @@ public readonly ref struct ReadOnlySpanU32<T> where T : unmanaged
 
         [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
         public ReadOnlySequence<T> Items => _items;
+    }
+}
+
+public static class ReadOnlySpanU32Builder
+{
+    public static ReadOnlySpanU32<T> Create<T>(ReadOnlySpan<T> span) where T : unmanaged
+    {
+        return new ReadOnlySpanU32<T>(span);
     }
 }
