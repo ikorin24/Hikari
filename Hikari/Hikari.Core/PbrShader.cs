@@ -130,16 +130,25 @@ public sealed class PbrShader : Shader
                 return v2f;
             }
 
+            struct Fout {
+                @location(0) color: vec2<f32>,
+                @builtin(frag_depth) depth: f32,
+            }
+
             @fragment fn fs_main(
                 v2f: V2F,
-            ) -> @builtin(frag_depth) f32 {
+            ) -> Fout {
                 if(v2f.clip_pos.x < f32(v2f.cascade) * f32(SM_WIDTH)) {
                     discard;
                 }
                 if(v2f.clip_pos.x >= f32(v2f.cascade + 1u) * f32(SM_WIDTH)) {
                     discard;
                 }
-                return v2f.clip_pos.z;
+                var output: Fout;
+                //output.color = vec4<f32>(v2f.clip_pos.z, v2f.clip_pos.z * v2f.clip_pos.z, 0.0, 0.0);
+                output.color = vec2<f32>(v2f.clip_pos.z, v2f.clip_pos.z * v2f.clip_pos.z);
+                output.depth = v2f.clip_pos.z;
+                return output;
             }
             """u8);
         return sb.Utf8String.ToImmutableArray();
@@ -357,7 +366,14 @@ public sealed class PbrShader : Shader
             {
                 Module = module,
                 EntryPoint = "fs_main"u8.ToImmutableArray(),
-                Targets = [],
+                Targets = [
+                    new ColorTargetState
+                    {
+                        Format = TextureFormat.Rg16Float,
+                        Blend = null,
+                        WriteMask = ColorWrites.All,
+                    },
+                ],
             },
             Primitive = new PrimitiveState
             {

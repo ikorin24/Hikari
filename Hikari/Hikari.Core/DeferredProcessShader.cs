@@ -41,8 +41,8 @@ public sealed class DeferredProcessShader : Shader
         @group(1) @binding(0) var<uniform> camera: CameraMatrix;
         @group(2) @binding(0) var<storage, read> dir_light: DirLightData;
         @group(2) @binding(1) var<storage, read> light: LightData;
-        @group(3) @binding(0) var shadowmap: texture_depth_2d;
-        @group(3) @binding(1) var sm_sampler: sampler_comparison;
+        @group(3) @binding(0) var shadowmap: texture_2d<f32>;
+        @group(3) @binding(1) var sm_sampler: sampler;
         @group(3) @binding(2) var<storage, read> lightMatrices: array<mat4x4<f32>>;
         @group(3) @binding(3) var<storage, read> cascadeFars: array<f32>;
 
@@ -138,7 +138,8 @@ public sealed class DeferredProcessShader : Shader
                         shadowmap_pos.x / f32(cascade_count) + f32(cascade) / f32(cascade_count),
                         shadowmap_pos.y,
                     ) + offset * shadowmap_size_inv;
-                    visibility = textureSampleCompareLevel(shadowmap, sm_sampler, shadow_uv, ref_z);
+                    let value = textureSampleLevel(shadowmap, sm_sampler, shadow_uv, 1.0);
+                    visibility = step(value.r, ref_z);
                 }
             }
 
@@ -354,9 +355,9 @@ public sealed class DeferredProcessShader : Shader
                         {
                             ViewDimension = TextureViewDimension.D2,
                             Multisampled = false,
-                            SampleType = TextureSampleType.Depth,
+                            SampleType = TextureSampleType.FloatNotFilterable,
                         }),
-                        BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Comparison),
+                        BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.NonFiltering),
                         BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
                         BindGroupLayoutEntry.Buffer(3, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
                     ],

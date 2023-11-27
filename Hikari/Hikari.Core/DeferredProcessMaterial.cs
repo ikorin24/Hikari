@@ -104,7 +104,6 @@ public sealed class DeferredProcessMaterial : Material
                             MagFilter = FilterMode.Nearest,
                             MinFilter = FilterMode.Nearest,
                             MipmapFilter = FilterMode.Nearest,
-                            Compare = CompareFunction.Greater,
                         }).AddTo(disposable)),
                         BindGroupEntry.Buffer(2, directionalLight.LightMatricesBuffer),
                         BindGroupEntry.Buffer(3, directionalLight.CascadeFarsBuffer),

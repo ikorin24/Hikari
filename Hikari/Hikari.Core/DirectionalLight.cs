@@ -17,6 +17,7 @@ public sealed partial class DirectionalLight : IScreenManaged
     private TypedOwnBuffer<LightMatrixArray> _lightMatrices;
     private TypedOwnBuffer<CascadeFarArray> _cascadeFars;
     private readonly Own<Texture2D> _shadowMap;
+    private readonly Own<Texture2D> _shadowMapD;
     private readonly SubscriptionBag _subscriptionBag = new();
 
     public Screen Screen => _screen;
@@ -42,10 +43,16 @@ public sealed partial class DirectionalLight : IScreenManaged
     {
         return RenderPass.Create(
             Screen,
-            null,
+            [
+                new ColorAttachment
+                {
+                    Target = ShadowMap.View,
+                    LoadOp = ColorBufferLoadOp.Clear(),
+                },
+            ],
             new DepthStencilAttachment
             {
-                Target = ShadowMap.View,
+                Target = _shadowMapD.AsValue().View,
                 LoadOp = new DepthStencilBufferLoadOp
                 {
                     Depth = DepthBufferLoadOp.Clear(0f),
@@ -75,6 +82,14 @@ public sealed partial class DirectionalLight : IScreenManaged
         _shadowMap = Texture2D.Create(screen, new()
         {
             Size = new Vector2u(ShadowMapWidth * CascadeCountConst, ShadowMapHeight),
+            Format = TextureFormat.Rg16Float,
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Usage = TextureUsages.TextureBinding | TextureUsages.RenderAttachment | TextureUsages.CopySrc,
+        });
+        _shadowMapD = Texture2D.Create(screen, new()
+        {
+            Size = new Vector2u(ShadowMapWidth * CascadeCountConst, ShadowMapHeight),
             Format = TextureFormat.Depth32Float,
             MipLevelCount = 1,
             SampleCount = 1,
@@ -90,6 +105,7 @@ public sealed partial class DirectionalLight : IScreenManaged
     {
         _lightData.Dispose();
         _shadowMap.Dispose();
+        _shadowMapD.Dispose();
         _lightMatrices.Dispose();
         _cascadeFars.Dispose();
         _subscriptionBag.Dispose();
