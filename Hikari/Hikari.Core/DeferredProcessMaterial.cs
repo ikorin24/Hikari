@@ -25,6 +25,8 @@ public sealed class DeferredProcessMaterial : Material
         return Shader.MaterialPassData[passIndex];
     }
 
+    public override uint GetInstanceCount(int passIndex) => 1;
+
     public override ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
     {
         return passIndex switch

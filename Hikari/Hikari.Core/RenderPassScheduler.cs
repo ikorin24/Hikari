@@ -65,18 +65,18 @@ public sealed class RenderPassScheduler
             var passData = material.Shader.MaterialPassData;
             for(int i = 0; i < passData.Length; i++) {
                 // It must be copied to local variable
-                var index = i;
+                var passIndex = i;
                 var data = new RenderData
                 {
                     Kind = passData[i].PassKind,
                     SortOrder = passData[i].SortOrder,
                     Pipeline = passData[i].Pipeline,
-                    BindGroupsProvider = () => material.GetBindGroups(index),
+                    BindGroupsProvider = () => material.GetBindGroups(passIndex),
                     VertexBuffers = mesh.VertexSlots,
                     Indices = mesh.IndexBuffer,
                     IndexFormat = mesh.IndexFormat,
                     TargetSubmesh = submesh,
-                    InstanceCount = 1,
+                    InstanceCount = material.GetInstanceCount(passIndex),
                 };
                 Add(data);
             }

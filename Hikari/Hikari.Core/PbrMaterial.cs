@@ -71,6 +71,16 @@ public sealed partial class PbrMaterial : Material
         return _passBindGroups[passIndex].AsSpan();
     }
 
+    public override uint GetInstanceCount(int passIndex)
+    {
+        return passIndex switch
+        {
+            0 => DirectionalLight.CascadeCountConst,
+            1 => 1,
+            _ => throw new ArgumentOutOfRangeException(nameof(passIndex))
+        };
+    }
+
     public override MaterialPassData GetPassData(int passIndex)
     {
         return Shader.MaterialPassData[passIndex];

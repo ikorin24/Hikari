@@ -77,6 +77,8 @@ internal abstract class UIMaterial : Material
         return Shader.MaterialPassData[passIndex];
     }
 
+    public sealed override uint GetInstanceCount(int passIndex) => 1;
+
     protected override void Release(bool manualRelease)
     {
         base.Release(manualRelease);
