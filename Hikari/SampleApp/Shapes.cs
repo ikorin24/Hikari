@@ -110,10 +110,10 @@ public static class Shapes
         const float A = 0.5f;
         ReadOnlySpan<Vertex> vertices =
         [
-            new Vertex(new(-A, A, 0.0f), new(0, 0, 1), new(0f, 1f)),
-            new Vertex(new(-A, -A, 0.0f), new(0, 0, 1), new(0f, 0f)),
-            new Vertex(new(A, -A, 0.0f), new(0, 0, 1), new(1f, 0f)),
-            new Vertex(new(A, A, 0.0f), new(0, 0, 1), new(1f, 1f)),
+            new Vertex(new(-A, A, 0.0f), new(0, 0, 1), new(0f, 0f)),
+            new Vertex(new(-A, -A, 0.0f), new(0, 0, 1), new(0f, 1f)),
+            new Vertex(new(A, -A, 0.0f), new(0, 0, 1), new(1f, 1f)),
+            new Vertex(new(A, A, 0.0f), new(0, 0, 1), new(1f, 0f)),
         ];
         ReadOnlySpan<ushort> indices = [0, 1, 2, 2, 3, 0];
         if(useTangent) {
