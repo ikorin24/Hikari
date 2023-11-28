@@ -1,5 +1,10 @@
 ﻿#nullable enable
+using Cysharp.Threading.Tasks;
+using System.Linq;
 using Hikari;
+using System;
+using System.Runtime.CompilerServices;
+using Hikari.Imaging;
 
 namespace SampleApp;
 
@@ -21,26 +26,7 @@ public sealed class App
         screen.Resized.Subscribe(x => gBuffer.Resize(x.Size));
 
         screen.Scheduler.SetRenderPass([
-            new RenderPassDefinition
-            {
-                Kind = PassKind.ShadowMap,
-                Factory = static (screen, _) => screen.Lights.DirectionalLight.CreateShadowRenderPass(),
-            },
-            //new RenderPassDefinition
-            //{
-            //    Kind = PassKind.Custom("prepare-vsm"),
-            //    Factory = static (screen, _) =>
-            //    {
-            //        return RenderPass.Create(
-            //            screen,
-            //            new ColorAttachment
-            //            {
-            //                Target = screen.Lights.DirectionalLight.ShadowMap,
-            //                LoadOp = ColorBufferLoadOp.Clear(),
-            //            },
-            //            null);
-            //    },
-            //},
+            .. screen.Lights.DirectionalLight.PrepareShadowMapPassDefinitions,
             new RenderPassDefinition
             {
                 Kind = PassKind.GBuffer,
@@ -75,22 +61,48 @@ public sealed class App
             new RenderPassDefinition
             {
                 Kind = PassKind.Surface,
-                Factory = static (screen, _) => RenderPass.Create(
-                    screen,
-                    new ColorAttachment
-                    {
-                        Target = screen.Surface,
-                        LoadOp = ColorBufferLoadOp.Clear(),
-                    },
-                    new DepthStencilAttachment
-                    {
-                        Target = screen.DepthStencil,
-                        LoadOp = new DepthStencilBufferLoadOp
+                Factory = static (screen, _) =>
+                {
+                    //// TODO: remove
+                    //if(screen.Keyboard.IsUp(Keys.Space)) {
+                    //    var shadowMap = screen.Lights.DirectionalLight.ShadowMap;
+                    //    shadowMap
+                    //        .ReadToArray()
+                    //        .ContinueWith(bytes =>
+                    //        {
+                    //            var pixels = bytes.AsSpan().MarshalCast<byte, (Half R, Half G)>().ToArray().Select(x => new Color4((float)x.R, (float)x.G, 0, 1f).ToColorByte()).ToArray().AsSpan();
+                    //            var image = new ImageView(pixels, shadowMap.Width, shadowMap.Height);
+                    //            image.SaveAsPng("shadowmap.png");
+                    //        }).Forget();
+
+                    //    var vsmt = screen.Lights.DirectionalLight.VarianceShadowMapTexture;
+                    //    vsmt
+                    //        .ReadToArray()
+                    //        .ContinueWith(bytes =>
+                    //        {
+                    //            var pixels = bytes.AsSpan().MarshalCast<byte, (Half R, Half G)>().ToArray().Select(x => new Color4((float)x.R, (float)x.G, 0, 1f).ToColorByte()).ToArray().AsSpan();
+                    //            var image = new ImageView(pixels, vsmt.Width, vsmt.Height);
+                    //            image.SaveAsPng("shadowmap_vsm.png");
+                    //        }).Forget();
+                    //}
+
+                    return RenderPass.Create(
+                        screen,
+                        new ColorAttachment
                         {
-                            Depth = DepthBufferLoadOp.Clear(0f),
-                            Stencil = null,
+                            Target = screen.Surface,
+                            LoadOp = ColorBufferLoadOp.Clear(),
                         },
-                    }),
+                        new DepthStencilAttachment
+                        {
+                            Target = screen.DepthStencil,
+                            LoadOp = new DepthStencilBufferLoadOp
+                            {
+                                Depth = DepthBufferLoadOp.Clear(0f),
+                                Stencil = null,
+                            },
+                        });
+                },
             },
         ]);
 

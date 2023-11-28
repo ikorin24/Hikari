@@ -133,7 +133,6 @@ public sealed class PbrShader : Shader
 
             struct Fout {
                 @location(0) color: vec2<f32>,
-                @builtin(frag_depth) depth: f32,
             }
 
             @fragment fn fs_main(
@@ -146,9 +145,7 @@ public sealed class PbrShader : Shader
                     discard;
                 }
                 var output: Fout;
-                //output.color = vec4<f32>(v2f.clip_pos.z, v2f.clip_pos.z * v2f.clip_pos.z, 0.0, 0.0);
                 output.color = vec2<f32>(v2f.clip_pos.z, v2f.clip_pos.z * v2f.clip_pos.z);
-                output.depth = v2f.clip_pos.z;
                 return output;
             }
             """u8);
@@ -387,7 +384,7 @@ public sealed class PbrShader : Shader
                 Targets = [
                     new ColorTargetState
                     {
-                        Format = TextureFormat.Rg16Float,
+                        Format = DirectionalLight.VarianceShadowMapFormat,
                         Blend = null,
                         WriteMask = ColorWrites.All,
                     },
@@ -398,7 +395,7 @@ public sealed class PbrShader : Shader
                 Topology = PrimitiveTopology.TriangleList,
                 StripIndexFormat = null,
                 FrontFace = FrontFace.Ccw,
-                CullMode = Face.Back,
+                CullMode = Face.Front,
                 PolygonMode = PolygonMode.Fill,
             },
             DepthStencil = new DepthStencilState

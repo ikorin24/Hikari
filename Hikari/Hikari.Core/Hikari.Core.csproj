@@ -13,6 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Utf8StringInterpolation" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Hikari.Events\Hikari.Events.csproj" />
     <ProjectReference Include="..\Hikari.Imaging\Hikari.Imaging.csproj" />
     <ProjectReference Include="..\Hikari.Generator\Hikari.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />

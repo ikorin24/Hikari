@@ -2,5 +2,6 @@
   <ItemGroup>
     <PackageVersion Include="UniTask" Version="2.5.0" />
     <PackageVersion Include="SkiaSharp" Version="2.88.6" />
+    <PackageVersion Include="Utf8StringInterpolation" Version="1.2.3" />
   </ItemGroup>
 </Project>

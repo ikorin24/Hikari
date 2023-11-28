@@ -99,10 +99,9 @@ public sealed class DeferredProcessShader : Shader
             let specular: vec3<f32> = max(vec3<f32>(), V * D * F * irradiance);
 
             // Shadow
-            var shadow_visibility: f32 = 1.0;
 
             let distance: f32 = length(pos_camera_coord);
-            let cascade_count: u32 = arrayLength(&cascadeFars);
+            let cascade_count: u32 = arrayLength(&lightMatrices);
             var cascade: u32 = cascade_count;
             for(var i: u32 = 0u; i < cascade_count; i++) {
                 if(distance < cascadeFars[i]) {
@@ -110,7 +109,7 @@ public sealed class DeferredProcessShader : Shader
                     break;
                 }
             }
-            
+
             var visibility: f32 = 1.0;
             if(cascade < cascade_count) {
                 let pos_world_coord = camera.inv_view * vec4(pos_camera_coord, 1.0);
@@ -120,12 +119,13 @@ public sealed class DeferredProcessShader : Shader
                     -p.y * 0.5 + 0.5,
                     p.z);
                 let bias = 0.005 / (f32(cascade + 1u) * 5.0);
+                //let bias = 0.0;
 
                 let shadowmap_size: vec2<u32> = textureDimensions(shadowmap, 0);
                 let shadowmap_size_inv: vec2<f32> = vec2<f32>(1.0, 1.0) / vec2<f32>(shadowmap_size);
 
                 let random: vec2<f32> = random_vec2_f32(in.uv);
-                let ref_z = shadowmap_pos.z + bias;
+                var ref_z = shadowmap_pos.z + bias;
                 let R: f32 = 6.0 / (f32(cascade + 1u) * 2.5);        // TODO:
                 let r = R * sqrt(random.x);
                 let offset = vec2<f32>(
@@ -136,12 +136,28 @@ public sealed class DeferredProcessShader : Shader
                     visibility = 1.0;
                 }
                 else {
+                    //var shadow_uv = vec2<f32>(
+                    //    shadowmap_pos.x / f32(cascade_count) + f32(cascade) / f32(cascade_count),
+                    //    shadowmap_pos.y,
+                    //) + offset * shadowmap_size_inv;
+                    //let value = textureSampleLevel(shadowmap, sm_sampler, shadow_uv, 0.0);
+                    //visibility = step(value.r, ref_z);
                     var shadow_uv = vec2<f32>(
                         shadowmap_pos.x / f32(cascade_count) + f32(cascade) / f32(cascade_count),
                         shadowmap_pos.y,
-                    ) + offset * shadowmap_size_inv;
-                    let value = textureSampleLevel(shadowmap, sm_sampler, shadow_uv, 1.0);
-                    visibility = step(value.r, ref_z);
+                    );
+
+                    let value = texture0ManualSampleRG(shadowmap, shadow_uv);
+                    let depth_sq = value.r * value.r;           // E(x)^2
+                    var variance = value.g - depth_sq;          // σ^2 = E(x^2) - E(x)^2
+                    let d = ref_z - value.r;                    // t - μ
+                    let p_max = variance / (variance + d * d);  //  σ^2 / (σ^2 + (t - μ)^2)
+                    if (ref_z <= value.r) {
+                        visibility = 0.0;
+                    }
+                    else {
+                        visibility = 1.0 - p_max;
+                    }
                 }
             }
 
@@ -159,9 +175,26 @@ public sealed class DeferredProcessShader : Shader
             var out: Fout;
             out.color = vec4<f32>(fragColor, 1.0);
             //out.color = vec4<f32>(albedo, 1.0);
+            //out.color = vec4<f32>(visibility, visibility, visibility, 1.0);
             let pos_dnc = camera.proj * vec4(pos_camera_coord, 1.0);
             out.depth = (pos_dnc.z / pos_dnc.w) * 0.5 + 0.5;
             return out;
+        }
+
+        fn texture0ManualSampleRG(t: texture_2d<f32>, uv: vec2<f32>) -> vec2<f32> {
+            let size: vec2<u32> = textureDimensions(t, 0);
+            let p: vec2<f32> = uv * vec2<f32>(size);
+            let floor_p: vec2<f32> = floor(p);
+            let delta: vec2<f32> = p - floor_p;
+            let p0 = vec2<u32>(floor_p);
+            let p1 = vec2<u32>(p0.x + 1u, p0.y);
+            let p2 = vec2<u32>(p0.x, p0.y + 1u);
+            let p3 = vec2<u32>(p0.x + 1u, p0.y + 1u);
+            let c0 = textureLoad(t, p0, 0).xy;
+            let c1 = textureLoad(t, p1, 0).xy;
+            let c2 = textureLoad(t, p2, 0).xy;
+            let c3 = textureLoad(t, p3, 0).xy;
+            return mix(mix(c0, c1, delta.x), mix(c2, c3, delta.x), delta.y);
         }
 
         fn to_vec3(v: vec4<f32>) -> vec3<f32> {

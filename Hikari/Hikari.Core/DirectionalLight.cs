@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -11,13 +12,15 @@ public sealed partial class DirectionalLight : IScreenManaged
     internal const uint CascadeCountConst = 4;       // 2 ~
     internal const u32 ShadowMapWidth = 1024;
     internal const u32 ShadowMapHeight = 1024;
+    internal const TextureFormat VarianceShadowMapFormat = TextureFormat.Rg32Float;
 
     private readonly Screen _screen;
     private readonly CachedOwnBuffer<DirectionalLightData> _lightData;
     private TypedOwnBuffer<LightMatrixArray> _lightMatrices;
     private TypedOwnBuffer<CascadeFarArray> _cascadeFars;
     private readonly Own<Texture2D> _shadowMap;
-    private readonly Own<Texture2D> _shadowMapD;
+    private readonly Own<Texture2D> _shadowMapTemp;
+    private readonly Own<Texture2D> _depthOnRenderShadowMap;
     private readonly SubscriptionBag _subscriptionBag = new();
 
     public Screen Screen => _screen;
@@ -27,6 +30,7 @@ public sealed partial class DirectionalLight : IScreenManaged
     public void Validate() => IScreenManaged.DefaultValidate(this);
 
     public Texture2D ShadowMap => _shadowMap.AsValue();
+    internal Texture2D ShadowMapTemp => _shadowMapTemp.AsValue();
 
     internal Buffer LightMatricesBuffer => _lightMatrices.AsBuffer();
     internal Buffer CascadeFarsBuffer => _cascadeFars.AsBuffer();
@@ -39,27 +43,63 @@ public sealed partial class DirectionalLight : IScreenManaged
 
     internal Buffer DataBuffer => _lightData.AsBuffer();
 
-    public OwnRenderPass CreateShadowRenderPass()
-    {
-        return RenderPass.Create(
-            Screen,
-            [
-                new ColorAttachment
-                {
-                    Target = ShadowMap.View,
-                    LoadOp = ColorBufferLoadOp.Clear(),
-                },
-            ],
-            new DepthStencilAttachment
+    public ImmutableArray<RenderPassDefinition> PrepareShadowMapPassDefinitions { get; } = [
+        new RenderPassDefinition
+        {
+            Kind = PassKind.ShadowMap,
+            Factory = static (screen, _) =>
             {
-                Target = _shadowMapD.AsValue().View,
-                LoadOp = new DepthStencilBufferLoadOp
-                {
-                    Depth = DepthBufferLoadOp.Clear(0f),
-                    Stencil = null,
-                }
-            });
-    }
+                return RenderPass.Create(
+                    screen,
+                    [
+                        new ColorAttachment
+                        {
+                            Target = screen.Lights.DirectionalLight.ShadowMap.View,
+                            LoadOp = ColorBufferLoadOp.Clear(),
+                        },
+                    ],
+                    new DepthStencilAttachment
+                    {
+                        Target = screen.Lights.DirectionalLight._depthOnRenderShadowMap.AsValue().View,
+                        LoadOp = new DepthStencilBufferLoadOp
+                        {
+                            Depth = DepthBufferLoadOp.Clear(0f),
+                            Stencil = null,
+                        }
+                    });
+            },
+        },
+        new RenderPassDefinition
+        {
+            Kind = PassKind.Custom("prepare-vsm-x"),
+            Factory = static (screen, _) =>
+            {
+                return RenderPass.Create(
+                    screen,
+                    new ColorAttachment
+                    {
+                        Target = screen.Lights.DirectionalLight.ShadowMapTemp,
+                        LoadOp = ColorBufferLoadOp.Clear(),
+                    },
+                    null);
+            },
+        },
+        new RenderPassDefinition
+        {
+            Kind = PassKind.Custom("prepare-vsm-y"),
+            Factory = static (screen, _) =>
+            {
+                return RenderPass.Create(
+                    screen,
+                    new ColorAttachment
+                    {
+                        Target = screen.Lights.DirectionalLight.ShadowMap,
+                        LoadOp = ColorBufferLoadOp.Clear(),
+                    },
+                    null);
+            },
+        },
+    ];
 
     public void SetLightData(in Vector3 direction, in Color3 color)
     {
@@ -82,12 +122,20 @@ public sealed partial class DirectionalLight : IScreenManaged
         _shadowMap = Texture2D.Create(screen, new()
         {
             Size = new Vector2u(ShadowMapWidth * CascadeCountConst, ShadowMapHeight),
-            Format = TextureFormat.Rg16Float,
+            Format = VarianceShadowMapFormat,
             MipLevelCount = 1,
             SampleCount = 1,
             Usage = TextureUsages.TextureBinding | TextureUsages.RenderAttachment | TextureUsages.CopySrc,
         });
-        _shadowMapD = Texture2D.Create(screen, new()
+        _shadowMapTemp = Texture2D.Create(screen, new()
+        {
+            Size = new Vector2u(ShadowMapWidth * CascadeCountConst, ShadowMapHeight),
+            Format = VarianceShadowMapFormat,
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Usage = TextureUsages.TextureBinding | TextureUsages.RenderAttachment | TextureUsages.CopySrc,
+        });
+        _depthOnRenderShadowMap = Texture2D.Create(screen, new()
         {
             Size = new Vector2u(ShadowMapWidth * CascadeCountConst, ShadowMapHeight),
             Format = TextureFormat.Depth32Float,
@@ -105,7 +153,8 @@ public sealed partial class DirectionalLight : IScreenManaged
     {
         _lightData.Dispose();
         _shadowMap.Dispose();
-        _shadowMapD.Dispose();
+        _shadowMapTemp.Dispose();
+        _depthOnRenderShadowMap.Dispose();
         _lightMatrices.Dispose();
         _cascadeFars.Dispose();
         _subscriptionBag.Dispose();
@@ -132,7 +181,8 @@ public sealed partial class DirectionalLight : IScreenManaged
         }
 
         var lightMatrices = lightMatrixArray.AsSpan();
-        var cascadeFars = cascadeFarArray.AsSpan();
+        var cascadeFars = cascadeFarArray.AsSpan().Slice(0, lightMatrices.Length);
+        var depthRange = cascadeFarArray.AsSpan().Slice(lightMatrices.Length);
 
         const float MaxShadowMapFar = 200;
 
@@ -164,11 +214,15 @@ public sealed partial class DirectionalLight : IScreenManaged
                     max = Vector3.Max(max, p);
                 }
                 var aabbInLightSpace = Bounds.FromMinMax(min, max);
+
+                var depthNear = -(aabbInLightSpace.Max.Z + aabbInLightSpace.Size.Z * 5.0f);  // TODO:
+                var depthFar = -aabbInLightSpace.Min.Z;
+                depthRange[i] = depthFar - depthNear;
                 var lproj = Matrix4.ReversedZ.OrthographicProjection(
                 aabbInLightSpace.Min.X, aabbInLightSpace.Max.X,
                 aabbInLightSpace.Min.Y, aabbInLightSpace.Max.Y,
-                -(aabbInLightSpace.Max.Z + aabbInLightSpace.Size.Z * 10.0f),  // TODO:
-                -aabbInLightSpace.Min.Z);
+                depthNear,
+                depthFar);
                 lightMatrices[i] = lproj * lview;
             }
             else if(camera.ProjectionMode.IsOrthographic(out var height)) {
@@ -230,16 +284,18 @@ public sealed partial class DirectionalLight : IScreenManaged
     [StructLayout(LayoutKind.Explicit, Size = sizeof(float) * (int)CascadeCountConst)]
     private unsafe partial struct CascadeFarArray
     {
+        const int N = (int)CascadeCountConst * 2;
+
         [FieldOffset(0)]
-        private fixed float _array[(int)CascadeCountConst];
+        private fixed float _array[N];
 
         [UnscopedRef]
         private ref float Head => ref Unsafe.As<CascadeFarArray, float>(ref this);
         [UnscopedRef]
         private readonly ref float HeadReadOnly => ref Unsafe.As<CascadeFarArray, float>(ref Unsafe.AsRef(in this));
 
-        public Span<float> AsSpan() => MemoryMarshal.CreateSpan(ref Head, (int)CascadeCountConst);
+        public Span<float> AsSpan() => MemoryMarshal.CreateSpan(ref Head, N);
 
-        public readonly ReadOnlySpan<float> AsReadOnlySpan() => MemoryMarshal.CreateReadOnlySpan(ref HeadReadOnly, (int)CascadeCountConst);
+        public readonly ReadOnlySpan<float> AsReadOnlySpan() => MemoryMarshal.CreateReadOnlySpan(ref HeadReadOnly, N);
     }
 }
