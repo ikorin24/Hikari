@@ -57,14 +57,14 @@ internal class Program
         //});
         //screen.UITree.SetRoot(button);
 
-        //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"D:\private\source\Elffy\src\Sandbox\Resources\AntiqueCamera.glb");
+        var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"D:\private\source\Elffy\src\Sandbox\Resources\AntiqueCamera.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\2CylinderEngine.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\BarramundiFish.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\BoomBox.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Buggy.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Fox.glb");
         //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\CesiumMan.glb");
-        var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Avocado.glb");
+        //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Avocado.glb");
 
         var tasks = model
             .GetDescendants()
@@ -79,15 +79,15 @@ internal class Program
             var min = vertices.Aggregate((a, b) => Vector3.Min(a, b));
             var max = vertices.Aggregate((a, b) => Vector3.Max(a, b));
             var len = (max - min).Length;
-            model.Scale = new Vector3(1f / len);
+            model.Scale = new Vector3(1f / len * 10);
         }).Forget();
 
-        //var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
-        //var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
-        //var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
-        //var plane = new PbrModel(Shapes.Plane(screen, true), PbrMaterial.Create(app.PbrBasicShader, albedo, mr, normal));
-        //plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
-        //plane.Scale = new Vector3(60);
+        var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
+        var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
+        var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
+        var plane = new PbrModel(Shapes.Plane(screen, true), PbrMaterial.Create(app.PbrBasicShader, albedo, mr, normal));
+        plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
+        plane.Scale = new Vector3(6);
 
         var camera = screen.Camera;
         camera.SetNearFar(0.5f, 1000);
@@ -96,6 +96,7 @@ internal class Program
         {
             ControlCamera(screen.Mouse, camera, Vector3.Zero);
         });
+        screen.Lights.DirectionalLight.SetLightData(new Vector3(0, -1, -8.5f), Color3.White);
     }
 
     private static Own<Texture2D> LoadTexture(Screen screen, string filepath, bool isSrgb)

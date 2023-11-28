@@ -7,7 +7,9 @@ namespace Hikari;
 
 public sealed class DeferredProcessShader : Shader
 {
-    private static ReadOnlySpan<byte> ShaderSource => """
+    private static readonly Lazy<ImmutableArray<byte>> ShaderSource = new(() =>
+    {
+        return """
         struct Vin {
             @location(0) pos: vec3<f32>,
             @location(1) uv: vec2<f32>,
@@ -229,20 +231,30 @@ public sealed class DeferredProcessShader : Shader
             let u32_max_inv = 2.3283064E-10;    // 1.0 / u32.maxvalue
             return vec2<f32>(f32(a.x) * u32_max_inv, f32(a.y) * u32_max_inv);
         }
-        """u8;
+        """u8.ToImmutableArray();
+    });
 
     private DeferredProcessShader(Screen screen)
-        : base(screen, new ShaderPassDescriptorArray1
-        {
-            Pass0 = new()
-            {
-                Source = ShaderSource,
-                SortOrder = 2000,
-                LayoutDescriptor = BuildPipelineLayout(screen, out var disposable),
-                PipelineDescriptorFactory = PipelineFactory,
-                PassKind = PassKind.Surface,
-            },
-        })
+        : base(
+            screen,
+            [
+                new()
+                {
+                    Source = ShaderSource.Value,
+                    SortOrder = 2000,
+                    LayoutDescriptor = BuildPipelineLayout(screen, out var disposable),
+                    PipelineDescriptorFactory = PipelineFactory,
+                    PassKind = PassKind.Surface,
+                    OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+                    {
+                        renderPass.SetPipeline(pipeline);
+                        renderPass.SetBindGroups(material.GetBindGroups(passIndex));
+                        renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+                        renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+                        renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
+                    },
+                },
+            ])
     {
         disposable.DisposeOn(Disposed);
     }

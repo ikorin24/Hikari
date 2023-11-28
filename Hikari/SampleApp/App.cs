@@ -26,6 +26,21 @@ public sealed class App
                 Kind = PassKind.ShadowMap,
                 Factory = static (screen, _) => screen.Lights.DirectionalLight.CreateShadowRenderPass(),
             },
+            //new RenderPassDefinition
+            //{
+            //    Kind = PassKind.Custom("prepare-vsm"),
+            //    Factory = static (screen, _) =>
+            //    {
+            //        return RenderPass.Create(
+            //            screen,
+            //            new ColorAttachment
+            //            {
+            //                Target = screen.Lights.DirectionalLight.ShadowMap,
+            //                LoadOp = ColorBufferLoadOp.Clear(),
+            //            },
+            //            null);
+            //    },
+            //},
             new RenderPassDefinition
             {
                 Kind = PassKind.GBuffer,
@@ -86,6 +101,7 @@ public sealed class App
             DeferredProcessShader = DeferredProcessShader.Create(screen).DisposeOn(screen.Closed),
         };
         DeferredPlane.AddRenderer(app.DeferredProcessShader, gBuffer);
+        VarianceShadowMapper.Create(screen);
         return app;
     }
 }

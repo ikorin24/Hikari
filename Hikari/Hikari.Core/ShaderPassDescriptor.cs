@@ -1,54 +1,32 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Immutable;
 
 namespace Hikari;
 
-public readonly ref struct ShaderPassDescriptor
+public readonly record struct ShaderPassDescriptor
 {
-    public required ReadOnlySpan<byte> Source { get; init; }
+    public required ImmutableArray<byte> Source { get; init; }
     public required PipelineLayoutDescriptor LayoutDescriptor { get; init; }
     public required Func<ShaderModule, PipelineLayout, RenderPipelineDescriptor> PipelineDescriptorFactory { get; init; }
     public required int SortOrder { get; init; }
     public required PassKind PassKind { get; init; }
+    public required RenderPassAction OnRenderPass { get; init; }
 
-    internal MaterialPassData CreateMaterialPassData<_>(Shader shader, int passIndex, Event<_> lifetimeLimit)
+    internal ShaderPassData CreateMaterialPassData<_>(Shader shader, int passIndex, Event<_> lifetimeLimit)
     {
         var screen = shader.Screen;
-        var module = ShaderModule.Create(screen, Source).DisposeOn(lifetimeLimit);
+        var module = ShaderModule.Create(screen, Source.AsSpan()).DisposeOn(lifetimeLimit);
         var layout = PipelineLayout.Create(screen, LayoutDescriptor).DisposeOn(lifetimeLimit);
-        return new MaterialPassData
+        return new ShaderPassData
         {
             Index = passIndex,
             PassKind = PassKind,
             SortOrder = SortOrder,
             Pipeline = RenderPipeline.Create(screen, PipelineDescriptorFactory(module, layout)).DisposeOn(lifetimeLimit),
-            PipelineLayout = layout,
+            OnRenderPass = OnRenderPass,
         };
     }
 }
 
-public readonly ref struct ShaderPassDescriptorArray1
-{
-    public required ShaderPassDescriptor Pass0 { get; init; }
-}
-
-public readonly ref struct ShaderPassDescriptorArray2
-{
-    public required ShaderPassDescriptor Pass0 { get; init; }
-    public required ShaderPassDescriptor Pass1 { get; init; }
-}
-
-public readonly ref struct ShaderPassDescriptorArray3
-{
-    public required ShaderPassDescriptor Pass0 { get; init; }
-    public required ShaderPassDescriptor Pass1 { get; init; }
-    public required ShaderPassDescriptor Pass2 { get; init; }
-}
-
-public readonly ref struct ShaderPassDescriptorArray4
-{
-    public required ShaderPassDescriptor Pass0 { get; init; }
-    public required ShaderPassDescriptor Pass1 { get; init; }
-    public required ShaderPassDescriptor Pass2 { get; init; }
-    public required ShaderPassDescriptor Pass3 { get; init; }
-}
+public delegate void RenderPassAction(in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex);

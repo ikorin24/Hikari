@@ -7,7 +7,7 @@ namespace Hikari;
 public abstract class Shader : IScreenManaged
 {
     private readonly Screen _screen;
-    private readonly ImmutableArray<MaterialPassData> _materialPassData;
+    private readonly ImmutableArray<ShaderPassData> _materialPassData;
     private EventSource<Shader> _disposed;
     private bool _released;
 
@@ -17,48 +17,17 @@ public abstract class Shader : IScreenManaged
 
     public Screen Screen => _screen;
 
-    public ReadOnlySpan<MaterialPassData> MaterialPassData => _materialPassData.AsSpan();
+    public ReadOnlySpan<ShaderPassData> ShaderPasses => _materialPassData.AsSpan();
 
-    protected Shader(Screen screen, in ShaderPassDescriptorArray1 passes)
+    protected Shader(Screen screen, ReadOnlySpan<ShaderPassDescriptor> passes)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _screen = screen;
-        _materialPassData = [
-            passes.Pass0.CreateMaterialPassData(this, 0, Disposed),
-        ];
-    }
-
-    protected Shader(Screen screen, in ShaderPassDescriptorArray2 passes)
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        _screen = screen;
-        _materialPassData = [
-            passes.Pass0.CreateMaterialPassData(this, 0, Disposed),
-            passes.Pass1.CreateMaterialPassData(this, 1, Disposed),
-        ];
-    }
-
-    protected Shader(Screen screen, in ShaderPassDescriptorArray3 passes)
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        _screen = screen;
-        _materialPassData = [
-            passes.Pass0.CreateMaterialPassData(this, 0, Disposed),
-            passes.Pass1.CreateMaterialPassData(this, 1, Disposed),
-            passes.Pass2.CreateMaterialPassData(this, 2, Disposed),
-        ];
-    }
-
-    protected Shader(Screen screen, in ShaderPassDescriptorArray4 passes)
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        _screen = screen;
-        _materialPassData = [
-            passes.Pass0.CreateMaterialPassData(this, 0, Disposed),
-            passes.Pass1.CreateMaterialPassData(this, 1, Disposed),
-            passes.Pass2.CreateMaterialPassData(this, 2, Disposed),
-            passes.Pass3.CreateMaterialPassData(this, 3, Disposed),
-        ];
+        var array = new ShaderPassData[passes.Length];
+        for(var i = 0; i < passes.Length; i++) {
+            array[i] = passes[i].CreateMaterialPassData(this, i, Disposed);
+        }
+        _materialPassData = array.AsImmutableArray();
     }
 
     private void Release()

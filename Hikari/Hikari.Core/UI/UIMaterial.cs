@@ -33,12 +33,12 @@ internal abstract class UIMaterial : Material
         _texture = texture;
         _sampler = sampler;
 
-        var passes = Shader.MaterialPassData;
+        var passes = Shader.ShaderPasses;
         _buffer = new(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst);
         _texContentSizeBuffer = Buffer.Create(Screen, (nuint)Unsafe.SizeOf<Vector2u>(), BufferUsages.Uniform | BufferUsages.CopyDst);
         _bindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = passes[0].PipelineLayout.BindGroupLayouts[0],
+            Layout = passes[0].Pipeline.Layout.BindGroupLayouts[0],
             Entries =
             [
                 BindGroupEntry.Buffer(0, screen.InfoBuffer),
@@ -47,7 +47,7 @@ internal abstract class UIMaterial : Material
         });
         _bindGroup1 = BindGroup.Create(screen, new()
         {
-            Layout = passes[0].PipelineLayout.BindGroupLayouts[1],
+            Layout = passes[0].Pipeline.Layout.BindGroupLayouts[1],
             Entries =
             [
                 BindGroupEntry.TextureView(0, texture.AsValue().View),
@@ -71,13 +71,6 @@ internal abstract class UIMaterial : Material
             _ => throw new ArgumentOutOfRangeException(nameof(passIndex)),
         };
     }
-
-    public sealed override MaterialPassData GetPassData(int passIndex)
-    {
-        return Shader.MaterialPassData[passIndex];
-    }
-
-    public sealed override uint GetInstanceCount(int passIndex) => 1;
 
     protected override void Release(bool manualRelease)
     {
@@ -129,14 +122,14 @@ internal abstract class UIMaterial : Material
 
     internal void UpdateTexture(MaybeOwn<Texture2D> texture)
     {
-        var pass0 = Shader.MaterialPassData[0];
+        var pass0 = Shader.ShaderPasses[0];
         var textureValue = texture.AsValue();
         _texture.Dispose();
         _texture = texture;
         _bindGroup1.Dispose();
         _bindGroup1 = BindGroup.Create(Screen, new()
         {
-            Layout = pass0.PipelineLayout.BindGroupLayouts[1],
+            Layout = pass0.Pipeline.Layout.BindGroupLayouts[1],
             Entries =
             [
                 BindGroupEntry.TextureView(0, textureValue.View),
@@ -181,11 +174,11 @@ internal abstract class UIMaterial : Material
 
     private void SetBindGroup2()
     {
-        var pass0 = Shader.MaterialPassData[0];
+        var pass0 = Shader.ShaderPasses[0];
         _bindGroup2.Dispose();
         _bindGroup2 = BindGroup.Create(Screen, new()
         {
-            Layout = pass0.PipelineLayout.BindGroupLayouts[2],
+            Layout = pass0.Pipeline.Layout.BindGroupLayouts[2],
             Entries =
             [
                 BindGroupEntry.Buffer(0, _backgroundBuffer.AsValue()),

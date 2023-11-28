@@ -7,7 +7,7 @@ namespace Hikari.UI;
 
 internal abstract class UIShader : Shader
 {
-    private static readonly Lazy<byte[]> _defaultShaderSource = new(() =>
+    private static readonly Lazy<ImmutableArray<byte>> _defaultShaderSource = new(() =>
     {
         var fs_main = """
             fn calc_back_color(
@@ -42,7 +42,7 @@ internal abstract class UIShader : Shader
             UIShaderSource.Fn_ui_color_shared_algorithm,
             UIShaderSource.Fn_gamma22,
             fs_main);
-        return sb.Utf8String.ToArray();
+        return sb.Utf8String.ToImmutableArray();
     });
 
     private readonly Own<Texture2D> _emptyTexture;
@@ -52,17 +52,24 @@ internal abstract class UIShader : Shader
     public Sampler EmptySampler => _emptyTextureSampler.AsValue();
 
     protected UIShader(Screen screen)
-        : base(screen, new ShaderPassDescriptorArray1
-        {
-            Pass0 = new()
+        : base(screen, [
+            new()
             {
                 Source = _defaultShaderSource.Value,
                 SortOrder = 3000,
                 LayoutDescriptor = PipelineLayoutFactory(screen, out var diposable),
                 PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
                 PassKind = PassKind.Surface,
+                OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+                {
+                    renderPass.SetPipeline(pipeline);
+                    renderPass.SetBindGroups(material.GetBindGroups(passIndex));
+                    renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+                    renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+                    renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
+                },
             },
-        })
+        ])
     {
         diposable.DisposeOn(Disposed);
         _emptyTexture = Texture2D.Create(screen, new()

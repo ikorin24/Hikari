@@ -12,7 +12,7 @@ public sealed class RenderPassScheduler
 {
     private readonly Screen _screen;
     private ImmutableArray<RenderPassDefinition> _passDefs;
-    private FrozenDictionary<PassKind, List<RenderData>> _passDataDic;
+    private FrozenDictionary<PassKind, List<Data>> _passDataDic;
     private FastSpinLock _lock;
 
     private static readonly RenderPassDefinition EmptyPass = new()
@@ -41,7 +41,7 @@ public sealed class RenderPassScheduler
     {
         _screen = screen;
         _passDefs = [];
-        _passDataDic = new Dictionary<PassKind, List<RenderData>>(0).ToFrozenDictionary();
+        _passDataDic = new Dictionary<PassKind, List<Data>>(0).ToFrozenDictionary();
     }
 
     public void SetRenderPass(ImmutableArray<RenderPassDefinition> passDefs)
@@ -51,7 +51,7 @@ public sealed class RenderPassScheduler
         }
         using(_lock.Scope()) {
             _passDefs = passDefs;
-            var dic = new Dictionary<PassKind, List<RenderData>>();
+            var dic = new Dictionary<PassKind, List<Data>>();
             foreach(var passDef in passDefs) {
                 dic.TryAdd(passDef.Kind, new());
             }
@@ -62,35 +62,24 @@ public sealed class RenderPassScheduler
     internal void Add(Renderer renderer)
     {
         foreach(var (material, mesh, submesh) in renderer.GetSubrenderers()) {
-            var passData = material.Shader.MaterialPassData;
-            for(int i = 0; i < passData.Length; i++) {
-                // It must be copied to local variable
-                var passIndex = i;
-                var data = new RenderData
-                {
-                    Kind = passData[i].PassKind,
-                    SortOrder = passData[i].SortOrder,
-                    Pipeline = passData[i].Pipeline,
-                    BindGroupsProvider = () => material.GetBindGroups(passIndex),
-                    VertexBuffers = mesh.VertexSlots,
-                    Indices = mesh.IndexBuffer,
-                    IndexFormat = mesh.IndexFormat,
-                    TargetSubmesh = submesh,
-                    InstanceCount = material.GetInstanceCount(passIndex),
-                };
-                Add(data);
+            var passes = material.Shader.ShaderPasses;
+
+            for(int i = 0; i < passes.Length; i++) {
+                if(_passDataDic.TryGetValue(passes[i].PassKind, out var list)) {
+                    var data = new Data
+                    {
+                        OnRenderPass = passes[i].OnRenderPass,
+                        Material = material,
+                        Mesh = mesh,
+                        Submesh = submesh,
+                        Pipeline = passes[i].Pipeline,
+                        PassIndex = i,
+                    };
+                    list.Add(data);     // TODO: lazy add
+                    //                                        // TODO: sort
+                }
             }
         }
-    }
-
-    internal void Add(in RenderData passData)
-    {
-        if(_passDataDic.TryGetValue(passData.Kind, out var list) == false) {
-            return;
-        }
-        list.Add(passData);     // TODO: lazy add
-        // TODO: sort
-        list.Sort((a, b) => a.SortOrder - b.SortOrder);
     }
 
     internal void RemoveRenderer()      // TODO:
@@ -115,15 +104,25 @@ public sealed class RenderPassScheduler
 
             if(_passDataDic.TryGetValue(passDef.Kind, out var list)) {
                 foreach(var data in list.AsSpan()) {
-                    renderPass.SetPipeline(data.Pipeline);
-                    renderPass.SetBindGroups(data.BindGroupsProvider.Invoke());
-                    foreach(var (slot, vertices) in data.VertexBuffers) {
-                        renderPass.SetVertexBuffer(slot, vertices);
-                    }
-                    renderPass.SetIndexBuffer(data.Indices, data.IndexFormat);
-                    renderPass.DrawIndexed(0, data.TargetSubmesh.IndexCount, data.TargetSubmesh.VertexOffset, 0, data.InstanceCount);
+                    data.Render(renderPass);
                 }
             }
+        }
+    }
+
+
+    private readonly record struct Data
+    {
+        public required RenderPassAction OnRenderPass { get; init; }
+        public required Material Material { get; init; }
+        public required Mesh Mesh { get; init; }
+        public required SubmeshData Submesh { get; init; }
+        public required RenderPipeline Pipeline { get; init; }
+        public required int PassIndex { get; init; }
+
+        public void Render(in RenderPass renderPass)
+        {
+            OnRenderPass.Invoke(renderPass, Pipeline, Material, Mesh, Submesh, PassIndex);
         }
     }
 }
@@ -150,18 +149,3 @@ public readonly record struct RenderPassDefinition
         UserData = userData;
     }
 }
-
-internal readonly record struct RenderData
-{
-    public required PassKind Kind { get; init; }
-    public required int SortOrder { get; init; }
-    public required RenderPipeline Pipeline { get; init; }
-    public required BindGroupsProvider BindGroupsProvider { get; init; }
-    public required ImmutableArray<VertexSlotData> VertexBuffers { get; init; }
-    public required BufferSlice Indices { get; init; }
-    public required IndexFormat IndexFormat { get; init; }
-    public required SubmeshData TargetSubmesh { get; init; }
-    public required uint InstanceCount { get; init; }
-}
-
-internal delegate ReadOnlySpan<BindGroupData> BindGroupsProvider();

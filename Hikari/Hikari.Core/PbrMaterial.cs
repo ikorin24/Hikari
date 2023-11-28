@@ -71,21 +71,6 @@ public sealed partial class PbrMaterial : Material
         return _passBindGroups[passIndex].AsSpan();
     }
 
-    public override uint GetInstanceCount(int passIndex)
-    {
-        return passIndex switch
-        {
-            0 => DirectionalLight.CascadeCountConst,
-            1 => 1,
-            _ => throw new ArgumentOutOfRangeException(nameof(passIndex))
-        };
-    }
-
-    public override MaterialPassData GetPassData(int passIndex)
-    {
-        return Shader.MaterialPassData[passIndex];
-    }
-
     protected override void Release(bool manualRelease)
     {
         base.Release(manualRelease);
@@ -143,12 +128,12 @@ public sealed partial class PbrMaterial : Material
         normalSampler.ThrowArgumentExceptionIfNone();
 
         var screen = shader.Screen;
-        var passes = shader.MaterialPassData;
+        var passes = shader.ShaderPasses;
         var lights = screen.Lights;
         var uniformBuffer = new TypedOwnBuffer<UniformValue>(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
         var bindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = passes[1].PipelineLayout.BindGroupLayouts[0],
+            Layout = passes[1].Pipeline.Layout.BindGroupLayouts[0],
             Entries =
             [
                 BindGroupEntry.Buffer(0, uniformBuffer),
@@ -163,7 +148,7 @@ public sealed partial class PbrMaterial : Material
 
         var shadowBindGroup0 = BindGroup.Create(screen, new()
         {
-            Layout = passes[0].PipelineLayout.BindGroupLayouts[0],
+            Layout = passes[0].Pipeline.Layout.BindGroupLayouts[0],
             Entries =
             [
                 BindGroupEntry.Buffer(0, uniformBuffer),

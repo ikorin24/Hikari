@@ -16,15 +16,13 @@ public abstract class Material : IScreenManaged
 
     public Event<Material> Disposed => _disposed.Event;
 
-    public abstract ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex);
-    public abstract uint GetInstanceCount(int passIndex);
-    public abstract MaterialPassData GetPassData(int passIndex);
-
     protected Material(Shader shader)
     {
         ArgumentNullException.ThrowIfNull(shader);
         _shader = shader;
     }
+
+    public abstract ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex);
 
     private void Release()
     {

@@ -20,13 +20,6 @@ public sealed class DeferredProcessMaterial : Material
         }).DisposeOn(Disposed);
     }
 
-    public override MaterialPassData GetPassData(int passIndex)
-    {
-        return Shader.MaterialPassData[passIndex];
-    }
-
-    public override uint GetInstanceCount(int passIndex) => 1;
-
     public override ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
     {
         return passIndex switch
@@ -48,7 +41,7 @@ public sealed class DeferredProcessMaterial : Material
     private static ImmutableArray<BindGroupData> CreatePass0BindGroups(Shader shader, GBuffer gBuffer, out DisposableBag disposable)
     {
         var screen = shader.Screen;
-        var passes = shader.MaterialPassData;
+        var passes = shader.ShaderPasses;
         var directionalLight = screen.Lights.DirectionalLight;
         var gTextures = gBuffer.Textures;
         disposable = new DisposableBag();
@@ -58,7 +51,7 @@ public sealed class DeferredProcessMaterial : Material
                 Index = 0,
                 BindGroup = BindGroup.Create(screen, new()
                 {
-                    Layout = passes[0].PipelineLayout.BindGroupLayouts[0],
+                    Layout = passes[0].Pipeline.Layout.BindGroupLayouts[0],
                     Entries =
                     [
                         BindGroupEntry.Sampler(0, Sampler.Create(screen, new()
@@ -92,7 +85,7 @@ public sealed class DeferredProcessMaterial : Material
                 Index = 3,
                 BindGroup = BindGroup.Create(screen, new()
                 {
-                    Layout = passes[0].PipelineLayout.BindGroupLayouts[3],
+                    Layout = passes[0].Pipeline.Layout.BindGroupLayouts[3],
                     Entries =
                     [
                         BindGroupEntry.TextureView(0, directionalLight.ShadowMap.View),

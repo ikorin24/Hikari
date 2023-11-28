@@ -177,11 +177,6 @@ public readonly ref struct RenderPass
         _native.AsMut().SetViewport(x, y, w, h, minDepth, maxDepth);
     }
 
-    public void DrawIndexed(u32 indexCount)
-    {
-        DrawIndexed(0, indexCount, 0, 0, 1);
-    }
-
     public void DrawIndexed(u32 indexStart, u32 indexCount, i32 baseVertex, u32 instanceStart, u32 instanceCount)
     {
         var indexRange = new CH.RangeU32(indexStart, checked(indexStart + indexCount));
@@ -195,7 +190,7 @@ public delegate OwnRenderPass RenderPassFunc<T>(Screen screen, T arg);
 public readonly ref struct OwnRenderPass
 {
     private readonly RenderPass _value;
-    internal readonly ReleaseRenderPass? _release;
+    private readonly ReleaseRenderPass? _release;
 
     [MemberNotNullWhen(false, nameof(_value))]
     [MemberNotNullWhen(false, nameof(_release))]

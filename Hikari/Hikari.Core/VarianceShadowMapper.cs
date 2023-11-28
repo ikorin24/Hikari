@@ -46,7 +46,7 @@ internal sealed class VsmMaterial : Material
             Index = 0,
             BindGroup = BindGroup.Create(shader.Screen, new()
             {
-                Layout = shader.MaterialPassData[0].PipelineLayout.BindGroupLayouts[0],
+                Layout = shader.ShaderPasses[0].Pipeline.Layout.BindGroupLayouts[0],
                 Entries = [
                 BindGroupEntry.TextureView(0, shadowMap.View),
                 ],
@@ -67,18 +67,13 @@ internal sealed class VsmMaterial : Material
             _ => throw new ArgumentOutOfRangeException(nameof(passIndex)),
         };
     }
-
-    public override uint GetInstanceCount(int passIndex) => 1;
-
-    public override MaterialPassData GetPassData(int passIndex)
-    {
-        return Shader.MaterialPassData[passIndex];
-    }
 }
 
 internal sealed class VsmShader : Shader
 {
-    private static ReadOnlySpan<byte> VSMGaussian => """
+    private static readonly Lazy<ImmutableArray<byte>> VSMGaussian = new(() =>
+    {
+        return """
         const weights: array<f32, 7> = array<f32, 7>(
             0.036632843,
             0.11128078,
@@ -119,14 +114,14 @@ internal sealed class VsmShader : Shader
             c += textureLoad(tex, vec2<i32>(pos.xy) + vec2(0, 6 - 3), 0).rg * weights[6];
             return vec4<f32>(c, 0.0, 0.0);
         }
-        """u8;
+        """u8.ToImmutableArray();
+    });
 
     private VsmShader(Screen screen)
-        : base(screen, new ShaderPassDescriptorArray2
-        {
-            Pass0 = GetPassDescriptor(screen, "gaussian_x"u8, out var pass0Bgl0),
-            Pass1 = GetPassDescriptor(screen, "gaussian_y"u8, out var pass1Bgl0),
-        })
+        : base(screen, [
+            GetPassDescriptor(screen, "gaussian_x"u8, out var pass0Bgl0),
+            GetPassDescriptor(screen, "gaussian_y"u8, out var pass1Bgl0),
+        ])
     {
         pass0Bgl0.DisposeOn(Disposed);
         pass1Bgl0.DisposeOn(Disposed);
@@ -141,7 +136,7 @@ internal sealed class VsmShader : Shader
     {
         return new()
         {
-            Source = VSMGaussian,
+            Source = VSMGaussian.Value,
             LayoutDescriptor = new()
             {
                 BindGroupLayouts = [
@@ -198,6 +193,14 @@ internal sealed class VsmShader : Shader
             },
             SortOrder = 0,
             PassKind = PassKind.Custom("vsm-gaussian"),
+            OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+            {
+                renderPass.SetPipeline(pipeline);
+                renderPass.SetBindGroups(material.GetBindGroups(passIndex));
+                renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+                renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+                renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
+            },
         };
     }
 }

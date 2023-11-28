@@ -2,13 +2,14 @@
 using Hikari.Internal;
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using V = Hikari.Vertex;
 
 namespace Hikari;
 
 public sealed class PbrShader : Shader
 {
-    private static readonly Lazy<ImmutableArray<byte>> _shaderSource = new(() =>
+    private static readonly Lazy<ImmutableArray<byte>> _source = new(() =>
     {
         using var sb = Utf8StringBuilder.FromLines(
             ShaderSource.Fn_Inverse3x3,
@@ -160,25 +161,42 @@ public sealed class PbrShader : Shader
     private PbrShader(Screen screen, IGBufferProvider gBufferProvider)
         : base(
             screen,
-            new ShaderPassDescriptorArray2
-            {
-                Pass0 = new()
+            [
+                new()
                 {
-                    Source = _shadowShader.Value.AsSpan(),
+                    Source = _shadowShader.Value,
                     LayoutDescriptor = GetShadowLayoutDesc(screen, out var disposable),
                     PipelineDescriptorFactory = GetShadowDescriptor,
                     SortOrder = -1000,
                     PassKind = PassKind.ShadowMap,
+                    OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+                    {
+                        renderPass.SetPipeline(pipeline);
+                        renderPass.SetBindGroups(material.GetBindGroups(passIndex));
+                        renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+                        renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+                        renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, DirectionalLight.CascadeCountConst);
+                    },
                 },
-                Pass1 = new()
+                new()
                 {
-                    Source = _shaderSource.Value.AsSpan(),
+                    Source = _source.Value,
                     LayoutDescriptor = GetLayoutDesc(screen, out var disposable2),
                     PipelineDescriptorFactory = static (module, layout) => GetDescriptor(module, layout, module.Screen.DepthStencil.Format),
                     SortOrder = 0,
                     PassKind = PassKind.GBuffer,
+                    OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+                    {
+                        renderPass.SetPipeline(pipeline);
+                        renderPass.SetBindGroups(material.GetBindGroups(passIndex));
+                        renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+                        Debug.Assert(mesh.TangentBuffer.HasValue);
+                        renderPass.SetVertexBuffer(1, mesh.TangentBuffer.Value);
+                        renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+                        renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
+                    },
                 },
-            })
+            ])
     {
         _gbufferProvider = gBufferProvider;
         disposable2.DisposeOn(Disposed);
