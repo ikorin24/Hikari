@@ -3,6 +3,7 @@ using Hikari.Internal;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using Utf8StringInterpolation;
 using V = Hikari.Vertex;
 
 namespace Hikari;
@@ -11,10 +12,13 @@ public sealed class PbrShader : Shader
 {
     private static readonly Lazy<ImmutableArray<byte>> _source = new(() =>
     {
-        using var sb = Utf8StringBuilder.FromLines(
-            ShaderSource.Fn_Inverse3x3,
-            Source);
-        return sb.Utf8String.ToImmutableArray();
+        using var bw = new PooledArrayBufferWriter<byte>();
+        var sb = Utf8String.CreateWriter(bw);
+        sb.AppendUtf8(ShaderSource.Fn_Inverse3x3);
+        sb.AppendLine();
+        sb.AppendUtf8(Source);
+        sb.Flush();
+        return bw.WrittenSpan.ToImmutableArray();
     });
 
     private static ReadOnlySpan<byte> Source => """
@@ -101,16 +105,13 @@ public sealed class PbrShader : Shader
 
     private static readonly Lazy<ImmutableArray<byte>> _shadowShader = new(() =>
     {
-        using var sb = new Utf8StringBuilder();
-        sb.Append("const CASCADE_COUNT: u32 = "u8);
-        sb.Append(DirectionalLight.CascadeCountConst);
-        sb.AppendLine("u;"u8);
-
-        sb.Append("const SM_WIDTH = "u8);
-        sb.Append(DirectionalLight.ShadowMapWidth);
-        sb.AppendLine(";"u8);
-
-        sb.AppendLine("""
+        using var bw = new PooledArrayBufferWriter<byte>();
+        var sb = Utf8String.CreateWriter(bw);
+        sb.AppendFormat($"const CASCADE_COUNT: u32 = {DirectionalLight.CascadeCountConst}u;");
+        sb.AppendLine();
+        sb.AppendFormat($"const SM_WIDTH = {DirectionalLight.ShadowMapWidth};");
+        sb.AppendLine();
+        sb.AppendUtf8("""
             struct V2F {
                 @builtin(position) clip_pos: vec4<f32>,
                 @location(0) cascade: u32,
@@ -145,11 +146,12 @@ public sealed class PbrShader : Shader
                     discard;
                 }
                 var output: Fout;
-                output.color = vec2<f32>(v2f.clip_pos.z, v2f.clip_pos.z * v2f.clip_pos.z);
+                output.color = vec2<f32>(v2f.clip_pos.z);
                 return output;
             }
             """u8);
-        return sb.Utf8String.ToImmutableArray();
+        sb.Flush();
+        return bw.WrittenSpan.ToImmutableArray();
     });
 
     private readonly IGBufferProvider _gbufferProvider;
