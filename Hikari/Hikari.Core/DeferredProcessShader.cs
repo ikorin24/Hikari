@@ -43,7 +43,7 @@ public sealed class DeferredProcessShader : Shader
         @group(1) @binding(0) var<uniform> camera: CameraMatrix;
         @group(2) @binding(0) var<storage, read> dir_light: DirLightData;
         @group(2) @binding(1) var<storage, read> light: LightData;
-        @group(3) @binding(0) var shadowmap: texture_2d<f32>;
+        @group(3) @binding(0) var shadowmap: texture_depth_2d;
         @group(3) @binding(1) var<storage, read> lightMatrices: array<mat4x4<f32>>;
         @group(3) @binding(2) var<storage, read> cascadeFars: array<f32>;
 
@@ -167,7 +167,7 @@ public sealed class DeferredProcessShader : Shader
             return mix(mix(c0, c1, delta.x), mix(c2, c3, delta.x), delta.y);
         }
 
-        fn calcShadowVisibility(tex: texture_2d<f32>, uv: vec2<f32>, cascade: u32, ref_z: f32) -> f32 {
+        fn calcShadowVisibility(tex: texture_depth_2d, uv: vec2<f32>, cascade: u32, ref_z: f32) -> f32 {
             let size: vec2<u32> = textureDimensions(tex, 0);
             let p: vec2<f32> = uv * vec2<f32>(size);
             let floor_p: vec2<f32> = floor(p);
@@ -215,22 +215,22 @@ public sealed class DeferredProcessShader : Shader
                 C * norm, CD * norm, CD * norm, D * norm,
             );
             return 
-                step(textureLoad(tex, pos[0], 0).x, ref_z) * kernel[0] +
-                step(textureLoad(tex, pos[1], 0).x, ref_z) * kernel[1] +
-                step(textureLoad(tex, pos[2], 0).x, ref_z) * kernel[2] +
-                step(textureLoad(tex, pos[3], 0).x, ref_z) * kernel[3] +
-                step(textureLoad(tex, pos[4], 0).x, ref_z) * kernel[4] +
-                step(textureLoad(tex, pos[5], 0).x, ref_z) * kernel[5] +
-                step(textureLoad(tex, pos[6], 0).x, ref_z) * kernel[6] +
-                step(textureLoad(tex, pos[7], 0).x, ref_z) * kernel[7] +
-                step(textureLoad(tex, pos[8], 0).x, ref_z) * kernel[8] +
-                step(textureLoad(tex, pos[9], 0).x, ref_z) * kernel[9] +
-                step(textureLoad(tex, pos[10], 0).x, ref_z) * kernel[10] +
-                step(textureLoad(tex, pos[11], 0).x, ref_z) * kernel[11] +
-                step(textureLoad(tex, pos[12], 0).x, ref_z) * kernel[12] +
-                step(textureLoad(tex, pos[13], 0).x, ref_z) * kernel[13] +
-                step(textureLoad(tex, pos[14], 0).x, ref_z) * kernel[14] +
-                step(textureLoad(tex, pos[15], 0).x, ref_z) * kernel[15];
+                step(textureLoad(tex, pos[0], 0), ref_z) * kernel[0] +
+                step(textureLoad(tex, pos[1], 0), ref_z) * kernel[1] +
+                step(textureLoad(tex, pos[2], 0), ref_z) * kernel[2] +
+                step(textureLoad(tex, pos[3], 0), ref_z) * kernel[3] +
+                step(textureLoad(tex, pos[4], 0), ref_z) * kernel[4] +
+                step(textureLoad(tex, pos[5], 0), ref_z) * kernel[5] +
+                step(textureLoad(tex, pos[6], 0), ref_z) * kernel[6] +
+                step(textureLoad(tex, pos[7], 0), ref_z) * kernel[7] +
+                step(textureLoad(tex, pos[8], 0), ref_z) * kernel[8] +
+                step(textureLoad(tex, pos[9], 0), ref_z) * kernel[9] +
+                step(textureLoad(tex, pos[10], 0), ref_z) * kernel[10] +
+                step(textureLoad(tex, pos[11], 0), ref_z) * kernel[11] +
+                step(textureLoad(tex, pos[12], 0), ref_z) * kernel[12] +
+                step(textureLoad(tex, pos[13], 0), ref_z) * kernel[13] +
+                step(textureLoad(tex, pos[14], 0), ref_z) * kernel[14] +
+                step(textureLoad(tex, pos[15], 0), ref_z) * kernel[15];
         }
 
         fn to_vec3(v: vec4<f32>) -> vec3<f32> {
@@ -436,7 +436,7 @@ public sealed class DeferredProcessShader : Shader
                         {
                             ViewDimension = TextureViewDimension.D2,
                             Multisampled = false,
-                            SampleType = TextureSampleType.FloatNotFilterable,
+                            SampleType = TextureSampleType.Depth,
                         }),
                         BindGroupLayoutEntry.Buffer(1, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
                         BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),

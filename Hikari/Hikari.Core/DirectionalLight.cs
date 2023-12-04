@@ -12,7 +12,7 @@ public sealed partial class DirectionalLight : IScreenManaged
     internal const uint CascadeCountConst = 4;       // 2 ~
     internal const u32 ShadowMapWidth = 1024;
     internal const u32 ShadowMapHeight = ShadowMapWidth;
-    internal const TextureFormat ShadowMapFormat = TextureFormat.R32Float;
+    internal const TextureFormat ShadowMapFormat = TextureFormat.Depth32Float;
 
     private readonly Screen _screen;
     private readonly CachedOwnBuffer<DirectionalLightData> _lightData;
@@ -49,21 +49,15 @@ public sealed partial class DirectionalLight : IScreenManaged
             {
                 return RenderPass.Create(
                     screen,
-                    [
-                        new ColorAttachment
-                        {
-                            Target = screen.Lights.DirectionalLight.ShadowMap.View,
-                            LoadOp = ColorBufferLoadOp.Clear(),
-                        },
-                    ],
+                    [],
                     new DepthStencilAttachment
                     {
-                        Target = screen.Lights.DirectionalLight._depthOnRenderShadowMap.AsValue().View,
+                        Target = screen.Lights.DirectionalLight.ShadowMap,
                         LoadOp = new DepthStencilBufferLoadOp
                         {
                             Depth = DepthBufferLoadOp.Clear(0f),
                             Stencil = null,
-                        }
+                        },
                     });
             },
         },
