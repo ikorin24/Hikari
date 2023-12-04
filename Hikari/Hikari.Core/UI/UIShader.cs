@@ -2,6 +2,7 @@
 using Hikari.Internal;
 using System;
 using System.Collections.Immutable;
+using Utf8StringInterpolation;
 
 namespace Hikari.UI;
 
@@ -27,22 +28,24 @@ internal abstract class UIShader : Shader
             }
             """u8;
 
-        using var sb = Utf8StringBuilder.FromLines(
-            UIShaderSource.TypeDef,
-            UIShaderSource.ConstDef,
-            UIShaderSource.Group0,
-            UIShaderSource.Group1,
-            UIShaderSource.Group2,
-            UIShaderSource.Fn_pow_x2,
-            UIShaderSource.Fn_blend,
-            UIShaderSource.Fn_vs_main,
-            UIShaderSource.Fn_corner_area_color,
-            UIShaderSource.Fn_get_texel_color,
-            UIShaderSource.Fn_calc_background_brush_color,
-            UIShaderSource.Fn_ui_color_shared_algorithm,
-            UIShaderSource.Fn_gamma22,
-            fs_main);
-        return sb.Utf8String.ToImmutableArray();
+        using var bw = new PooledArrayBufferWriter<byte>();
+        using(var sb = Utf8String.CreateWriter(bw)) {
+            sb.AppendUtf8(UIShaderSource.TypeDef); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.ConstDef); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.Group0); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.Group1); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.Group2); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.Fn_pow_x2); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.Fn_blend); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.Fn_vs_main); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.Fn_corner_area_color); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.Fn_get_texel_color); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.Fn_calc_background_brush_color); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.Fn_ui_color_shared_algorithm); sb.AppendLine();
+            sb.AppendUtf8(UIShaderSource.Fn_gamma22); sb.AppendLine();
+            sb.AppendUtf8(fs_main);
+        }
+        return bw.WrittenSpan.ToImmutableArray();
     });
 
     private readonly Own<Texture2D> _emptyTexture;
