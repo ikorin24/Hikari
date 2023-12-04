@@ -50,6 +50,13 @@ public sealed class GBufferProvider : IScreenManaged, IGBufferProvider
         return Own.New(self, static x => SafeCast.As<GBufferProvider>(x).Release());
     }
 
+    public static Own<GBufferProvider> CreateScreenSize(Screen screen, ReadOnlySpan<TextureFormat> formats)
+    {
+        var self = new GBufferProvider(screen, screen.ClientSize, formats);
+        screen.Resized.Subscribe(x => self.Resize(x.Size));
+        return Own.New(self, static x => SafeCast.As<GBufferProvider>(x).Release());
+    }
+
     public GBuffer GetCurrentGBuffer()
     {
         lock(this) {

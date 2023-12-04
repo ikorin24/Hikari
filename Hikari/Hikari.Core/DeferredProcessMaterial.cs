@@ -89,17 +89,8 @@ public sealed class DeferredProcessMaterial : Material
                     Entries =
                     [
                         BindGroupEntry.TextureView(0, directionalLight.ShadowMap.View),
-                        BindGroupEntry.Sampler(1, Sampler.Create(screen, new()
-                        {
-                            AddressModeU = AddressMode.ClampToEdge,
-                            AddressModeV = AddressMode.ClampToEdge,
-                            AddressModeW = AddressMode.ClampToEdge,
-                            MagFilter = FilterMode.Nearest,
-                            MinFilter = FilterMode.Nearest,
-                            MipmapFilter = FilterMode.Nearest,
-                        }).AddTo(disposable)),
-                        BindGroupEntry.Buffer(2, directionalLight.LightMatricesBuffer),
-                        BindGroupEntry.Buffer(3, directionalLight.CascadeFarsBuffer),
+                        BindGroupEntry.Buffer(1, directionalLight.LightMatricesBuffer),
+                        BindGroupEntry.Buffer(2, directionalLight.CascadeFarsBuffer),
                     ],
                 }).AddTo(disposable)
             },

@@ -44,9 +44,8 @@ public sealed class DeferredProcessShader : Shader
         @group(2) @binding(0) var<storage, read> dir_light: DirLightData;
         @group(2) @binding(1) var<storage, read> light: LightData;
         @group(3) @binding(0) var shadowmap: texture_2d<f32>;
-        @group(3) @binding(1) var sm_sampler: sampler;
-        @group(3) @binding(2) var<storage, read> lightMatrices: array<mat4x4<f32>>;
-        @group(3) @binding(3) var<storage, read> cascadeFars: array<f32>;
+        @group(3) @binding(1) var<storage, read> lightMatrices: array<mat4x4<f32>>;
+        @group(3) @binding(2) var<storage, read> cascadeFars: array<f32>;
 
         @vertex fn vs_main(
             v: Vin,
@@ -99,7 +98,6 @@ public sealed class DeferredProcessShader : Shader
             let specular: vec3<f32> = max(vec3<f32>(), V * D * F * irradiance);
 
             // Shadow
-
             let distance: f32 = length(pos_camera_coord);
             let cascade_count: u32 = arrayLength(&lightMatrices);
             var cascade: u32 = cascade_count;
@@ -109,59 +107,32 @@ public sealed class DeferredProcessShader : Shader
                     break;
                 }
             }
-
-            var visibility: f32 = 1.0;
+            var visibility: f32;
             if(cascade < cascade_count) {
-                let pos_world_coord = camera.inv_view * vec4(pos_camera_coord, 1.0);
-                let p = to_vec3(lightMatrices[cascade] * pos_world_coord);
-                let shadowmap_pos = vec3<f32>(
-                    p.x * 0.5 + 0.5,
-                    -p.y * 0.5 + 0.5,
-                    p.z);
+                let shadow_pos = to_vec3(lightMatrices[cascade] * camera.inv_view * vec4(pos_camera_coord, 1.0));
+                let shadow_uv = vec3<f32>(
+                    shadow_pos.x * 0.5 + 0.5,
+                    -shadow_pos.y * 0.5 + 0.5,
+                    shadow_pos.z);
                 let bias = 0.005 / (f32(cascade + 1u) * 5.0);
-                //let bias = 0.0;
-
-                let shadowmap_size: vec2<u32> = textureDimensions(shadowmap, 0);
-                let shadowmap_size_inv: vec2<f32> = vec2<f32>(1.0, 1.0) / vec2<f32>(shadowmap_size);
-
-                let random: vec2<f32> = random_vec2_f32(in.uv);
-                var ref_z = shadowmap_pos.z + bias;
-                let R: f32 = 6.0 / (f32(cascade + 1u) * 2.5);        // TODO:
-                let r = R * sqrt(random.x);
-                let offset = vec2<f32>(
-                    r * cos(2.0 * PI * random.y),
-                    r * sin(2.0 * PI * random.y),
-                );
-                if(shadowmap_pos.x < 0.0 || shadowmap_pos.x > 1.0 || shadowmap_pos.y < 0.0 || shadowmap_pos.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
+                let ref_z = shadow_uv.z + bias;
+                if(shadow_uv.x < 0.0 || shadow_uv.x > 1.0 || shadow_uv.y < 0.0 || shadow_uv.y > 1.0 || ref_z > 1.0 || ref_z < 0.0) {
                     visibility = 1.0;
                 }
                 else {
-                    //var shadow_uv = vec2<f32>(
-                    //    shadowmap_pos.x / f32(cascade_count) + f32(cascade) / f32(cascade_count),
-                    //    shadowmap_pos.y,
-                    //) + offset * shadowmap_size_inv;
-                    //let value = textureSampleLevel(shadowmap, sm_sampler, shadow_uv, 0.0);
-                    //visibility = step(value.r, ref_z);
-                    var shadow_uv = vec2<f32>(
-                        shadowmap_pos.x / f32(cascade_count) + f32(cascade) / f32(cascade_count),
-                        shadowmap_pos.y,
+                    let atlas_shadow_uv = vec2<f32>(
+                        shadow_uv.x / f32(cascade_count) + f32(cascade) / f32(cascade_count),
+                        shadow_uv.y,
                     );
-
-                    let value = texture0ManualSampleRG(shadowmap, shadow_uv);
-                    let depth_sq = value.r * value.r;           // E(x)^2
-                    var variance = value.g - depth_sq;          // σ^2 = E(x^2) - E(x)^2
-                    let d = ref_z - value.r;                    // t - μ
-                    let p_max = variance / (variance + d * d);  //  σ^2 / (σ^2 + (t - μ)^2)
-                    if (ref_z <= value.r) {
-                        visibility = 0.0;
-                    }
-                    else {
-                        visibility = 1.0 - p_max;
-                    }
+                    visibility = calcShadowVisibility(shadowmap, atlas_shadow_uv, cascade, ref_z);
                 }
+            }
+            else {
+                visibility = 1.0;
             }
 
             if (cascade == cascade_count - 1u) {
+                // fade out shadow
                 let coeff: f32 = (cascadeFars[cascade] - distance) / (cascadeFars[cascade] - cascadeFars[cascade - 1u]);
                 visibility = 1.0 - (1.0 - visibility) * coeff;
             }
@@ -174,14 +145,13 @@ public sealed class DeferredProcessShader : Shader
 
             var out: Fout;
             out.color = vec4<f32>(fragColor, 1.0);
-            //out.color = vec4<f32>(albedo, 1.0);
             //out.color = vec4<f32>(visibility, visibility, visibility, 1.0);
             let pos_dnc = camera.proj * vec4(pos_camera_coord, 1.0);
             out.depth = (pos_dnc.z / pos_dnc.w) * 0.5 + 0.5;
             return out;
         }
 
-        fn texture0ManualSampleRG(t: texture_2d<f32>, uv: vec2<f32>) -> vec2<f32> {
+        fn texture0ManualSampleRG(t: texture_2d<f32>, uv: vec2<f32>, ref_z: f32) -> vec2<f32> {
             let size: vec2<u32> = textureDimensions(t, 0);
             let p: vec2<f32> = uv * vec2<f32>(size);
             let floor_p: vec2<f32> = floor(p);
@@ -195,6 +165,72 @@ public sealed class DeferredProcessShader : Shader
             let c2 = textureLoad(t, p2, 0).xy;
             let c3 = textureLoad(t, p3, 0).xy;
             return mix(mix(c0, c1, delta.x), mix(c2, c3, delta.x), delta.y);
+        }
+
+        fn calcShadowVisibility(tex: texture_2d<f32>, uv: vec2<f32>, cascade: u32, ref_z: f32) -> f32 {
+            let size: vec2<u32> = textureDimensions(tex, 0);
+            let p: vec2<f32> = uv * vec2<f32>(size);
+            let floor_p: vec2<f32> = floor(p);
+            let floor_pu: vec2<u32> = vec2<u32>(floor_p);
+            let delta: vec2<f32> = p - floor_p;
+
+            let A = (1.0 - delta.x) * (1.0 - delta.y);
+            let B = delta.x * (1.0 - delta.y);
+            let C = (1.0 - delta.x) * delta.y;
+            let D = delta.x * delta.y;
+            let AB = A + B;
+            let AC = A + C;
+            let BD = B + D;
+            let CD = C + D;
+
+            let x_min: u32 = cascade * size.y;
+            let x_max: u32 = (cascade + 1u) * size.y;
+            let y_min: u32 = 0u;
+            let y_max: u32 = size.y;
+
+            let s = array<u32, 4>(
+                clamp(floor_pu.x - 1u, x_min, x_max),
+                clamp(floor_pu.x + 0u, x_min, x_max),
+                clamp(floor_pu.x + 1u, x_min, x_max),
+                clamp(floor_pu.x + 2u, x_min, x_max),
+            );
+            let t = array<u32, 4>(
+                clamp(floor_pu.y - 1u, y_min, y_max),
+                clamp(floor_pu.y + 0u, y_min, y_max),
+                clamp(floor_pu.y + 1u, y_min, y_max),
+                clamp(floor_pu.y + 2u, y_min, y_max),
+            );
+
+            let pos = array<vec2<u32>, 16>(
+                vec2(s[0], t[0]), vec2<u32>(s[1], t[0]), vec2<u32>(s[2], t[0]), vec2<u32>(s[3], t[0]),
+                vec2(s[0], t[1]), vec2<u32>(s[1], t[1]), vec2<u32>(s[2], t[1]), vec2<u32>(s[3], t[1]),
+                vec2(s[0], t[2]), vec2<u32>(s[1], t[2]), vec2<u32>(s[2], t[2]), vec2<u32>(s[3], t[2]),
+                vec2(s[0], t[3]), vec2<u32>(s[1], t[3]), vec2<u32>(s[2], t[3]), vec2<u32>(s[3], t[3]),
+            );
+            let norm: f32 = 0.111111111;        // 1.0 / 9.0
+            let kernel = array<f32, 16>(
+                A * norm, AB * norm, AB * norm, B * norm,
+                AC * norm, 1.0 * norm, 1.0 * norm, BD * norm,
+                AC * norm, 1.0 * norm, 1.0 * norm, BD * norm,
+                C * norm, CD * norm, CD * norm, D * norm,
+            );
+            return 
+                step(textureLoad(tex, pos[0], 0).x, ref_z) * kernel[0] +
+                step(textureLoad(tex, pos[1], 0).x, ref_z) * kernel[1] +
+                step(textureLoad(tex, pos[2], 0).x, ref_z) * kernel[2] +
+                step(textureLoad(tex, pos[3], 0).x, ref_z) * kernel[3] +
+                step(textureLoad(tex, pos[4], 0).x, ref_z) * kernel[4] +
+                step(textureLoad(tex, pos[5], 0).x, ref_z) * kernel[5] +
+                step(textureLoad(tex, pos[6], 0).x, ref_z) * kernel[6] +
+                step(textureLoad(tex, pos[7], 0).x, ref_z) * kernel[7] +
+                step(textureLoad(tex, pos[8], 0).x, ref_z) * kernel[8] +
+                step(textureLoad(tex, pos[9], 0).x, ref_z) * kernel[9] +
+                step(textureLoad(tex, pos[10], 0).x, ref_z) * kernel[10] +
+                step(textureLoad(tex, pos[11], 0).x, ref_z) * kernel[11] +
+                step(textureLoad(tex, pos[12], 0).x, ref_z) * kernel[12] +
+                step(textureLoad(tex, pos[13], 0).x, ref_z) * kernel[13] +
+                step(textureLoad(tex, pos[14], 0).x, ref_z) * kernel[14] +
+                step(textureLoad(tex, pos[15], 0).x, ref_z) * kernel[15];
         }
 
         fn to_vec3(v: vec4<f32>) -> vec3<f32> {
@@ -328,7 +364,7 @@ public sealed class DeferredProcessShader : Shader
                         Format = screen.Surface.Format,
                         Blend = null,
                         WriteMask = ColorWrites.All,
-                    }
+                    },
                 ],
             },
             Primitive = new PrimitiveState
@@ -402,9 +438,8 @@ public sealed class DeferredProcessShader : Shader
                             Multisampled = false,
                             SampleType = TextureSampleType.FloatNotFilterable,
                         }),
-                        BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.NonFiltering),
+                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
                         BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
-                        BindGroupLayoutEntry.Buffer(3, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
                     ],
                 }).AddTo(disposable),
             ],

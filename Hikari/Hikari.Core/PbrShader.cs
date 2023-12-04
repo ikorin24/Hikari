@@ -384,7 +384,7 @@ public sealed class PbrShader : Shader
                 Targets = [
                     new ColorTargetState
                     {
-                        Format = DirectionalLight.VarianceShadowMapFormat,
+                        Format = DirectionalLight.ShadowMapFormat,
                         Blend = null,
                         WriteMask = ColorWrites.All,
                     },

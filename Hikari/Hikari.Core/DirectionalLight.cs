@@ -11,15 +11,14 @@ public sealed partial class DirectionalLight : IScreenManaged
 {
     internal const uint CascadeCountConst = 4;       // 2 ~
     internal const u32 ShadowMapWidth = 1024;
-    internal const u32 ShadowMapHeight = 1024;
-    internal const TextureFormat VarianceShadowMapFormat = TextureFormat.Rg32Float;
+    internal const u32 ShadowMapHeight = ShadowMapWidth;
+    internal const TextureFormat ShadowMapFormat = TextureFormat.R32Float;
 
     private readonly Screen _screen;
     private readonly CachedOwnBuffer<DirectionalLightData> _lightData;
     private TypedOwnBuffer<LightMatrixArray> _lightMatrices;
     private TypedOwnBuffer<CascadeFarArray> _cascadeFars;
     private readonly Own<Texture2D> _shadowMap;
-    private readonly Own<Texture2D> _shadowMapTemp;
     private readonly Own<Texture2D> _depthOnRenderShadowMap;
     private readonly SubscriptionBag _subscriptionBag = new();
 
@@ -30,7 +29,6 @@ public sealed partial class DirectionalLight : IScreenManaged
     public void Validate() => IScreenManaged.DefaultValidate(this);
 
     public Texture2D ShadowMap => _shadowMap.AsValue();
-    internal Texture2D ShadowMapTemp => _shadowMapTemp.AsValue();
 
     internal Buffer LightMatricesBuffer => _lightMatrices.AsBuffer();
     internal Buffer CascadeFarsBuffer => _cascadeFars.AsBuffer();
@@ -43,7 +41,7 @@ public sealed partial class DirectionalLight : IScreenManaged
 
     internal Buffer DataBuffer => _lightData.AsBuffer();
 
-    public ImmutableArray<RenderPassDefinition> PrepareShadowMapPassDefinitions { get; } = [
+    public ImmutableArray<RenderPassDefinition> ShadowMapPassDefinitions { get; } = [
         new RenderPassDefinition
         {
             Kind = PassKind.ShadowMap,
@@ -69,36 +67,6 @@ public sealed partial class DirectionalLight : IScreenManaged
                     });
             },
         },
-        new RenderPassDefinition
-        {
-            Kind = PassKind.Custom("prepare-vsm-x"),
-            Factory = static (screen, _) =>
-            {
-                return RenderPass.Create(
-                    screen,
-                    new ColorAttachment
-                    {
-                        Target = screen.Lights.DirectionalLight.ShadowMapTemp,
-                        LoadOp = ColorBufferLoadOp.Clear(),
-                    },
-                    null);
-            },
-        },
-        new RenderPassDefinition
-        {
-            Kind = PassKind.Custom("prepare-vsm-y"),
-            Factory = static (screen, _) =>
-            {
-                return RenderPass.Create(
-                    screen,
-                    new ColorAttachment
-                    {
-                        Target = screen.Lights.DirectionalLight.ShadowMap,
-                        LoadOp = ColorBufferLoadOp.Clear(),
-                    },
-                    null);
-            },
-        },
     ];
 
     public void SetLightData(in Vector3 direction, in Color3 color)
@@ -122,15 +90,7 @@ public sealed partial class DirectionalLight : IScreenManaged
         _shadowMap = Texture2D.Create(screen, new()
         {
             Size = new Vector2u(ShadowMapWidth * CascadeCountConst, ShadowMapHeight),
-            Format = VarianceShadowMapFormat,
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Usage = TextureUsages.TextureBinding | TextureUsages.RenderAttachment | TextureUsages.CopySrc,
-        });
-        _shadowMapTemp = Texture2D.Create(screen, new()
-        {
-            Size = new Vector2u(ShadowMapWidth * CascadeCountConst, ShadowMapHeight),
-            Format = VarianceShadowMapFormat,
+            Format = ShadowMapFormat,
             MipLevelCount = 1,
             SampleCount = 1,
             Usage = TextureUsages.TextureBinding | TextureUsages.RenderAttachment | TextureUsages.CopySrc,
@@ -153,7 +113,6 @@ public sealed partial class DirectionalLight : IScreenManaged
     {
         _lightData.Dispose();
         _shadowMap.Dispose();
-        _shadowMapTemp.Dispose();
         _depthOnRenderShadowMap.Dispose();
         _lightMatrices.Dispose();
         _cascadeFars.Dispose();
@@ -184,7 +143,7 @@ public sealed partial class DirectionalLight : IScreenManaged
         var cascadeFars = cascadeFarArray.AsSpan().Slice(0, lightMatrices.Length);
         var depthRange = cascadeFarArray.AsSpan().Slice(lightMatrices.Length);
 
-        const float MaxShadowMapFar = 200;
+        const float MaxShadowMapFar = 100;
 
         float logNear = float.Log(camera.Near);
         float logFar = float.Log(MaxShadowMapFar);
