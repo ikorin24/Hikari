@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 
 namespace Hikari;
 
-public sealed class ComputePipeline : IScreenManaged
+public sealed partial class ComputePipeline : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.ComputePipeline> _native;
@@ -15,19 +15,22 @@ public sealed class ComputePipeline : IScreenManaged
 
     public bool IsManaged => _native.IsNone == false;
 
-    private ComputePipeline(Screen screen, Rust.Box<Wgpu.ComputePipeline> native)
+    [Owned(nameof(Release))]
+    private ComputePipeline(Screen screen, in ComputePipelineDescriptor desc)
     {
+        using(var pin = new PinHandleHolder()) {
+            _native = screen.AsRefChecked().CreateComputePipeline(desc.ToNative(pin));
+        }
         _screen = screen;
-        _native = native;
     }
 
     ~ComputePipeline() => Release(false);
 
-    private static readonly Action<ComputePipeline> _release = static self =>
+    private void Release()
     {
-        self.Release(true);
-        GC.SuppressFinalize(self);
-    };
+        Release(true);
+        GC.SuppressFinalize(this);
+    }
 
     private void Release(bool disposing)
     {
@@ -39,17 +42,6 @@ public sealed class ComputePipeline : IScreenManaged
     }
 
     public void Validate() => IScreenManaged.DefaultValidate(this);
-
-
-    public static Own<ComputePipeline> Create(Screen screen, in ComputePipelineDescriptor desc)
-    {
-        Rust.Box<Wgpu.ComputePipeline> native;
-        using(var pin = new PinHandleHolder()) {
-            native = screen.AsRefChecked().CreateComputePipeline(desc.ToNative(pin));
-        }
-        var pipeline = new ComputePipeline(screen, native);
-        return Own.New(pipeline, static x => _release(SafeCast.As<ComputePipeline>(x)));
-    }
 }
 
 public readonly struct ComputePipelineDescriptor

@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 
 namespace Hikari;
 
-public sealed class Buffer : IScreenManaged, IReadBuffer<Buffer>
+public sealed partial class Buffer : IScreenManaged, IReadBuffer<Buffer>
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Buffer> _native;
@@ -25,12 +25,30 @@ public sealed class Buffer : IScreenManaged, IReadBuffer<Buffer>
 
     public bool IsManaged => _native.IsNone == false;
 
-    private Buffer(Screen screen, Rust.Box<Wgpu.Buffer> native, BufferUsages usage, usize byteLen)
+    [Owned(nameof(Release))]
+    private Buffer(Screen screen, usize size, BufferUsages usage)
     {
+        ArgumentNullException.ThrowIfNull(screen);
+        var screenRef = screen.AsRefChecked();
         _screen = screen;
-        _native = native;
+        _native = screenRef.CreateBuffer(size, usage.FlagsMap());
         _usage = usage;
-        _byteLen = byteLen;
+        _byteLen = size;
+    }
+
+    [Owned(nameof(Release))]
+    private Buffer(Screen screen, ref readonly byte ptr, usize byteLength, BufferUsages usage)
+    {
+        ArgumentNullException.ThrowIfNull(screen);
+        unsafe {
+            fixed(byte* p = &ptr) {
+                var data = new CH.Slice<u8>(p, byteLength);
+                _native = screen.AsRefChecked().CreateBufferInit(data, usage.FlagsMap());
+            }
+        }
+        _screen = screen;
+        _usage = usage;
+        _byteLen = byteLength;
     }
 
     ~Buffer() => Release(false);
@@ -52,49 +70,23 @@ public sealed class Buffer : IScreenManaged, IReadBuffer<Buffer>
         }
     }
 
-    public unsafe static Own<Buffer> Create(Screen screen, usize size, BufferUsages usage)
+    public static Own<Buffer> Create<T>(Screen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
     {
-        ArgumentNullException.ThrowIfNull(screen);
-
-        var screenRef = screen.AsRefChecked();
-        var bufferNative = screenRef.CreateBuffer(size, usage.FlagsMap());
-        var buffer = new Buffer(screen, bufferNative, usage, size);
-        return Own.New(buffer, static x => SafeCast.As<Buffer>(x).Release());
+        return Create(
+            screen,
+            in UnsafeEx.As<T, byte>(in data.GetReference()),
+            checked((usize)(Unsafe.SizeOf<T>() * data.Length)),
+            usage);
     }
 
-    public unsafe static Own<Buffer> CreateInitSpan<T>(Screen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
+    public static Own<Buffer> Create<T>(Screen screen, in T data, BufferUsages usage) where T : unmanaged
     {
-        ArgumentNullException.ThrowIfNull(screen);
-        return CreateFromSpan(screen, data, usage);
+        return Create(screen, in UnsafeEx.As<T, byte>(in data), (usize)Unsafe.SizeOf<T>(), usage);
     }
 
-    public unsafe static Own<Buffer> CreateInitData<T>(Screen screen, in T data, BufferUsages usage) where T : unmanaged
+    public unsafe static Own<Buffer> Create(Screen screen, byte* ptr, usize byteLength, BufferUsages usage)
     {
-        ArgumentNullException.ThrowIfNull(screen);
-        return CreateFromSpan(screen, new ReadOnlySpan<T>(in data), usage);
-    }
-
-    public unsafe static Own<Buffer> CreateInitBytes(Screen screen, byte* ptr, usize byteLength, BufferUsages usage)
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        return CreateFromPtr(screen, ptr, byteLength, usage);
-    }
-
-    private unsafe static Own<Buffer> CreateFromSpan<T>(Screen screen, ReadOnlySpan<T> data, BufferUsages usage) where T : unmanaged
-    {
-        fixed(T* ptr = data) {
-            var bytelen = (usize)data.Length * (usize)sizeof(T);
-            return CreateFromPtr(screen, (byte*)ptr, bytelen, usage);
-        }
-    }
-
-    private unsafe static Own<Buffer> CreateFromPtr(Screen screen, byte* ptr, usize byteLength, BufferUsages usage)
-    {
-        var screenRef = screen.AsRefChecked();
-        var data = new CH.Slice<u8>(ptr, byteLength);
-        var bufferNative = screenRef.CreateBufferInit(data, usage.FlagsMap());
-        var buffer = new Buffer(screen, bufferNative, usage, byteLength);
-        return Own.New(buffer, static x => SafeCast.As<Buffer>(x).Release());
+        return Create(screen, ref *ptr, byteLength, usage);
     }
 
     public BufferSlice Slice() => BufferSlice.Full(this);

@@ -4,7 +4,7 @@ using System;
 
 namespace Hikari;
 
-public sealed class ShaderModule : IScreenManaged
+public sealed partial class ShaderModule : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.ShaderModule> _native;
@@ -14,10 +14,12 @@ public sealed class ShaderModule : IScreenManaged
 
     public bool IsManaged => _native.IsNone == false;
 
-    private ShaderModule(Screen screen, Rust.Box<Wgpu.ShaderModule> native)
+    [Owned(nameof(Release))]
+    private ShaderModule(Screen screen, ReadOnlySpan<byte> shaderSource)
     {
+        ArgumentNullException.ThrowIfNull(screen);
+        _native = screen.AsRefChecked().CreateShaderModule(shaderSource);
         _screen = screen;
-        _native = native;
     }
 
     ~ShaderModule() => Release(false);
@@ -37,13 +39,5 @@ public sealed class ShaderModule : IScreenManaged
             if(disposing) {
             }
         }
-    }
-
-    public static Own<ShaderModule> Create(Screen screen, ReadOnlySpan<byte> shaderSource)
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        var shaderModuleNative = screen.AsRefChecked().CreateShaderModule(shaderSource);
-        var shaderModule = new ShaderModule(screen, shaderModuleNative);
-        return Own.New(shaderModule, static x => SafeCast.As<ShaderModule>(x).Release());
     }
 }

@@ -3,7 +3,7 @@ using System;
 
 namespace Hikari;
 
-public sealed class GBufferProvider : IScreenManaged, IGBufferProvider
+public sealed partial class GBufferProvider : IScreenManaged, IGBufferProvider
 {
     private readonly Screen _screen;
     private readonly TextureFormat[] _formats;
@@ -27,6 +27,7 @@ public sealed class GBufferProvider : IScreenManaged, IGBufferProvider
 
     public ReadOnlySpan<TextureFormat> Formats => _formats;
 
+    [Owned(nameof(Release))]
     private GBufferProvider(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
         _screen = screen;
@@ -44,17 +45,11 @@ public sealed class GBufferProvider : IScreenManaged, IGBufferProvider
         }
     }
 
-    public static Own<GBufferProvider> Create(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
-    {
-        var self = new GBufferProvider(screen, size, formats);
-        return Own.New(self, static x => SafeCast.As<GBufferProvider>(x).Release());
-    }
-
     public static Own<GBufferProvider> CreateScreenSize(Screen screen, ReadOnlySpan<TextureFormat> formats)
     {
-        var self = new GBufferProvider(screen, screen.ClientSize, formats);
-        screen.Resized.Subscribe(x => self.Resize(x.Size));
-        return Own.New(self, static x => SafeCast.As<GBufferProvider>(x).Release());
+        var value = Create(screen, screen.ClientSize, formats);
+        screen.Resized.Subscribe(x => value.AsValue().Resize(x.Size));
+        return value;
     }
 
     public GBuffer GetCurrentGBuffer()

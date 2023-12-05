@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Hikari;
 
-public sealed class GBuffer : IScreenManaged
+public sealed partial class GBuffer : IScreenManaged
 {
     private readonly Screen _screen;
     private readonly Vector2u _size;
@@ -17,8 +17,12 @@ public sealed class GBuffer : IScreenManaged
     public Vector2u Size => _size;
     public ReadOnlySpan<Texture2D> Textures => _colors;
 
+    [Owned(nameof(Release))]
     private GBuffer(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
     {
+        if(formats.IsEmpty) {
+            throw new ArgumentException("formats is empty", nameof(formats));
+        }
         var colors = new Texture2D[formats.Length];
         for(int i = 0; i < colors.Length; i++) {
             colors[i] = Texture2D.Create(screen, new()
@@ -46,15 +50,5 @@ public sealed class GBuffer : IScreenManaged
     public void Validate()
     {
         IScreenManaged.DefaultValidate(this);
-    }
-
-    public static Own<GBuffer> Create(Screen screen, Vector2u size, ReadOnlySpan<TextureFormat> formats)
-    {
-        if(formats.IsEmpty) {
-            throw new ArgumentException("formats is empty", nameof(formats));
-        }
-
-        var gbuffer = new GBuffer(screen, size, formats);
-        return Own.New(gbuffer, static x => SafeCast.As<GBuffer>(x).Release());
     }
 }

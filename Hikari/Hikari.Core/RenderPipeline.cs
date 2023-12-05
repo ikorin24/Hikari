@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace Hikari;
 
-public sealed class RenderPipeline : IScreenManaged
+public sealed partial class RenderPipeline : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.RenderPipeline> _native;
@@ -23,11 +23,19 @@ public sealed class RenderPipeline : IScreenManaged
 
     public bool IsManaged => _native.IsNone == false;
 
-    private RenderPipeline(Screen screen, Rust.Box<Wgpu.RenderPipeline> native, in RenderPipelineDescriptor desc)
+    [Owned(nameof(Release))]
+    private RenderPipeline(Screen screen, in RenderPipelineDescriptor desc)
     {
-        _screen = screen;
-        _native = native;
+        var pins = new PinHandleHolder();
+        try {
+            var descNative = desc.ToNative(pins);
+            _native = screen.AsRefChecked().CreateRenderPipeline(descNative);
+        }
+        finally {
+            pins.Dispose();
+        }
         _desc = desc;
+        _screen = screen;
     }
 
     ~RenderPipeline() => Release(false);
@@ -46,20 +54,6 @@ public sealed class RenderPipeline : IScreenManaged
             native.DestroyRenderPipeline();
             if(disposing) {
             }
-        }
-    }
-
-    public unsafe static Own<RenderPipeline> Create(Screen screen, in RenderPipelineDescriptor desc)
-    {
-        var pins = new PinHandleHolder();
-        try {
-            var descNative = desc.ToNative(pins);
-            var native = screen.AsRefChecked().CreateRenderPipeline(descNative);
-            var renderPipeline = new RenderPipeline(screen, native, in desc);
-            return Own.New(renderPipeline, static x => SafeCast.As<RenderPipeline>(x).Release());
-        }
-        finally {
-            pins.Dispose();
         }
     }
 }

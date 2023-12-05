@@ -25,14 +25,13 @@ internal class BufferDataStructGenerator : IIncrementalGenerator
 
 #nullable enable
 
-namespace Hikari
+namespace Hikari;
+
+[global::System.Diagnostics.Conditional("COMPILE_TIME_ONLY")]
+[global::System.AttributeUsage(System.AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
+internal sealed class BufferDataStructAttribute : global::System.Attribute
 {
-    [global::System.Diagnostics.Conditional("COMPILE_TIME_ONLY")]
-    [global::System.AttributeUsage(System.AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
-    internal sealed class BufferDataStructAttribute : global::System.Attribute
-    {
-        public BufferDataStructAttribute() { }
-    }
+    public BufferDataStructAttribute() { }
 }
 
 """);
@@ -137,7 +136,7 @@ partial {{(typeSymbol.IsRecord ? "record struct" : "struct")}} {{typeSymbol.Name
 {
     private static class OffsetOf
     {
-{{string.Join(Environment.NewLine, offsets)}}
+{{string.Join("\n", offsets)}}
     }
 }
 

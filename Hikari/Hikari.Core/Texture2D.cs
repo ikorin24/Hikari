@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed class Texture2D : ITexture2DProvider, IScreenManaged
+public sealed partial class Texture2D : ITexture2DProvider, IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Texture> _native;
@@ -48,6 +48,17 @@ public sealed class Texture2D : ITexture2DProvider, IScreenManaged
         _defaultView = TextureView.Create(this);
     }
 
+    [Owned(nameof(Release))]
+    private Texture2D(Screen screen, in Texture2DDescriptor desc)
+    {
+        ArgumentNullException.ThrowIfNull(screen);
+        var descNative = desc.ToNative();
+        _native = screen.AsRefChecked().CreateTexture(in descNative);
+        _screen = screen;
+        _desc = desc;
+        _defaultView = TextureView.Create(this);
+    }
+
     ~Texture2D() => Release(false);
 
     public void Validate() => IScreenManaged.DefaultValidate(this);
@@ -70,18 +81,9 @@ public sealed class Texture2D : ITexture2DProvider, IScreenManaged
 
     public Texture2DDescriptor GetDescriptor() => _desc;
 
-    public static Own<Texture2D> Create(Screen screen, in Texture2DDescriptor desc)
+    public unsafe static Own<Texture2D> CreateFromRawData(Screen screen, in Texture2DDescriptor desc, ReadOnlySpan<u8> rawData)
     {
-        ArgumentNullException.ThrowIfNull(screen);
-        var descNative = desc.ToNative();
-        var textureNative = screen.AsRefChecked().CreateTexture(descNative);
-        var texture = new Texture2D(screen, textureNative, desc);
-        return Own.New(texture, static x => SafeCast.As<Texture2D>(x).Release());
-    }
-
-    public unsafe static Own<Texture2D> CreateFromRawData(Screen screen, in Texture2DDescriptor desc, ReadOnlySpan<u8> data)
-    {
-        return TextureHelper.CreateFromRawData(screen, desc, data, &Callback);
+        return TextureHelper.CreateFromRawData(screen, desc, rawData, &Callback);
 
         static Own<Texture2D> Callback(
             Screen screen,
@@ -98,9 +100,11 @@ public sealed class Texture2D : ITexture2DProvider, IScreenManaged
         var desc = new Texture2DDescriptor
         {
             Size = new Vector2u((uint)image.Width, (uint)image.Height),
-            MipLevelCount = mipLevelCount.GetValueOrDefault(
-                uint.Log2(uint.Min((uint)image.Width, (uint)image.Height))
-            ),
+            MipLevelCount = mipLevelCount switch
+            {
+                not null => mipLevelCount.Value,
+                null => uint.Log2(uint.Min((uint)image.Width, (uint)image.Height)),
+            },
             SampleCount = 1,
             Format = format,
             Usage = usage,
@@ -287,7 +291,7 @@ public sealed class Texture2D : ITexture2DProvider, IScreenManaged
         // make bufferSize multiply of COPY_BYTES_PER_ROW_ALIGNMENT
         bufferSize = (bufferSize + EngineConsts.COPY_BYTES_PER_ROW_ALIGNMENT - 1) & ~(EngineConsts.COPY_BYTES_PER_ROW_ALIGNMENT - 1);
 
-        using(var buffer = Buffer.Create(screen, bufferSize, BufferUsages.CopySrc | BufferUsages.CopyDst)) {
+        using(var buffer = Buffer.Create(screen, (nuint)bufferSize, BufferUsages.CopySrc | BufferUsages.CopyDst)) {
             var bufValue = buffer.AsValue();
             EngineCore.CopyTextureToBuffer(screen.AsRefChecked(), source, size, bufValue.NativeRef, layout);
             bufValue.ReadCallback((bytes, _) => onRead(bytes, this), onException);

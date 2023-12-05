@@ -5,10 +5,11 @@ using System.Runtime.CompilerServices;
 
 namespace Hikari;
 
-public sealed class Sampler : IScreenManaged
+public sealed partial class Sampler : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Sampler> _native;
+    private readonly SamplerDescriptor _desc;
 
     public Screen Screen => _screen;
 
@@ -16,10 +17,16 @@ public sealed class Sampler : IScreenManaged
 
     public bool IsManaged => _native.IsNone == false;
 
-    private Sampler(Screen screen, Rust.Box<Wgpu.Sampler> native)
+    public SamplerDescriptor Descriptor => _desc;
+
+    [Owned(nameof(Release))]
+    private Sampler(Screen screen, in SamplerDescriptor desc)
     {
+        ArgumentNullException.ThrowIfNull(screen);
+        var descNative = desc.ToNative();
+        _native = screen.AsRefChecked().CreateSampler(descNative);
         _screen = screen;
-        _native = native;
+        _desc = desc;
     }
 
     ~Sampler() => Release(false);
@@ -39,28 +46,6 @@ public sealed class Sampler : IScreenManaged
             if(disposing) {
             }
         }
-    }
-
-    public static Own<Sampler> Create(Screen screen, in SamplerDescriptor desc)
-    {
-        ArgumentNullException.ThrowIfNull(screen);
-        var descNative = desc.ToNative();
-        var samplerNative = screen.AsRefChecked().CreateSampler(descNative);
-        var sampler = new Sampler(screen, samplerNative);
-        return Own.New(sampler, static x => SafeCast.As<Sampler>(x).Release());
-    }
-
-    public static Own<Sampler> NoMipmap(Screen screen, AddressMode addressMode, FilterMode magFilter, FilterMode minFilter)
-    {
-        return Create(screen, new SamplerDescriptor
-        {
-            AddressModeU = addressMode,
-            AddressModeV = addressMode,
-            AddressModeW = addressMode,
-            MagFilter = magFilter,
-            MinFilter = minFilter,
-            MipmapFilter = FilterMode.Nearest,
-        });
     }
 }
 

@@ -22,10 +22,11 @@ internal static class TextureHelper
         }
     }
 
-    public unsafe static T CreateFromRawData<TDesc, T>(
+    public unsafe static TOut CreateFromRawData<TDesc, TOut>(
         Screen screen,
-        in TDesc desc, ReadOnlySpan<u8> data,
-        delegate*<Screen, Rust.Box<Wgpu.Texture>, in TDesc, T> callback)
+        in TDesc desc,
+        ReadOnlySpan<u8> data,
+        delegate*<Screen, Rust.Box<Wgpu.Texture>, in TDesc, TOut> callback)
         where TDesc : struct, ITextureDescriptor
     {
         // data is a raw data of texture in the current format.

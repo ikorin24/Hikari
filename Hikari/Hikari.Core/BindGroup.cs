@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed class BindGroup : IScreenManaged
+public sealed partial class BindGroup : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.BindGroup> _native;
@@ -32,21 +32,23 @@ public sealed class BindGroup : IScreenManaged
         }
     }
 
-    private BindGroup(Screen screen, Rust.Box<Wgpu.BindGroup> native, in BindGroupDescriptor desc)
+    [Owned(nameof(Release))]
+    private BindGroup(Screen screen, in BindGroupDescriptor desc)
     {
         ArgumentNullException.ThrowIfNull(screen);
-        _native = native;
+        using var pins = new PinHandleHolder();
+        _native = screen.AsRefChecked().CreateBindGroup(desc.ToNative(pins));
         _screen = screen;
         _desc = desc;
     }
 
     ~BindGroup() => Release(false);
 
-    private static readonly Action<BindGroup> _release = static self =>
+    private void Release()
     {
-        self.Release(true);
-        GC.SuppressFinalize(self);
-    };
+        Release(true);
+        GC.SuppressFinalize(this);
+    }
 
     private void Release(bool disposing)
     {
@@ -55,14 +57,6 @@ public sealed class BindGroup : IScreenManaged
             if(disposing) {
             }
         }
-    }
-
-    public static Own<BindGroup> Create(Screen screen, in BindGroupDescriptor desc)
-    {
-        using var pins = new PinHandleHolder();
-        var bindGroupNative = screen.AsRefChecked().CreateBindGroup(desc.ToNative(pins));
-        var bindGroup = new BindGroup(screen, bindGroupNative, desc);
-        return Own.New(bindGroup, static x => _release(SafeCast.As<BindGroup>(x)));
     }
 }
 

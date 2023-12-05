@@ -18,7 +18,7 @@ internal readonly record struct TypedOwnBuffer<T> : IDisposable where T : unmana
 
     public TypedOwnBuffer(Screen screen, in T data, BufferUsages usage)
     {
-        _buffer = Buffer.CreateInitData(screen, data, usage);
+        _buffer = Buffer.Create(screen, data, usage);
     }
 
     internal readonly Buffer AsBuffer() => _buffer.AsValue();

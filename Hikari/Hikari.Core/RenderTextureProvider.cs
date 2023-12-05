@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Hikari;
 
-public sealed class RenderTextureProvider : ITexture2DProvider
+public sealed partial class RenderTextureProvider : ITexture2DProvider
 {
     private Own<Texture2D> _currentOwn;
     private Texture2D? _current;
@@ -44,18 +44,17 @@ public sealed class RenderTextureProvider : ITexture2DProvider
 
     Rust.Ref<Wgpu.TextureView> ITextureViewProvider.GetCurrentTextureView() => GetCurrentTextureView();
 
+    [Owned(nameof(Release))]
     private RenderTextureProvider(Screen screen, in Texture2DDescriptor desc)
     {
         _currentOwn = Texture2D.Create(screen, desc);
         _current = _currentOwn.AsValue();
     }
 
-    public static Own<RenderTextureProvider> Create(Screen screen, in Texture2DDescriptor desc)
+    [Owned(nameof(Release))]
+    private RenderTextureProvider(Screen screen)
     {
-        return Own.New(new RenderTextureProvider(screen, desc), x =>
-        {
-            SafeCast.As<RenderTextureProvider>(x).Release();
-        });
+        throw null!;
     }
 
     public bool Resize(Vector2u size)
@@ -77,7 +76,7 @@ public sealed class RenderTextureProvider : ITexture2DProvider
         return true;
     }
 
-    public void Release()
+    private void Release()
     {
         _currentOwn.Dispose();
         _current = null;
@@ -106,3 +105,24 @@ public sealed class RenderTextureProvider : ITexture2DProvider
 
     TextureDimension ITexture2DProvider.GetCurrentDimension() => Dimension;
 }
+
+//partial class RenderTextureProvider
+//{
+//    public static Own<RenderTextureProvider> Create(Screen screen, in Texture2DDescriptor desc)
+//    {
+//        var self = new RenderTextureProvider(screen, desc);
+//        return Own.New(self, static self =>
+//        {
+//            SafeCast.As<RenderTextureProvider>(self).Release();
+//        });
+//    }
+//}
+
+//[global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+//[global::System.Diagnostics.Conditional("COMPILE_TIME_ONLY")]
+//internal sealed class OwnedAttribute : global::System.Attribute
+//{
+//    public OwnedAttribute(string releaseMethod)
+//    {
+//    }
+//}

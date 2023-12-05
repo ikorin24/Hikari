@@ -58,7 +58,7 @@ internal abstract class UIMaterial : Material
         Brush.Transparent.GetBufferData(this, static (span, self) =>
         {
             self._backgroundBuffer.Dispose();
-            self._backgroundBuffer = Buffer.CreateInitSpan(self.Screen, span, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
+            self._backgroundBuffer = Buffer.Create(self.Screen, span, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
             self.SetBindGroup2();
         });
     }
@@ -164,7 +164,7 @@ internal abstract class UIMaterial : Material
                 background.GetBufferData(this, static (span, self) =>
                 {
                     self._backgroundBuffer.Dispose();
-                    self._backgroundBuffer = Buffer.CreateInitSpan(self.Screen, span, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
+                    self._backgroundBuffer = Buffer.Create(self.Screen, span, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
                     self.SetBindGroup2();
                 });
             }

@@ -29,8 +29,8 @@ partial class Mesh
         Own<Buffer> indexBuffer;
         fixed(void* v = desc.Vertices.Data)
         fixed(void* ind = desc.Indices.Data) {
-            vertexBuffer = Buffer.CreateInitBytes(screen, (u8*)v, desc.Vertices.Data.ByteLength, desc.Vertices.Usages | BufferUsages.Vertex);
-            indexBuffer = Buffer.CreateInitBytes(screen, (u8*)ind, desc.Indices.Data.ByteLength, desc.Indices.Usages | BufferUsages.Index);
+            vertexBuffer = Buffer.Create(screen, (u8*)v, desc.Vertices.Data.ByteLength, desc.Vertices.Usages | BufferUsages.Vertex);
+            indexBuffer = Buffer.Create(screen, (u8*)ind, desc.Indices.Data.ByteLength, desc.Indices.Usages | BufferUsages.Index);
         }
         Own<Buffer> tangentBuffer;
         if(desc.Tangents.Data.IsEmpty) {
@@ -38,7 +38,7 @@ partial class Mesh
         }
         else {
             fixed(void* t = desc.Tangents.Data) {
-                tangentBuffer = Buffer.CreateInitBytes(screen, (u8*)t, desc.Tangents.Data.ByteLength, desc.Tangents.Usages | BufferUsages.Vertex);
+                tangentBuffer = Buffer.Create(screen, (u8*)t, desc.Tangents.Data.ByteLength, desc.Tangents.Usages | BufferUsages.Vertex);
             }
         }
         var meshData = new MeshData

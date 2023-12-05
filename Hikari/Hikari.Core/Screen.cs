@@ -169,7 +169,7 @@ public sealed class Screen
         _objectStore = new ObjectStore(this);
         _uiTree = new UITree(this);
         _scheduler = new RenderPassScheduler(this);
-        _info = Buffer.CreateInitData(this, new ScreenInfo
+        _info = Buffer.Create(this, new ScreenInfo
         {
             Size = Vector2u.Zero,
         }, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);

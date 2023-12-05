@@ -9,10 +9,11 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed class BindGroupLayout : IScreenManaged
+public sealed partial class BindGroupLayout : IScreenManaged
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.BindGroupLayout> _native;
+    private readonly BindGroupLayoutDescriptor _desc;
 
     public Screen Screen => _screen;
 
@@ -20,19 +21,27 @@ public sealed class BindGroupLayout : IScreenManaged
 
     public bool IsManaged => _native.IsNone == false;
 
-    private BindGroupLayout(Screen screen, Rust.Box<Wgpu.BindGroupLayout> native)
+    public BindGroupLayoutDescriptor Descriptor => _desc;
+
+    [Owned(nameof(Release))]
+    private BindGroupLayout(Screen screen, in BindGroupLayoutDescriptor desc)
     {
+        ArgumentNullException.ThrowIfNull(screen);
+        using(var pins = new PinHandleHolder()) {
+            var descNative = desc.ToNative(pins);
+            _native = screen.AsRefChecked().CreateBindGroupLayout(descNative);
+        }
         _screen = screen;
-        _native = native;
+        _desc = desc;
     }
 
     ~BindGroupLayout() => Release(false);
 
-    private static readonly Action<BindGroupLayout> _release = static self =>
+    private void Release()
     {
-        self.Release(true);
-        GC.SuppressFinalize(self);
-    };
+        Release(true);
+        GC.SuppressFinalize(this);
+    }
 
     private void Release(bool disposing)
     {
@@ -44,18 +53,9 @@ public sealed class BindGroupLayout : IScreenManaged
     }
 
     public void Validate() => IScreenManaged.DefaultValidate(this);
-
-    public unsafe static Own<BindGroupLayout> Create(Screen screen, in BindGroupLayoutDescriptor desc)
-    {
-        using var pins = new PinHandleHolder();
-        var descNative = desc.ToNative(pins);
-        var bindGroupLayoutNative = screen.AsRefChecked().CreateBindGroupLayout(descNative);
-        var bindGroupLayout = new BindGroupLayout(screen, bindGroupLayoutNative);
-        return Own.New(bindGroupLayout, static x => _release(SafeCast.As<BindGroupLayout>(x)));
-    }
 }
 
-public readonly struct BindGroupLayoutDescriptor
+public readonly record struct BindGroupLayoutDescriptor
 {
     public required ImmutableArray<BindGroupLayoutEntry> Entries { get; init; }
 
@@ -73,7 +73,7 @@ internal interface IBindingTypeData
     CH.BindingType ToNative(PinHandleHolder holder);
 }
 
-public readonly struct BindGroupLayoutEntry
+public readonly record struct BindGroupLayoutEntry
 {
     private readonly u32 _binding;
     private readonly ShaderStages _visibility;
