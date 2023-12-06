@@ -57,17 +57,4 @@ public sealed class PbrModel : FrameObject, ITreeModel
     public Matrix4 GetModel(out bool isUniformScale) => _treeModelImpl.GetModel(out isUniformScale);
 
     public Matrix4 GetSelfModel(out bool isUniformScale) => _treeModelImpl.GetSelfModel(out isUniformScale);
-
-    protected override void PrepareForRender()
-    {
-        var renderer = Renderer;
-        for(int i = 0; i < renderer.SubrendererCount; i++) {
-            var material = renderer.GetMaterial<PbrMaterial>(i);
-            material.WriteModelUniform(new()
-            {
-                Model = GetModel(out var isUniformScale),
-                IsUniformScale = isUniformScale ? 1 : 0,
-            });
-        }
-    }
 }

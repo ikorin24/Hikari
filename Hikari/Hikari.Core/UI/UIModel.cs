@@ -18,15 +18,6 @@ internal sealed class UIModel : FrameObject
         _element = element;
     }
 
-    protected override void PrepareForRender()
-    {
-        var screen = Screen;
-        var screenSize = screen.ClientSize;
-        var scaleFactor = screen.ScaleFactor;
-        var uiProjection = Matrix4.ReversedZ.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
-        _element.UpdateMaterial(screenSize, scaleFactor, uiProjection, 0);
-    }
-
     private static Mesh GetMesh(Screen screen)
     {
         return _cache.GetOrAdd(screen, static screen =>

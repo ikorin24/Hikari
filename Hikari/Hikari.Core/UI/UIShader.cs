@@ -72,7 +72,15 @@ internal abstract class UIShader : Shader
                     renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
                 },
             },
-        ])
+        ],
+            static (obj, material) =>
+            {
+                var screen = obj.Screen;
+                var screenSize = screen.ClientSize;
+                var scaleFactor = screen.ScaleFactor;
+                var uiProjection = Matrix4.ReversedZ.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
+                ((UIModel)obj).Element.UpdateMaterial(screenSize, scaleFactor, uiProjection, 0);
+            })
     {
         diposable.DisposeOn(Disposed);
         _emptyTexture = Texture2D.Create(screen, new()

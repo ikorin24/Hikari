@@ -323,7 +323,8 @@ public sealed class DeferredProcessShader : Shader
                         renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
                     },
                 },
-            ])
+            ],
+            null)
     {
         disposable.DisposeOn(Disposed);
     }

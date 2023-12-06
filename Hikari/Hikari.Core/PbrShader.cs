@@ -195,7 +195,18 @@ public sealed class PbrShader : Shader
                         renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
                     },
                 },
-            ])
+            ],
+            static (obj, material) =>
+            {
+                if(obj is IModel model) {
+
+                    ((PbrMaterial)material).WriteModelUniform(new()
+                    {
+                        Model = model.GetModel(out var isUniformScale),
+                        IsUniformScale = isUniformScale ? 1 : 0,
+                    });
+                };
+            })
     {
         _gbufferProvider = gBufferProvider;
         disposable2.DisposeOn(Disposed);

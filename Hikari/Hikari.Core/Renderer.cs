@@ -27,6 +27,14 @@ public sealed class Renderer
         _materials = materials;
     }
 
+    internal void PrepareForRender(FrameObject obj)
+    {
+        foreach(var material in _materials) {
+            var materialValue = material.AsValue();
+            materialValue.Shader.PrepareForRender(obj, materialValue);
+        }
+    }
+
     public Material GetMaterial(int submeshIndex)
     {
         return _materials[submeshIndex].AsValue();

@@ -95,9 +95,10 @@ public abstract class FrameObject : IScreenManaged
     internal void InvokeEarlyUpdate() => _earlyUpdate.Invoke(this);
     internal void InvokeUpdate() => _update.Invoke(this);
     internal void InvokeLateUpdate() => _lateUpdate.Invoke(this);
-    internal void InvokePrepareForRender() => PrepareForRender();
-
-    protected abstract void PrepareForRender();
+    internal void InvokePrepareForRender()
+    {
+        _renderer.PrepareForRender(this);
+    }
 
     internal void OnAlive()
     {
