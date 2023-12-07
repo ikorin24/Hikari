@@ -46,6 +46,31 @@ public sealed class UITree
             var childrenFlowInfo = dummyInfo.Flow.NewChildrenFlowInfo(contentArea);
             rootElement.UpdateLayout(isLayoutDirty, dummyInfo, contentArea, ref childrenFlowInfo, mouse, scaleFactor);
         });
+
+        screen.PrepareForRender.Subscribe(screen =>
+        {
+            var screenSize = screen.ClientSize;
+            var scaleFactor = screen.ScaleFactor;
+            var uiProjection = Matrix4.ReversedZ.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
+
+            var rootElement = _rootElement;
+            if(rootElement == null) {
+                return;
+            }
+
+            uint i = 0;
+            Recurse(rootElement, screenSize, scaleFactor, in uiProjection, ref i);
+
+            static void Recurse(UIElement element, Vector2u screenSize, float scaleFactor, in Matrix4 uiProjection, ref uint index)
+            {
+                //var depth = float.Min(1, index++ / 1000f);  // TODO:
+                element.UpdateMaterial(screenSize, scaleFactor, uiProjection, 0f);
+                foreach(var child in element.Children) {
+                    Recurse(child, screenSize, scaleFactor, in uiProjection, ref index);
+                }
+            }
+
+        });
     }
 
     internal static bool RegisterShader<T>(Func<Screen, UIShader> provider) where T : UIElement
@@ -68,10 +93,10 @@ public sealed class UITree
             throw new ArgumentException("the element is already in UI tree");
         }
         element.CreateModel(this);
-        element.ModelAlive.Subscribe(model =>
+        element.ModelAlive.Subscribe(element =>
         {
             _rootElement?.Model?.Terminate();
-            _rootElement = model.Element;
+            _rootElement = element;
         });
     }
 

@@ -139,7 +139,7 @@ public static class GlbModelLoader
                 Submeshes = submeshes.AsImmutableArray(),
             });
 
-            model = new PbrModel(mesh, materials.AsImmutableArray())
+            model = new FrameObject(mesh, materials.AsImmutableArray())
             {
                 Name = node.name?.ToString(),
             };

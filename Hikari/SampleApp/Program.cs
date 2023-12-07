@@ -37,13 +37,13 @@ internal class Program
         var app = App.BuildPipelines(screen);
         screen.Title = "sample";
 
-        //screen.UITree.RenderRoot($$"""
-        //{
-        //    "@type": {{typeof(Counter)}},
-        //    "Width": "600px",
-        //    "Height": "300px"
-        //}
-        //""");
+        screen.UITree.RenderRoot($$"""
+        {
+            "@type": {{typeof(Counter)}},
+            "Width": "600px",
+            "Height": "300px"
+        }
+        """);
         //var button = new Button
         //{
         //    Width = 100,
@@ -68,7 +68,7 @@ internal class Program
 
         var tasks = model
             .GetDescendants()
-            .OfType<PbrModel>()
+            .OfType<FrameObject>()
             .Select(m =>
             {
                 return m.Renderer.Mesh.VertexBuffer.ReadToArray().ContinueWith(x => x.AsSpan().MarshalCast<byte, Vertex>().ToArray());
@@ -85,7 +85,7 @@ internal class Program
         var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
         var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
         var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
-        var plane = new PbrModel(Shapes.Plane(screen, true), PbrMaterial.Create(app.PbrBasicShader, albedo, mr, normal));
+        var plane = new FrameObject(Shapes.Plane(screen, true), PbrMaterial.Create(app.PbrBasicShader, albedo, mr, normal).Cast<Material>());
         plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
         plane.Scale = new Vector3(16);
 

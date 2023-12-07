@@ -14,13 +14,13 @@ internal static class ReactComponentBuilder
             switch(obj) {
                 case UIElement element: {
                     Debug.Assert(element.Parent == null);
-                    element.ModelAlive.Subscribe(model => component.OnMount());
-                    element.ModelDead.Subscribe(model => component.OnUnmount());
-                    element.ModelEarlyUpdate.Subscribe(model =>
+                    element.ModelAlive.Subscribe(_ => component.OnMount());
+                    element.ModelDead.Subscribe(_ => component.OnUnmount());
+                    element.ModelEarlyUpdate.Subscribe(element =>
                     {
                         if(component.NeedsToRerender) {
                             var source = component.GetSource();
-                            var target = (IReactive)model.Element;
+                            var target = (IReactive)element;
                             target.ApplyDiff(source);
                             component.RenderCompleted(target);
                         }
@@ -30,8 +30,8 @@ internal static class ReactComponentBuilder
                 }
                 case IReactComponent c: {
                     var element = c.BuildUIElement();
-                    element.ModelAlive.Subscribe(model => c.OnMount());
-                    element.ModelDead.Subscribe(model => c.OnUnmount());
+                    element.ModelAlive.Subscribe(_ => c.OnMount());
+                    element.ModelDead.Subscribe(_ => c.OnUnmount());
                     component.RenderCompleted(c);
                     return element;
                 }

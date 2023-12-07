@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
@@ -8,15 +9,15 @@ namespace Hikari.UI;
 
 public abstract class UIElement : IToJson, IReactive
 {
-    private UIModel? _model;
+    private FrameObject? _model;
     private UIElement? _parent;
     private readonly UIElementCollection _children;
-    private EventSource<UIModel> _modelAlive;
-    private EventSource<UIModel> _modelEarlyUpdate;
-    private EventSource<UIModel> _modelUpdate;
-    private EventSource<UIModel> _modelLateUpdate;
-    private EventSource<UIModel> _modelTerminated;
-    private EventSource<UIModel> _modelDead;
+    private EventSource<UIElement> _modelAlive;
+    private EventSource<UIElement> _modelEarlyUpdate;
+    private EventSource<UIElement> _modelUpdate;
+    private EventSource<UIElement> _modelLateUpdate;
+    private EventSource<UIElement> _modelTerminated;
+    private EventSource<UIElement> _modelDead;
     private EventSource<UIElement> _clicked;
     private readonly SubscriptionBag _modelSubscriptions = new SubscriptionBag();
     private UIElementInfo _info;
@@ -25,17 +26,17 @@ public abstract class UIElement : IToJson, IReactive
     private bool _needToInvokeClicked;
     private bool _needToLayoutUpdate;
 
-    internal Event<UIModel> ModelAlive => _modelAlive.Event;
-    internal Event<UIModel> ModelEarlyUpdate => _modelEarlyUpdate.Event;
-    internal Event<UIModel> ModelUpdate => _modelUpdate.Event;
-    internal Event<UIModel> ModelLateUpdate => _modelLateUpdate.Event;
-    internal Event<UIModel> ModelTerminated => _modelTerminated.Event;
-    internal Event<UIModel> ModelDead => _modelDead.Event;
+    internal Event<UIElement> ModelAlive => _modelAlive.Event;
+    internal Event<UIElement> ModelEarlyUpdate => _modelEarlyUpdate.Event;
+    internal Event<UIElement> ModelUpdate => _modelUpdate.Event;
+    internal Event<UIElement> ModelLateUpdate => _modelLateUpdate.Event;
+    internal Event<UIElement> ModelTerminated => _modelTerminated.Event;
+    internal Event<UIElement> ModelDead => _modelDead.Event;
     internal SubscriptionRegister ModelSubscriptions => _modelSubscriptions.Register;
 
     public Event<UIElement> Clicked => _clicked.Event;
     public UIElement? Parent => _parent;
-    internal UIModel? Model => _model;
+    internal FrameObject? Model => _model;
     public Screen? Screen => _model?.Screen;
 
     public void Remove()
@@ -202,9 +203,8 @@ public abstract class UIElement : IToJson, IReactive
         Children = new UIElementCollection();
         _needToLayoutUpdate = true;
 
-        ModelUpdate.Subscribe(static model =>
+        ModelUpdate.Subscribe(static self =>
         {
-            var self = model.Element;
             if(self._needToInvokeClicked) {
                 self._needToInvokeClicked = false;
                 self._clicked.Invoke(self);
@@ -327,63 +327,62 @@ public abstract class UIElement : IToJson, IReactive
         _parent = null;
     }
 
+    private static readonly ConcurrentDictionary<Screen, Own<Mesh>> _cache = new();
+    private static Mesh GetMesh(Screen screen)
+    {
+        return _cache.GetOrAdd(screen, static screen =>
+        {
+            screen.Closed.Subscribe(static screen =>
+            {
+                if(_cache.TryRemove(screen, out var cache)) {
+                    cache.Dispose();
+                }
+            });
+            return Mesh.Create<VertexSlim, ushort>(
+                screen,
+                [
+                    new VertexSlim(0, 1, 0, 0, 0),
+                    new VertexSlim(0, 0, 0, 0, 1),
+                    new VertexSlim(1, 0, 0, 1, 1),
+                    new VertexSlim(1, 1, 0, 1, 0),
+                ],
+                [0, 1, 2, 2, 3, 0]);
+        }).AsValue();
+    }
+
     internal void CreateModel(UITree tree)
     {
         Debug.Assert(_model == null);
         var shader = tree.GetRegisteredShader(GetType());
-        var model = new UIModel(this, shader);
+        var model = new FrameObject(GetMesh(shader.Screen), shader.CreateMaterial().Cast<Material>());
         model.Alive
-            .Subscribe(static self =>
-            {
-                var model = SafeCast.As<UIModel>(self);
-                model.Element._modelAlive.Invoke(model);
-            })
+            .Subscribe(_ => _modelAlive.Invoke(this))
             .AddTo(model.Subscriptions);
         model.EarlyUpdate
-            .Subscribe(static self =>
-            {
-                var model = SafeCast.As<UIModel>(self);
-                model.Element._modelEarlyUpdate.Invoke(model);
-            })
+            .Subscribe(_ => _modelEarlyUpdate.Invoke(this))
             .AddTo(model.Subscriptions);
         model.Update
-            .Subscribe(static self =>
-            {
-                var model = SafeCast.As<UIModel>(self);
-                model.Element._modelUpdate.Invoke(model);
-            })
+            .Subscribe(_ => _modelUpdate.Invoke(this))
             .AddTo(model.Subscriptions);
         model.LateUpdate
-            .Subscribe(static self =>
-            {
-                var model = SafeCast.As<UIModel>(self);
-                model.Element._modelLateUpdate.Invoke(model);
-            })
-            .AddTo(model.Subscriptions);
-        model.Terminated
-            .Subscribe(static self =>
-            {
-                var model = SafeCast.As<UIModel>(self);
-                model.Element._modelTerminated.Invoke(model);
-            })
-            .AddTo(model.Subscriptions);
-        model.Dead
-            .Subscribe(static self =>
-            {
-                var model = SafeCast.As<UIModel>(self);
-                model.Element._modelDead.Invoke(model);
-                model.Element._modelSubscriptions.Dispose();
-            })
+            .Subscribe(_ => _modelLateUpdate.Invoke(this))
             .AddTo(model.Subscriptions);
 
-        model.Terminated.Subscribe(static self =>
+        model.Terminated.Subscribe(_ =>
         {
-            var model = SafeCast.As<UIModel>(self);
-            var element = model.Element;
-            foreach(var child in element.Children) {
+            _modelTerminated.Invoke(this);
+            foreach(var child in Children) {
                 child.Remove();
             }
         }).AddTo(model.Subscriptions);
+
+        model.Dead
+            .Subscribe(_ =>
+            {
+                _modelDead.Invoke(this);
+                _modelSubscriptions.Dispose();
+            })
+            .AddTo(model.Subscriptions);
 
         _model = model;
         foreach(var child in _children) {
@@ -588,7 +587,7 @@ public abstract class UIElement : IToJson, IReactive
         }
     }
 
-    internal void UpdateMaterial(in Vector2u screenSize, float scaleFactor, in Matrix4 uiProjection, uint index)
+    internal void UpdateMaterial(in Vector2u screenSize, float scaleFactor, in Matrix4 uiProjection, float depth)
     {
         var model = _model;
         Debug.Assert(model != null);
@@ -607,8 +606,6 @@ public abstract class UIElement : IToJson, IReactive
         };
 
         var polygonRect = cache.Layout.Rect.GetMargedRect(shadowRect);
-
-        var depth = float.Min(1, index / 100000f);  // TODO:
         var modelOrigin = new Vector3
         {
             // origin is bottom-left of rect because clip space is bottom-left based

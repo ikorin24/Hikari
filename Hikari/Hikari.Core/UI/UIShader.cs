@@ -55,32 +55,27 @@ internal abstract class UIShader : Shader
     public Sampler EmptySampler => _emptyTextureSampler.AsValue();
 
     protected UIShader(Screen screen)
-        : base(screen, [
-            new()
-            {
-                Source = _defaultShaderSource.Value,
-                SortOrder = 3000,
-                LayoutDescriptor = PipelineLayoutFactory(screen, out var diposable),
-                PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
-                PassKind = PassKind.Surface,
-                OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+        : base(
+            screen,
+            [
+                new()
                 {
-                    renderPass.SetPipeline(pipeline);
-                    renderPass.SetBindGroups(material.GetBindGroups(passIndex));
-                    renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
-                    renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
-                    renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
+                    Source = _defaultShaderSource.Value,
+                    SortOrder = 3000,
+                    LayoutDescriptor = PipelineLayoutFactory(screen, out var diposable),
+                    PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
+                    PassKind = PassKind.Surface,
+                    OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+                    {
+                        renderPass.SetPipeline(pipeline);
+                        renderPass.SetBindGroups(material.GetBindGroups(passIndex));
+                        renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+                        renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+                        renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
+                    },
                 },
-            },
-        ],
-            static (obj, material) =>
-            {
-                var screen = obj.Screen;
-                var screenSize = screen.ClientSize;
-                var scaleFactor = screen.ScaleFactor;
-                var uiProjection = Matrix4.ReversedZ.OrthographicProjection(0, (float)screenSize.X, 0, (float)screenSize.Y, 0, 1f);
-                ((UIModel)obj).Element.UpdateMaterial(screenSize, scaleFactor, uiProjection, 0);
-            })
+            ],
+            null)
     {
         diposable.DisposeOn(Disposed);
         _emptyTexture = Texture2D.Create(screen, new()

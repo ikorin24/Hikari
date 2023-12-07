@@ -1,11 +1,11 @@
 ﻿#nullable enable
-using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
 namespace Hikari;
 
-public abstract class FrameObject : IScreenManaged
+public sealed class FrameObject : IScreenManaged, ITreeModel
 {
     private readonly Screen _screen;
     private string? _name;
@@ -13,12 +13,31 @@ public abstract class FrameObject : IScreenManaged
     private readonly SubscriptionBag _subscriptions = new SubscriptionBag();
     private bool _isFrozen;
     private readonly Renderer _renderer;
+    private TreeModelImpl _treeModelImpl = new TreeModelImpl();
     private EventSource<FrameObject> _update;
     private EventSource<FrameObject> _lateUpdate;
     private EventSource<FrameObject> _earlyUpdate;
     private EventSource<FrameObject> _alive;
     private EventSource<FrameObject> _terminated;
     private EventSource<FrameObject> _dead;
+
+    public Vector3 Position
+    {
+        get => _treeModelImpl.Position;
+        set => _treeModelImpl.Position = value;
+    }
+    public Quaternion Rotation
+    {
+        get => _treeModelImpl.Rotation;
+        set => _treeModelImpl.Rotation = value;
+    }
+    public Vector3 Scale
+    {
+        get => _treeModelImpl.Scale;
+        set => _treeModelImpl.Scale = value;
+    }
+    public ITreeModel? Parent => _treeModelImpl.Parent;
+    public IReadOnlyList<ITreeModel> Children => _treeModelImpl.Children;
 
     public Event<FrameObject> Alive => _alive.Event;
     public Event<FrameObject> Terminated => _terminated.Event;
@@ -47,7 +66,11 @@ public abstract class FrameObject : IScreenManaged
 
     public bool IsManaged => LifeState != LifeState.Dead;
 
-    protected FrameObject(MaybeOwn<Mesh> mesh, ImmutableArray<Own<Material>> materials)
+    public FrameObject(MaybeOwn<Mesh> mesh, Own<Material> material) : this(mesh, [material])
+    {
+    }
+
+    public FrameObject(MaybeOwn<Mesh> mesh, ImmutableArray<Own<Material>> materials)
     {
         var renderer = new Renderer(mesh, materials);
         var screen = renderer.Screen;
@@ -59,7 +82,19 @@ public abstract class FrameObject : IScreenManaged
         screen.Scheduler.Add(renderer);
     }
 
-    public virtual void Validate() => IScreenManaged.DefaultValidate(this);
+    void ITreeModel.OnAddedToChildren(ITreeModel parent) => _treeModelImpl.OnAddedToChildren(parent);
+
+    void ITreeModel.OnRemovedFromChildren() => _treeModelImpl.OnRemovedFromChildren();
+
+    public void AddChild(ITreeModel child) => _treeModelImpl.AddChild(this, child);
+
+    public void RemoveChild(ITreeModel child) => _treeModelImpl.RemoveChild(child);
+
+    public Matrix4 GetModel(out bool isUniformScale) => _treeModelImpl.GetModel(out isUniformScale);
+
+    public Matrix4 GetSelfModel(out bool isUniformScale) => _treeModelImpl.GetSelfModel(out isUniformScale);
+
+    public void Validate() => IScreenManaged.DefaultValidate(this);
 
     internal void SetLifeStateAlive()
     {
@@ -95,10 +130,6 @@ public abstract class FrameObject : IScreenManaged
     internal void InvokeEarlyUpdate() => _earlyUpdate.Invoke(this);
     internal void InvokeUpdate() => _update.Invoke(this);
     internal void InvokeLateUpdate() => _lateUpdate.Invoke(this);
-    internal void InvokePrepareForRender()
-    {
-        _renderer.PrepareForRender(this);
-    }
 
     internal void OnAlive()
     {
@@ -118,7 +149,7 @@ public abstract class FrameObject : IScreenManaged
         _state = LifeState.Dead;
     }
 
-    internal virtual void OnDead()
+    internal void OnDead()
     {
         _subscriptions.Dispose();
         _renderer.DisposeInternal();

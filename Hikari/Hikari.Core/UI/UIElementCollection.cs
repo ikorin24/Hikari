@@ -67,10 +67,10 @@ public sealed class UIElementCollection
         ArgumentNullException.ThrowIfNull(element);
         _children.Add(element);
         _parent?.RequestRelayout();
-        element.ModelDead.Subscribe(model =>
+        element.ModelDead.Subscribe(element =>
         {
-            if(_children.Remove(model.Element)) {
-                model.Element.ClearParent();
+            if(_children.Remove(element)) {
+                element.ClearParent();
                 _parent?.RequestRelayout();
             }
         }).AddTo(element.ModelSubscriptions);
@@ -107,10 +107,10 @@ public sealed class UIElementCollection
                         dic.Add(key, uiElement);
                     }
                     list.Add(uiElement);
-                    uiElement.ModelDead.Subscribe(model =>
+                    uiElement.ModelDead.Subscribe(element =>
                     {
-                        if(list.Remove(model.Element)) {
-                            model.Element.ClearParent();
+                        if(list.Remove(element)) {
+                            element.ClearParent();
                         }
                     }).AddTo(uiElement.ModelSubscriptions);
                     break;
@@ -122,10 +122,10 @@ public sealed class UIElementCollection
                     }
                     var uiElement = component.BuildUIElement();
                     list.Add(uiElement);
-                    uiElement.ModelDead.Subscribe(model =>
+                    uiElement.ModelDead.Subscribe(element =>
                     {
-                        if(list.Remove(model.Element)) {
-                            model.Element.ClearParent();
+                        if(list.Remove(element)) {
+                            element.ClearParent();
                         }
                     }).AddTo(uiElement.ModelSubscriptions);
                     break;
