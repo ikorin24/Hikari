@@ -29,7 +29,7 @@ public sealed partial class PbrMaterial : Material
     public Sampler NormalSampler => _normalSampler.AsValue();
 
     private PbrMaterial(
-        PbrShader shader,
+        Shader shader,
         TypedOwnBuffer<UniformValue> uniform,
         MaybeOwn<Texture2D> albedo,
         MaybeOwn<Sampler> albedoSampler,
@@ -88,7 +88,7 @@ public sealed partial class PbrMaterial : Material
     }
 
     public static Own<PbrMaterial> Create(
-        PbrShader shader,
+        Shader shader,
         MaybeOwn<Texture2D> albedo,
         MaybeOwn<Texture2D> metallicRoughness,
         MaybeOwn<Texture2D> normal)
@@ -111,7 +111,7 @@ public sealed partial class PbrMaterial : Material
     }
 
     public static Own<PbrMaterial> Create(
-        PbrShader shader,
+        Shader shader,
         MaybeOwn<Texture2D> albedo,
         MaybeOwn<Sampler> albedoSampler,
         MaybeOwn<Texture2D> metallicRoughness,

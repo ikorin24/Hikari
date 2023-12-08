@@ -1,13 +1,18 @@
 ﻿#nullable enable
 using Hikari.Internal;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Utf8StringInterpolation;
 
 namespace Hikari.UI;
 
-internal abstract class UIShader : Shader
+internal static class UIShader
 {
+    private static readonly ConcurrentDictionary<Screen, Own<Texture2D>> _textureCache = new();
+    private static readonly ConcurrentDictionary<Screen, Own<Sampler>> _samplerCache = new();
+    private static readonly ConcurrentDictionary<Screen, Own<Shader>> _shaderCache = new();
+
     private static readonly Lazy<ImmutableArray<byte>> _defaultShaderSource = new(() =>
     {
         var fs_main = """
@@ -48,63 +53,89 @@ internal abstract class UIShader : Shader
         return bw.WrittenSpan.ToImmutableArray();
     });
 
-    private readonly Own<Texture2D> _emptyTexture;
-    private readonly Own<Sampler> _emptyTextureSampler;
+    public static Texture2D GetEmptyTexture2D(Screen screen)
+    {
+        return _textureCache.GetOrAdd(screen, static screen =>
+        {
+            var texture = Texture2D.Create(screen, new()
+            {
+                Size = new(1, 1),
+                Format = TextureFormat.Rgba8Unorm,
+                MipLevelCount = 1,
+                Usage = TextureUsages.TextureBinding | TextureUsages.CopySrc,
+                SampleCount = 1,
+            });
+            screen.Closed.Subscribe(static screen =>
+            {
+                if(_textureCache.TryRemove(screen, out var texture)) {
+                    texture.Dispose();
+                }
+            });
+            return texture;
+        }).AsValue();
+    }
 
-    public Texture2D EmptyTexture => _emptyTexture.AsValue();
-    public Sampler EmptySampler => _emptyTextureSampler.AsValue();
+    public static Sampler GetEmptySampler(Screen screen)
+    {
+        return _samplerCache.GetOrAdd(screen, static screen =>
+        {
+            var sampler = Sampler.Create(screen, new()
+            {
+                AddressModeU = AddressMode.ClampToEdge,
+                AddressModeV = AddressMode.ClampToEdge,
+                AddressModeW = AddressMode.ClampToEdge,
+                MinFilter = FilterMode.Nearest,
+                MagFilter = FilterMode.Nearest,
+                MipmapFilter = FilterMode.Nearest,
+            });
+            screen.Closed.Subscribe(static screen =>
+            {
+                if(_samplerCache.TryRemove(screen, out var sampler)) {
+                    sampler.Dispose();
+                }
+            });
+            return sampler;
+        }).AsValue();
+    }
 
-    protected UIShader(Screen screen)
-        : base(
-            screen,
-            [
-                new()
-                {
-                    Source = _defaultShaderSource.Value,
-                    SortOrder = 3000,
-                    LayoutDescriptor = PipelineLayoutFactory(screen, out var diposable),
-                    PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
-                    PassKind = PassKind.Surface,
-                    OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+    public static Shader CreateOrCached(Screen screen)
+    {
+        return _shaderCache.GetOrAdd(screen, static screen =>
+        {
+            var shader = Shader.Create(
+                screen,
+                [
+                    new()
                     {
-                        renderPass.SetPipeline(pipeline);
-                        renderPass.SetBindGroups(material.GetBindGroups(passIndex));
-                        renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
-                        renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
-                        renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
+                        Source = _defaultShaderSource.Value,
+                        SortOrder = 3000,
+                        LayoutDescriptor = PipelineLayoutFactory(screen, out var diposable),
+                        PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
+                        PassKind = PassKind.Surface,
+                        OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+                        {
+                            renderPass.SetPipeline(pipeline);
+                            renderPass.SetBindGroups(material.GetBindGroups(passIndex));
+                            renderPass.SetVertexBuffer(0, mesh.VertexBuffer);
+                            renderPass.SetIndexBuffer(mesh.IndexBuffer, mesh.IndexFormat);
+                            renderPass.DrawIndexed(submesh.IndexOffset, submesh.IndexCount, submesh.VertexOffset, 0, 1);
+                        },
                     },
-                },
-            ],
-            null)
-    {
-        diposable.DisposeOn(Disposed);
-        _emptyTexture = Texture2D.Create(screen, new()
-        {
-            Size = new(1, 1),
-            Format = TextureFormat.Rgba8Unorm,
-            MipLevelCount = 1,
-            Usage = TextureUsages.TextureBinding | TextureUsages.CopySrc,
-            SampleCount = 1,
-        });
-        _emptyTextureSampler = Sampler.Create(screen, new()
-        {
-            AddressModeU = AddressMode.ClampToEdge,
-            AddressModeV = AddressMode.ClampToEdge,
-            AddressModeW = AddressMode.ClampToEdge,
-            MinFilter = FilterMode.Nearest,
-            MagFilter = FilterMode.Nearest,
-            MipmapFilter = FilterMode.Nearest,
-        });
+                ],
+                null);
+            var shaderValue = shader.AsValue();
+            diposable.DisposeOn(shaderValue.Disposed);
+            screen.Closed.Subscribe(static screen =>
+            {
+                if(_shaderCache.TryRemove(screen, out var shader)) {
+                    shader.Dispose();
+                }
+            });
+            return shader;
+        }).AsValue();
     }
 
-    protected override void Release(bool manualRelease)
-    {
-        base.Release(manualRelease);
-        _emptyTexture.Dispose();
-        _emptyTextureSampler.Dispose();
-    }
-
-    public abstract Own<UIMaterial> CreateMaterial();
+    //public abstract Own<UIMaterial> CreateMaterial();
 
     private static PipelineLayoutDescriptor PipelineLayoutFactory(
         Screen screen,

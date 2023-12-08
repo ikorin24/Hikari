@@ -6,8 +6,7 @@ namespace SampleApp;
 public sealed class App
 {
     public required Screen Screen { get; init; }
-    public required PbrShader PbrBasicShader { get; init; }
-    public required DeferredProcessShader DeferredProcessShader { get; init; }
+    public required Shader PbrBasicShader { get; init; }
 
     public static App BuildPipelines(Screen screen)
     {
@@ -72,9 +71,8 @@ public sealed class App
         {
             Screen = screen,
             PbrBasicShader = PbrShader.Create(screen, gBuffer).DisposeOn(screen.Closed),
-            DeferredProcessShader = DeferredProcessShader.Create(screen).DisposeOn(screen.Closed),
         };
-        DeferredPlane.AddRenderer(app.DeferredProcessShader, gBuffer);
+        DeferredPlane.AddRenderer(screen, gBuffer);
         return app;
     }
 }

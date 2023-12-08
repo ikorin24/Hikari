@@ -8,7 +8,7 @@ using V = Hikari.Vertex;
 
 namespace Hikari;
 
-public sealed class PbrShader : Shader
+public static class PbrShader
 {
     private static readonly Lazy<ImmutableArray<byte>> _source = new(() =>
     {
@@ -154,11 +154,9 @@ public sealed class PbrShader : Shader
         return bw.WrittenSpan.ToImmutableArray();
     });
 
-    private readonly IGBufferProvider _gbufferProvider;
-    public IGBufferProvider GBufferProvider => _gbufferProvider;
-
-    private PbrShader(Screen screen, IGBufferProvider gBufferProvider)
-        : base(
+    public static Own<Shader> Create(Screen screen, IGBufferProvider gBufferProvider)
+    {
+        var shader = Shader.Create(
             screen,
             [
                 new()
@@ -206,24 +204,15 @@ public sealed class PbrShader : Shader
                         IsUniformScale = isUniformScale ? 1 : 0,
                     });
                 };
-            })
-    {
-        _gbufferProvider = gBufferProvider;
-        disposable2.DisposeOn(Disposed);
-        disposable.DisposeOn(Disposed);
+            });
+
+        var shaderValue = shader.AsValue();
+        disposable2.DisposeOn(shaderValue.Disposed);
+        disposable.DisposeOn(shaderValue.Disposed);
+        return shader;
     }
 
-    public static Own<PbrShader> Create(Screen screen, IGBufferProvider gBufferProvider)
-    {
-        ArgumentNullException.ThrowIfNull(gBufferProvider);
-        var self = new PbrShader(screen, gBufferProvider);
-        return CreateOwn(self);
-    }
-
-
-    private static PipelineLayoutDescriptor GetLayoutDesc(
-        Screen screen,
-        out DisposableBag disposable)
+    private static PipelineLayoutDescriptor GetLayoutDesc(Screen screen, out DisposableBag disposable)
     {
         disposable = new DisposableBag();
         return new PipelineLayoutDescriptor
@@ -351,9 +340,7 @@ public sealed class PbrShader : Shader
         };
     }
 
-    private static PipelineLayoutDescriptor GetShadowLayoutDesc(
-        Screen screen,
-        out DisposableBag disposable)
+    private static PipelineLayoutDescriptor GetShadowLayoutDesc(Screen screen, out DisposableBag disposable)
     {
         disposable = new DisposableBag();
         return new()

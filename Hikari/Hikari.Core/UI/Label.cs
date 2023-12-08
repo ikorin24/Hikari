@@ -77,7 +77,10 @@ public sealed class Label : UIElement, IFromJson<Label>
     static Label()
     {
         Serializer.RegisterConstructor(FromJson);
-        UITree.RegisterShader<Label>(LabelShader.CreateOrCached);
+        UITree.RegisterMaterial<Label>(static screen =>
+        {
+            return LabelMaterial.Create(UIShader.CreateOrCached(screen)).Cast<Material>();
+        });
     }
 
     public static Label FromJson(in ObjectSource source) => new Label(source);
@@ -196,44 +199,19 @@ internal record struct LabelInfo
     }
 }
 
-file sealed class LabelShader : UIShader
-{
-    private static readonly ConcurrentDictionary<Screen, LabelShader> _cache = new();
-
-    private LabelShader(Screen screen) : base(screen)
-    {
-    }
-
-    public static LabelShader CreateOrCached(Screen screen)
-    {
-        return _cache.GetOrAdd(screen, static screen => Create(screen).DisposeOn(screen.Closed));
-    }
-
-    private static Own<LabelShader> Create(Screen screen) => CreateOwn(new LabelShader(screen));
-
-    public override Own<UIMaterial> CreateMaterial()
-    {
-        return LabelMaterial.Create(this, EmptyTexture, EmptySampler).Cast<UIMaterial>();
-    }
-}
-
 file sealed class LabelMaterial : UIMaterial
 {
     private LabelInfo? _labelInfo;
     private Color4? _color;
     private float? _scaleFactor;
 
-    private LabelMaterial(
-        LabelShader shader,
-        MaybeOwn<Texture2D> texture,
-        MaybeOwn<Sampler> sampler)
-        : base(shader, texture, sampler)
+    private LabelMaterial(Shader shader) : base(shader)
     {
     }
 
-    internal static Own<LabelMaterial> Create(LabelShader shader, MaybeOwn<Texture2D> texture, MaybeOwn<Sampler> sampler)
+    internal static Own<LabelMaterial> Create(Shader shader)
     {
-        var self = new LabelMaterial(shader, texture, sampler);
+        var self = new LabelMaterial(shader);
         return CreateOwn(self);
     }
 

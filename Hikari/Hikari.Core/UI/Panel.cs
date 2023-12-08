@@ -34,7 +34,11 @@ public sealed class Panel : UIElement, IFromJson<Panel>
     static Panel()
     {
         Serializer.RegisterConstructor(FromJson);
-        UITree.RegisterShader<Panel>(PanelShader.CreateOrCached);
+        UITree.RegisterMaterial<Panel>(static screen =>
+        {
+            return PanelMaterial.Create(UIShader.CreateOrCached(screen)).Cast<Material>();
+        });
+
     }
 
     public static Panel FromJson(in ObjectSource source) => new Panel(source);
@@ -99,48 +103,15 @@ public sealed record PanelPseudoInfo
     }
 }
 
-file sealed class PanelShader : UIShader
-{
-    private static readonly ConcurrentDictionary<Screen, PanelShader> _cache = new();
-
-    private PanelShader(Screen screen) : base(screen)
-    {
-    }
-
-    public static PanelShader CreateOrCached(Screen screen)
-    {
-        return _cache.GetOrAdd(screen, static screen => Create(screen).DisposeOn(screen.Closed));
-    }
-
-    private static Own<PanelShader> Create(Screen screen)
-    {
-        return CreateOwn(new PanelShader(screen));
-    }
-
-    public override Own<UIMaterial> CreateMaterial()
-    {
-        return PanelMaterial.Create(this, EmptyTexture, EmptySampler).Cast<UIMaterial>();
-    }
-}
-
 file sealed class PanelMaterial : UIMaterial
 {
-    private PanelMaterial(
-        PanelShader shader,
-        MaybeOwn<Texture2D> texture,
-        MaybeOwn<Sampler> sampler)
-        : base(shader, texture, sampler)
+    private PanelMaterial(Shader shader) : base(shader)
     {
     }
 
-    internal static Own<PanelMaterial> Create(PanelShader shader, MaybeOwn<Texture2D> texture, MaybeOwn<Sampler> sampler)
+    internal static Own<PanelMaterial> Create(Shader shader)
     {
-        var self = new PanelMaterial(shader, texture, sampler);
+        var self = new PanelMaterial(shader);
         return CreateOwn(self);
-    }
-
-    public override void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)
-    {
-        base.UpdateMaterial(element, result, mvp, scaleFactor);
     }
 }

@@ -61,7 +61,11 @@ public sealed class Button : UIElement, IFromJson<Button>
     static Button()
     {
         Serializer.RegisterConstructor(FromJson);
-        UITree.RegisterShader<Button>(ButtonShader.CreateOrCached);
+        UITree.RegisterMaterial<Button>(static screen =>
+        {
+            return ButtonMaterial.Create(UIShader.CreateOrCached(screen)).Cast<Material>();
+        });
+
     }
 
     public static Button FromJson(in ObjectSource source) => new Button(source);
@@ -196,48 +200,19 @@ internal record struct ButtonInfo
     }
 }
 
-file sealed class ButtonShader : UIShader
-{
-    private static readonly ConcurrentDictionary<Screen, ButtonShader> _cache = new();
-
-    private ButtonShader(Screen screen) : base(screen)
-    {
-    }
-
-    public static ButtonShader CreateOrCached(Screen screen)
-    {
-        return _cache.GetOrAdd(screen, static screen => Create(screen).DisposeOn(screen.Closed));
-    }
-
-    private static Own<ButtonShader> Create(Screen screen)
-    {
-        var self = new ButtonShader(screen);
-        return CreateOwn(self);
-    }
-
-    public override Own<UIMaterial> CreateMaterial()
-    {
-        return ButtonMaterial.Create(this, EmptyTexture, EmptySampler).Cast<UIMaterial>();
-    }
-}
-
 file sealed class ButtonMaterial : UIMaterial
 {
     private ButtonInfo? _buttonInfo;
     private Color4? _color;
     private float? _scaleFactor;
 
-    private ButtonMaterial(
-        ButtonShader shader,
-        MaybeOwn<Texture2D> texture,
-        MaybeOwn<Sampler> sampler)
-        : base(shader, texture, sampler)
+    private ButtonMaterial(Shader shader) : base(shader)
     {
     }
 
-    internal static Own<ButtonMaterial> Create(ButtonShader shader, MaybeOwn<Texture2D> texture, MaybeOwn<Sampler> sampler)
+    internal static Own<ButtonMaterial> Create(Shader shader)
     {
-        var self = new ButtonMaterial(shader, texture, sampler);
+        var self = new ButtonMaterial(shader);
         return CreateOwn(self);
     }
 

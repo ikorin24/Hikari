@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 
 namespace Hikari;
 
-public sealed class DeferredProcessShader : Shader
+public static class DeferredProcessShader
 {
     private static readonly Lazy<ImmutableArray<byte>> ShaderSource = new(() =>
     {
@@ -303,8 +303,9 @@ public sealed class DeferredProcessShader : Shader
         """u8.ToImmutableArray();
     });
 
-    private DeferredProcessShader(Screen screen)
-        : base(
+    public static Own<Shader> Create(Screen screen)
+    {
+        var shader = Shader.Create(
             screen,
             [
                 new()
@@ -324,15 +325,10 @@ public sealed class DeferredProcessShader : Shader
                     },
                 },
             ],
-            null)
-    {
-        disposable.DisposeOn(Disposed);
-    }
-
-    public static Own<DeferredProcessShader> Create(Screen screen)
-    {
-        var shader = new DeferredProcessShader(screen);
-        return CreateOwn(shader);
+            null);
+        var shaderValue = shader.AsValue();
+        disposable.DisposeOn(shaderValue.Disposed);
+        return shader;
     }
 
     private static RenderPipelineDescriptor PipelineFactory(ShaderModule module, PipelineLayout layout)

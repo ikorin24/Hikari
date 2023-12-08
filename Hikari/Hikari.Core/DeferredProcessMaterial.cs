@@ -29,7 +29,7 @@ public sealed class DeferredProcessMaterial : Material
         };
     }
 
-    internal static Own<Material> Create(DeferredProcessShader shader, IGBufferProvider gBuffer)
+    internal static Own<Material> Create(Shader shader, IGBufferProvider gBuffer)
     {
         ArgumentNullException.ThrowIfNull(gBuffer);
         ArgumentNullException.ThrowIfNull(shader);

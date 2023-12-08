@@ -353,8 +353,8 @@ public abstract class UIElement : IToJson, IReactive
     internal void CreateModel(UITree tree)
     {
         Debug.Assert(_model == null);
-        var shader = tree.GetRegisteredShader(GetType());
-        var model = new FrameObject(GetMesh(shader.Screen), shader.CreateMaterial().Cast<Material>());
+        var material = tree.GetRegisteredMaterial(GetType());
+        var model = new FrameObject(GetMesh(tree.Screen), material);
         model.Alive
             .Subscribe(_ => _modelAlive.Invoke(this))
             .AddTo(model.Subscriptions);

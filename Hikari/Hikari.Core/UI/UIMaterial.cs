@@ -22,8 +22,12 @@ internal abstract class UIMaterial : Material
 
     public Texture2D? Texture => _texture.TryAsValue(out var texture) ? texture : null;
 
+    protected UIMaterial(Shader shader) : this(shader, UIShader.GetEmptyTexture2D(shader.Screen), UIShader.GetEmptySampler(shader.Screen))
+    {
+    }
+
     protected UIMaterial(
-        UIShader shader,
+        Shader shader,
         MaybeOwn<Texture2D> texture,
         MaybeOwn<Sampler> sampler) : base(shader)
     {

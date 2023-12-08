@@ -5,9 +5,9 @@ namespace Hikari;
 
 public sealed class DeferredPlane
 {
-    public static void AddRenderer(DeferredProcessShader shader, IGBufferProvider gBuffer)
+    public static void AddRenderer(Screen screen, IGBufferProvider gBuffer)
     {
-        var screen = shader.Screen;
+        var shader = DeferredProcessShader.Create(screen).DisposeOn(screen.Closed);
         var material = DeferredProcessMaterial.Create(shader, gBuffer);
         const float Z = 0;
         ReadOnlySpan<VertexSlim> vertices =
