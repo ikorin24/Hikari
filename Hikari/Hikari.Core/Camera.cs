@@ -12,7 +12,7 @@ public sealed partial class Camera
     private readonly Screen _screen;
     private TypedOwnBuffer<CameraMatrix> _cameraMatrix;
     private readonly Own<BindGroupLayout> _bindGroupLayout;
-    private readonly Own<BindGroup> _bindGroup;
+    private readonly Arc<BindGroup> _bindGroup;
     private readonly object _sync = new object();
     private CameraState _state;
     private bool _isCameraMatrixChanged;
@@ -27,7 +27,7 @@ public sealed partial class Camera
     public Screen Screen => _screen;
 
     public BindGroupLayout CameraDataBindGroupLayout => _bindGroupLayout.AsValue();
-    public BindGroup CameraDataBindGroup => _bindGroup.AsValue();
+    public BindGroup CameraDataBindGroup => _bindGroup.Value;
 
     public CameraProjectionMode ProjectionMode
     {
@@ -214,7 +214,7 @@ public sealed partial class Camera
                     }),
             ],
         });
-        _bindGroup = BindGroup.Create(screen, new BindGroupDescriptor
+        _bindGroup = new BindGroup(screen, new BindGroupDescriptor
         {
             Layout = _bindGroupLayout.AsValue(),
             Entries =

@@ -15,9 +15,9 @@ public sealed partial class PbrMaterial : Material
     private readonly MaybeOwn<Sampler> _normalSampler;
 
     private readonly TypedOwnBuffer<UniformValue> _modelUniform;
-    private readonly Own<BindGroup> _bindGroup0;
+    private readonly Arc<BindGroup> _bindGroup0;
     private readonly BindGroup _bindGroup1;
-    private readonly Own<BindGroup> _shadowBindGroup0;
+    private readonly Arc<BindGroup> _shadowBindGroup0;
     private readonly ImmutableArray<ImmutableArray<BindGroupData>> _passBindGroups;
 
     public Texture2D Albedo => _albedo.AsValue();
@@ -37,8 +37,8 @@ public sealed partial class PbrMaterial : Material
         MaybeOwn<Sampler> metallicRoughnessSampler,
         MaybeOwn<Texture2D> normal,
         MaybeOwn<Sampler> normalSampler,
-        Own<BindGroup> bindGroup0,
-        Own<BindGroup> shadowBindGroup0)
+        BindGroup bindGroup0,
+        BindGroup shadowBindGroup0)
         : base(shader)
     {
         _modelUniform = uniform;
@@ -52,8 +52,8 @@ public sealed partial class PbrMaterial : Material
         _bindGroup1 = Screen.Camera.CameraDataBindGroup;
         _shadowBindGroup0 = shadowBindGroup0;
         _passBindGroups = [
-            [new(0, shadowBindGroup0.AsValue())],
-            [new(0, _bindGroup0.AsValue()), new(1, _bindGroup1)],
+            [new(0, shadowBindGroup0)],
+            [new(0, bindGroup0), new(1, _bindGroup1)],
         ];
     }
 
@@ -131,7 +131,7 @@ public sealed partial class PbrMaterial : Material
         var passes = shader.ShaderPasses;
         var lights = screen.Lights;
         var uniformBuffer = new TypedOwnBuffer<UniformValue>(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
-        var bindGroup0 = BindGroup.Create(screen, new()
+        var bindGroup0 = new BindGroup(screen, new()
         {
             Layout = passes[1].Pipeline.Layout.BindGroupLayouts[0],
             Entries =
@@ -146,7 +146,7 @@ public sealed partial class PbrMaterial : Material
             ],
         });
 
-        var shadowBindGroup0 = BindGroup.Create(screen, new()
+        var shadowBindGroup0 = new BindGroup(screen, new()
         {
             Layout = passes[0].Pipeline.Layout.BindGroupLayouts[0],
             Entries =

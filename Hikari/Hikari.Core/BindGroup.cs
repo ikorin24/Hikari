@@ -8,11 +8,12 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed partial class BindGroup : IScreenManaged
+public sealed class BindGroup : IScreenManaged, IArc
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.BindGroup> _native;
     private readonly BindGroupDescriptor _desc;
+    private AtomicCounter _counter;
 
     internal Rust.Ref<Wgpu.BindGroup> NativeRef => _native.Unwrap();
 
@@ -32,8 +33,7 @@ public sealed partial class BindGroup : IScreenManaged
         }
     }
 
-    [Owned(nameof(Release))]
-    private BindGroup(Screen screen, in BindGroupDescriptor desc)
+    public BindGroup(Screen screen, in BindGroupDescriptor desc)
     {
         ArgumentNullException.ThrowIfNull(screen);
         using var pins = new PinHandleHolder();
@@ -56,6 +56,18 @@ public sealed partial class BindGroup : IScreenManaged
             native.DestroyBindGroup();
             if(disposing) {
             }
+        }
+    }
+
+    void IArc.AddRef()
+    {
+        _counter.Increment();
+    }
+
+    void IArc.RemoveRef()
+    {
+        if(_counter.Decrement()) {
+            Release();
         }
     }
 }

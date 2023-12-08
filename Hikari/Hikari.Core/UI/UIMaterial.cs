@@ -7,9 +7,9 @@ namespace Hikari.UI;
 
 internal abstract class UIMaterial : Material
 {
-    private readonly Own<BindGroup> _bindGroup0;
-    private Own<BindGroup> _bindGroup1;
-    private Own<BindGroup> _bindGroup2;
+    private readonly Arc<BindGroup> _bindGroup0;
+    private Arc<BindGroup> _bindGroup1;
+    private Arc<BindGroup> _bindGroup2;
     private readonly CachedOwnBuffer<UIShaderSource.BufferData> _buffer;
     private ImmutableArray<BindGroupData> _pass0Bindgroups;
 
@@ -40,7 +40,7 @@ internal abstract class UIMaterial : Material
         var passes = Shader.ShaderPasses;
         _buffer = new(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst);
         _texContentSizeBuffer = Buffer.Create(Screen, (nuint)Unsafe.SizeOf<Vector2u>(), BufferUsages.Uniform | BufferUsages.CopyDst);
-        _bindGroup0 = BindGroup.Create(screen, new()
+        _bindGroup0 = new BindGroup(screen, new()
         {
             Layout = passes[0].Pipeline.Layout.BindGroupLayouts[0],
             Entries =
@@ -49,7 +49,7 @@ internal abstract class UIMaterial : Material
                 BindGroupEntry.Buffer(1, _buffer),
             ],
         });
-        _bindGroup1 = BindGroup.Create(screen, new()
+        _bindGroup1 = new BindGroup(screen, new()
         {
             Layout = passes[0].Pipeline.Layout.BindGroupLayouts[1],
             Entries =
@@ -131,7 +131,7 @@ internal abstract class UIMaterial : Material
         _texture.Dispose();
         _texture = texture;
         _bindGroup1.Dispose();
-        _bindGroup1 = BindGroup.Create(Screen, new()
+        _bindGroup1 = new BindGroup(Screen, new()
         {
             Layout = pass0.Pipeline.Layout.BindGroupLayouts[1],
             Entries =
@@ -142,9 +142,9 @@ internal abstract class UIMaterial : Material
             ],
         });
         _pass0Bindgroups = [
-            new(0, _bindGroup0.AsValue()),
-            new(1, _bindGroup1.AsValue()),
-            new(2, _bindGroup2.AsValue()),
+            new(0, _bindGroup0.Value),
+            new(1, _bindGroup1.Value),
+            new(2, _bindGroup2.Value),
         ];
     }
 
@@ -180,7 +180,7 @@ internal abstract class UIMaterial : Material
     {
         var pass0 = Shader.ShaderPasses[0];
         _bindGroup2.Dispose();
-        _bindGroup2 = BindGroup.Create(Screen, new()
+        _bindGroup2 = new BindGroup(Screen, new()
         {
             Layout = pass0.Pipeline.Layout.BindGroupLayouts[2],
             Entries =
@@ -189,9 +189,9 @@ internal abstract class UIMaterial : Material
             ],
         });
         _pass0Bindgroups = [
-            new(0, _bindGroup0.AsValue()),
-            new(1, _bindGroup1.AsValue()),
-            new(2, _bindGroup2.AsValue()),
+            new(0, _bindGroup0.Value),
+            new(1, _bindGroup1.Value),
+            new(2, _bindGroup2.Value),
         ];
     }
 }

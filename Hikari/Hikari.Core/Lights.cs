@@ -9,7 +9,7 @@ public sealed partial class Lights
     private readonly DirectionalLight _dirLight;
     private readonly CachedOwnBuffer<BufferData> _lightData;
     private readonly Own<BindGroupLayout> _bindGroupLayout;
-    private readonly Own<BindGroup> _bindGroup;
+    private readonly Arc<BindGroup> _bindGroup;
 
     public Screen Screen => _screen;
 
@@ -28,7 +28,7 @@ public sealed partial class Lights
     }
 
     public BindGroupLayout DataBindGroupLayout => _bindGroupLayout.AsValue();
-    public BindGroup DataBindGroup => _bindGroup.AsValue();
+    public BindGroup DataBindGroup => _bindGroup.Value;
 
     internal Lights(Screen screen)
     {
@@ -52,7 +52,7 @@ public sealed partial class Lights
                 }),
             ],
         });
-        _bindGroup = BindGroup.Create(screen, new BindGroupDescriptor
+        _bindGroup = new BindGroup(screen, new BindGroupDescriptor
         {
             Layout = _bindGroupLayout.AsValue(),
             Entries =

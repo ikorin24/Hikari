@@ -18,6 +18,11 @@ public sealed class DeferredProcessMaterial : Material
             _disposable?.Dispose();
             _disposable = disposable;
         }).DisposeOn(Disposed);
+
+        Disposed.Subscribe(self =>
+        {
+            _disposable?.Dispose();
+        });
     }
 
     public override ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
@@ -45,55 +50,43 @@ public sealed class DeferredProcessMaterial : Material
         var directionalLight = screen.Lights.DirectionalLight;
         var gTextures = gBuffer.Textures;
         disposable = new DisposableBag();
+
+        var bg0 = new BindGroup(screen, new()
+        {
+            Layout = passes[0].Pipeline.Layout.BindGroupLayouts[0],
+            Entries = [
+                BindGroupEntry.Sampler(0, Sampler.Create(screen, new()
+                {
+                    AddressModeU = AddressMode.ClampToEdge,
+                    AddressModeV = AddressMode.ClampToEdge,
+                    AddressModeW = AddressMode.ClampToEdge,
+                    MagFilter = FilterMode.Nearest,
+                    MinFilter = FilterMode.Nearest,
+                    MipmapFilter = FilterMode.Nearest,
+                }).AddTo(disposable)),
+                BindGroupEntry.TextureView(1, gTextures[0].View),
+                BindGroupEntry.TextureView(2, gTextures[1].View),
+                BindGroupEntry.TextureView(3, gTextures[2].View),
+                BindGroupEntry.TextureView(4, gTextures[3].View),
+            ],
+        });
+        disposable.Add(bg0.AsArc());
+        var bg3 = new BindGroup(screen, new()
+        {
+            Layout = passes[0].Pipeline.Layout.BindGroupLayouts[3],
+            Entries = [
+                BindGroupEntry.TextureView(0, directionalLight.ShadowMap.View),
+                BindGroupEntry.Buffer(1, directionalLight.LightMatricesBuffer),
+                BindGroupEntry.Buffer(2, directionalLight.CascadeFarsBuffer),
+            ],
+        });
+        disposable.Add(bg3.AsArc());
+
         return [
-            new BindGroupData
-            {
-                Index = 0,
-                BindGroup = BindGroup.Create(screen, new()
-                {
-                    Layout = passes[0].Pipeline.Layout.BindGroupLayouts[0],
-                    Entries =
-                    [
-                        BindGroupEntry.Sampler(0, Sampler.Create(screen, new()
-                        {
-                            AddressModeU = AddressMode.ClampToEdge,
-                            AddressModeV = AddressMode.ClampToEdge,
-                            AddressModeW = AddressMode.ClampToEdge,
-                            MagFilter = FilterMode.Nearest,
-                            MinFilter = FilterMode.Nearest,
-                            MipmapFilter = FilterMode.Nearest,
-                        }).AddTo(disposable)),
-                        BindGroupEntry.TextureView(1, gTextures[0].View),
-                        BindGroupEntry.TextureView(2, gTextures[1].View),
-                        BindGroupEntry.TextureView(3, gTextures[2].View),
-                        BindGroupEntry.TextureView(4, gTextures[3].View),
-                    ],
-                }).AddTo(disposable)
-            },
-            new BindGroupData
-            {
-                Index = 1,
-                BindGroup = screen.Camera.CameraDataBindGroup,
-            },
-            new BindGroupData
-            {
-                Index = 2,
-                BindGroup = screen.Lights.DataBindGroup,
-            },
-            new BindGroupData
-            {
-                Index = 3,
-                BindGroup = BindGroup.Create(screen, new()
-                {
-                    Layout = passes[0].Pipeline.Layout.BindGroupLayouts[3],
-                    Entries =
-                    [
-                        BindGroupEntry.TextureView(0, directionalLight.ShadowMap.View),
-                        BindGroupEntry.Buffer(1, directionalLight.LightMatricesBuffer),
-                        BindGroupEntry.Buffer(2, directionalLight.CascadeFarsBuffer),
-                    ],
-                }).AddTo(disposable)
-            },
+            new(0, bg0),
+            new(1, screen.Camera.CameraDataBindGroup),
+            new(2, screen.Lights.DataBindGroup),
+            new(3, bg3),
         ];
     }
 }

@@ -21,5 +21,6 @@ public sealed class DeferredPlane
         var mesh = Mesh.Create<VertexSlim, ushort>(screen, vertices, indices).Cast<Mesh>();
         var renderer = new Renderer(mesh, [material]);
         screen.Scheduler.Add(renderer);
+        screen.Closed.Subscribe(_ => renderer.DisposeInternal());
     }
 }
