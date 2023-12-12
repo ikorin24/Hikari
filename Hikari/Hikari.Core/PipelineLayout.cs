@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 
 namespace Hikari;
 
-public sealed partial class PipelineLayout : IScreenManaged
+public sealed partial class PipelineLayout
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.PipelineLayout> _native;
@@ -18,8 +18,6 @@ public sealed partial class PipelineLayout : IScreenManaged
     public PipelineLayoutDescriptor Descriptor => _desc;
 
     public ReadOnlySpan<BindGroupLayout> BindGroupLayouts => _desc.BindGroupLayouts.AsSpan();
-
-    public bool IsManaged => _native.IsNone == false;
 
     [Owned(nameof(Release))]
     private PipelineLayout(Screen screen, in PipelineLayoutDescriptor desc)
@@ -38,8 +36,6 @@ public sealed partial class PipelineLayout : IScreenManaged
     }
 
     ~PipelineLayout() => Release(false);
-
-    public void Validate() => IScreenManaged.DefaultValidate(this);
 
     private void Release()
     {

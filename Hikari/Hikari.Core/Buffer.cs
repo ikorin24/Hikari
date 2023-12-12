@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 
 namespace Hikari;
 
-public sealed partial class Buffer : IScreenManaged, IReadBuffer<Buffer>
+public sealed partial class Buffer : IReadBuffer<Buffer>
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Buffer> _native;
@@ -22,8 +22,6 @@ public sealed partial class Buffer : IScreenManaged, IReadBuffer<Buffer>
     public usize ByteLength => _byteLen;
 
     internal Rust.Ref<Wgpu.Buffer> NativeRef => _native.Unwrap();
-
-    public bool IsManaged => _native.IsNone == false;
 
     [Owned(nameof(Release))]
     private Buffer(Screen screen, usize size, BufferUsages usage)
@@ -52,8 +50,6 @@ public sealed partial class Buffer : IScreenManaged, IReadBuffer<Buffer>
     }
 
     ~Buffer() => Release(false);
-
-    public void Validate() => IScreenManaged.DefaultValidate(this);
 
     private void Release()
     {

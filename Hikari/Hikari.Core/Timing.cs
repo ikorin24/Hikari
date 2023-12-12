@@ -9,7 +9,7 @@ using Hikari.Internal;
 
 namespace Hikari;
 
-public sealed class Timing : IScreenManaged
+public sealed class Timing
 {
     private readonly Screen _screen;
     private readonly Queue<WorkItem> _queue;
@@ -19,8 +19,6 @@ public sealed class Timing : IScreenManaged
     public Screen Screen => _screen;
 
     public Event<Screen> Event => _eventSource.Event;
-
-    bool IScreenManaged.IsManaged => true;
 
     internal Timing(Screen screen)
     {
@@ -111,8 +109,6 @@ public sealed class Timing : IScreenManaged
             }
         }
     }
-
-    void IScreenManaged.Validate() { }  // nop
 
     private readonly struct WorkItem
     {

@@ -5,15 +5,13 @@ using System.Collections.Immutable;
 
 namespace Hikari;
 
-public sealed partial class ComputePipeline : IScreenManaged
+public sealed partial class ComputePipeline
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.ComputePipeline> _native;
     internal Rust.Ref<Wgpu.ComputePipeline> NativeRef => _native.Unwrap();
 
     public Screen Screen => _screen;
-
-    public bool IsManaged => _native.IsNone == false;
 
     [Owned(nameof(Release))]
     private ComputePipeline(Screen screen, in ComputePipelineDescriptor desc)
@@ -40,8 +38,6 @@ public sealed partial class ComputePipeline : IScreenManaged
             }
         }
     }
-
-    public void Validate() => IScreenManaged.DefaultValidate(this);
 }
 
 public readonly struct ComputePipelineDescriptor

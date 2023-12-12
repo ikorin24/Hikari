@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 
 namespace Hikari;
 
-public sealed partial class Shader : IScreenManaged
+public sealed partial class Shader
 {
     private readonly Screen _screen;
     private readonly ImmutableArray<ShaderPassData> _materialPassData;
@@ -13,8 +13,6 @@ public sealed partial class Shader : IScreenManaged
     private readonly Action<FrameObject, IMaterial>? _prepareForRender;
 
     public Event<Shader> Disposed => _disposed.Event;
-
-    public bool IsManaged => _released == false;
 
     public Screen Screen => _screen;
 
@@ -41,11 +39,6 @@ public sealed partial class Shader : IScreenManaged
 
     private void Release(bool manualRelease)
     {
-    }
-
-    public void Validate()
-    {
-        IScreenManaged.DefaultValidate(this);
     }
 
     internal void PrepareForRender(FrameObject frameObject, IMaterial material)

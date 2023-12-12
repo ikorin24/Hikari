@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed partial class Texture2D : ITexture2DProvider, IScreenManaged
+public sealed partial class Texture2D : ITexture2DProvider
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Texture> _native;
@@ -17,7 +17,6 @@ public sealed partial class Texture2D : ITexture2DProvider, IScreenManaged
     private readonly Own<TextureView> _defaultView;
 
     public Screen Screen => _screen;
-    public bool IsManaged => _native.IsNone == false;
 
     internal Rust.Ref<Wgpu.Texture> NativeRef => _native.Unwrap();
 
@@ -60,8 +59,6 @@ public sealed partial class Texture2D : ITexture2DProvider, IScreenManaged
     }
 
     ~Texture2D() => Release(false);
-
-    public void Validate() => IScreenManaged.DefaultValidate(this);
 
     private void Release()
     {

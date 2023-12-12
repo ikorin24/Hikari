@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace Hikari;
 
-public sealed partial class RenderPipeline : IScreenManaged
+public sealed partial class RenderPipeline
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.RenderPipeline> _native;
@@ -20,8 +20,6 @@ public sealed partial class RenderPipeline : IScreenManaged
     public RenderPipelineDescriptor Descriptor => _desc;
 
     public PipelineLayout Layout => _desc.Layout;
-
-    public bool IsManaged => _native.IsNone == false;
 
     [Owned(nameof(Release))]
     private RenderPipeline(Screen screen, in RenderPipelineDescriptor desc)
@@ -39,8 +37,6 @@ public sealed partial class RenderPipeline : IScreenManaged
     }
 
     ~RenderPipeline() => Release(false);
-
-    public void Validate() => IScreenManaged.DefaultValidate(this);
 
     private void Release()
     {

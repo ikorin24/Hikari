@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 
 namespace Hikari;
 
-public sealed class DeferredProcessMaterial : IMaterial, IScreenManaged
+public sealed class DeferredProcessMaterial : IMaterial
 {
     private readonly Shader _shader;
     private ImmutableArray<BindGroupData> _pass0BindGroups;
@@ -15,8 +15,6 @@ public sealed class DeferredProcessMaterial : IMaterial, IScreenManaged
     public Shader Shader => _shader;
 
     public Screen Screen => _shader.Screen;
-
-    public bool IsManaged => true;  // TODO;
 
     public Event<DeferredProcessMaterial> Disposed => _disposed.Event;
 
@@ -111,9 +109,5 @@ public sealed class DeferredProcessMaterial : IMaterial, IScreenManaged
                 }).AddTo(disposable)
             },
         ];
-    }
-
-    public void Validate()
-    {
     }
 }

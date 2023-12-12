@@ -32,7 +32,6 @@ internal struct UIMaterialBase
     public readonly Screen Screen => _shader.Screen;
     public readonly Texture2D? Texture => _texture.TryAsValue(out var texture) ? texture : null;
 
-    public readonly bool IsManaged => true;  // TODO:
 
     public UIMaterialBase(Shader shader) : this(shader, UIShader.GetEmptyTexture2D(shader.Screen), UIShader.GetEmptySampler(shader.Screen))
     {
@@ -93,12 +92,6 @@ internal struct UIMaterialBase
             0 => _pass0Bindgroups.AsSpan(),
             _ => throw new ArgumentOutOfRangeException(nameof(passIndex)),
         };
-    }
-
-    public void Validate()
-    {
-        _texture.Validate();
-        _sampler.Validate();
     }
 
     public void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)

@@ -3,7 +3,7 @@ using System;
 
 namespace Hikari;
 
-public sealed partial class GBufferProvider : IScreenManaged, IGBufferProvider
+public sealed partial class GBufferProvider : IGBufferProvider
 {
     private readonly Screen _screen;
     private readonly TextureFormat[] _formats;
@@ -12,16 +12,6 @@ public sealed partial class GBufferProvider : IScreenManaged, IGBufferProvider
     private bool _isReleased;
 
     public Screen Screen => _screen;
-
-    public bool IsManaged
-    {
-        get
-        {
-            lock(this) {
-                return !_isReleased && _gBuffer.TryAsValue(out var gbuffer) && gbuffer.IsManaged;
-            }
-        }
-    }
 
     public Event<IGBufferProvider> GBufferChanged => _gBufferChanged.Event;
 
@@ -65,11 +55,6 @@ public sealed partial class GBufferProvider : IScreenManaged, IGBufferProvider
     public void Resize(Vector2u newSize)
     {
         RecreateGBuffer(newSize);
-    }
-
-    public void Validate()
-    {
-        IScreenManaged.DefaultValidate(this);
     }
 
     private void RecreateGBuffer(Vector2u size)

@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace Hikari;
 
-public sealed partial class Mesh : IScreenManaged
+public sealed partial class Mesh
 {
     private readonly Screen _screen;
     private readonly MeshData _data;
@@ -28,8 +28,6 @@ public sealed partial class Mesh : IScreenManaged
 
     public Screen Screen => _screen;
 
-    public bool IsManaged => _isReleased == false;
-
     private Mesh(Screen screen, in MeshData data, ImmutableArray<SubmeshData> submeshes)
     {
         Debug.Assert(submeshes.IsEmpty == false);
@@ -37,11 +35,6 @@ public sealed partial class Mesh : IScreenManaged
         _data = data;
         _submeshes = submeshes;
         _isReleased = false;
-    }
-
-    public void Validate()
-    {
-        IScreenManaged.DefaultValidate(this);
     }
 
     private void Release()

@@ -200,7 +200,7 @@ internal record struct ButtonInfo
     }
 }
 
-file sealed class ButtonMaterial : IUIMaterial, IScreenManaged
+file sealed class ButtonMaterial : IUIMaterial
 {
     private ButtonInfo? _buttonInfo;
     private Color4? _color;
@@ -210,8 +210,6 @@ file sealed class ButtonMaterial : IUIMaterial, IScreenManaged
     public Screen Screen => _base.Screen;
 
     public Shader Shader => _base.Shader;
-
-    public bool IsManaged => true;  // TODO:
 
     private ButtonMaterial(Shader shader)
     {
@@ -248,9 +246,4 @@ file sealed class ButtonMaterial : IUIMaterial, IScreenManaged
     }
 
     public ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex) => _base.GetBindGroups(passIndex);
-
-    public void Validate()
-    {
-        IScreenManaged.DefaultValidate(this);
-    }
 }

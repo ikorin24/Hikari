@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed partial class BindGroup : IScreenManaged
+public sealed partial class BindGroup
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.BindGroup> _native;
@@ -18,19 +18,8 @@ public sealed partial class BindGroup : IScreenManaged
 
     public Screen Screen => _screen;
 
-    public bool IsManaged => _native.IsNone == false;
-
     public BindGroupLayout Layout => _desc.Layout;
     public ImmutableArray<BindGroupEntry> Entries => _desc.Entries;
-
-    public void Validate()
-    {
-        IScreenManaged.DefaultValidate(this);
-        _desc.Layout.Validate();
-        foreach(var entry in _desc.Entries) {
-            entry.Resource.Validate();
-        }
-    }
 
     [Owned(nameof(Release))]
     private BindGroup(Screen screen, in BindGroupDescriptor desc)
@@ -78,17 +67,26 @@ public readonly struct BindGroupDescriptor
 public readonly struct BindGroupEntry
 {
     private readonly u32 _binding;
-    private readonly IScreenManaged _resource;
+    private readonly object _resource;
 
     public u32 Binding => _binding;
 
-    internal IScreenManaged Resource => _resource;
-
-    private BindGroupEntry(u32 binding, IScreenManaged resource)
+    private BindGroupEntry(u32 binding, BufferBinding bufferBinding)
     {
-        Debug.Assert(resource is BufferBinding or Hikari.TextureView or Hikari.Sampler);
         _binding = binding;
-        _resource = resource;
+        _resource = bufferBinding;
+    }
+
+    private BindGroupEntry(u32 binding, TextureView textureView)
+    {
+        _binding = binding;
+        _resource = textureView;
+    }
+
+    private BindGroupEntry(u32 binding, Sampler sampler)
+    {
+        _binding = binding;
+        _resource = sampler;
     }
 
     internal CH.BindGroupEntry ToNative(PinHandleHolder pins)
@@ -141,14 +139,12 @@ public readonly struct BindGroupEntry
         return new BindGroupEntry(binding, sampler);
     }
 
-    internal sealed class BufferBinding : IScreenManaged
+    internal sealed class BufferBinding
     {
         private readonly Buffer _buffer;
         private readonly Wrap _wrap;
 
         public Screen Screen => _buffer.Screen;
-
-        public bool IsManaged => _buffer.IsManaged;
 
         public BufferBinding(BufferSlice bufferSlice) : this(bufferSlice.Buffer, bufferSlice.Offset, bufferSlice.Length)
         {
@@ -165,11 +161,11 @@ public readonly struct BindGroupEntry
             });
         }
 
-        public void Validate() => IScreenManaged.DefaultValidate(this);
-
         internal unsafe CH.BindingResource ToNative(PinHandleHolder pins)
         {
-            _buffer.Validate();
+            if(_buffer.NativeRef.IsInvalid) {
+                throw new InvalidOperationException();
+            }
             pins.Add(GCHandle.Alloc(_wrap, GCHandleType.Pinned));
             var payload = (CH.BufferBinding*)Unsafe.AsPointer(ref Unsafe.AsRef(in _wrap.Native));
             return CH.BindingResource.Buffer(payload);

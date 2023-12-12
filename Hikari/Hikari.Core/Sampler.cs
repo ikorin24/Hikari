@@ -1,11 +1,10 @@
 ﻿#nullable enable
 using Hikari.NativeBind;
 using System;
-using System.Runtime.CompilerServices;
 
 namespace Hikari;
 
-public sealed partial class Sampler : IScreenManaged
+public sealed partial class Sampler
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.Sampler> _native;
@@ -14,8 +13,6 @@ public sealed partial class Sampler : IScreenManaged
     public Screen Screen => _screen;
 
     internal Rust.Ref<Wgpu.Sampler> NativeRef => _native.Unwrap();
-
-    public bool IsManaged => _native.IsNone == false;
 
     public SamplerDescriptor Descriptor => _desc;
 
@@ -30,8 +27,6 @@ public sealed partial class Sampler : IScreenManaged
     }
 
     ~Sampler() => Release(false);
-
-    public void Validate() => IScreenManaged.DefaultValidate(this);
 
     private void Release()
     {

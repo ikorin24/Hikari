@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed partial class DirectionalLight : IScreenManaged
+public sealed partial class DirectionalLight
 {
     internal const uint CascadeCountConst = 4;       // 2 ~
     internal const u32 ShadowMapWidth = 1024;
@@ -23,10 +23,6 @@ public sealed partial class DirectionalLight : IScreenManaged
     private readonly SubscriptionBag _subscriptionBag = new();
 
     public Screen Screen => _screen;
-
-    public bool IsManaged => _lightData.IsNone == false;
-
-    public void Validate() => IScreenManaged.DefaultValidate(this);
 
     public Texture2D ShadowMap => _shadowMap.AsValue();
 

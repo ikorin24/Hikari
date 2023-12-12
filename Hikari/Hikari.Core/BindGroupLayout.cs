@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed partial class BindGroupLayout : IScreenManaged
+public sealed partial class BindGroupLayout
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.BindGroupLayout> _native;
@@ -18,8 +18,6 @@ public sealed partial class BindGroupLayout : IScreenManaged
     public Screen Screen => _screen;
 
     internal Rust.Ref<Wgpu.BindGroupLayout> NativeRef => _native.Unwrap();
-
-    public bool IsManaged => _native.IsNone == false;
 
     public BindGroupLayoutDescriptor Descriptor => _desc;
 
@@ -51,8 +49,6 @@ public sealed partial class BindGroupLayout : IScreenManaged
             }
         }
     }
-
-    public void Validate() => IScreenManaged.DefaultValidate(this);
 }
 
 public readonly record struct BindGroupLayoutDescriptor

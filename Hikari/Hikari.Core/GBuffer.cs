@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Hikari;
 
-public sealed partial class GBuffer : IScreenManaged
+public sealed partial class GBuffer
 {
     private readonly Screen _screen;
     private readonly Vector2u _size;
@@ -13,7 +13,6 @@ public sealed partial class GBuffer : IScreenManaged
 
     public Event<GBuffer> Disposed => _disposed.Event;
     public Screen Screen => _screen;
-    public bool IsManaged => _colors != null;
     public Vector2u Size => _size;
     public ReadOnlySpan<Texture2D> Textures => _colors;
 
@@ -45,10 +44,5 @@ public sealed partial class GBuffer : IScreenManaged
             return;
         }
         _disposed.Invoke(this);
-    }
-
-    public void Validate()
-    {
-        IScreenManaged.DefaultValidate(this);
     }
 }

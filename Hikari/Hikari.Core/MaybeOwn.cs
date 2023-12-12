@@ -95,11 +95,6 @@ public static class MaybeOwn
 
     public static MaybeOwn<T> New<T>(T value) where T : notnull => MaybeOwn<T>.FromShared(value);
 
-    public static void Validate<T>(this MaybeOwn<T> self) where T : IScreenManaged
-    {
-        self._inner.Validate();
-    }
-
     [DebuggerHidden]
     internal static void ThrowArgumentExceptionIfNone<T>(this MaybeOwn<T> self, [CallerArgumentExpression(nameof(self))] string? paramName = null)
         where T : notnull

@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace Hikari;
 
-public sealed class FrameObject : IScreenManaged, ITreeModel
+public sealed class FrameObject : ITreeModel
 {
     private readonly Screen _screen;
     private string? _name;
@@ -64,8 +64,6 @@ public sealed class FrameObject : IScreenManaged, ITreeModel
 
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
 
-    public bool IsManaged => LifeState != LifeState.Dead;
-
     public FrameObject(MaybeOwn<Mesh> mesh, Own<IMaterial> material) : this(mesh, [material])
     {
     }
@@ -93,8 +91,6 @@ public sealed class FrameObject : IScreenManaged, ITreeModel
     public Matrix4 GetModel(out bool isUniformScale) => _treeModelImpl.GetModel(out isUniformScale);
 
     public Matrix4 GetSelfModel(out bool isUniformScale) => _treeModelImpl.GetSelfModel(out isUniformScale);
-
-    public void Validate() => IScreenManaged.DefaultValidate(this);
 
     internal void SetLifeStateAlive()
     {

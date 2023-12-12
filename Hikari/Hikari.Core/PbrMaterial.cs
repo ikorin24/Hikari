@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed partial class PbrMaterial : IMaterial, IScreenManaged
+public sealed partial class PbrMaterial : IMaterial
 {
     private readonly Shader _shader;
     private readonly MaybeOwn<Texture2D> _albedo;
@@ -32,8 +32,6 @@ public sealed partial class PbrMaterial : IMaterial, IScreenManaged
     public Sampler AlbedoSampler => _albedoSampler.AsValue();
     public Sampler MetallicRoughnessSampler => _metallicRoughnessSampler.AsValue();
     public Sampler NormalSampler => _normalSampler.AsValue();
-
-    public bool IsManaged => _modelUniform.IsNone == false;
 
     private PbrMaterial(
         Shader shader,
@@ -62,14 +60,6 @@ public sealed partial class PbrMaterial : IMaterial, IScreenManaged
             [new(0, shadowBindGroup0.AsValue())],
             [new(0, _bindGroup0.AsValue()), new(1, _bindGroup1)],
         ];
-    }
-
-    public void Validate()
-    {
-        _albedo.Validate();
-        _metallicRoughness.Validate();
-        _normal.Validate();
-        _bindGroup1.Validate();
     }
 
     public ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)

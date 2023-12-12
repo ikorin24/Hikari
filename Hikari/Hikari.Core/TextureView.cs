@@ -4,15 +4,13 @@ using System;
 
 namespace Hikari;
 
-public sealed class TextureView : IScreenManaged, ITextureViewProvider
+public sealed class TextureView : ITextureViewProvider
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.TextureView> _native;
     private readonly Texture2D _texture;
 
     public Screen Screen => _screen;
-
-    public bool IsManaged => _native.IsNone == false;
 
     public Texture2D Texture => _texture;
 
@@ -28,12 +26,6 @@ public sealed class TextureView : IScreenManaged, ITextureViewProvider
     }
 
     ~TextureView() => Release(false);
-
-    public void Validate()
-    {
-        IScreenManaged.DefaultValidate(this);
-        _texture.Validate();
-    }
 
     private void Release()
     {
@@ -53,7 +45,6 @@ public sealed class TextureView : IScreenManaged, ITextureViewProvider
     public static Own<TextureView> Create(Texture2D texture)
     {
         ArgumentNullException.ThrowIfNull(texture);
-        texture.ThrowIfNotScreenManaged();
         var screen = texture.Screen;
         var textureViewNative = texture.NativeRef.CreateTextureView(CH.TextureViewDescriptor.Default);
         var textureView = new TextureView(screen, textureViewNative, texture);

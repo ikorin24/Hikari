@@ -4,15 +4,13 @@ using System;
 
 namespace Hikari;
 
-public sealed partial class ShaderModule : IScreenManaged
+public sealed partial class ShaderModule
 {
     private readonly Screen _screen;
     private Rust.OptionBox<Wgpu.ShaderModule> _native;
 
     public Screen Screen => _screen;
     internal Rust.Ref<Wgpu.ShaderModule> NativeRef => _native.Unwrap();
-
-    public bool IsManaged => _native.IsNone == false;
 
     [Owned(nameof(Release))]
     private ShaderModule(Screen screen, ReadOnlySpan<byte> shaderSource)
@@ -23,8 +21,6 @@ public sealed partial class ShaderModule : IScreenManaged
     }
 
     ~ShaderModule() => Release(false);
-
-    public void Validate() => IScreenManaged.DefaultValidate(this);
 
     private void Release()
     {

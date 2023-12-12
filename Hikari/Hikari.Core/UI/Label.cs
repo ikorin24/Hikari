@@ -199,7 +199,7 @@ internal record struct LabelInfo
     }
 }
 
-file sealed class LabelMaterial : IUIMaterial, IScreenManaged
+file sealed class LabelMaterial : IUIMaterial
 {
     private LabelInfo? _labelInfo;
     private Color4? _color;
@@ -219,8 +219,6 @@ file sealed class LabelMaterial : IUIMaterial, IScreenManaged
     public Screen Screen => _base.Screen;
 
     public Shader Shader => _base.Shader;
-
-    public bool IsManaged => true;  // TODO:
 
     internal static Own<LabelMaterial> Create(Shader shader)
     {
@@ -247,10 +245,5 @@ file sealed class LabelMaterial : IUIMaterial, IScreenManaged
             _base.UpdateTextureContentSize(contentSize);
 
         }
-    }
-
-    public void Validate()
-    {
-        IScreenManaged.DefaultValidate(this);
     }
 }
