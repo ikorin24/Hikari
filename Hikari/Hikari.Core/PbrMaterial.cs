@@ -5,8 +5,9 @@ using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed partial class PbrMaterial : Material
+public sealed partial class PbrMaterial : IMaterial, IScreenManaged
 {
+    private readonly Shader _shader;
     private readonly MaybeOwn<Texture2D> _albedo;
     private readonly MaybeOwn<Texture2D> _metallicRoughness;
     private readonly MaybeOwn<Texture2D> _normal;
@@ -19,7 +20,11 @@ public sealed partial class PbrMaterial : Material
     private readonly BindGroup _bindGroup1;
     private readonly Own<BindGroup> _shadowBindGroup0;
     private readonly ImmutableArray<ImmutableArray<BindGroupData>> _passBindGroups;
+    private EventSource<PbrMaterial> _disposed;
 
+    public Event<PbrMaterial> Disposed => _disposed.Event;
+    public Shader Shader => _shader;
+    public Screen Screen => _shader.Screen;
     public Texture2D Albedo => _albedo.AsValue();
     public Texture2D MetallicRoughness => _metallicRoughness.AsValue();
     public Texture2D Normal => _normal.AsValue();
@@ -27,6 +32,8 @@ public sealed partial class PbrMaterial : Material
     public Sampler AlbedoSampler => _albedoSampler.AsValue();
     public Sampler MetallicRoughnessSampler => _metallicRoughnessSampler.AsValue();
     public Sampler NormalSampler => _normalSampler.AsValue();
+
+    public bool IsManaged => _modelUniform.IsNone == false;
 
     private PbrMaterial(
         Shader shader,
@@ -39,8 +46,8 @@ public sealed partial class PbrMaterial : Material
         MaybeOwn<Sampler> normalSampler,
         Own<BindGroup> bindGroup0,
         Own<BindGroup> shadowBindGroup0)
-        : base(shader)
     {
+        _shader = shader;
         _modelUniform = uniform;
         _albedo = albedo;
         _albedoSampler = albedoSampler;
@@ -57,23 +64,26 @@ public sealed partial class PbrMaterial : Material
         ];
     }
 
-    public override void Validate()
+    public void Validate()
     {
-        base.Validate();
         _albedo.Validate();
         _metallicRoughness.Validate();
         _normal.Validate();
         _bindGroup1.Validate();
     }
 
-    public override ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
+    public ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
     {
         return _passBindGroups[passIndex].AsSpan();
     }
 
-    protected override void Release(bool manualRelease)
+    private void Release()
     {
-        base.Release(manualRelease);
+        Release(true);
+    }
+
+    private void Release(bool manualRelease)
+    {
         if(manualRelease) {
             _modelUniform.Dispose();
             _albedo.Dispose();
@@ -84,6 +94,7 @@ public sealed partial class PbrMaterial : Material
             _normalSampler.Dispose();
             _bindGroup0.Dispose();
             _shadowBindGroup0.Dispose();
+            _disposed.Invoke(this);
         }
     }
 
@@ -168,7 +179,7 @@ public sealed partial class PbrMaterial : Material
             bindGroup0,
             shadowBindGroup0
         );
-        return CreateOwn(material);
+        return Own.New(material, static x => SafeCast.As<PbrMaterial>(x).Release());
     }
 
     internal void WriteModelUniform(in UniformValue value)

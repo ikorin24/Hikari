@@ -112,7 +112,7 @@ internal static class UIShader
                         LayoutDescriptor = PipelineLayoutFactory(screen, out var diposable),
                         PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
                         PassKind = PassKind.Surface,
-                        OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+                        OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, IMaterial material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
                         {
                             renderPass.SetPipeline(pipeline);
                             renderPass.SetBindGroups(material.GetBindGroups(passIndex));

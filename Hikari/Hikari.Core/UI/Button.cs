@@ -63,7 +63,7 @@ public sealed class Button : UIElement, IFromJson<Button>
         Serializer.RegisterConstructor(FromJson);
         UITree.RegisterMaterial<Button>(static screen =>
         {
-            return ButtonMaterial.Create(UIShader.CreateOrCached(screen)).Cast<Material>();
+            return ButtonMaterial.Create(UIShader.CreateOrCached(screen)).Cast<IUIMaterial>();
         });
 
     }
@@ -200,25 +200,38 @@ internal record struct ButtonInfo
     }
 }
 
-file sealed class ButtonMaterial : UIMaterial
+file sealed class ButtonMaterial : IUIMaterial, IScreenManaged
 {
     private ButtonInfo? _buttonInfo;
     private Color4? _color;
     private float? _scaleFactor;
+    private UIMaterialBase _base;
 
-    private ButtonMaterial(Shader shader) : base(shader)
+    public Screen Screen => _base.Screen;
+
+    public Shader Shader => _base.Shader;
+
+    public bool IsManaged => true;  // TODO:
+
+    private ButtonMaterial(Shader shader)
     {
+        _base = new UIMaterialBase(shader);
+    }
+
+    private void Release()
+    {
+        _base.Release();
     }
 
     internal static Own<ButtonMaterial> Create(Shader shader)
     {
         var self = new ButtonMaterial(shader);
-        return CreateOwn(self);
+        return Own.New(self, static x => SafeCast.As<ButtonMaterial>(x).Release());
     }
 
-    public override void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)
+    public void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)
     {
-        base.UpdateMaterial(element, result, mvp, scaleFactor);
+        _base.UpdateMaterial(element, result, mvp, scaleFactor);
         var button = (Button)element;
         Debug.Assert(button.ButtonApplied.HasValue);
         ref readonly var applied = ref button.ButtonApplied.ValueRef();
@@ -226,7 +239,18 @@ file sealed class ButtonMaterial : UIMaterial
             _buttonInfo = applied;
             _color = result.AppliedInfo.Color;
             _scaleFactor = scaleFactor;
-            TextMaterialHelper.UpdateTextTexture(this, applied.Text, applied.FontSize, result.AppliedInfo.Color.ToColorByte(), scaleFactor);
+            var (newTexture, contentSize, changed) = TextMaterialHelper.UpdateTextTexture(Screen, _base.Texture, applied.Text, applied.FontSize, result.AppliedInfo.Color.ToColorByte(), scaleFactor);
+            if(changed) {
+                _base.UpdateTexture(newTexture);
+            }
+            _base.UpdateTextureContentSize(contentSize);
         }
+    }
+
+    public ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex) => _base.GetBindGroups(passIndex);
+
+    public void Validate()
+    {
+        IScreenManaged.DefaultValidate(this);
     }
 }

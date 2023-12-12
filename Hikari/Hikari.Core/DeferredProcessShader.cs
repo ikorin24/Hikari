@@ -315,7 +315,7 @@ public static class DeferredProcessShader
                     LayoutDescriptor = BuildPipelineLayout(screen, out var disposable),
                     PipelineDescriptorFactory = PipelineFactory,
                     PassKind = PassKind.Surface,
-                    OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+                    OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, IMaterial material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
                     {
                         renderPass.SetPipeline(pipeline);
                         renderPass.SetBindGroups(material.GetBindGroups(passIndex));

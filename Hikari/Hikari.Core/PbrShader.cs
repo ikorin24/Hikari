@@ -166,7 +166,7 @@ public static class PbrShader
                     PipelineDescriptorFactory = GetShadowDescriptor,
                     SortOrder = -1000,
                     PassKind = PassKind.ShadowMap,
-                    OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+                    OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, IMaterial material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
                     {
                         renderPass.SetPipeline(pipeline);
                         renderPass.SetBindGroups(material.GetBindGroups(passIndex));
@@ -182,7 +182,7 @@ public static class PbrShader
                     PipelineDescriptorFactory = static (module, layout) => GetDescriptor(module, layout, module.Screen.DepthStencil.Format),
                     SortOrder = 0,
                     PassKind = PassKind.GBuffer,
-                    OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
+                    OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, IMaterial material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
                     {
                         renderPass.SetPipeline(pipeline);
                         renderPass.SetBindGroups(material.GetBindGroups(passIndex));

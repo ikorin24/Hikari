@@ -5,8 +5,14 @@ using System.Runtime.CompilerServices;
 
 namespace Hikari.UI;
 
-internal abstract class UIMaterial : Material
+internal interface IUIMaterial : IMaterial
 {
+    void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor);
+}
+
+internal struct UIMaterialBase
+{
+    private readonly Shader _shader;
     private readonly Own<BindGroup> _bindGroup0;
     private Own<BindGroup> _bindGroup1;
     private Own<BindGroup> _bindGroup2;
@@ -20,26 +26,30 @@ internal abstract class UIMaterial : Material
     private readonly Own<Buffer> _texContentSizeBuffer;
     private Vector2u? _texContentSize;
 
-    public Texture2D? Texture => _texture.TryAsValue(out var texture) ? texture : null;
+    private const BufferUsages BackgroundBufferUsage = BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst;
 
-    protected UIMaterial(Shader shader) : this(shader, UIShader.GetEmptyTexture2D(shader.Screen), UIShader.GetEmptySampler(shader.Screen))
+    public readonly Shader Shader => _shader;
+    public readonly Screen Screen => _shader.Screen;
+    public readonly Texture2D? Texture => _texture.TryAsValue(out var texture) ? texture : null;
+
+    public readonly bool IsManaged => true;  // TODO:
+
+    public UIMaterialBase(Shader shader) : this(shader, UIShader.GetEmptyTexture2D(shader.Screen), UIShader.GetEmptySampler(shader.Screen))
     {
     }
 
-    protected UIMaterial(
-        Shader shader,
-        MaybeOwn<Texture2D> texture,
-        MaybeOwn<Sampler> sampler) : base(shader)
+    public UIMaterialBase(Shader shader, MaybeOwn<Texture2D> texture, MaybeOwn<Sampler> sampler)
     {
         texture.ThrowArgumentExceptionIfNone(nameof(texture));
         sampler.ThrowArgumentExceptionIfNone(nameof(sampler));
-        var screen = Screen;
+        _shader = shader;
+        var screen = shader.Screen;
         _texture = texture;
         _sampler = sampler;
 
-        var passes = Shader.ShaderPasses;
+        var passes = shader.ShaderPasses;
         _buffer = new(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst);
-        _texContentSizeBuffer = Buffer.Create(Screen, (nuint)Unsafe.SizeOf<Vector2u>(), BufferUsages.Uniform | BufferUsages.CopyDst);
+        _texContentSizeBuffer = Buffer.Create(screen, (nuint)Unsafe.SizeOf<Vector2u>(), BufferUsages.Uniform | BufferUsages.CopyDst);
         _bindGroup0 = BindGroup.Create(screen, new()
         {
             Layout = passes[0].Pipeline.Layout.BindGroupLayouts[0],
@@ -59,15 +69,24 @@ internal abstract class UIMaterial : Material
                 BindGroupEntry.Buffer(2, _texContentSizeBuffer.AsValue()),
             ],
         });
-        Brush.Transparent.GetBufferData(this, static (span, self) =>
-        {
-            self._backgroundBuffer.Dispose();
-            self._backgroundBuffer = Buffer.Create(self.Screen, span, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
-            self.SetBindGroup2();
-        });
+        _backgroundBuffer.Dispose();
+        _backgroundBuffer = Brush.Transparent.GetBufferData(this, static (span, self) => Buffer.Create(self.Screen, span, BackgroundBufferUsage));
+        SetBindGroup2();
     }
 
-    public sealed override ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
+    internal readonly void Release()
+    {
+        _bindGroup0.Dispose();
+        _bindGroup1.Dispose();
+        _bindGroup2.Dispose();
+        _buffer.Dispose();
+        _backgroundBuffer.Dispose();
+        _texture.Dispose();
+        _sampler.Dispose();
+        _texContentSizeBuffer.Dispose();
+    }
+
+    public readonly ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
     {
         return passIndex switch
         {
@@ -76,29 +95,13 @@ internal abstract class UIMaterial : Material
         };
     }
 
-    protected override void Release(bool manualRelease)
+    public void Validate()
     {
-        base.Release(manualRelease);
-        if(manualRelease) {
-            _bindGroup0.Dispose();
-            _bindGroup1.Dispose();
-            _bindGroup2.Dispose();
-            _buffer.Dispose();
-            _backgroundBuffer.Dispose();
-            _texture.Dispose();
-            _sampler.Dispose();
-            _texContentSizeBuffer.Dispose();
-        }
-    }
-
-    public override void Validate()
-    {
-        base.Validate();
         _texture.Validate();
         _sampler.Validate();
     }
 
-    public virtual void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)
+    public void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)
     {
         var bufferData = new UIShaderSource.BufferData
         {
@@ -165,12 +168,9 @@ internal abstract class UIMaterial : Material
                     static (span, buffer) => buffer.WriteSpan(0, span));
             }
             else {
-                background.GetBufferData(this, static (span, self) =>
-                {
-                    self._backgroundBuffer.Dispose();
-                    self._backgroundBuffer = Buffer.Create(self.Screen, span, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
-                    self.SetBindGroup2();
-                });
+                _backgroundBuffer.Dispose();
+                _backgroundBuffer = background.GetBufferData(this, static (span, self) => Buffer.Create(self.Screen, span, BackgroundBufferUsage));
+                SetBindGroup2();
             }
             _background = background;
         }

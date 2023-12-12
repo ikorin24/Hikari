@@ -12,7 +12,7 @@ public sealed class UITree
     private bool _isLayoutDirty = false;
     private IReactive? _root;
 
-    private static readonly ConcurrentDictionary<Type, Func<Screen, Own<Material>>> _materialProviders = new();
+    private static readonly ConcurrentDictionary<Type, Func<Screen, Own<IUIMaterial>>> _materialProviders = new();
 
     public Screen Screen => _screen;
 
@@ -73,13 +73,13 @@ public sealed class UITree
         });
     }
 
-    internal static bool RegisterMaterial<T>(Func<Screen, Own<Material>> provider) where T : UIElement
+    internal static bool RegisterMaterial<T>(Func<Screen, Own<IUIMaterial>> provider) where T : UIElement
     {
         ArgumentNullException.ThrowIfNull(provider);
         return _materialProviders.TryAdd(typeof(T), provider);
     }
 
-    internal Own<Material> GetRegisteredMaterial(Type type)
+    internal Own<IUIMaterial> GetRegisteredMaterial(Type type)
     {
         ArgumentNullException.ThrowIfNull(type);
         var provider = _materialProviders[type];

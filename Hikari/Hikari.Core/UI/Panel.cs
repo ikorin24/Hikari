@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System;
 using System.Collections.Concurrent;
 using System.Text.Json;
 
@@ -36,7 +37,7 @@ public sealed class Panel : UIElement, IFromJson<Panel>
         Serializer.RegisterConstructor(FromJson);
         UITree.RegisterMaterial<Panel>(static screen =>
         {
-            return PanelMaterial.Create(UIShader.CreateOrCached(screen)).Cast<Material>();
+            return PanelMaterial.Create(UIShader.CreateOrCached(screen)).Cast<IUIMaterial>();
         });
 
     }
@@ -103,15 +104,34 @@ public sealed record PanelPseudoInfo
     }
 }
 
-file sealed class PanelMaterial : UIMaterial
+file sealed class PanelMaterial : IUIMaterial
 {
-    private PanelMaterial(Shader shader) : base(shader)
+    private UIMaterialBase _base;
+
+    private PanelMaterial(Shader shader)
     {
+        _base = new UIMaterialBase(shader);
     }
+
+    public Screen Screen => _base.Screen;
+
+    public Shader Shader => _base.Shader;
 
     internal static Own<PanelMaterial> Create(Shader shader)
     {
         var self = new PanelMaterial(shader);
-        return CreateOwn(self);
+        return Own.New(self, static x => SafeCast.As<PanelMaterial>(x).Release());
+    }
+
+    private void Release()
+    {
+        _base.Release();
+    }
+
+    public ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex) => _base.GetBindGroups(passIndex);
+
+    public void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)
+    {
+        _base.UpdateMaterial(element, result, mvp, scaleFactor);
     }
 }

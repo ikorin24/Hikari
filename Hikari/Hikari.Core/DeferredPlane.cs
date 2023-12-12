@@ -18,8 +18,9 @@ public sealed class DeferredPlane
             new(new(-1, 1, Z), new(0, 0)),
         ];
         ReadOnlySpan<ushort> indices = [0, 1, 2, 2, 3, 0];
-        var mesh = Mesh.Create<VertexSlim, ushort>(screen, vertices, indices).Cast<Mesh>();
-        var renderer = new Renderer(mesh, [material]);
+        var mesh = Mesh.Create<VertexSlim, ushort>(screen, vertices, indices);
+        var renderer = new Renderer(mesh, material.Cast<IMaterial>());
         screen.Scheduler.Add(renderer);
+        screen.Closed.Subscribe(_ => renderer.DisposeInternal());
     }
 }

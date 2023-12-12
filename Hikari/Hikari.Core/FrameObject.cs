@@ -66,11 +66,11 @@ public sealed class FrameObject : IScreenManaged, ITreeModel
 
     public bool IsManaged => LifeState != LifeState.Dead;
 
-    public FrameObject(MaybeOwn<Mesh> mesh, Own<Material> material) : this(mesh, [material])
+    public FrameObject(MaybeOwn<Mesh> mesh, Own<IMaterial> material) : this(mesh, [material])
     {
     }
 
-    public FrameObject(MaybeOwn<Mesh> mesh, ImmutableArray<Own<Material>> materials)
+    public FrameObject(MaybeOwn<Mesh> mesh, ImmutableArray<Own<IMaterial>> materials)
     {
         var renderer = new Renderer(mesh, materials);
         var screen = renderer.Screen;

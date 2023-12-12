@@ -354,7 +354,7 @@ public abstract class UIElement : IToJson, IReactive
     {
         Debug.Assert(_model == null);
         var material = tree.GetRegisteredMaterial(GetType());
-        var model = new FrameObject(GetMesh(tree.Screen), material);
+        var model = new FrameObject(GetMesh(tree.Screen), material.Cast<IMaterial>());
         model.Alive
             .Subscribe(_ => _modelAlive.Invoke(this))
             .AddTo(model.Subscriptions);
@@ -622,7 +622,7 @@ public abstract class UIElement : IToJson, IReactive
                 new Vector4(0, 0, 0, 1));
 
         Debug.Assert(model.Renderer.SubrendererCount == 1);
-        var material = model.Renderer.GetMaterial<UIMaterial>(0);
+        var material = model.Renderer.GetMaterial<IUIMaterial>(0);
         material.UpdateMaterial(this, cache, uiProjection * modelMatrix, scaleFactor);
     }
 }

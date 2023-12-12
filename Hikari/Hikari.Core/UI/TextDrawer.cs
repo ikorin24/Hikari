@@ -16,7 +16,7 @@ internal static class TextDrawer
     [ThreadStatic]
     private static SKPaint? _paintCache;
 
-    public static void Draw<T>(ReadOnlySpan<byte> utf8Text, in TextDrawOptions options, T arg, TextDrawerCallback<T> callback)
+    public static TResult Draw<T, TResult>(ReadOnlySpan<byte> utf8Text, in TextDrawOptions options, T arg, TextDrawerCallback<T, TResult> callback)
     {
         using var result = DrawPrivate(utf8Text, SKTextEncoding.Utf8, options);
         var a = new TextDrawerResult<T>
@@ -25,10 +25,10 @@ internal static class TextDrawer
             Image = result.Image,
             TextBoundsSize = result.TextBounds,
         };
-        callback.Invoke(a);
+        return callback.Invoke(a);
     }
 
-    public static void Draw<T>(ReadOnlySpan<char> text, in TextDrawOptions options, T arg, TextDrawerCallback<T> callback)
+    public static TResult Draw<T, TResult>(ReadOnlySpan<char> text, in TextDrawOptions options, T arg, TextDrawerCallback<T, TResult> callback)
     {
         using var result = DrawPrivate(text.MarshalCast<char, byte>(), SKTextEncoding.Utf16, options);
         var a = new TextDrawerResult<T>
@@ -37,7 +37,7 @@ internal static class TextDrawer
             Image = result.Image,
             TextBoundsSize = result.TextBounds,
         };
-        callback.Invoke(a);
+        return callback.Invoke(a);
     }
 
     private static unsafe DrawResult DrawPrivate(ReadOnlySpan<byte> text, SKTextEncoding enc, in TextDrawOptions options)
@@ -145,7 +145,7 @@ internal static class TextDrawer
     }
 }
 
-internal delegate void TextDrawerCallback<T>(TextDrawerResult<T> result);
+internal delegate TResult TextDrawerCallback<T, TResult>(TextDrawerResult<T> result);
 
 internal readonly ref struct TextDrawerResult<T>
 {

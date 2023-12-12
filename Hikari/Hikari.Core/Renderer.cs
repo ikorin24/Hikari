@@ -8,7 +8,7 @@ public sealed class Renderer
 {
     private readonly Screen _screen;
     private readonly MaybeOwn<Mesh> _mesh;
-    private readonly ImmutableArray<Own<Material>> _materials;
+    private readonly ImmutableArray<Own<IMaterial>> _materials;
 
     public Screen Screen => _screen;
 
@@ -16,7 +16,11 @@ public sealed class Renderer
 
     public int SubrendererCount => _materials.Length;
 
-    internal Renderer(MaybeOwn<Mesh> mesh, ImmutableArray<Own<Material>> materials)
+    internal Renderer(MaybeOwn<Mesh> mesh, Own<IMaterial> material) : this(mesh, [material])
+    {
+    }
+
+    internal Renderer(MaybeOwn<Mesh> mesh, ImmutableArray<Own<IMaterial>> materials)
     {
         var meshValue = mesh.AsValue();
         if(meshValue.Submeshes.Length != materials.Length) {
@@ -35,12 +39,12 @@ public sealed class Renderer
         }
     }
 
-    public Material GetMaterial(int submeshIndex)
+    public IMaterial GetMaterial(int submeshIndex)
     {
         return _materials[submeshIndex].AsValue();
     }
 
-    public T GetMaterial<T>(int submeshIndex) where T : Material
+    public T GetMaterial<T>(int submeshIndex) where T : IMaterial
     {
         var material = _materials[submeshIndex].AsValue();
         return (T)material;
@@ -67,7 +71,7 @@ public sealed class Renderer
     {
         private readonly Mesh _mesh;
         private readonly ReadOnlySpan<SubmeshData> _submeshes;
-        private readonly ReadOnlySpan<Own<Material>> _materials;
+        private readonly ReadOnlySpan<Own<IMaterial>> _materials;
         private int _index;
 
         public readonly Subrenderer Current => new Subrenderer(_materials[_index].AsValue(), _mesh, _submeshes[_index]);
@@ -89,18 +93,18 @@ public sealed class Renderer
 
 internal readonly record struct Subrenderer
 {
-    public Material Material { get; }
+    public IMaterial Material { get; }
     public Mesh Mesh { get; }
     public SubmeshData Submesh { get; }
 
-    public Subrenderer(Material material, Mesh mesh, SubmeshData submesh)
+    public Subrenderer(IMaterial material, Mesh mesh, SubmeshData submesh)
     {
         Material = material;
         Mesh = mesh;
         Submesh = submesh;
     }
 
-    public void Deconstruct(out Material material, out Mesh mesh, out SubmeshData submesh)
+    public void Deconstruct(out IMaterial material, out Mesh mesh, out SubmeshData submesh)
     {
         material = Material;
         mesh = Mesh;

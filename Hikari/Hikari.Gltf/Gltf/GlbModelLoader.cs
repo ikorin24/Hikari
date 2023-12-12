@@ -102,7 +102,7 @@ public static class GlbModelLoader
             var tangents = new SpanU32<Vector3>(tangentsBuf.Ptr, vc);
             var indices = new SpanU32<uint>(indicesBuf.Ptr, ic);
 
-            var materials = new Own<Material>[meshPrimitives.Length];
+            var materials = new Own<IMaterial>[meshPrimitives.Length];
             uint vPos = 0;
             uint iPos = 0;
             for(int i = 0; i < meshPrimitives.Length; i++) {
@@ -127,7 +127,7 @@ public static class GlbModelLoader
                     materialData.Pbr.MetallicRoughness,
                     materialData.Pbr.MetallicRoughnessSampler,
                     materialData.Normal.Texture,
-                    materialData.Normal.Sampler).Cast<Material>();
+                    materialData.Normal.Sampler).Cast<IMaterial>();
             }
             Debug.Assert(vPos == vc);
             Debug.Assert(iPos == ic);

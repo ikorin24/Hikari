@@ -10,7 +10,7 @@ public sealed partial class Shader : IScreenManaged
     private readonly ImmutableArray<ShaderPassData> _materialPassData;
     private EventSource<Shader> _disposed;
     private bool _released;
-    private readonly Action<FrameObject, Material>? _prepareForRender;
+    private readonly Action<FrameObject, IMaterial>? _prepareForRender;
 
     public Event<Shader> Disposed => _disposed.Event;
 
@@ -21,7 +21,7 @@ public sealed partial class Shader : IScreenManaged
     public ReadOnlySpan<ShaderPassData> ShaderPasses => _materialPassData.AsSpan();
 
     [Owned(nameof(Release))]
-    private Shader(Screen screen, ReadOnlySpan<ShaderPassDescriptor> passes, Action<FrameObject, Material>? prepareForRender)
+    private Shader(Screen screen, ReadOnlySpan<ShaderPassDescriptor> passes, Action<FrameObject, IMaterial>? prepareForRender)
     {
         ArgumentNullException.ThrowIfNull(screen);
         _screen = screen;
@@ -48,7 +48,7 @@ public sealed partial class Shader : IScreenManaged
         IScreenManaged.DefaultValidate(this);
     }
 
-    internal void PrepareForRender(FrameObject frameObject, Material material)
+    internal void PrepareForRender(FrameObject frameObject, IMaterial material)
     {
         _prepareForRender?.Invoke(frameObject, material);
     }

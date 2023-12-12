@@ -85,7 +85,7 @@ internal class Program
         var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
         var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
         var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
-        var plane = new FrameObject(Shapes.Plane(screen, true), PbrMaterial.Create(app.PbrBasicShader, albedo, mr, normal).Cast<Material>());
+        var plane = new FrameObject(Shapes.Plane(screen, true), PbrMaterial.Create(app.PbrBasicShader, albedo, mr, normal).Cast<IMaterial>());
         plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
         plane.Scale = new Vector3(16);
 

@@ -162,6 +162,16 @@ public readonly struct Brush
 
     internal void GetBufferData<T>(T arg, ReadOnlySpanAction<byte, T> action)
     {
+        GetBufferData((arg, action), static (span, x) =>
+        {
+            var (arg, action) = x;
+            action.Invoke(span, arg);
+            return (object?)null;
+        });
+    }
+
+    internal TResult GetBufferData<T, TResult>(T arg, ReadOnlySpanFunc<byte, T, TResult> func)
+    {
         // | position | size | type        | data       | note              |
         // | 0 - 3    | 4    | f32         | direction  | radian, [0, 2*Pi] |
         // | 4 - 7    | 4    | u32         | count      |                   |
@@ -183,8 +193,7 @@ public readonly struct Brush
                     Color = _solidColor,
                     Offset = 0f,
                 };
-                action.Invoke(span, arg);
-                break;
+                return func.Invoke(span, arg);
             }
             case BrushType.LinearGradient: {
                 using var mem = new ValueTypeRentMemory<byte>(16 + _gradientStops.Length * 32, false, out var span);
@@ -204,8 +213,7 @@ public readonly struct Brush
                         Offset = _gradientStops[i].Offset,
                     };
                 }
-                action.Invoke(span, arg);
-                break;
+                return func.Invoke(span, arg);
             }
             default: {
                 throw new NotImplementedException();

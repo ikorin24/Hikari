@@ -114,7 +114,7 @@ public sealed class RenderPassScheduler
     private readonly record struct Data
     {
         public required RenderPassAction OnRenderPass { get; init; }
-        public required Material Material { get; init; }
+        public required IMaterial Material { get; init; }
         public required Mesh Mesh { get; init; }
         public required SubmeshData Submesh { get; init; }
         public required RenderPipeline Pipeline { get; init; }

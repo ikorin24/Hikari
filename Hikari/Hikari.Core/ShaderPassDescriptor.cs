@@ -29,4 +29,4 @@ public readonly record struct ShaderPassDescriptor
     }
 }
 
-public delegate void RenderPassAction(in RenderPass renderPass, RenderPipeline pipeline, Material material, Mesh mesh, in SubmeshData submesh, int passIndex);
+public delegate void RenderPassAction(in RenderPass renderPass, RenderPipeline pipeline, IMaterial material, Mesh mesh, in SubmeshData submesh, int passIndex);
