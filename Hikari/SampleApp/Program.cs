@@ -1,15 +1,14 @@
 ﻿#nullable enable
+using Cysharp.Threading.Tasks;
+using Hikari;
+using Hikari.Gltf;
 using Hikari.Imaging;
 using Hikari.Mathematics;
-using Hikari;
 using Hikari.UI;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using Hikari.Gltf;
-using System.Collections.Generic;
-using System.Linq;
-using Cysharp.Threading.Tasks;
 
 namespace SampleApp;
 
@@ -19,85 +18,183 @@ internal class Program
     private static void Main(string[] args)
     {
         Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1");
-        //Environment.SetEnvironmentVariable("RUST_LOG", "INFO");
         var screenConfig = new ScreenConfig
         {
             Backend = GraphicsBackend.Dx12,
-            Width = 1280,
-            Height = 720,
+            Width = 1920,
+            Height = 1080,
             Style = WindowStyle.Default,
             PresentMode = SurfacePresentMode.VsyncOn,
         };
-        Engine.Run(screenConfig, OnInitialized);
+        Engine.Run(screenConfig, screen => OnInitialized(screen).Forget());
     }
 
-    private static void OnInitialized(Screen screen)
+    private static void SetLight(Screen screen, float angle)
     {
-        screen.Update.Subscribe(_ => System.Threading.Thread.Sleep(16 * 3));
+        var (sin, cos) = MathF.SinCos(angle);
+        var vec = -new Vector3(sin * 10, 10, cos * 2);
+        screen.Lights.DirectionalLight.SetLightData(vec.Normalized(), Color3.White);
+    }
+
+    private static async UniTaskVoid OnInitialized(Screen screen)
+    {
         var app = App.BuildPipelines(screen);
-        screen.Title = "sample";
-
-        screen.UITree.RenderRoot($$"""
-        {
-            "@type": {{typeof(Counter)}},
-            "Width": "600px",
-            "Height": "300px"
-        }
-        """);
-        //var button = new Button
-        //{
-        //    Width = 100,
-        //    Height = 100,
-        //    Text = "hoge",
-        //    Background = Brush.White,
-        //};
-        //button.Clicked.Subscribe(button =>
-        //{
-        //    Debug.WriteLine("clicked");
-        //});
-        //screen.UITree.SetRoot(button);
-
-        var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"D:\private\source\Elffy\src\Sandbox\Resources\AntiqueCamera.glb");
-        //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\2CylinderEngine.glb");
-        //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\BarramundiFish.glb");
-        //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\BoomBox.glb");
-        //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Buggy.glb");
-        //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Fox.glb");
-        //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\CesiumMan.glb");
-        //var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"C:\Users\ikorin\Downloads\Avocado.glb");
-
-        var tasks = model
-            .GetDescendants()
-            .OfType<FrameObject>()
-            .Select(m =>
-            {
-                return m.Renderer.Mesh.VertexBuffer.ReadToArray().ContinueWith(x => x.AsSpan().MarshalCast<byte, Vertex>().ToArray());
-            });
-        UniTask.WhenAll(tasks).ContinueWith(result =>
-        {
-            var vertices = result.SelectMany(v => v).Select(v => v.Position).ToArray();
-            var min = vertices.Aggregate((a, b) => Vector3.Min(a, b));
-            var max = vertices.Aggregate((a, b) => Vector3.Max(a, b));
-            var len = (max - min).Length;
-            model.Scale = new Vector3(1f / len * 10);
-        }).Forget();
-
-        var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
-        var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
-        var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
-        var plane = new FrameObject(Shapes.Plane(screen, true), PbrMaterial.Create(app.PbrBasicShader, albedo, mr, normal).Cast<IMaterial>());
-        plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
-        plane.Scale = new Vector3(16);
+        screen.Title = "SampleApp";
 
         var camera = screen.Camera;
         camera.SetNearFar(0.5f, 1000);
-        camera.LookAt(Vector3.Zero, new Vector3(0, 2f, 3) * 0.6f);
-        screen.Update.Subscribe(screen =>
+        camera.LookAt(new Vector3(0, 0.5f, 0), new Vector3(0, 1f, 3) * 2.0f);
+        screen.Update.Subscribe(ControlCamera);
+
+        var angle = 0.ToRadian() * 0.3f;
+        var (sin, cos) = MathF.SinCos(angle);
+        var vec = -new Vector3(sin * 10, 10, cos * 2);
+        screen.Lights.DirectionalLight.SetLightData(vec.Normalized(), Color3.White);
+        SetLight(screen, 0);
+        screen.Lights.AmbientStrength = 0.1f;
+
+        await UniTask.WhenAll(
+            UniTask.Run(() =>
+            {
+                var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"resources\AntiqueCamera.glb");
+                model.Position = new Vector3(0, 0, 0);
+                model.Scale = new Vector3(0.2f);
+            }),
+            UniTask.Run(() =>
+            {
+                var model2 = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"resources\Avocado.glb");
+                model2.Position = new Vector3(0, 0, -1.3f);
+                model2.Scale = new Vector3(25f);
+            }),
+            UniTask.Run(() =>
+            {
+                var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
+                var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
+                var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
+                var plane = new FrameObject(
+                    Shapes.Plane(screen, true),
+                    PbrMaterial.Create(app.PbrBasicShader, albedo, mr, normal).Cast<IMaterial>());
+                plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
+                plane.Scale = new Vector3(3);
+            }));
+        Debug.WriteLine("all loaded");
+        await screen.Update.Switch();
+
+        var rand = new Xorshift32();
+        var avocados = new Queue<ITreeModel>();
+        bool loading = false;
+        var createAvocado = () =>
         {
-            ControlCamera(screen.Mouse, camera, Vector3.Zero);
+            if(loading) {
+                return;
+            }
+            UniTask.Void(async () =>
+            {
+                loading = true;
+                try {
+                    ITreeModel avocado;
+                    if(avocados.Count <= 4) {
+                        avocado = await UniTask.Run(() =>
+                        {
+                            return GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"resources\Avocado.glb");
+                        });
+                        Debug.WriteLine("create avocado");
+                        avocado.Scale = new Vector3(5f);
+                        avocados.Enqueue(avocado);
+                    }
+                    else {
+                        avocado = avocados.Dequeue();
+                        avocados.Enqueue(avocado);
+                    }
+                    avocado.Position = new Vector3
+                    {
+                        X = rand.Single() * 2 - 1,
+                        Y = rand.Single() * 0.2f + 0.2f,
+                        Z = rand.Single() * 2 - 1,
+                    };
+                    avocado.Rotation = Quaternion.FromAxisAngle(
+                        new Vector3
+                        {
+                            X = rand.Single() + 0.0001f,
+                            Y = rand.Single(),
+                            Z = rand.Single(),
+                        }.Normalized(),
+                        (rand.Single() * 360f).ToRadian());
+                }
+                finally {
+                    loading = false;
+                }
+            });
+        };
+        Debug.WriteLine("create UI");
+        CreateUI(screen, createAvocado);
+        int i = 0;
+        screen.Update.Subscribe(_ =>
+        {
+            var angle = i++.ToRadian() * 0.3f;
+            SetLight(screen, angle);
         });
-        screen.Lights.DirectionalLight.SetLightData(new Vector3(0.5f, -1, -1.5f), Color3.White);
-        //screen.Lights.DirectionalLight.SetLightData(new Vector3(0, -1, -8.5f), Color3.White);
+    }
+
+    private static void CreateUI(Screen screen, Action buttonClicked)
+    {
+        var uiPanel = new Panel
+        {
+            Width = 160,
+            Background = Brush.LinearGradient(0,
+            [
+                new(Color4.FromHexCode("#0000"), 0.6f),
+                new(Color4.FromHexCode("#135B2D"), 0.9f),
+            ]),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Flow = new Flow(FlowDirection.Column, FlowWrapMode.NoWrap),
+            Height = LayoutLength.Proportion(1f),
+            Children =
+            [
+                new Label
+                {
+                    Height = 30,
+                    Text = "move: W,A,S,D, E,Q",
+                    Color = Color4.White,
+                    Background = Brush.Transparent,
+                },
+                new Label
+                {
+                    Height = 30,
+                    Text = "rotate: left drag",
+                    Color = Color4.White,
+                    Background = Brush.Transparent,
+                },
+                new Button
+                {
+                    Height = 40,
+                    Margin = new Thickness(15, 10),
+                    Text = "Create Avocado",
+                    Color = Color4.White,
+                    BorderWidth = new Thickness(1f),
+                    BorderColor = Brush.White,
+                    BorderRadius = new CornerRadius(6),
+                    Background = Brush.LinearGradient(0,
+                    [
+                        new(Color4.FromHexCode("#3075FF"), 0.75f),
+                        new(Color4.FromHexCode("#5188FF"), 0.9f),
+                    ]),
+                    HoverProps = new()
+                    {
+                        Background = Brush.Solid(Color4.FromHexCode("#2565FF")),
+                    },
+                    ActiveProps = new()
+                    {
+                        Background = Brush.Solid(Color4.FromHexCode("#0055FF")),
+                    },
+                    OnClicked = self =>
+                    {
+                        buttonClicked.Invoke();
+                    },
+                },
+            ],
+        };
+        screen.UITree.SetRoot(uiPanel);
     }
 
     private static Own<Texture2D> LoadTexture(Screen screen, string filepath, bool isSrgb)
@@ -133,21 +230,54 @@ internal class Program
         }
     }
 
-    private static void ControlCamera(Mouse mouse, Camera camera, Vector3 target)
+    private static void ControlCamera(Screen screen)
     {
+        var camera = screen.Camera;
+        var keyboard = screen.Keyboard;
+        var mouse = screen.Mouse;
         var cameraPos = camera.Position;
+        var target = cameraPos + camera.Direction * 2f;
         var posChanged = false;
+        if(keyboard.IsPressed(Keys.W) || keyboard.IsPressed(Keys.A) || keyboard.IsPressed(Keys.S) || keyboard.IsPressed(Keys.D)
+                || keyboard.IsPressed(Keys.E) || keyboard.IsPressed(Keys.Q)) {
+            const float S = 0.04f;
+            var v = camera.Direction * S;
+            Vector3 vec = default;
+            if(keyboard.IsPressed(Keys.W)) {
+                vec += v;
+            }
+            if(keyboard.IsPressed(Keys.S)) {
+                vec -= v;
+            }
+            if(keyboard.IsPressed(Keys.A)) {
+                var left = Matrix2.GetRotation(-90.ToRadian()) * v.Xz;
+                vec += new Vector3(left.X, 0, left.Y);
+            }
+            if(keyboard.IsPressed(Keys.D)) {
+                var right = Matrix2.GetRotation(90.ToRadian()) * v.Xz;
+                vec += new Vector3(right.X, 0, right.Y);
+            }
+            if(keyboard.IsPressed(Keys.E)) {
+                vec += Vector3.UnitY * S;
+            }
+            if(keyboard.IsPressed(Keys.Q)) {
+                vec -= Vector3.UnitY * S;
+            }
+            target += vec;
+            cameraPos += vec;
+            posChanged = true;
+        }
         if(mouse.IsPressed(MouseButton.Left)) {
-            var vec = (mouse.PositionDelta ?? Vector2.Zero) * ((float.Pi / 180f) * 0.5f);
+            var vec = (mouse.PositionDelta ?? Vector2.Zero) * ((float.Pi / 180f) * 0.05f);
             cameraPos = CalcCameraPosition(cameraPos, target, vec.X, vec.Y);
             posChanged = true;
         }
 
-        var wheelDelta = mouse.WheelDelta;
-        if(wheelDelta != 0) {
-            cameraPos += (cameraPos - target) * wheelDelta * -0.1f;
-            posChanged = true;
-        }
+        //var wheelDelta = mouse.WheelDelta;
+        //if(wheelDelta != 0) {
+        //    cameraPos += (cameraPos - target) * wheelDelta * -0.1f;
+        //    posChanged = true;
+        //}
 
         if(posChanged) {
             camera.LookAt(target, cameraPos);
@@ -169,274 +299,5 @@ internal class Program
         (result.X, result.Z) = Matrix2.GetRotation(horizontalAngle) * vec.Xz * (radius * cosBeta / xzLength);
         result.Y = radius * sinBeta;
         return result + center;
-    }
-}
-
-[ReactComponent]
-public partial class Counter
-{
-    private partial record struct Props(
-        LayoutLength Width,
-        LayoutLength Height
-    );
-    private int _countA;
-    private int _countB;
-    private int _countC;
-    private partial ObjectSourceBuilder Render(in Props props)
-    {
-        var text = $"A: {_countA}, B: {_countB}, C: {_countC}";
-        return $$"""
-        {
-            "@type": {{typeof(Panel)}},
-            "Width": {{props.Width}},
-            "Height": {{props.Height}},
-            "Background": "#ddd",
-            "BorderRadius": "10px",
-            "Flow": "Column NoWrap",
-            "Children": [
-            {
-                "@type": {{typeof(Label)}},
-                "@key": "0",
-                "VerticalAlignment": "Top",
-                "Height": 80,
-                "FontSize": 20,
-                "Background": "#27acd9",
-                "BorderRadius": "10px 10px 0px 0px",
-                "Color": "#fff",
-                "Text": {{text}}
-            },
-            {
-                "@type": {{typeof(Panel)}},
-                "Background": "#0000",
-                "Flow": "Row Wrap",
-                "Children": [
-                {
-                    "@type": {{typeof(CountButton)}},
-                    "@key": "1",
-                    "Width": 150,
-                    "Height": 60,
-                    "Clicked": {{(UIElement _) =>
-                    {
-                        SetState(ref _countA, _countA + 1);
-                    }}}
-                },
-                {
-                    "@type": {{typeof(CountButton)}},
-                    "@key": "2",
-                    "Width": 150,
-                    "Height": 60,
-                    "Clicked": {{(UIElement _) =>
-                    {
-                        SetState(ref _countB, _countB + 1);
-                    }}}
-                },
-                {
-                    "@type": {{typeof(CountButton)}},
-                    "@key": "3",
-                    "Width": 150,
-                    "Height": 60,
-                    "Clicked": {{(UIElement _) =>
-                    {
-                        SetState(ref _countC, _countC + 1);
-                    }}}
-                }]
-            }]
-        }
-        """;
-    }
-
-    partial void OnMount()
-    {
-    }
-
-    partial void OnUnmount()
-    {
-    }
-}
-
-[ReactComponent]
-public partial class CountButton
-{
-    private partial record struct Props(int Width, int Height, Action<Button> Clicked);
-
-    private partial ObjectSourceBuilder Render(in Props props)
-    {
-        return $$"""
-        {
-            "@type": {{typeof(Button)}},
-            "Width": {{props.Width}},
-            "Height": {{props.Height}},
-            "BorderRadius": {{props.Height / 2f}},
-            "BorderColor": "#27acd9",
-            "BorderWidth": 4,
-            "Background": "#fff",
-            "Margin": 4,
-            "Text": "click me!",
-            "FontSize": 16,
-            "Color": "#27acd9",
-            "BoxShadow": "0px 0px 4px 0px #000e",
-            "Clicked": {{props.Clicked}},
-            "&:Hover": {
-                "Background": "#27acd9",
-                "Color": "#fff",
-            },
-            "&:Active": {
-                "BoxShadow": "0px 0px 2px 0px #000e",
-                "Background": "#1089d9",
-                "BorderColor": "#1089d9",
-                "Color": "#fff",
-            }
-        }
-        """;
-    }
-}
-
-sealed partial class Counter
-    : IReactComponent,
-      IFromJson<Counter>
-{
-    readonly partial record struct Props;
-
-    private Props __p;
-    private bool _needsToRerender;
-    private object? _rendered;
-
-    static Counter()
-    {
-        Serializer.RegisterConstructor(FromJson);
-    }
-
-    private Counter(Props props)
-    {
-        __p = props;
-    }
-
-    bool IReactComponent.NeedsToRerender => _needsToRerender;
-
-    private partial ObjectSourceBuilder Render(in Props props);
-
-    private void SetState<T>(ref T state, in T newValue)
-    {
-        state = newValue;
-        _needsToRerender = true;
-    }
-
-    public static Counter FromJson(in ObjectSource source)
-    {
-        var props = Props.FromJson(source);
-        return new Counter(props);
-    }
-
-    ObjectSource IReactComponent.GetSource() => Render(__p).ToSourceClear();
-
-    void IReactComponent.RenderCompleted<T>(T rendered)
-    {
-        _rendered = rendered;
-        _needsToRerender = false;
-    }
-
-    void IReactive.ApplyDiff(in ObjectSource source)
-    {
-        __p = Props.FromJson(source);
-        var innerSource = Render(__p).ToSourceClear();
-        _rendered = innerSource.Apply(_rendered, out _);
-    }
-
-    partial void OnMount();
-    partial void OnUnmount();
-
-    void IReactComponent.OnMount() => OnMount();
-    void IReactComponent.OnUnmount() => OnUnmount();
-
-    partial record struct Props : IFromJson<Props>
-    {
-        static Props()
-        {
-            Serializer.RegisterConstructor(FromJson);
-        }
-
-        public static Props FromJson(in ObjectSource source)
-        {
-            return new()
-            {
-                //Message = element.TryGetProperty("Message"u8, out var message) ? Serializer.Instantiate<string>(message) : "",
-                Width = source.TryGetProperty(nameof(Width), out var width) ? width.Instantiate<LayoutLength>() : default,
-                Height = source.TryGetProperty(nameof(Height), out var height) ? height.Instantiate<LayoutLength>() : default,
-            };
-        }
-    }
-}
-
-sealed partial class CountButton : IReactComponent, IFromJson<CountButton>
-{
-    readonly partial record struct Props;
-
-    private Props __p;
-    private bool _needsToRerender;
-    private object? _rendered;
-
-    static CountButton()
-    {
-        Serializer.RegisterConstructor(FromJson);
-    }
-
-    private CountButton(Props props)
-    {
-        __p = props;
-    }
-
-    bool IReactComponent.NeedsToRerender => _needsToRerender;
-
-    private partial ObjectSourceBuilder Render(in Props props);
-
-    private void SetState<T>(ref T state, in T newValue)
-    {
-        state = newValue;
-        _needsToRerender = true;
-    }
-
-    public static CountButton FromJson(in ObjectSource source)
-    {
-        var props = Props.FromJson(source);
-        return new CountButton(props);
-    }
-
-    ObjectSource IReactComponent.GetSource() => Render(__p).ToSourceClear();
-
-    void IReactComponent.RenderCompleted<T>(T rendered)
-    {
-        _rendered = rendered;
-        _needsToRerender = false;
-    }
-
-    void IReactive.ApplyDiff(in ObjectSource source)
-    {
-        __p = Props.FromJson(source);
-        var innerSource = Render(__p).ToSourceClear();
-        _rendered = innerSource.Apply(_rendered, out _);
-    }
-
-    partial void OnMount();
-    partial void OnUnmount();
-
-    void IReactComponent.OnMount() => OnMount();
-    void IReactComponent.OnUnmount() => OnUnmount();
-
-    partial record struct Props : IFromJson<Props>
-    {
-        static Props()
-        {
-            Serializer.RegisterConstructor(FromJson);
-        }
-
-        public static Props FromJson(in ObjectSource source)
-        {
-            return new()
-            {
-                Width = source.TryGetProperty(nameof(Width), out var width) ? width.Instantiate<int>() : default,
-                Height = source.TryGetProperty(nameof(Height), out var height) ? height.Instantiate<int>() : default,
-                Clicked = source.TryGetProperty(nameof(Clicked), out var clicked) ? clicked.Instantiate<Action<Button>>() : throw new ArgumentNullException("Clicked"),
-            };
-        }
     }
 }

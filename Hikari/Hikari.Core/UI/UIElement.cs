@@ -35,6 +35,13 @@ public abstract class UIElement : IToJson, IReactive
     internal SubscriptionRegister ModelSubscriptions => _modelSubscriptions.Register;
 
     public Event<UIElement> Clicked => _clicked.Event;
+    public Action<UIElement> OnClicked
+    {
+        init
+        {
+            Clicked.Subscribe(value);
+        }
+    }
     public UIElement? Parent => _parent;
     internal FrameObject? Model => _model;
     public Screen? Screen => _model?.Screen;
