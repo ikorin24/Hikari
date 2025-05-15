@@ -12,3 +12,7 @@ SampleApp.csproj を実行すれば動きます。Windows のみ。C#, Rust 側�
 > cd Hikari/SampleApp
 > dotnet run -c Release
 ```
+
+Forward Rendering, Deferred Rendering, Cascaded Shadow, PBR など
+
+![scene-image](./img/image.gif)
