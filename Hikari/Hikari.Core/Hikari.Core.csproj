@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\..\corehikari\output\x86_64-pc-windows-msvc\corehikari.dll" Link="native\x86_64-windows\corehikari.dll">
+    <None Include="..\native\x86_64-pc-windows-msvc\corehikari.dll" Link="native\x86_64-windows\corehikari.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
