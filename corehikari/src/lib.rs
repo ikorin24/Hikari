@@ -239,8 +239,8 @@ pub(crate) struct ImageCopyTexture<'a> {
 }
 
 impl<'a> ImageCopyTexture<'a> {
-    pub const fn to_wgpu_type(&self) -> wgpu::ImageCopyTexture {
-        wgpu::ImageCopyTexture {
+    pub const fn to_wgpu_type(&self) -> wgpu::TexelCopyTextureInfo {
+        wgpu::TexelCopyTextureInfo {
             texture: self.texture,
             mip_level: self.mip_level,
             origin: wgpu::Origin3d {
@@ -262,8 +262,8 @@ pub(crate) struct ImageDataLayout {
 }
 
 impl ImageDataLayout {
-    pub fn to_wgpu_type(&self) -> wgpu::ImageDataLayout {
-        wgpu::ImageDataLayout {
+    pub fn to_wgpu_type(&self) -> wgpu::TexelCopyBufferLayout {
+        wgpu::TexelCopyBufferLayout {
             offset: self.offset,
             bytes_per_row: Some(self.bytes_per_row),
             rows_per_image: Some(self.rows_per_image),
@@ -286,6 +286,7 @@ impl TextureViewDescriptor {
     pub fn to_wgpu_type(&self) -> wgpu::TextureViewDescriptor {
         wgpu::TextureViewDescriptor {
             label: None,
+            usage: None,
             format: self.format.map_to_option(|x| x.to_wgpu_type()),
             dimension: self.dimension.map_to_option(|x| x.to_wgpu_type()),
             aspect: self.aspect.to_wgpu_type(),
@@ -489,7 +490,8 @@ impl<'a> RenderPipelineDescriptor<'a> {
     ) -> Result<T, Box<dyn Error>> {
         let vertex = wgpu::VertexState {
             module: self.vertex.module,
-            entry_point: self.vertex.entry_point.as_str()?,
+            compilation_options: Default::default(),
+            entry_point: Some(self.vertex.entry_point.as_str()?),
             buffers: &self
                 .vertex
                 .buffers
@@ -508,7 +510,8 @@ impl<'a> RenderPipelineDescriptor<'a> {
                     .collect();
                 Some(wgpu::FragmentState {
                     module: fragment.module,
-                    entry_point: fragment.entry_point.as_str()?,
+                    compilation_options: Default::default(),
+                    entry_point: Some(fragment.entry_point.as_str()?),
                     targets: &fragment_targets,
                 })
             }
@@ -517,6 +520,7 @@ impl<'a> RenderPipelineDescriptor<'a> {
 
         let pipeline_desc = wgpu::RenderPipelineDescriptor {
             label: None,
+            cache: None,
             layout: Some(self.layout),
             vertex,
             fragment,
@@ -543,9 +547,11 @@ impl<'a> ComputePipelineDescriptor<'a> {
     ) -> Result<T, Box<dyn Error>> {
         let pipeline_desc = wgpu::ComputePipelineDescriptor {
             label: None,
+            compilation_options: Default::default(),
+            cache: None,
             layout: Some(self.layout),
             module: self.module,
-            entry_point: self.entry_point.as_str()?,
+            entry_point: Some(self.entry_point.as_str()?),
         };
         consume(&pipeline_desc)
     }
@@ -909,7 +915,7 @@ pub(crate) enum TextureFormat {
     /// Red, green, blue, and alpha channels. 10 bit integer for RGB channels, 2 bit integer for alpha channel. [0, 1023] ([0, 3] for alpha) converted to/from float [0, 1] in shader.
     Rgb10a2Unorm = 28,
     /// Red, green, and blue channels. 11 bit float with no sign bit for RG channels. 10 bit float with no sign bit for blue channel. Float in shader.
-    Rg11b10Float = 29,
+    Rg11b10Ufloat = 29,
 
     // Normal 64 bit formats
     /// Red and green channels. 32 bit integer per channel. Unsigned in shader.
@@ -1137,7 +1143,7 @@ impl TextureFormat {
             Self::Bgra8Unorm => wgpu::TextureFormat::Bgra8Unorm,
             Self::Bgra8UnormSrgb => wgpu::TextureFormat::Bgra8UnormSrgb,
             Self::Rgb10a2Unorm => wgpu::TextureFormat::Rgb10a2Unorm,
-            Self::Rg11b10Float => wgpu::TextureFormat::Rg11b10Float,
+            Self::Rg11b10Ufloat => wgpu::TextureFormat::Rg11b10Ufloat,
             Self::Rg32Uint => wgpu::TextureFormat::Rg32Uint,
             Self::Rg32Sint => wgpu::TextureFormat::Rg32Sint,
             Self::Rg32Float => wgpu::TextureFormat::Rg32Float,
@@ -1222,7 +1228,7 @@ impl TryFrom<wgpu::TextureFormat> for TextureFormat {
             wgpu::TextureFormat::Bgra8Unorm => Ok(Self::Bgra8Unorm),
             wgpu::TextureFormat::Bgra8UnormSrgb => Ok(Self::Bgra8UnormSrgb),
             wgpu::TextureFormat::Rgb10a2Unorm => Ok(Self::Rgb10a2Unorm),
-            wgpu::TextureFormat::Rg11b10Float => Ok(Self::Rg11b10Float),
+            wgpu::TextureFormat::Rg11b10Ufloat => Ok(Self::Rg11b10Ufloat),
             wgpu::TextureFormat::Rg32Uint => Ok(Self::Rg32Uint),
             wgpu::TextureFormat::Rg32Sint => Ok(Self::Rg32Sint),
             wgpu::TextureFormat::Rg32Float => Ok(Self::Rg32Float),
@@ -1305,7 +1311,7 @@ mod tests {
         assert_eq!(A::Bgra8Unorm.to_wgpu_type(), B::Bgra8Unorm);
         assert_eq!(A::Bgra8UnormSrgb.to_wgpu_type(), B::Bgra8UnormSrgb);
         assert_eq!(A::Rgb10a2Unorm.to_wgpu_type(), B::Rgb10a2Unorm);
-        assert_eq!(A::Rg11b10Float.to_wgpu_type(), B::Rg11b10Float);
+        assert_eq!(A::Rg11b10Ufloat.to_wgpu_type(), B::Rg11b10Ufloat);
         assert_eq!(A::Rg32Uint.to_wgpu_type(), B::Rg32Uint);
         assert_eq!(A::Rg32Sint.to_wgpu_type(), B::Rg32Sint);
         assert_eq!(A::Rg32Float.to_wgpu_type(), B::Rg32Float);
@@ -1384,7 +1390,7 @@ mod tests {
         assert_eq!(A::Bgra8Unorm, B::Bgra8Unorm.try_into().unwrap());
         assert_eq!(A::Bgra8UnormSrgb, B::Bgra8UnormSrgb.try_into().unwrap());
         assert_eq!(A::Rgb10a2Unorm, B::Rgb10a2Unorm.try_into().unwrap());
-        assert_eq!(A::Rg11b10Float, B::Rg11b10Float.try_into().unwrap());
+        assert_eq!(A::Rg11b10Ufloat, B::Rg11b10Ufloat.try_into().unwrap());
         assert_eq!(A::Rg32Uint, B::Rg32Uint.try_into().unwrap());
         assert_eq!(A::Rg32Sint, B::Rg32Sint.try_into().unwrap());
         assert_eq!(A::Rg32Float, B::Rg32Float.try_into().unwrap());
@@ -1932,6 +1938,14 @@ impl From<winit::event::MouseButton> for MouseButton {
                 number: 2,
                 is_named_buton: true,
             },
+            winit::event::MouseButton::Back => MouseButton {
+                number: 3,
+                is_named_buton: true,
+            },
+            winit::event::MouseButton::Forward => MouseButton {
+                number: 4,
+                is_named_buton: true,
+            },
             winit::event::MouseButton::Other(n) => MouseButton {
                 number: n,
                 is_named_buton: false,
@@ -1947,7 +1961,7 @@ static_assertions::const_assert_eq!(wgpu::COPY_BUFFER_ALIGNMENT, 4);
 static_assertions::const_assert_eq!(wgpu::MAP_ALIGNMENT, 8);
 static_assertions::const_assert_eq!(wgpu::VERTEX_STRIDE_ALIGNMENT, 4);
 static_assertions::const_assert_eq!(wgpu::PUSH_CONSTANT_ALIGNMENT, 4);
-static_assertions::const_assert_eq!(wgpu::QUERY_SET_MAX_QUERIES, 8192);
+static_assertions::const_assert_eq!(wgpu::QUERY_SET_MAX_QUERIES, 4096);
 static_assertions::const_assert_eq!(wgpu::QUERY_SIZE, 8);
 
 pub(crate) type ScreenInitFn =
@@ -1956,8 +1970,13 @@ pub(crate) type EngineUnhandledErrorFn = extern "cdecl" fn(message: *const u8, l
 pub(crate) type ClearedEventFn = extern "cdecl" fn(screen_id: ScreenId);
 pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> bool;
 pub(crate) type ResizedEventFn = extern "cdecl" fn(screen_id: ScreenId, width: u32, height: u32);
+// pub(crate) type KeyboardEventFn =
+//     extern "cdecl" fn(screen_id: ScreenId, key: winit::event::VirtualKeyCode, pressed: bool);
+
+// TODO:
 pub(crate) type KeyboardEventFn =
-    extern "cdecl" fn(screen_id: ScreenId, key: winit::event::VirtualKeyCode, pressed: bool);
+    extern "cdecl" fn(screen_id: ScreenId, key: u32, pressed: bool);
+
 pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen_id: ScreenId, input: char);
 pub(crate) type MouseButtonEventFn =
     extern "cdecl" fn(screen_id: ScreenId, button: MouseButton, pressed: bool);

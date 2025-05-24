@@ -14,14 +14,14 @@ use regex::Regex;
 use std::cell::Cell;
 use std::error::Error;
 use std::num;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use winit;
-use winit::event_loop::EventLoopWindowTarget;
+use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::{dpi, window};
 
 pub(crate) struct Screen {
-    pub window: window::Window,
-    pub surface: wgpu::Surface,
+    pub window: Arc<window::Window>,
+    pub surface: wgpu::Surface<'static>,
     surface_config_data: SurfaceConfigData,
     surface_size: Mutex<Cell<(num::NonZeroU32, num::NonZeroU32)>>,
     pub device: wgpu::Device,
@@ -32,7 +32,7 @@ pub(crate) struct Screen {
 impl Screen {
     pub fn new(
         config: &ScreenConfig,
-        event_loop: &EventLoopWindowTarget<ProxyMessage>,
+        event_loop: &ActiveEventLoop,
     ) -> Result<Screen, Box<dyn Error>> {
         let window = platform::create_window(&config, event_loop)?;
         if let Some(monitor) = window.current_monitor() {
@@ -55,30 +55,28 @@ impl Screen {
         present_mode: &wgpu::PresentMode,
     ) -> Result<Screen, Box<dyn Error>> {
         let size = window.inner_size();
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: *backends,
-            dx12_shader_compiler: wgpu::Dx12Compiler::default(),
             flags: wgpu::InstanceFlags::empty(), // TODO: set flags for debugging
-            gles_minor_version: wgpu::Gles3MinorVersion::default(),
+            backend_options: wgpu::BackendOptions::default(),
         });
-        let surface = unsafe { instance.create_surface(&window)? };
+        let window = Arc::new(window);
+        let surface = instance.create_surface(window.clone())?;
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::None,
                 compatible_surface: Some(&surface),
                 force_fallback_adapter: false,
             })
-            .block_on()
-            .ok_or("no graphics card found available for the specified config".to_owned())?;
+            .block_on()?;
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    features: wgpu::Features::ADDRESS_MODE_CLAMP_TO_BORDER,
-                    limits: wgpu::Limits::default(),
-                    label: None,
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                required_features: wgpu::Features::ADDRESS_MODE_CLAMP_TO_BORDER,
+                required_limits: wgpu::Limits::default(),
+                memory_hints: wgpu::MemoryHints::default(),
+                trace: wgpu::Trace::Off,
+                label: None,
+            })
             .block_on()?;
         device.on_uncaptured_error(Box::new(|error| {
             static ANCI_ESC_SEQ_DECORATION: Lazy<Regex> =
@@ -141,7 +139,7 @@ impl Screen {
 
     pub fn set_inner_size(&self, width: num::NonZeroU32, height: num::NonZeroU32) {
         let size = dpi::PhysicalSize::<u32>::new(width.into(), height.into());
-        self.window.set_inner_size(size);
+        _ = self.window.request_inner_size(size);
     }
 
     pub fn resize_surface(&self, width: u32, height: u32) {
@@ -182,6 +180,7 @@ impl SurfaceConfigData {
             present_mode: self.present_mode,
             alpha_mode: self.alpha_mode,
             view_formats: vec![],
+            desired_maximum_frame_latency: 2,
         }
     }
 }
@@ -212,5 +211,6 @@ fn new_default_surface_config(
         present_mode,
         alpha_mode,
         view_formats: vec![],
+        desired_maximum_frame_latency: 2,
     }
 }

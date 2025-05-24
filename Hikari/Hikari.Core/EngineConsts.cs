@@ -31,7 +31,7 @@ internal static class EngineConsts
     /// <summary>
     /// Maximum queries in a query set
     /// </summary>
-    public const u32 QUERY_SET_MAX_QUERIES = 8192;
+    public const u32 QUERY_SET_MAX_QUERIES = 4096;
     /// <summary>
     /// Size of a single piece of query data.
     /// </summary>

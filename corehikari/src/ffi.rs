@@ -2,6 +2,7 @@ use crate::engine::*;
 use crate::screen::*;
 use crate::*;
 use std::num::NonZeroU32;
+use winit::dpi::PhysicalSize;
 
 /// # Thread Safety
 /// Only from main thread.
@@ -599,7 +600,7 @@ extern "cdecl" fn hikari_copy_texture_to_buffer(
         .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
     encoder.copy_texture_to_buffer(
         source.to_wgpu_type(),
-        wgpu::ImageCopyBuffer {
+        wgpu::TexelCopyBufferInfo {
             buffer,
             layout: image_layout.to_wgpu_type(),
         },
@@ -750,10 +751,12 @@ extern "cdecl" fn hikari_create_texture_with_data(
 ) -> ApiBoxResult<wgpu::Texture> {
     use wgpu::util::DeviceExt;
 
-    let texture =
-        screen
-            .device
-            .create_texture_with_data(&screen.queue, &desc.to_wgpu_type(), &data);
+    let texture = screen.device.create_texture_with_data(
+        &screen.queue,
+        &desc.to_wgpu_type(),
+        Default::default(),
+        &data,
+    );
     let value = Box::new(texture);
     ApiBoxResult::ok(value)
 }
@@ -796,7 +799,7 @@ extern "cdecl" fn hikari_texture_format_sample_type(
 ) -> ApiValueResult<Opt<TextureSampleType>> {
     let sample_type: Opt<TextureSampleType> = format
         .to_wgpu_type()
-        .sample_type(aspect.map_to_option(|a| a.to_wgpu_type()))
+        .sample_type(aspect.map_to_option(|a| a.to_wgpu_type()), None)
         .map(|x| x.into())
         .into();
     ApiValueResult::ok(sample_type)
@@ -825,7 +828,7 @@ extern "cdecl" fn hikari_texture_format_block_size(
 ) -> ApiValueResult<Opt<u32>> {
     let block_size: Opt<u32> = format
         .to_wgpu_type()
-        .block_size(aspect.map_to_option(|a| a.to_wgpu_type()))
+        .block_copy_size(aspect.map_to_option(|a| a.to_wgpu_type()))
         .into();
     ApiValueResult::ok(block_size)
 }
@@ -1099,7 +1102,9 @@ extern "cdecl" fn hikari_set_ime_allowed(screen: &Screen, allowed: bool) -> ApiR
 #[no_mangle]
 extern "cdecl" fn hikari_set_ime_position(screen: &Screen, x: u32, y: u32) -> ApiResult {
     let pos = winit::dpi::PhysicalPosition::new(x, y);
-    screen.window.set_ime_position(pos);
+    screen
+        .window
+        .set_ime_cursor_area(pos, PhysicalSize::new(30, 30));
     ApiResult::ok()
 }
 

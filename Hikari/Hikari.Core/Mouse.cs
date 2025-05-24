@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System;
 using System.Runtime.CompilerServices;
 using Hikari.NativeBind;
 
@@ -8,7 +9,7 @@ public sealed class Mouse
 {
     private readonly Screen _screen;
     private PosBuf _posBuf;
-    private readonly KeyBuf[] _namedKeys = new KeyBuf[3];
+    private readonly KeyBuf[] _namedKeys = new KeyBuf[Enum.GetNames<MouseButton>().Length];
     private bool _areAnyButtonsChanged;
     private readonly object _sync = new();
 
@@ -246,4 +247,6 @@ public enum MouseButton : uint
     Left = 0,
     Right,
     Middle,
+    Back,
+    Forward,
 }

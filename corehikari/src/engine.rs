@@ -6,8 +6,14 @@ use std::fmt::Debug;
 use std::sync;
 use std::sync::Mutex;
 use winit;
-use winit::event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget};
-use winit::platform::run_return::EventLoopExtRunReturn;
+use winit::application::ApplicationHandler;
+use winit::event::{MouseScrollDelta, TouchPhase, WindowEvent};
+use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
+// use winit::keyboard::{Key, PhysicalKey};
+use winit::platform::run_on_demand::EventLoopExtRunOnDemand;
+// EventLoopWindowTarget
+// use winit::platform::run_return::EventLoopExtRunReturn;
+use winit::window::WindowId;
 use winit::{event, window};
 
 pub(crate) struct Engine {
@@ -68,18 +74,18 @@ impl Engine {
         f(screen_id, width, height)
     }
 
-    pub fn event_keyboard(
-        screen_id: ScreenId,
-        key: &event::VirtualKeyCode,
-        state: &event::ElementState,
-    ) {
-        let f = Self::get_engine_field(|engine| engine.config.event_keyboard).unwrap();
-        let pressed = match state {
-            event::ElementState::Pressed => true,
-            event::ElementState::Released => false,
-        };
-        f(screen_id, *key, pressed)
-    }
+    // pub fn event_keyboard(
+    //     screen_id: ScreenId,
+    //     key: &event::VirtualKeyCode,
+    //     state: &event::ElementState,
+    // ) {
+    //     let f = Self::get_engine_field(|engine| engine.config.event_keyboard).unwrap();
+    //     let pressed = match state {
+    //         event::ElementState::Pressed => true,
+    //         event::ElementState::Released => false,
+    //     };
+    //     f(screen_id, *key, pressed)
+    // }
 
     pub fn event_char_received(screen_id: ScreenId, c: char) {
         let f = Self::get_engine_field(|engine| engine.config.event_char_received).unwrap();
@@ -129,6 +135,18 @@ impl Engine {
     pub fn event_closed(screen_id: ScreenId) -> Option<Box<Screen>> {
         let f = Self::get_engine_field(|engine| engine.config.event_closed).unwrap();
         f(screen_id)
+    }
+
+    pub fn close_screen(target: &ScreenIdData) -> bool {
+        if Self::event_closing(target.1) {
+            let mut is_empty = false;
+            remove_screen(*target, &mut is_empty);
+            let closed_screen = Engine::event_closed(target.1);
+            drop(closed_screen);
+            is_empty
+        } else {
+            false
+        }
     }
 
     fn get_engine_field<T>(f: fn(engine: &Engine) -> T) -> Result<T, EngineErr> {
@@ -188,7 +206,7 @@ pub(crate) fn send_proxy_message(message: ProxyMessage) -> Result<(), Box<dyn Er
 
 fn create_screen(
     screen_config: &ScreenConfig,
-    event_loop: &EventLoopWindowTarget<ProxyMessage>,
+    event_loop: &ActiveEventLoop,
 ) -> Result<(), Box<dyn Error>> {
     let screen = Screen::new(screen_config, event_loop)?;
     let screen = Box::new(screen);
@@ -209,7 +227,8 @@ pub(crate) fn engine_start(
     if is_engine_running {
         return Err(EngineErr::ALREADY_RUNNING.into());
     }
-    let mut event_loop = EventLoopBuilder::with_user_event().build();
+    let mut event_loop = EventLoop::with_user_event().build()?;
+    event_loop.set_control_flow(ControlFlow::Poll);
     {
         let mut engine = ENGINE.write().unwrap();
         *engine = Some(Engine::new(engine_config));
@@ -219,7 +238,7 @@ pub(crate) fn engine_start(
         }
     }
     env_logger::init();
-    create_screen(screen_config, &event_loop)?;
+    // create_screen(screen_config, &event_loop)?;
 
     // if cfg!(target_os = "windows") {
     //     // [NOTE]
@@ -245,9 +264,11 @@ pub(crate) fn engine_start(
     //     });
     // }
 
-    event_loop.run_return(move |event, event_loop, control_flow| {
-        handle_event(&event, event_loop, control_flow);
-    });
+    let mut app = App::default();
+    get_loop_proxy()
+        .unwrap()
+        .send_event(ProxyMessage::CreateScreen(*screen_config))?;
+    event_loop.run_app_on_demand(&mut app)?;
 
     // drop the engine from the static field.
     {
@@ -257,112 +278,261 @@ pub(crate) fn engine_start(
     return Ok(());
 }
 
-fn handle_event(
-    event: &event::Event<ProxyMessage>,
-    event_loop: &EventLoopWindowTarget<ProxyMessage>,
-    control_flow: &mut winit::event_loop::ControlFlow,
-) {
-    use winit::event::*;
+#[derive(Default)]
+struct App {
+    state: Option<()>,
+}
 
-    match event {
-        Event::UserEvent(proxy_message) => match proxy_message {
+impl App {
+    pub fn new() -> Self {
+        Self { state: None }
+    }
+}
+
+impl ApplicationHandler<ProxyMessage> for App {
+    fn resumed(&mut self, _event_loop: &ActiveEventLoop) {
+
+        // // Create window object
+        // let window = Arc::new(
+        //     event_loop
+        //         .create_window(Window::default_attributes())
+        //         .unwrap(),
+        // );
+
+        // let state = pollster::block_on(State::new(window.clone()));
+        // self.state = Some(state);
+
+        // window.request_redraw();
+    }
+
+    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: ProxyMessage) {
+        match event {
             ProxyMessage::CreateScreen(config) => {
                 // if let Err(err) = create_screen(config, event_loop) {
                 //     Engine::dispatch_err(err);
                 // }
-                create_screen(config, event_loop).unwrap();
+                create_screen(&config, event_loop).unwrap();
             }
-        },
-        Event::WindowEvent { event, window_id } => {
-            if let Some(target) = get_screen(window_id) {
-                match event {
-                    WindowEvent::CursorEntered { .. } => {
-                        Engine::event_cursor_entered_left(target.1, true);
+        }
+    }
+
+    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+        let screens = SCREENS.lock().unwrap();
+        screens.iter().for_each(|x| {
+            Engine::event_cleared(x.1);
+        });
+    }
+
+    fn window_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        window_id: WindowId,
+        event: WindowEvent,
+    ) {
+        let target = if let Some(target) = get_screen(&window_id) {
+            target
+        } else {
+            return;
+        };
+        match event {
+            WindowEvent::CursorEntered { .. } => {
+                Engine::event_cursor_entered_left(target.1, true);
+            }
+            WindowEvent::CursorLeft { .. } => {
+                Engine::event_cursor_entered_left(target.1, false);
+            }
+            WindowEvent::CursorMoved { position, .. } => {
+                Engine::event_cursor_moved(target.1, position.x as f32, position.y as f32);
+            }
+            WindowEvent::Ime(ime) => {
+                let data = ImeInputData::new(&ime);
+                Engine::event_ime(target.1, &data);
+            }
+            // WindowEvent::ReceivedCharacter(c) => {
+            //     Engine::event_char_received(target.1, *c);
+            // }
+            WindowEvent::MouseInput { state, button, .. } => {
+                Engine::event_mouse_button(target.1, &button, &state);
+            }
+            WindowEvent::MouseWheel { delta, phase, .. } if phase == TouchPhase::Moved => {
+                match delta {
+                    MouseScrollDelta::LineDelta(x_delta, y_delta) => {
+                        Engine::event_wheel(target.1, x_delta, y_delta);
                     }
-                    WindowEvent::CursorLeft { .. } => {
-                        Engine::event_cursor_entered_left(target.1, false);
+                    MouseScrollDelta::PixelDelta(_pos) => {
+                        // TODO: support touchpad devices
                     }
-                    WindowEvent::CursorMoved { position, .. } => {
-                        Engine::event_cursor_moved(target.1, position.x as f32, position.y as f32);
-                    }
-                    WindowEvent::Ime(ime) => {
-                        let data = ImeInputData::new(ime);
-                        Engine::event_ime(target.1, &data);
-                    }
-                    WindowEvent::ReceivedCharacter(c) => {
-                        Engine::event_char_received(target.1, *c);
-                    }
-                    WindowEvent::MouseInput { state, button, .. } => {
-                        Engine::event_mouse_button(target.1, button, state);
-                    }
-                    WindowEvent::MouseWheel { delta, phase, .. } if *phase == TouchPhase::Moved => {
-                        match delta {
-                            MouseScrollDelta::LineDelta(x_delta, y_delta) => {
-                                Engine::event_wheel(target.1, *x_delta, *y_delta);
-                            }
-                            MouseScrollDelta::PixelDelta(_pos) => {
-                                // TODO: support touchpad devices
-                            }
+                }
+            }
+            WindowEvent::CloseRequested => {
+                if Engine::close_screen(&target) {
+                    event_loop.exit();
+                }
+            }
+            // WindowEvent::KeyboardInput {
+            //     input:
+            //         KeyboardInput {
+            //             state,
+            //             virtual_keycode: Some(key),
+            //             ..
+            //         },
+            //     ..
+            // } => {
+            //     Engine::event_keyboard(target.1, key, state);
+            // }
+            WindowEvent::KeyboardInput {
+                device_id,
+                event,
+                is_synthetic,
+            } => {
+                _ = device_id;
+                _ = event;
+                _ = is_synthetic;
+                // TODO
+                // Engine::event_keyboard(target.1, key, &event.state);
+            }
+            WindowEvent::Resized(physical_size) => {
+                Engine::event_resized(target.1, physical_size.width, physical_size.height);
+            }
+            // WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+            //     Engine::event_resized(target.1, new_inner_size.width, new_inner_size.height);
+            // }
+            WindowEvent::ScaleFactorChanged {
+                scale_factor,
+                inner_size_writer,
+            } => {
+                _ = scale_factor;
+                _ = inner_size_writer;
+                // TODO: 分からん
+                // Engine::event_resized(target.1, new_inner_size.width, new_inner_size.height);
+            }
+            WindowEvent::RedrawRequested => {
+                if let Some(target) = get_screen(&window_id) {
+                    let continue_next = Engine::event_redraw_requested(target.1);
+                    if continue_next == false {
+                        if Engine::close_screen(&target) {
+                            event_loop.exit();
                         }
                     }
-                    WindowEvent::CloseRequested => {
-                        close_screen(&target, control_flow);
-                    }
-                    WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                state,
-                                virtual_keycode: Some(key),
-                                ..
-                            },
-                        ..
-                    } => {
-                        Engine::event_keyboard(target.1, key, state);
-                    }
-                    WindowEvent::Resized(physical_size) => {
-                        Engine::event_resized(target.1, physical_size.width, physical_size.height);
-                    }
-                    WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                        Engine::event_resized(
-                            target.1,
-                            new_inner_size.width,
-                            new_inner_size.height,
-                        );
-                    }
-                    _ => {}
                 }
             }
+            // WindowEvent::MainEventsCleared => {
+            //     let screens = SCREENS.lock().unwrap();
+            //     screens.iter().for_each(|x| {
+            //         Engine::event_cleared(x.1);
+            //     });
+            // }
+            _ => {}
         }
-        Event::RedrawRequested(window_id) => {
-            if let Some(target) = get_screen(window_id) {
-                let continue_next = Engine::event_redraw_requested(target.1);
-                if continue_next == false {
-                    close_screen(&target, control_flow);
-                }
-            }
-        }
-        Event::MainEventsCleared => {
-            let screens = SCREENS.lock().unwrap();
-            screens.iter().for_each(|x| {
-                Engine::event_cleared(x.1);
-            });
-        }
-        _ => {}
     }
 }
 
-fn close_screen(target: &ScreenIdData, control_flow: &mut winit::event_loop::ControlFlow) {
-    if Engine::event_closing(target.1) {
-        let mut is_empty = false;
-        remove_screen(*target, &mut is_empty);
-        let closed_screen = Engine::event_closed(target.1);
-        drop(closed_screen);
+// fn handle_event(
+//     event: &event::Event<ProxyMessage>,
+//     event_loop: &EventLoop<ProxyMessage>,
+//     control_flow: &mut winit::event_loop::ControlFlow,
+// ) {
+//     use winit::event::*;
 
-        if is_empty {
-            *control_flow = winit::event_loop::ControlFlow::Exit;
-        }
-    }
-}
+//     match event {
+//         Event::UserEvent(proxy_message) => match proxy_message {
+//             ProxyMessage::CreateScreen(config) => {
+//                 // if let Err(err) = create_screen(config, event_loop) {
+//                 //     Engine::dispatch_err(err);
+//                 // }
+//                 create_screen(config, event_loop).unwrap();
+//             }
+//         },
+//         Event::WindowEvent { event, window_id } => {
+//             if let Some(target) = get_screen(window_id) {
+//                 match event {
+//                     WindowEvent::CursorEntered { .. } => {
+//                         Engine::event_cursor_entered_left(target.1, true);
+//                     }
+//                     WindowEvent::CursorLeft { .. } => {
+//                         Engine::event_cursor_entered_left(target.1, false);
+//                     }
+//                     WindowEvent::CursorMoved { position, .. } => {
+//                         Engine::event_cursor_moved(target.1, position.x as f32, position.y as f32);
+//                     }
+//                     WindowEvent::Ime(ime) => {
+//                         let data = ImeInputData::new(ime);
+//                         Engine::event_ime(target.1, &data);
+//                     }
+//                     WindowEvent::ReceivedCharacter(c) => {
+//                         Engine::event_char_received(target.1, *c);
+//                     }
+//                     WindowEvent::MouseInput { state, button, .. } => {
+//                         Engine::event_mouse_button(target.1, button, state);
+//                     }
+//                     WindowEvent::MouseWheel { delta, phase, .. } if *phase == TouchPhase::Moved => {
+//                         match delta {
+//                             MouseScrollDelta::LineDelta(x_delta, y_delta) => {
+//                                 Engine::event_wheel(target.1, *x_delta, *y_delta);
+//                             }
+//                             MouseScrollDelta::PixelDelta(_pos) => {
+//                                 // TODO: support touchpad devices
+//                             }
+//                         }
+//                     }
+//                     WindowEvent::CloseRequested => {
+//                         close_screen(&target, control_flow);
+//                     }
+//                     WindowEvent::KeyboardInput {
+//                         input:
+//                             KeyboardInput {
+//                                 state,
+//                                 virtual_keycode: Some(key),
+//                                 ..
+//                             },
+//                         ..
+//                     } => {
+//                         Engine::event_keyboard(target.1, key, state);
+//                     }
+//                     WindowEvent::Resized(physical_size) => {
+//                         Engine::event_resized(target.1, physical_size.width, physical_size.height);
+//                     }
+//                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+//                         Engine::event_resized(
+//                             target.1,
+//                             new_inner_size.width,
+//                             new_inner_size.height,
+//                         );
+//                     }
+//                     _ => {}
+//                 }
+//             }
+//         }
+//         Event::RedrawRequested(window_id) => {
+//             if let Some(target) = get_screen(window_id) {
+//                 let continue_next = Engine::event_redraw_requested(target.1);
+//                 if continue_next == false {
+//                     close_screen(&target, control_flow);
+//                 }
+//             }
+//         }
+//         Event::MainEventsCleared => {
+//             let screens = SCREENS.lock().unwrap();
+//             screens.iter().for_each(|x| {
+//                 Engine::event_cleared(x.1);
+//             });
+//         }
+//         _ => {}
+//     }
+// }
+
+// fn close_screen(target: &ScreenIdData, control_flow: &mut winit::event_loop::ControlFlow) {
+//     if Engine::event_closing(target.1) {
+//         let mut is_empty = false;
+//         remove_screen(*target, &mut is_empty);
+//         let closed_screen = Engine::event_closed(target.1);
+//         drop(closed_screen);
+
+//         if is_empty {
+//             *control_flow = winit::event_loop::ControlFlow::Exit;
+//         }
+//     }
+// }
 
 #[derive(Clone, Copy)]
 pub(crate) struct EngineErr {
