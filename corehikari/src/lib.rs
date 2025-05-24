@@ -1974,8 +1974,7 @@ pub(crate) type ResizedEventFn = extern "cdecl" fn(screen_id: ScreenId, width: u
 //     extern "cdecl" fn(screen_id: ScreenId, key: winit::event::VirtualKeyCode, pressed: bool);
 
 // TODO:
-pub(crate) type KeyboardEventFn =
-    extern "cdecl" fn(screen_id: ScreenId, key: u32, pressed: bool);
+pub(crate) type KeyboardEventFn = extern "cdecl" fn(screen_id: ScreenId, key: u32, pressed: bool);
 
 pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen_id: ScreenId, input: char);
 pub(crate) type MouseButtonEventFn =

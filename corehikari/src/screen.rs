@@ -6,7 +6,6 @@ use macos as platform;
 #[cfg(target_os = "windows")]
 use windows as platform;
 
-use crate::engine::ProxyMessage;
 use crate::*;
 use once_cell::sync::Lazy;
 use pollster::FutureExt;
@@ -16,7 +15,7 @@ use std::error::Error;
 use std::num;
 use std::sync::{Arc, Mutex};
 use winit;
-use winit::event_loop::{ActiveEventLoop, EventLoop};
+use winit::event_loop::ActiveEventLoop;
 use winit::{dpi, window};
 
 pub(crate) struct Screen {
@@ -33,6 +32,7 @@ impl Screen {
     pub fn new(
         config: &ScreenConfig,
         event_loop: &ActiveEventLoop,
+        on_unhandled_error: impl Fn(&str) + Send + Sync + 'static,
     ) -> Result<Screen, Box<dyn Error>> {
         let window = platform::create_window(&config, event_loop)?;
         if let Some(monitor) = window.current_monitor() {
@@ -46,13 +46,19 @@ impl Screen {
         }
         window.set_ime_allowed(true);
         window.focus_window();
-        Self::initialize(window, &config.backend, &config.present_mode.to_wgpu_type())
+        Self::initialize(
+            window,
+            &config.backend,
+            &config.present_mode.to_wgpu_type(),
+            on_unhandled_error,
+        )
     }
 
     fn initialize(
         window: window::Window,
         backends: &wgpu::Backends,
         present_mode: &wgpu::PresentMode,
+        on_unhandled_error: impl Fn(&str) + Send + Sync + 'static,
     ) -> Result<Screen, Box<dyn Error>> {
         let size = window.inner_size();
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
@@ -78,14 +84,14 @@ impl Screen {
                 label: None,
             })
             .block_on()?;
-        device.on_uncaptured_error(Box::new(|error| {
+        device.on_uncaptured_error(Box::new(move |error| {
             static ANCI_ESC_SEQ_DECORATION: Lazy<Regex> =
                 Lazy::new(|| Regex::new("\x1b\\[[0-9;]*m").unwrap());
             let message: String = error.to_string();
             // Some error messages contain decorations of ANSI escape sequences.
             // They should be removed.
             let message = ANCI_ESC_SEQ_DECORATION.replace_all(&message, "");
-            crate::engine::Engine::on_unhandled_error(&message);
+            on_unhandled_error(&message);
         }));
         let surface_config = {
             let surface_caps = surface.get_capabilities(&adapter);

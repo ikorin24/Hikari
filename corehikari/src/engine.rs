@@ -3,21 +3,19 @@ use crate::*;
 use std::cell::Cell;
 use std::error::Error;
 use std::fmt::Debug;
-use std::sync;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use winit;
 use winit::application::ApplicationHandler;
 use winit::event::{MouseScrollDelta, TouchPhase, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
-// use winit::keyboard::{Key, PhysicalKey};
 use winit::platform::run_on_demand::EventLoopExtRunOnDemand;
-// EventLoopWindowTarget
-// use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::WindowId;
 use winit::{event, window};
 
 pub(crate) struct Engine {
     config: EngineCoreConfig,
+    screens: Vec<ScreenIdData>,
 }
 
 thread_local! {
@@ -44,33 +42,38 @@ pub(crate) fn get_tls_last_error_len() -> usize {
 
 impl Engine {
     pub fn new(config: &EngineCoreConfig) -> Self {
-        Engine { config: *config }
+        Engine {
+            config: *config,
+            screens: vec![],
+        }
     }
 
-    pub fn on_screen_init(screen: Box<Screen>) -> ScreenId {
-        let f = Self::get_engine_field(|engine| engine.config.on_screen_init).unwrap();
+    fn on_screen_init(&self, screen: Box<Screen>) -> ScreenId {
+        let f = self.config.on_screen_init;
         let screen_info = &screen.get_info();
         f(screen, screen_info)
     }
 
-    pub fn on_unhandled_error(error: &str) {
-        let f = Self::get_engine_field(|engine| engine.config.on_unhandled_error).unwrap();
-        let bytes = error.as_bytes();
-        f(bytes.as_ptr(), bytes.len())
+    fn on_unhandled_error(&self) -> impl Fn(&str) + Send + Sync + 'static {
+        let f = self.config.on_unhandled_error;
+        move |error: &str| {
+            let bytes = error.as_bytes();
+            f(bytes.as_ptr(), bytes.len())
+        }
     }
 
-    pub fn event_cleared(screen_id: ScreenId) {
-        let f = Self::get_engine_field(|engine| engine.config.event_cleared).unwrap();
+    fn event_cleared(&self, screen_id: ScreenId) {
+        let f = self.config.event_cleared;
         f(screen_id)
     }
 
-    pub fn event_redraw_requested(screen_id: ScreenId) -> bool {
-        let f = Self::get_engine_field(|engine| engine.config.event_redraw_requested).unwrap();
+    fn event_redraw_requested(&self, screen_id: ScreenId) -> bool {
+        let f = self.config.event_redraw_requested;
         f(screen_id)
     }
 
-    pub fn event_resized(screen_id: ScreenId, width: u32, height: u32) {
-        let f = Self::get_engine_field(|engine| engine.config.event_resized).unwrap();
+    fn event_resized(&self, screen_id: ScreenId, width: u32, height: u32) {
+        let f = self.config.event_resized;
         f(screen_id, width, height)
     }
 
@@ -87,17 +90,18 @@ impl Engine {
     //     f(screen_id, *key, pressed)
     // }
 
-    pub fn event_char_received(screen_id: ScreenId, c: char) {
-        let f = Self::get_engine_field(|engine| engine.config.event_char_received).unwrap();
+    fn event_char_received(&self, screen_id: ScreenId, c: char) {
+        let f = self.config.event_char_received;
         f(screen_id, c)
     }
 
-    pub fn event_mouse_button(
+    fn event_mouse_button(
+        &self,
         screen_id: ScreenId,
         button: &event::MouseButton,
         state: &event::ElementState,
     ) {
-        let f = Self::get_engine_field(|engine| engine.config.event_mouse_button).unwrap();
+        let f = self.config.event_mouse_button;
         let pressed = match state {
             event::ElementState::Pressed => true,
             event::ElementState::Released => false,
@@ -105,221 +109,77 @@ impl Engine {
         f(screen_id, (*button).into(), pressed)
     }
 
-    pub fn event_ime(screen_id: ScreenId, input: &ImeInputData) {
-        let f = Self::get_engine_field(|engine| engine.config.event_ime).unwrap();
+    fn event_ime(&self, screen_id: ScreenId, input: &ImeInputData) {
+        let f = self.config.event_ime;
         f(screen_id, input)
     }
 
-    pub fn event_wheel(screen_id: ScreenId, x_delta: f32, y_delta: f32) {
-        let f = Self::get_engine_field(|engine| engine.config.event_wheel).unwrap();
+    fn event_wheel(&self, screen_id: ScreenId, x_delta: f32, y_delta: f32) {
+        let f = self.config.event_wheel;
         f(screen_id, x_delta, y_delta)
     }
 
-    pub fn event_cursor_moved(screen_id: ScreenId, x: f32, y: f32) {
-        let f = Self::get_engine_field(|engine| engine.config.event_cursor_moved).unwrap();
+    fn event_cursor_moved(&self, screen_id: ScreenId, x: f32, y: f32) {
+        let f = self.config.event_cursor_moved;
         f(screen_id, x, y)
     }
 
-    pub fn event_cursor_entered_left(screen_id: ScreenId, entered: bool) {
-        let f = Self::get_engine_field(|engine| engine.config.event_cursor_entered_left).unwrap();
+    fn event_cursor_entered_left(&self, screen_id: ScreenId, entered: bool) {
+        let f = self.config.event_cursor_entered_left;
         f(screen_id, entered);
     }
 
-    pub fn event_closing(screen_id: ScreenId) -> bool {
-        let f = Self::get_engine_field(|engine| engine.config.event_closing).unwrap();
+    fn event_closing(&self, screen_id: ScreenId) -> bool {
+        let f = self.config.event_closing;
         let mut cancel = false;
         f(screen_id, &mut cancel);
         !cancel
     }
 
-    pub fn event_closed(screen_id: ScreenId) -> Option<Box<Screen>> {
-        let f = Self::get_engine_field(|engine| engine.config.event_closed).unwrap();
+    fn event_closed(&self, screen_id: ScreenId) -> Option<Box<Screen>> {
+        let f = self.config.event_closed;
         f(screen_id)
     }
 
-    pub fn close_screen(target: &ScreenIdData) -> bool {
-        if Self::event_closing(target.1) {
-            let mut is_empty = false;
-            remove_screen(*target, &mut is_empty);
-            let closed_screen = Engine::event_closed(target.1);
+    fn close_screen(&mut self, target: &ScreenIdData) -> bool {
+        if self.event_closing(target.1) {
+            let index = self.screens.iter().position(|x| x == target);
+            if let Some(index) = index {
+                self.screens.swap_remove(index);
+            }
+            let is_empty = self.screens.is_empty();
+            let closed_screen = self.event_closed(target.1);
             drop(closed_screen);
             is_empty
         } else {
             false
         }
     }
-
-    fn get_engine_field<T>(f: fn(engine: &Engine) -> T) -> Result<T, EngineErr> {
-        let reader = ENGINE.read().unwrap();
-        match reader.as_ref().map(f) {
-            Some(value) => Ok(value),
-            None => Err(EngineErr::NOT_RUNNING),
-        }
-    }
 }
 
-static ENGINE: sync::RwLock<Option<Engine>> = sync::RwLock::new(None);
-
-static SCREENS: Mutex<Vec<ScreenIdData>> = Mutex::new(vec![]);
-
-static LOOP_PROXY: Mutex<Option<EventLoopProxy<ProxyMessage>>> = Mutex::new(None);
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum ProxyMessage {
-    CreateScreen(ScreenConfig),
-}
-
-pub(crate) fn get_loop_proxy() -> Result<EventLoopProxy<ProxyMessage>, EngineErr> {
-    let proxy = LOOP_PROXY.lock().unwrap();
-    proxy.clone().ok_or(EngineErr::NOT_RUNNING)
-}
-
-fn get_screen(window_id: &window::WindowId) -> Option<ScreenIdData> {
-    let screens = SCREENS.lock().unwrap();
-    screens.iter().find(|x| x.0 == *window_id).copied()
-}
-fn push_screen(id_data: ScreenIdData) {
-    let mut screens = SCREENS.lock().unwrap();
-    screens.push(id_data);
-}
-fn remove_screen(id_data: ScreenIdData, is_empty: &mut bool) {
-    let mut screens = SCREENS.lock().unwrap();
-    let index = screens
-        .iter()
-        .enumerate()
-        .find(|(_, x)| **x == id_data)
-        .map(|(i, _)| i);
-    if let Some(index) = index {
-        screens.swap_remove(index);
-    }
-    *is_empty = screens.is_empty();
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-struct ScreenIdData(window::WindowId, ScreenId);
-
-pub(crate) fn send_proxy_message(message: ProxyMessage) -> Result<(), Box<dyn Error>> {
-    let proxy = get_loop_proxy()?;
-    proxy.send_event(message)?;
-    Ok(())
-}
-
-fn create_screen(
-    screen_config: &ScreenConfig,
-    event_loop: &ActiveEventLoop,
-) -> Result<(), Box<dyn Error>> {
-    let screen = Screen::new(screen_config, event_loop)?;
-    let screen = Box::new(screen);
-    let window_id = screen.window.id();
-    let screen_id = Engine::on_screen_init(screen);
-    push_screen(ScreenIdData(window_id, screen_id));
-    Ok(())
-}
-
-pub(crate) fn engine_start(
-    engine_config: &EngineCoreConfig,
-    screen_config: &ScreenConfig,
-) -> Result<(), Box<dyn Error>> {
-    let is_engine_running = {
-        let engine = ENGINE.read().unwrap();
-        engine.is_some()
-    };
-    if is_engine_running {
-        return Err(EngineErr::ALREADY_RUNNING.into());
-    }
-    let mut event_loop = EventLoop::with_user_event().build()?;
-    event_loop.set_control_flow(ControlFlow::Poll);
-    {
-        let mut engine = ENGINE.write().unwrap();
-        *engine = Some(Engine::new(engine_config));
-        {
-            let mut proxy = LOOP_PROXY.lock().unwrap();
-            *proxy = Some(event_loop.create_proxy());
-        }
-    }
-    env_logger::init();
-    // create_screen(screen_config, &event_loop)?;
-
-    // if cfg!(target_os = "windows") {
-    //     // [NOTE]
-    //     // To avoid strange IME behavior, set 'control_flow' to 'Wait' for the first few times.
-    //     // After that, set it to 'Poll'.
-    //     // Poll' is necessary because the game engine always needs to loop as fast as possible.
-
-    //     let mut i: usize = 0;
-    //     const WAIT_EVENT_COUNT: usize = 50;
-    //     event_loop.run_return(move |event, event_loop, control_flow| {
-    //         if i == 0 {
-    //             control_flow.set_wait();
-    //         }
-    //         if i == WAIT_EVENT_COUNT {
-    //             control_flow.set_poll();
-    //         }
-    //         i = i.saturating_add(1);
-    //         handle_event(&event, event_loop, control_flow);
-    //     });
-    // } else {
-    //     event_loop.run_return(move |event, event_loop, control_flow| {
-    //         handle_event(&event, event_loop, control_flow);
-    //     });
-    // }
-
-    let mut app = App::default();
-    get_loop_proxy()
-        .unwrap()
-        .send_event(ProxyMessage::CreateScreen(*screen_config))?;
-    event_loop.run_app_on_demand(&mut app)?;
-
-    // drop the engine from the static field.
-    {
-        let mut engine = ENGINE.write().unwrap();
-        _ = engine.take();
-    }
-    return Ok(());
-}
-
-#[derive(Default)]
-struct App {
-    state: Option<()>,
-}
-
-impl App {
-    pub fn new() -> Self {
-        Self { state: None }
-    }
-}
-
-impl ApplicationHandler<ProxyMessage> for App {
-    fn resumed(&mut self, _event_loop: &ActiveEventLoop) {
-
-        // // Create window object
-        // let window = Arc::new(
-        //     event_loop
-        //         .create_window(Window::default_attributes())
-        //         .unwrap(),
-        // );
-
-        // let state = pollster::block_on(State::new(window.clone()));
-        // self.state = Some(state);
-
-        // window.request_redraw();
-    }
+impl ApplicationHandler<ProxyMessage> for Engine {
+    fn resumed(&mut self, _event_loop: &ActiveEventLoop) {}
 
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: ProxyMessage) {
         match event {
             ProxyMessage::CreateScreen(config) => {
-                // if let Err(err) = create_screen(config, event_loop) {
-                //     Engine::dispatch_err(err);
-                // }
-                create_screen(&config, event_loop).unwrap();
+                let screen = match Screen::new(&config, event_loop, self.on_unhandled_error()) {
+                    Ok(screen) => screen,
+                    Err(_err) => {
+                        return;
+                    }
+                };
+                let screen = Box::new(screen);
+                let window_id = screen.window.id();
+                let screen_id = self.on_screen_init(screen);
+                self.screens.push(ScreenIdData(window_id, screen_id));
             }
         }
     }
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
-        let screens = SCREENS.lock().unwrap();
-        screens.iter().for_each(|x| {
-            Engine::event_cleared(x.1);
+        self.screens.iter().for_each(|x| {
+            self.event_cleared(x.1);
         });
     }
 
@@ -329,35 +189,36 @@ impl ApplicationHandler<ProxyMessage> for App {
         window_id: WindowId,
         event: WindowEvent,
     ) {
-        let target = if let Some(target) = get_screen(&window_id) {
-            target
-        } else {
-            return;
+        let target = match self.screens.iter().find(|x| x.0 == window_id).copied() {
+            Some(target) => target,
+            None => {
+                return;
+            }
         };
         match event {
             WindowEvent::CursorEntered { .. } => {
-                Engine::event_cursor_entered_left(target.1, true);
+                self.event_cursor_entered_left(target.1, true);
             }
             WindowEvent::CursorLeft { .. } => {
-                Engine::event_cursor_entered_left(target.1, false);
+                self.event_cursor_entered_left(target.1, false);
             }
             WindowEvent::CursorMoved { position, .. } => {
-                Engine::event_cursor_moved(target.1, position.x as f32, position.y as f32);
+                self.event_cursor_moved(target.1, position.x as f32, position.y as f32);
             }
             WindowEvent::Ime(ime) => {
                 let data = ImeInputData::new(&ime);
-                Engine::event_ime(target.1, &data);
+                self.event_ime(target.1, &data);
             }
             // WindowEvent::ReceivedCharacter(c) => {
             //     Engine::event_char_received(target.1, *c);
             // }
             WindowEvent::MouseInput { state, button, .. } => {
-                Engine::event_mouse_button(target.1, &button, &state);
+                self.event_mouse_button(target.1, &button, &state);
             }
             WindowEvent::MouseWheel { delta, phase, .. } if phase == TouchPhase::Moved => {
                 match delta {
                     MouseScrollDelta::LineDelta(x_delta, y_delta) => {
-                        Engine::event_wheel(target.1, x_delta, y_delta);
+                        self.event_wheel(target.1, x_delta, y_delta);
                     }
                     MouseScrollDelta::PixelDelta(_pos) => {
                         // TODO: support touchpad devices
@@ -365,7 +226,7 @@ impl ApplicationHandler<ProxyMessage> for App {
                 }
             }
             WindowEvent::CloseRequested => {
-                if Engine::close_screen(&target) {
+                if self.close_screen(&target) {
                     event_loop.exit();
                 }
             }
@@ -392,7 +253,7 @@ impl ApplicationHandler<ProxyMessage> for App {
                 // Engine::event_keyboard(target.1, key, &event.state);
             }
             WindowEvent::Resized(physical_size) => {
-                Engine::event_resized(target.1, physical_size.width, physical_size.height);
+                self.event_resized(target.1, physical_size.width, physical_size.height);
             }
             // WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
             //     Engine::event_resized(target.1, new_inner_size.width, new_inner_size.height);
@@ -407,12 +268,10 @@ impl ApplicationHandler<ProxyMessage> for App {
                 // Engine::event_resized(target.1, new_inner_size.width, new_inner_size.height);
             }
             WindowEvent::RedrawRequested => {
-                if let Some(target) = get_screen(&window_id) {
-                    let continue_next = Engine::event_redraw_requested(target.1);
-                    if continue_next == false {
-                        if Engine::close_screen(&target) {
-                            event_loop.exit();
-                        }
+                let continue_next = self.event_redraw_requested(target.1);
+                if continue_next == false {
+                    if self.close_screen(&target) {
+                        event_loop.exit();
                     }
                 }
             }
@@ -427,112 +286,52 @@ impl ApplicationHandler<ProxyMessage> for App {
     }
 }
 
-// fn handle_event(
-//     event: &event::Event<ProxyMessage>,
-//     event_loop: &EventLoop<ProxyMessage>,
-//     control_flow: &mut winit::event_loop::ControlFlow,
-// ) {
-//     use winit::event::*;
+static LOOP_PROXY: Mutex<Option<EventLoopProxy<ProxyMessage>>> = Mutex::new(None);
 
-//     match event {
-//         Event::UserEvent(proxy_message) => match proxy_message {
-//             ProxyMessage::CreateScreen(config) => {
-//                 // if let Err(err) = create_screen(config, event_loop) {
-//                 //     Engine::dispatch_err(err);
-//                 // }
-//                 create_screen(config, event_loop).unwrap();
-//             }
-//         },
-//         Event::WindowEvent { event, window_id } => {
-//             if let Some(target) = get_screen(window_id) {
-//                 match event {
-//                     WindowEvent::CursorEntered { .. } => {
-//                         Engine::event_cursor_entered_left(target.1, true);
-//                     }
-//                     WindowEvent::CursorLeft { .. } => {
-//                         Engine::event_cursor_entered_left(target.1, false);
-//                     }
-//                     WindowEvent::CursorMoved { position, .. } => {
-//                         Engine::event_cursor_moved(target.1, position.x as f32, position.y as f32);
-//                     }
-//                     WindowEvent::Ime(ime) => {
-//                         let data = ImeInputData::new(ime);
-//                         Engine::event_ime(target.1, &data);
-//                     }
-//                     WindowEvent::ReceivedCharacter(c) => {
-//                         Engine::event_char_received(target.1, *c);
-//                     }
-//                     WindowEvent::MouseInput { state, button, .. } => {
-//                         Engine::event_mouse_button(target.1, button, state);
-//                     }
-//                     WindowEvent::MouseWheel { delta, phase, .. } if *phase == TouchPhase::Moved => {
-//                         match delta {
-//                             MouseScrollDelta::LineDelta(x_delta, y_delta) => {
-//                                 Engine::event_wheel(target.1, *x_delta, *y_delta);
-//                             }
-//                             MouseScrollDelta::PixelDelta(_pos) => {
-//                                 // TODO: support touchpad devices
-//                             }
-//                         }
-//                     }
-//                     WindowEvent::CloseRequested => {
-//                         close_screen(&target, control_flow);
-//                     }
-//                     WindowEvent::KeyboardInput {
-//                         input:
-//                             KeyboardInput {
-//                                 state,
-//                                 virtual_keycode: Some(key),
-//                                 ..
-//                             },
-//                         ..
-//                     } => {
-//                         Engine::event_keyboard(target.1, key, state);
-//                     }
-//                     WindowEvent::Resized(physical_size) => {
-//                         Engine::event_resized(target.1, physical_size.width, physical_size.height);
-//                     }
-//                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-//                         Engine::event_resized(
-//                             target.1,
-//                             new_inner_size.width,
-//                             new_inner_size.height,
-//                         );
-//                     }
-//                     _ => {}
-//                 }
-//             }
-//         }
-//         Event::RedrawRequested(window_id) => {
-//             if let Some(target) = get_screen(window_id) {
-//                 let continue_next = Engine::event_redraw_requested(target.1);
-//                 if continue_next == false {
-//                     close_screen(&target, control_flow);
-//                 }
-//             }
-//         }
-//         Event::MainEventsCleared => {
-//             let screens = SCREENS.lock().unwrap();
-//             screens.iter().for_each(|x| {
-//                 Engine::event_cleared(x.1);
-//             });
-//         }
-//         _ => {}
-//     }
-// }
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum ProxyMessage {
+    CreateScreen(ScreenConfig),
+}
 
-// fn close_screen(target: &ScreenIdData, control_flow: &mut winit::event_loop::ControlFlow) {
-//     if Engine::event_closing(target.1) {
-//         let mut is_empty = false;
-//         remove_screen(*target, &mut is_empty);
-//         let closed_screen = Engine::event_closed(target.1);
-//         drop(closed_screen);
+pub(crate) fn get_loop_proxy() -> Result<EventLoopProxy<ProxyMessage>, EngineErr> {
+    let proxy = LOOP_PROXY.lock().unwrap();
+    proxy.clone().ok_or(EngineErr::NOT_RUNNING)
+}
 
-//         if is_empty {
-//             *control_flow = winit::event_loop::ControlFlow::Exit;
-//         }
-//     }
-// }
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct ScreenIdData(window::WindowId, ScreenId);
+
+pub(crate) fn send_proxy_message(message: ProxyMessage) -> Result<(), Box<dyn Error>> {
+    let proxy = get_loop_proxy()?;
+    proxy.send_event(message)?;
+    Ok(())
+}
+
+static IS_ENGINE_RUNNING: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn engine_start(
+    engine_config: &EngineCoreConfig,
+    screen_config: &ScreenConfig,
+) -> Result<(), Box<dyn Error>> {
+    if IS_ENGINE_RUNNING.swap(true, Ordering::Relaxed) {
+        return Err(EngineErr::ALREADY_RUNNING.into());
+    }
+    let mut event_loop = EventLoop::with_user_event().build()?;
+    event_loop.set_control_flow(ControlFlow::Poll);
+    let mut engine = Engine::new(engine_config);
+    {
+        let mut proxy = LOOP_PROXY.lock().unwrap();
+        *proxy = Some(event_loop.create_proxy());
+    }
+    env_logger::init();
+
+    get_loop_proxy()
+        .unwrap()
+        .send_event(ProxyMessage::CreateScreen(*screen_config))?;
+    event_loop.run_app_on_demand(&mut engine)?;
+    IS_ENGINE_RUNNING.store(false, Ordering::Relaxed);
+    Ok(())
+}
 
 #[derive(Clone, Copy)]
 pub(crate) struct EngineErr {
