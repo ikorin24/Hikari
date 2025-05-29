@@ -12,7 +12,7 @@ log = "0.4.17"
 pollster = "0.2.5"
 smallvec = "1.10.0"
 static_assertions = "1.1.0"
-wgpu = "25.0.0"
+wgpu = "25.0.2"
 winit = "0.30.8"
 corehikari_macros = { path = "../corehikari_macros" }
 regex = "1.7.1"
