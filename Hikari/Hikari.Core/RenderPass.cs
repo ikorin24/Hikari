@@ -53,19 +53,11 @@ public readonly ref struct RenderPass
 
     public static unsafe OwnRenderPass Create(Screen screen, scoped in ColorAttachment? color, scoped in DepthStencilAttachment? depthStencil)
     {
-        var colorsNative = color switch
-        {
-            ColorAttachment c => new(c.ToNative()),
-            null => CH.Opt<CH.RenderPassColorAttachment>.None,
-        };
+        var colorsNative = CH.Opt.From(color?.ToNative());
         var desc = new CH.RenderPassDescriptor
         {
             color_attachments = new() { data = &colorsNative, len = 1 },
-            depth_stencil_attachment = depthStencil switch
-            {
-                DepthStencilAttachment ds => new(ds.ToNative()),
-                null => CH.Opt<CH.RenderPassDepthStencilAttachment>.None,
-            },
+            depth_stencil_attachment = CH.Opt.From(depthStencil?.ToNative()),
         };
         return Create(screen, desc);
     }
@@ -99,21 +91,13 @@ public readonly ref struct RenderPass
     {
         var colorsNative = stackalloc CH.Opt<CH.RenderPassColorAttachment>[colors.Length];
         for(int i = 0; i < colors.Length; i++) {
-            colorsNative[i] = colors[i] switch
-            {
-                ColorAttachment color => new(color.ToNative()),
-                null => CH.Opt<CH.RenderPassColorAttachment>.None,
-            };
+            colorsNative[i] = CH.Opt.From(colors[i]?.ToNative());
         }
 
         var desc = new CH.RenderPassDescriptor
         {
             color_attachments = new() { data = colorsNative, len = (u32)colors.Length },
-            depth_stencil_attachment = depthStencil switch
-            {
-                DepthStencilAttachment ds => new(ds.ToNative()),
-                null => CH.Opt<CH.RenderPassDepthStencilAttachment>.None,
-            },
+            depth_stencil_attachment = CH.Opt.From(depthStencil?.ToNative()),
         };
         return Create(screen, desc);
     }
@@ -277,16 +261,8 @@ public readonly record struct DepthStencilAttachment
         return new()
         {
             view = Target.GetCurrentTextureView(),
-            depth = LoadOp.Depth switch
-            {
-                DepthBufferLoadOp depth => new(depth.ToNative()),
-                null => CH.Opt<CH.RenderPassDepthBufferInit>.None,
-            },
-            stencil = LoadOp.Stencil switch
-            {
-                StencilBufferLoadOp stencil => new(stencil.ToNative()),
-                null => CH.Opt<CH.RenderPassStencilBufferInit>.None,
-            },
+            depth = CH.Opt.From(LoadOp.Depth?.ToNative()),
+            stencil = CH.Opt.From(LoadOp.Stencil?.ToNative()),
         };
     }
 }

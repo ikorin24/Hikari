@@ -1,10 +1,11 @@
 ﻿#nullable enable
+using Cysharp.Threading.Tasks;
 using Hikari.NativeBind;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Hikari;
 
@@ -13,6 +14,63 @@ public static class Engine
     private static readonly Dictionary<CH.ScreenId, Screen> _screens = new();
 
     private static Action<Screen>? _onScreenInit;
+
+    public static void Run(in ScreenConfig screenConfig, Func<Screen, UniTask> onScreenInit)
+    {
+        Run(in screenConfig, screen =>
+        {
+            UniTask.Void(
+                async static arg =>
+                {
+                    var (onScreenInit, screen) = arg;
+                    try {
+                        await onScreenInit(screen);
+                    }
+                    catch(Exception ex) {
+                        Console.Error.WriteLine(ex);
+                    }
+                },
+                (onScreenInit, screen));
+        });
+    }
+
+    public static void Run(in ScreenConfig screenConfig, Func<Screen, ValueTask> onScreenInit)
+    {
+        Run(in screenConfig, screen =>
+        {
+            UniTask.Void(
+                async static arg =>
+                {
+                    var (onScreenInit, screen) = arg;
+                    try {
+                        await onScreenInit(screen);
+                    }
+                    catch(Exception ex) {
+                        Console.Error.WriteLine(ex);
+                    }
+                },
+                (onScreenInit, screen));
+        });
+    }
+
+    public static void Run(in ScreenConfig screenConfig, Func<Screen, Task> onScreenInit)
+    {
+        Run(in screenConfig, screen =>
+        {
+            UniTask.Void(
+                async static arg =>
+                {
+                    var (onScreenInit, screen) = arg;
+                    try {
+                        await onScreenInit(screen);
+                    }
+                    catch(Exception ex) {
+                        Console.Error.WriteLine(ex);
+                    }
+                },
+                (onScreenInit, screen));
+        });
+    }
 
     public static void Run(in ScreenConfig screenConfig, Action<Screen> onScreenInit)
     {

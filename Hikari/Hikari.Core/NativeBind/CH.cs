@@ -35,10 +35,6 @@ internal static class CH
             _value = value;
         }
 
-        public static Opt<T> None => default;
-
-        public static Opt<T> Some(T value) => new(value);
-
         public bool TryGetValue(out T value)
         {
             value = _value;
@@ -60,6 +56,37 @@ internal static class CH
             }
             return _value;
         }
+
+        public static implicit operator Opt<T>(Opt.OptNone _) => default;
+    }
+
+    internal static class Opt
+    {
+        public static OptNone None => default;
+
+        public static Opt<T> Some<T>(T value) where T : unmanaged
+        {
+            return new Opt<T>(value);
+        }
+
+        public static Opt<T> From<T>(T? nullable) where T : unmanaged
+        {
+            return nullable switch
+            {
+                T a => new Opt<T>(a),
+                null => None,
+            };
+        }
+
+        public readonly record struct OptNone;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal record struct Tuple<T1, T2>(T1 Item1, T2 Item2)
+        where T1 : unmanaged
+        where T2 : unmanaged
+    {
+        public static implicit operator Tuple<T1, T2>((T1, T2) value) => new(value.Item1, value.Item2);
     }
 
     [StructLayout(LayoutKind.Sequential)]

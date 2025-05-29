@@ -269,7 +269,7 @@ internal unsafe static partial class EngineCore
         i32 y,
         MonitorId? monitorId)
     {
-        var id = monitorId.HasValue ? CH.Opt<CH.MonitorId>.Some(monitorId.Value.Id) : CH.Opt<CH.MonitorId>.None;
+        var id = CH.Opt.From(monitorId?.Id);
         hikari_screen_set_location(screen, x, y, id).Validate();
     }
 
@@ -278,7 +278,7 @@ internal unsafe static partial class EngineCore
         this Rust.Ref<CH.Screen> screen,
         MonitorId? monitorId)
     {
-        var id = monitorId.HasValue ? CH.Opt<CH.MonitorId>.Some(monitorId.Value.Id) : CH.Opt<CH.MonitorId>.None;
+        var id = CH.Opt.From(monitorId?.Id);
         return hikari_screen_get_location(screen, id).Validate();
     }
 

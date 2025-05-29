@@ -87,11 +87,7 @@ public static class TextureFormatHelper
 
     public static TextureSampleType? SampleType(this TextureFormat format, TextureAspect? aspect = null)
     {
-        var aspectNative = aspect switch
-        {
-            TextureAspect a => CH.Opt<CH.TextureAspect>.Some(a.MapOrThrow()),
-            null => CH.Opt<CH.TextureAspect>.None,
-        };
+        var aspectNative = CH.Opt.From(aspect?.MapOrThrow());
         var sampleType = format.MapOrThrow().TextureFormatSampleType(aspectNative);
         return sampleType.TryGetValue(out var value) ? value.MapOrThrow() : null;
     }
@@ -106,11 +102,7 @@ public static class TextureFormatHelper
 
     public static u32? BlockSize(this TextureFormat format, TextureAspect? aspect = null)
     {
-        var aspectNative = aspect switch
-        {
-            TextureAspect a => CH.Opt<CH.TextureAspect>.Some(a.MapOrThrow()),
-            null => CH.Opt<CH.TextureAspect>.None,
-        };
+        var aspectNative = CH.Opt.From(aspect?.MapOrThrow());
         return format.MapOrThrow().TextureFormatBlockSize(aspectNative).GetOrNull();
     }
 

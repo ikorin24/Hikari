@@ -52,7 +52,11 @@ internal static class InternalExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static CH.Opt<TResult> ToNative<T, TResult>(this T? self, Func<T, TResult> mapper) where T : struct where TResult : unmanaged
     {
-        return self == null ? CH.Opt<TResult>.None : CH.Opt<TResult>.Some(mapper(self.Value));
+        return self switch
+        {
+            T value => CH.Opt.Some(mapper(value)),
+            null => CH.Opt.None,
+        };
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

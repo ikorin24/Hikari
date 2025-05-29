@@ -440,7 +440,7 @@ public sealed class ScreenClosingState
     }
 }
 
-public readonly struct ScreenConfig
+public readonly record struct ScreenConfig
 {
     public required WindowStyle Style { get; init; }
     public required u32 Width { get; init; }

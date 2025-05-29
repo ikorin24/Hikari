@@ -26,7 +26,7 @@ internal class Program
             Style = WindowStyle.Default,
             PresentMode = SurfacePresentMode.VsyncOn,
         };
-        Engine.Run(screenConfig, screen => OnInitialized(screen).Forget());
+        Engine.Run(screenConfig, OnInitialized);
     }
 
     private static void SetLight(Screen screen, float angle)
