@@ -1,4 +1,5 @@
-﻿#nullable enable
+﻿#if HIKARI_JSON_SERDE
+#nullable enable
 using System;
 using System.Diagnostics;
 
@@ -42,3 +43,4 @@ internal static class ReactComponentBuilder
         }
     }
 }
+#endif

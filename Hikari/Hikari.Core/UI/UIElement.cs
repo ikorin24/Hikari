@@ -7,7 +7,10 @@ using System.Text.Json;
 
 namespace Hikari.UI;
 
-public abstract class UIElement : IToJson, IReactive
+public abstract class UIElement
+#if HIKARI_JSON_SERDE
+    : IToJson, IReactive
+#endif
 {
     private FrameObject? _model;
     private UIElement? _parent;
@@ -219,6 +222,8 @@ public abstract class UIElement : IToJson, IReactive
         });
     }
 
+
+#if HIKARI_JSON_SERDE
     protected UIElement(in ObjectSource source) : this()
     {
         if(source.TryGetProperty(nameof(Width), out var width)) {
@@ -322,6 +327,7 @@ public abstract class UIElement : IToJson, IReactive
         writer.WriteEndObject();
         return JsonValueKind.Object;
     }
+#endif
 
     internal void SetParent(UIElement parent)
     {
@@ -703,7 +709,9 @@ internal record struct UIElementInfo
 }
 
 public abstract record PseudoInfo
+#if HIKARI_JSON_SERDE
     : IToJson
+#endif
 {
     public LayoutLength? Width { get; init; }
     public LayoutLength? Height { get; init; }
@@ -726,6 +734,8 @@ public abstract record PseudoInfo
 
     internal const string HoverName = "&:Hover";
     internal const string ActiveName = "&:Active";
+
+#if HIKARI_JSON_SERDE
 
     public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
@@ -777,6 +787,7 @@ public abstract record PseudoInfo
             writer.Write(nameof(Color), Color.Value);
         }
     }
+#endif
 }
 
 [Flags]

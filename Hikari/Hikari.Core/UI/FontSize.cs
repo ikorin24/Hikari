@@ -5,20 +5,27 @@ using System.Text.Json;
 namespace Hikari.UI;
 
 public readonly struct FontSize
-    : IEquatable<FontSize>,
+    : IEquatable<FontSize>
+#if HIKARI_JSON_SERDE
+    ,
       IFromJson<FontSize>,
       IToJson
+#endif
 {
     private readonly float _px;
     public float Px => _px;
 
+#if HIKARI_JSON_SERDE
     static FontSize() => Serializer.RegisterConstructor(FromJson);
+#endif
 
     public FontSize(float px)
     {
         _px = px;
     }
 
+
+#if HIKARI_JSON_SERDE
     public static FontSize FromJson(in ObjectSource source)
     {
         switch(source.ValueKind) {
@@ -44,6 +51,7 @@ public readonly struct FontSize
         writer.WriteStringValue($"{_px}px");
         return JsonValueKind.String;
     }
+#endif
 
     public static implicit operator FontSize(float value) => new(value);
 

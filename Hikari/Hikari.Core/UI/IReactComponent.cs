@@ -1,4 +1,5 @@
-﻿#nullable enable
+﻿#if HIKARI_JSON_SERDE
+#nullable enable
 
 namespace Hikari.UI;
 
@@ -10,3 +11,4 @@ public interface IReactComponent : IReactive
     void OnMount();
     void OnUnmount();
 }
+#endif

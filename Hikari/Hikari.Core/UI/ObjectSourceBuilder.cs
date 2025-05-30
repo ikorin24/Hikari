@@ -1,4 +1,5 @@
-﻿#nullable enable
+﻿#if HIKARI_JSON_SERDE
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -149,3 +150,4 @@ public ref struct ObjectSourceBuilder
         return h;
     }
 }
+#endif

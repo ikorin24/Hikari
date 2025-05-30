@@ -6,8 +6,10 @@ using System.Text.Json;
 namespace Hikari.UI;
 
 public readonly record struct Flow
+#if HIKARI_JSON_SERDE
     : IFromJson<Flow>,
       IToJson
+#endif
 {
     public required FlowDirection Direction { get; init; }
     public FlowWrapMode Wrap { get; init; }
@@ -18,7 +20,9 @@ public readonly record struct Flow
         Wrap = FlowWrapMode.NoWrap,
     };
 
+#if HIKARI_JSON_SERDE
     static Flow() => Serializer.RegisterConstructor(FromJson);
+#endif
 
     [SetsRequiredMembers]
     public Flow(FlowDirection direction)
@@ -34,6 +38,8 @@ public readonly record struct Flow
         Wrap = wrap;
     }
 
+
+#if HIKARI_JSON_SERDE
     public JsonValueKind ToJson(Utf8JsonWriter writer)
     {
         if(Direction == FlowDirection.None) {
@@ -75,6 +81,7 @@ public readonly record struct Flow
             }
         }
     }
+#endif
 
     internal FlowLayoutInfo NewChildrenFlowInfo(in RectF contentArea)
     {

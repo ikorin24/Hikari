@@ -5,7 +5,10 @@ using System.Text.Json;
 
 namespace Hikari.UI;
 
-public sealed class Panel : UIElement, IFromJson<Panel>
+public sealed class Panel : UIElement
+#if HIKARI_JSON_SERDE
+    , IFromJson<Panel>
+#endif
 {
     private PanelPseudoInfo? _hoverInfo;
     private PanelPseudoInfo? _activeInfo;
@@ -34,7 +37,9 @@ public sealed class Panel : UIElement, IFromJson<Panel>
 
     static Panel()
     {
+#if HIKARI_JSON_SERDE
         Serializer.RegisterConstructor(FromJson);
+#endif
         UITree.RegisterMaterial<Panel>(static screen =>
         {
             return PanelMaterial.Create(UIShader.CreateOrCached(screen)).Cast<IUIMaterial>();
@@ -42,15 +47,16 @@ public sealed class Panel : UIElement, IFromJson<Panel>
 
     }
 
-    public static Panel FromJson(in ObjectSource source) => new Panel(source);
-
     public Panel()
     {
     }
 
+#if HIKARI_JSON_SERDE
     private Panel(in ObjectSource source) : base(source)
     {
     }
+
+    public static Panel FromJson(in ObjectSource source) => new Panel(source);
 
     protected override void ToJsonProtected(Utf8JsonWriter writer)
     {
@@ -61,6 +67,7 @@ public sealed class Panel : UIElement, IFromJson<Panel>
     {
         base.ApplyDiffProtected(source);
     }
+#endif
 
     protected override PanelPseudoInfo? GetHoverProps() => _hoverInfo;
 
@@ -73,9 +80,12 @@ public sealed class Panel : UIElement, IFromJson<Panel>
 }
 
 public sealed record PanelPseudoInfo
-    : PseudoInfo,
-    IFromJson<PanelPseudoInfo>
+    : PseudoInfo
+#if HIKARI_JSON_SERDE
+    , IFromJson<PanelPseudoInfo>
+#endif
 {
+#if HIKARI_JSON_SERDE
     static PanelPseudoInfo() => Serializer.RegisterConstructor(FromJson);
 
     public static PanelPseudoInfo FromJson(in ObjectSource source)
@@ -102,6 +112,7 @@ public sealed record PanelPseudoInfo
             return source.TryGetProperty(propName, out var value) ? value.Instantiate<T>() : default(T?);
         }
     }
+#endif
 }
 
 file sealed class PanelMaterial : IUIMaterial

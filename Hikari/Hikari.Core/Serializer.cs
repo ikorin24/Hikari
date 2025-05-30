@@ -1,4 +1,5 @@
-﻿#nullable enable
+﻿#if HIKARI_JSON_SERDE
+#nullable enable
 using Hikari.UI;
 using Hikari.Collections;
 using System;
@@ -525,3 +526,4 @@ internal static class EnumJsonHelper
 
 // [NOTE] no covariant
 public delegate T CtorFunc<T>(in ObjectSource source);
+#endif

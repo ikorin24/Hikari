@@ -8,9 +8,12 @@ namespace Hikari.UI;
 
 [DebuggerDisplay("{DebugDisplay}")]
 public readonly struct Thickness
-    : IEquatable<Thickness>,
+    : IEquatable<Thickness>
+#if HIKARI_JSON_SERDE
+    ,
       IFromJson<Thickness>,
       IToJson
+#endif
 {
     public required float Top { get; init; }
     public required float Right { get; init; }
@@ -22,7 +25,9 @@ public readonly struct Thickness
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebugDisplay => $"{Top}px {Right}px {Bottom}px {Left}px";
 
+#if HIKARI_JSON_SERDE
     static Thickness() => Serializer.RegisterConstructor(FromJson);
+#endif
 
     [SetsRequiredMembers]
     public Thickness(float value)
@@ -68,6 +73,7 @@ public readonly struct Thickness
 
     public override int GetHashCode() => HashCode.Combine(Left, Top, Right, Bottom);
 
+#if HIKARI_JSON_SERDE
     public static Thickness FromJson(in ObjectSource source)
     {
         // 10
@@ -112,6 +118,7 @@ public readonly struct Thickness
         writer.WriteStringValue($"{Top}px {Right}px {Bottom}px {Left}px");
         return JsonValueKind.String;
     }
+#endif
 
     public static bool operator ==(Thickness left, Thickness right) => left.Equals(right);
 

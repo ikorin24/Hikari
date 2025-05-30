@@ -10,15 +10,21 @@ using Hikari.Collections;
 namespace Hikari.UI;
 
 public sealed class UIElementCollection
-    : IEnumerable<UIElement>,
+    : IEnumerable<UIElement>
+#if HIKARI_JSON_SERDE
+    ,
       IFromJson<UIElementCollection>,
       IToJson,
       IReactive
+#endif
 {
     private UIElement? _parent;
     private readonly List<UIElement> _children;
+
+#if HIKARI_JSON_SERDE
     private readonly List<IReactive> _reactives;
     private readonly Dictionary<string, IReactive> _dic;
+#endif
 
     internal UIElement? Parent
     {
@@ -46,21 +52,28 @@ public sealed class UIElementCollection
 
     public int Count => _children.Count;
 
+
+#if HIKARI_JSON_SERDE
     static UIElementCollection() => Serializer.RegisterConstructor(FromJson);
+#endif
 
     public UIElementCollection()
     {
         _children = new List<UIElement>();
+#if HIKARI_JSON_SERDE
         _reactives = new List<IReactive>();
         _dic = new Dictionary<string, IReactive>();
+#endif
     }
 
+#if HIKARI_JSON_SERDE
     private UIElementCollection(List<UIElement> inner, List<IReactive> reactives, Dictionary<string, IReactive> dic)
     {
         _children = inner;
         _reactives = reactives;
         _dic = dic;
     }
+#endif
 
     public void Add(UIElement element)
     {
@@ -93,6 +106,7 @@ public sealed class UIElementCollection
 
     IEnumerator IEnumerable.GetEnumerator() => _children.GetEnumerator();
 
+#if HIKARI_JSON_SERDE
     public static UIElementCollection FromJson(in ObjectSource source)
     {
         var list = new List<UIElement>(source.GetArrayLength());
@@ -172,6 +186,7 @@ public sealed class UIElementCollection
             reactives.AddRange(tmp);
         }
     }
+#endif
 
     public struct Enumerator : IEnumerator<UIElement>
     {

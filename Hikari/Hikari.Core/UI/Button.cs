@@ -6,7 +6,10 @@ using System.Text.Json;
 
 namespace Hikari.UI;
 
-public sealed class Button : UIElement, IFromJson<Button>
+public sealed class Button : UIElement
+#if HIKARI_JSON_SERDE
+    , IFromJson<Button>
+#endif
 {
     private ButtonInfo _info;
     private ButtonPseudoInfo? _hoverInfo;
@@ -60,7 +63,9 @@ public sealed class Button : UIElement, IFromJson<Button>
 
     static Button()
     {
+#if HIKARI_JSON_SERDE
         Serializer.RegisterConstructor(FromJson);
+#endif
         UITree.RegisterMaterial<Button>(static screen =>
         {
             return ButtonMaterial.Create(UIShader.CreateOrCached(screen)).Cast<IUIMaterial>();
@@ -68,6 +73,7 @@ public sealed class Button : UIElement, IFromJson<Button>
 
     }
 
+#if HIKARI_JSON_SERDE
     public static Button FromJson(in ObjectSource source) => new Button(source);
 
     protected override void ToJsonProtected(Utf8JsonWriter writer)
@@ -83,12 +89,14 @@ public sealed class Button : UIElement, IFromJson<Button>
         Text = source.ApplyProperty(nameof(Text), Text, () => ButtonInfo.DefaultText, out _);
         FontSize = source.ApplyProperty(nameof(FontSize), FontSize, () => ButtonInfo.DefaultFontSize, out _);
     }
+#endif
 
     public Button() : base()
     {
         _info = ButtonInfo.Default;
     }
 
+#if HIKARI_JSON_SERDE
     private Button(in ObjectSource source) : base(source)
     {
         _info = ButtonInfo.Default;
@@ -105,6 +113,7 @@ public sealed class Button : UIElement, IFromJson<Button>
             _activeInfo = ButtonPseudoInfo.FromJson(active);
         }
     }
+#endif
 
     protected override ButtonPseudoInfo? GetHoverProps() => _hoverInfo;
 
@@ -124,14 +133,19 @@ public sealed class Button : UIElement, IFromJson<Button>
 }
 
 public sealed record ButtonPseudoInfo
-    : PseudoInfo,
-    IFromJson<ButtonPseudoInfo>
+    : PseudoInfo
+#if HIKARI_JSON_SERDE
+    , IFromJson<ButtonPseudoInfo>
+#endif
 {
+#if HIKARI_JSON_SERDE
     static ButtonPseudoInfo() => Serializer.RegisterConstructor(FromJson);
+#endif
 
     public string? Text { get; init; }
     public FontSize? FontSize { get; init; }
 
+#if HIKARI_JSON_SERDE
     public static ButtonPseudoInfo FromJson(in ObjectSource source)
     {
         return new ButtonPseudoInfo
@@ -174,6 +188,7 @@ public sealed record ButtonPseudoInfo
             writer.Write(nameof(FontSize), FontSize.Value);
         }
     }
+#endif
 }
 
 internal record struct ButtonInfo

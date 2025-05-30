@@ -8,9 +8,12 @@ namespace Hikari.UI;
 
 [DebuggerDisplay("{DebugView}")]
 public readonly struct LayoutLength
-    : IEquatable<LayoutLength>,
+    : IEquatable<LayoutLength>
+#if HIKARI_JSON_SERDE
+    ,
       IFromJson<LayoutLength>,
       IToJson
+#endif
 {
     public required float Value { get; init; }
     public required LayoutLengthType Type { get; init; }
@@ -23,7 +26,9 @@ public readonly struct LayoutLength
         _ => "?",
     };
 
+#if HIKARI_JSON_SERDE
     static LayoutLength() => Serializer.RegisterConstructor(FromJson);
+#endif
 
     [SetsRequiredMembers]
     public LayoutLength(float value, LayoutLengthType type)
@@ -37,6 +42,8 @@ public readonly struct LayoutLength
         [DoesNotReturn] static void ThrowOutOfRange() => throw new ArgumentOutOfRangeException(nameof(value));
     }
 
+
+#if HIKARI_JSON_SERDE
     public static LayoutLength FromJson(in ObjectSource source)
     {
         // 10
@@ -88,6 +95,7 @@ public readonly struct LayoutLength
             }
         }
     }
+#endif
 
     public static LayoutLength Length(float length) => new LayoutLength(length, LayoutLengthType.Length);
 

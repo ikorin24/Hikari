@@ -1,4 +1,5 @@
-﻿#nullable enable
+﻿#if HIKARI_JSON_SERDE
+#nullable enable
 using System;
 using System.Buffers;
 using System.Collections;
@@ -543,3 +544,4 @@ file static class JsonElementEqualityComparer
         public readonly int _idx;
     }
 }
+#endif

@@ -10,7 +10,9 @@ public sealed class UITree
     private readonly Screen _screen;
     private UIElement? _rootElement;
     private bool _isLayoutDirty = false;
+#if HIKARI_JSON_SERDE
     private IReactive? _root;
+#endif
 
     private static readonly ConcurrentDictionary<Type, Func<Screen, Own<IUIMaterial>>> _materialProviders = new();
 
@@ -100,6 +102,7 @@ public sealed class UITree
         });
     }
 
+#if HIKARI_JSON_SERDE
     public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] ObjectSourceBuilder builder)
     {
         var source = builder.ToSourceClear();
@@ -130,4 +133,5 @@ public sealed class UITree
             }
         }
     }
+#endif
 }

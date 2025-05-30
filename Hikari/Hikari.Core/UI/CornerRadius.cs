@@ -7,10 +7,12 @@ using System.Text.Json;
 namespace Hikari.UI;
 
 [DebuggerDisplay("{DebugView}")]
-public readonly struct CornerRadius
-    : IEquatable<CornerRadius>,
-      IFromJson<CornerRadius>,
-      IToJson
+public readonly struct CornerRadius :
+#if HIKARI_JSON_SERDE
+    IFromJson<CornerRadius>,
+    IToJson,
+#endif
+    IEquatable<CornerRadius>
 {
     public required float TopLeft { get; init; }
     public required float TopRight { get; init; }
@@ -22,7 +24,9 @@ public readonly struct CornerRadius
 
     public static CornerRadius Zero => default;
 
+#if HIKARI_JSON_SERDE
     static CornerRadius() => Serializer.RegisterConstructor(FromJson);
+#endif
 
     [SetsRequiredMembers]
     public CornerRadius(float value)
@@ -78,6 +82,7 @@ public readonly struct CornerRadius
         return HashCode.Combine(TopLeft, TopRight, BottomRight, BottomLeft);
     }
 
+#if HIKARI_JSON_SERDE
     public static CornerRadius FromJson(in ObjectSource source)
     {
         switch(source.ValueKind) {
@@ -116,6 +121,7 @@ public readonly struct CornerRadius
         writer.WriteStringValue($"{TopLeft}px {TopRight}px {BottomRight}px {BottomLeft}px");
         return JsonValueKind.String;
     }
+#endif
 
     public Vector4 ToVector4() => new Vector4(TopLeft, TopRight, BottomRight, BottomLeft);
 

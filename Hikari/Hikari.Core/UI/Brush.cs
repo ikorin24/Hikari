@@ -13,10 +13,12 @@ using System.Runtime.InteropServices;
 namespace Hikari.UI;
 
 [DebuggerDisplay("{DebugView}")]
-public readonly struct Brush
-    : IFromJson<Brush>,
-      IToJson,
-      IEquatable<Brush>
+public readonly struct Brush :
+#if HIKARI_JSON_SERDE
+    IFromJson<Brush>,
+    IToJson,
+#endif
+    IEquatable<Brush>
 {
     private readonly BrushType _type;
     private readonly Color4 _solidColor;
@@ -37,7 +39,9 @@ public readonly struct Brush
 
     public BrushType Type => _type;
 
+#if HIKARI_JSON_SERDE
     static Brush() => Serializer.RegisterConstructor(FromJson);
+#endif
 
     private Brush(Color4 solidColor)
     {
@@ -111,6 +115,7 @@ public readonly struct Brush
         return new Brush(directionRadian, gradientStops.ToArray());
     }
 
+#if HIKARI_JSON_SERDE
     public static Brush FromJson(in ObjectSource source)
     {
         // "#ffee23"
@@ -152,6 +157,7 @@ public readonly struct Brush
         writer.WriteEndObject();
         return JsonValueKind.Object;
     }
+#endif
 
     internal int GetBufferDataSize() => _type switch
     {

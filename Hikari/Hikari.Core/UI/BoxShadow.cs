@@ -6,9 +6,12 @@ using System.Text.Json;
 namespace Hikari.UI;
 
 public readonly struct BoxShadow
-    : IEquatable<BoxShadow>,
+    : IEquatable<BoxShadow>
+#if HIKARI_JSON_SERDE
+    ,
       IFromJson<BoxShadow>,
       IToJson
+#endif
 {
     private readonly float _offsetX;
     private readonly float _offsetY;
@@ -74,7 +77,9 @@ public readonly struct BoxShadow
 
     public static BoxShadow None => default;
 
+#if HIKARI_JSON_SERDE
     static BoxShadow() => Serializer.RegisterConstructor(FromJson);
+#endif
 
     public BoxShadow()
     {
@@ -97,6 +102,7 @@ public readonly struct BoxShadow
 
     public override int GetHashCode() => HashCode.Combine(OffsetX, OffsetY, BlurRadius, SpreadRadius, Color, IsInset);
 
+#if HIKARI_JSON_SERDE
     public static BoxShadow FromJson(in ObjectSource source)
     {
         switch(source.ValueKind) {
@@ -206,6 +212,7 @@ public readonly struct BoxShadow
         }
         return JsonValueKind.String;
     }
+#endif
 
     public static bool operator ==(BoxShadow left, BoxShadow right) => left.Equals(right);
 

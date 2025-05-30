@@ -6,7 +6,10 @@ using System.Text.Json;
 
 namespace Hikari.UI;
 
-public sealed class Label : UIElement, IFromJson<Label>
+public sealed class Label : UIElement
+#if HIKARI_JSON_SERDE
+    , IFromJson<Label>
+#endif
 {
     private LabelInfo _info;
     private LabelPseudoInfo? _hoverInfo;
@@ -76,13 +79,16 @@ public sealed class Label : UIElement, IFromJson<Label>
 
     static Label()
     {
+#if HIKARI_JSON_SERDE
         Serializer.RegisterConstructor(FromJson);
+#endif
         UITree.RegisterMaterial<Label>(static screen =>
         {
             return LabelMaterial.Create(UIShader.CreateOrCached(screen)).Cast<IUIMaterial>();
         });
     }
 
+#if HIKARI_JSON_SERDE
     public static Label FromJson(in ObjectSource source) => new Label(source);
 
     protected override void ToJsonProtected(Utf8JsonWriter writer)
@@ -98,12 +104,14 @@ public sealed class Label : UIElement, IFromJson<Label>
         Text = source.ApplyProperty(nameof(Text), Text, () => LabelInfo.DefaultText, out _);
         FontSize = source.ApplyProperty(nameof(FontSize), FontSize, () => LabelInfo.DefaultFontSize, out _);
     }
+#endif
 
     public Label() : base()
     {
         _info = LabelInfo.Default;
     }
 
+#if HIKARI_JSON_SERDE
     private Label(in ObjectSource source) : base(source)
     {
         _info = LabelInfo.Default;
@@ -120,16 +128,23 @@ public sealed class Label : UIElement, IFromJson<Label>
             _activeInfo = LabelPseudoInfo.FromJson(active);
         }
     }
+#endif
 }
 
 public sealed record LabelPseudoInfo
-    : PseudoInfo,
-    IFromJson<LabelPseudoInfo>
+    : PseudoInfo
+#if HIKARI_JSON_SERDE
+    , IFromJson<LabelPseudoInfo>
+#endif
 {
+#if HIKARI_JSON_SERDE
     static LabelPseudoInfo() => Serializer.RegisterConstructor(FromJson);
+#endif
 
     public string? Text { get; init; }
     public FontSize? FontSize { get; init; }
+
+#if HIKARI_JSON_SERDE
 
     public static LabelPseudoInfo FromJson(in ObjectSource source)
     {
@@ -173,6 +188,7 @@ public sealed record LabelPseudoInfo
             writer.Write(nameof(FontSize), FontSize.Value);
         }
     }
+#endif
 }
 
 internal record struct LabelInfo
