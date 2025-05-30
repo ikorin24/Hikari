@@ -4,16 +4,29 @@
     <TargetFramework>net9</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>Hikari</RootNamespace>
+    <RustProjectPath>..\..\corehikari\</RustProjectPath>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <RustTarget>x86_64-pc-windows-msvc</RustTarget>
+    <DeploymentLibPath>native\x86_64-windows\corehikari.dll</DeploymentLibPath>
+  </PropertyGroup>
+  
   <ItemGroup>
-    <!--<None Include="..\native\x86_64-pc-windows-msvc\corehikari.dll" Link="native\x86_64-windows\corehikari.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>-->
-    <None Include="..\..\corehikari\output\x86_64-pc-windows-msvc\corehikari.dll" Link="native\x86_64-windows\corehikari.dll">
+    <None Include="$(RustProjectPath)target\$(RustTarget)\release\corehikari.dll" Link="$(DeploymentLibPath)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <Target Name="Build Native Library" BeforeTargets="Build" Condition="'$(RustTarget)' != ''" Inputs="$(RustProjectPath)**\*;$(RustProjectPath)\src\**\*.*;" Outputs="$(DeploymentLibPath)">
+    <Message Text="------ Build Rust native library (target: '$(RustTarget)') ------" Importance="high" />
+    <Exec Command="cargo build --release --target $(RustTarget)" WorkingDirectory="$(RustProjectPath)" />
+  </Target>
+
+  <Target Name="Clean Native Library" AfterTargets="Clean" Condition="'$(RustTarget)' != ''">
+    <Message Text="------ Clean Rust native library (target: '$(RustTarget)') ------" Importance="high" />
+    <Exec Command="cargo clean --release --target $(RustTarget)" WorkingDirectory="$(RustProjectPath)" />
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="Utf8StringInterpolation" />
