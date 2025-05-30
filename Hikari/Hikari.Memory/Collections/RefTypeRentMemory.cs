@@ -120,9 +120,9 @@ public readonly struct RefTypeRentMemory<T> :
             Debug.Assert(_array is not null);
             AsSpan().Clear();           // All elements MUST be cleared, or elements are not collected by GC.
             ArrayMemoryPool.ReturnRefTypeMemory(_array, _start);
-            Unsafe.AsRef<object?[]?>(_array) = null;
-            Unsafe.AsRef(_start) = 0;
-            Unsafe.AsRef(_length) = 0;
+            Unsafe.AsRef<object?[]?>(in _array) = null;
+            Unsafe.AsRef(in _start) = 0;
+            Unsafe.AsRef(in _length) = 0;
         }
     }
 

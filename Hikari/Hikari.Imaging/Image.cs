@@ -134,7 +134,7 @@ namespace Hikari.Imaging
         public void Dispose()
         {
             var source = Interlocked.Exchange(ref Unsafe.AsRef(in _source), null);
-            Unsafe.AsRef(_token) = 0;
+            Unsafe.AsRef(in _token) = 0;
             source?.Dispose();
         }
 

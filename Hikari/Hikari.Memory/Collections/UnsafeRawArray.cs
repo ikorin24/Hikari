@@ -123,8 +123,8 @@ public readonly unsafe struct UnsafeRawArray<T> :
     public void Dispose()
     {
         Marshal.FreeHGlobal(Ptr);
-        Unsafe.AsRef(Length) = 0;
-        Unsafe.AsRef(Ptr) = default;
+        Unsafe.AsRef(in Length) = 0;
+        Unsafe.AsRef(in Ptr) = default;
     }
 
     /// <summary>Copy to managed memory</summary>

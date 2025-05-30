@@ -90,10 +90,10 @@ impl Engine {
     //     f(screen_id, *key, pressed)
     // }
 
-    fn event_char_received(&self, screen_id: ScreenId, c: char) {
-        let f = self.config.event_char_received;
-        f(screen_id, c)
-    }
+    // fn event_char_received(&self, screen_id: ScreenId, c: char) {
+    //     let f = self.config.event_char_received;
+    //     f(screen_id, c as u32)
+    // }
 
     fn event_mouse_button(
         &self,

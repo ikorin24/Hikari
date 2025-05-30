@@ -105,9 +105,11 @@ partial class MeshHelper
 
     private readonly record struct IndexTriangle<TIndex> where TIndex : unmanaged, INumberBase<TIndex>
     {
+#pragma warning disable 0649
         public readonly TIndex I0;
         public readonly TIndex I1;
         public readonly TIndex I2;
+#pragma warning restore 0649
 
         public (usize I0, usize I1, usize i2) ToUsize()
         {

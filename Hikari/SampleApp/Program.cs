@@ -36,7 +36,7 @@ internal class Program
         screen.Lights.DirectionalLight.SetLightData(vec.Normalized(), Color3.White);
     }
 
-    private static async UniTaskVoid OnInitialized(Screen screen)
+    private static async void OnInitialized(Screen screen)
     {
         var app = App.BuildPipelines(screen);
         screen.Title = "SampleApp";

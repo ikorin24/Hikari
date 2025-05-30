@@ -148,10 +148,10 @@ public readonly struct ValueTypeRentMemory<T> :
         }
         else if(_length != 0) {
             ArrayMemoryPool.ReturnValueTypeMemory(_array, (int)_start);
-            Unsafe.AsRef<byte[]?>(_array) = null;
+            Unsafe.AsRef<byte[]?>(in _array) = null;
         }
-        Unsafe.AsRef(_start) = nint.Zero;
-        Unsafe.AsRef(_length) = 0;
+        Unsafe.AsRef(in _start) = nint.Zero;
+        Unsafe.AsRef(in _length) = 0;
     }
 
     public override bool Equals(object? obj) => obj is ValueTypeRentMemory<T> memory && Equals(memory);

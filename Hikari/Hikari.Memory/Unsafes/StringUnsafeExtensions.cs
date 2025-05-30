@@ -43,7 +43,7 @@ internal static class StringUnsafeExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<char> SliceUnsafe(this ReadOnlySpan<char> source, int start)
     {
-        return MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(source.At(start)), source.Length - start);
+        return MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in source.At(start)), source.Length - start);
     }
 
     /// <summary>Get slice of <see cref="ReadOnlySpan{T}"/> of type <see cref="char"/>.</summary>
@@ -55,6 +55,6 @@ internal static class StringUnsafeExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlySpan<char> SliceUnsafe(this ReadOnlySpan<char> source, int start, int length)
     {
-        return MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(source.At(start)), length);
+        return MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in source.At(start)), length);
     }
 }

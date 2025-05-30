@@ -115,21 +115,66 @@ public readonly partial struct ObjectSource : IEquatable<ObjectSource>
 
     public T GetNumber<T>() where T : struct, System.Numerics.INumber<T>
     {
-        if(typeof(T) == typeof(Decimal)) { return UnsafeEx.As<Decimal, T>(_element.GetDecimal()); }
-        if(typeof(T) == typeof(Byte)) { return UnsafeEx.As<Byte, T>(_element.GetByte()); }
-        if(typeof(T) == typeof(Char)) { return UnsafeEx.As<Char, T>((char)_element.GetInt32()); }
-        if(typeof(T) == typeof(Double)) { return UnsafeEx.As<Double, T>(_element.GetDouble()); }
-        if(typeof(T) == typeof(Half)) { return UnsafeEx.As<Half, T>((Half)_element.GetSingle()); }
-        if(typeof(T) == typeof(Int16)) { return UnsafeEx.As<Int16, T>(_element.GetInt16()); }
-        if(typeof(T) == typeof(Int32)) { return UnsafeEx.As<Int32, T>(_element.GetInt32()); }
-        if(typeof(T) == typeof(Int64)) { return UnsafeEx.As<Int64, T>(_element.GetInt64()); }
-        if(typeof(T) == typeof(IntPtr)) { return UnsafeEx.As<IntPtr, T>((IntPtr)_element.GetInt64()); }
-        if(typeof(T) == typeof(SByte)) { return UnsafeEx.As<SByte, T>(_element.GetSByte()); }
-        if(typeof(T) == typeof(Single)) { return UnsafeEx.As<Single, T>(_element.GetSingle()); }
-        if(typeof(T) == typeof(UInt16)) { return UnsafeEx.As<UInt16, T>(_element.GetUInt16()); }
-        if(typeof(T) == typeof(UInt32)) { return UnsafeEx.As<UInt32, T>(_element.GetUInt32()); }
-        if(typeof(T) == typeof(UInt64)) { return UnsafeEx.As<UInt64, T>(_element.GetUInt64()); }
-        if(typeof(T) == typeof(UIntPtr)) { return UnsafeEx.As<UIntPtr, T>((UIntPtr)_element.GetUInt64()); }
+        if(typeof(T) == typeof(Decimal)) {
+            var value = _element.GetDecimal();
+            return UnsafeEx.As<Decimal, T>(in value);
+        }
+        if(typeof(T) == typeof(Byte)) {
+            var value = _element.GetByte();
+            return UnsafeEx.As<Byte, T>(in value);
+        }
+        if(typeof(T) == typeof(Char)) {
+            var value = (char)_element.GetInt32();
+            return UnsafeEx.As<Char, T>(in value);
+        }
+        if(typeof(T) == typeof(Double)) {
+            var value = _element.GetDouble();
+            return UnsafeEx.As<Double, T>(in value);
+        }
+        if(typeof(T) == typeof(Half)) {
+            var value = (Half)_element.GetSingle();
+            return UnsafeEx.As<Half, T>(in value);
+        }
+        if(typeof(T) == typeof(Int16)) {
+            var value = _element.GetInt16();
+            return UnsafeEx.As<Int16, T>(in value);
+        }
+        if(typeof(T) == typeof(Int32)) {
+            var value = _element.GetInt32();
+            return UnsafeEx.As<Int32, T>(in value);
+        }
+        if(typeof(T) == typeof(Int64)) {
+            var value = _element.GetInt64();
+            return UnsafeEx.As<Int64, T>(in value);
+        }
+        if(typeof(T) == typeof(IntPtr)) {
+            var value = (IntPtr)_element.GetInt64();
+            return UnsafeEx.As<IntPtr, T>(in value);
+        }
+        if(typeof(T) == typeof(SByte)) {
+            var value = _element.GetSByte();
+            return UnsafeEx.As<SByte, T>(in value);
+        }
+        if(typeof(T) == typeof(Single)) {
+            var value = _element.GetSingle();
+            return UnsafeEx.As<Single, T>(in value);
+        }
+        if(typeof(T) == typeof(UInt16)) {
+            var value = _element.GetUInt16();
+            return UnsafeEx.As<UInt16, T>(in value);
+        }
+        if(typeof(T) == typeof(UInt32)) {
+            var value = _element.GetUInt32();
+            return UnsafeEx.As<UInt32, T>(in value);
+        }
+        if(typeof(T) == typeof(UInt64)) {
+            var value = _element.GetUInt64();
+            return UnsafeEx.As<UInt64, T>(in value);
+        }
+        if(typeof(T) == typeof(UIntPtr)) {
+            var value = (UIntPtr)_element.GetUInt64();
+            return UnsafeEx.As<UIntPtr, T>(in value);
+        }
 
         // Int128, UInt128, NFloat
         throw new NotSupportedException($"{typeof(T)} is not supported");

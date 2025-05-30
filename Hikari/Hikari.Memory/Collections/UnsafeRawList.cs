@@ -290,7 +290,7 @@ public unsafe readonly struct UnsafeRawList<T> :
         if(_ptr == nint.Zero) { return; }
         ArrayRef().Dispose();
         Marshal.FreeHGlobal(_ptr);
-        Unsafe.AsRef(_ptr) = default;
+        Unsafe.AsRef(in _ptr) = default;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

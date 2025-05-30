@@ -17,9 +17,9 @@ public static class UnsafeEx
     /// <param name="source">source reference</param>
     /// <returns>readonly reference to a value of type <typeparamref name="TTo"/></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref readonly TTo As<TFrom, TTo>(in TFrom source)
+    public static ref readonly TTo As<TFrom, TTo>(scoped ref readonly TFrom source)
     {
-        return ref Unsafe.As<TFrom, TTo>(ref Unsafe.AsRef(source));
+        return ref Unsafe.As<TFrom, TTo>(ref Unsafe.AsRef(in source));
     }
 
     /// <summary>Determines whether the specified references point to the same location.</summary>
@@ -28,13 +28,13 @@ public static class UnsafeEx
     /// <param name="right">The second reference to compare.</param>
     /// <returns>true if left and right point to the same location; otherwise, false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool AreSame<T>(in T left, in T right)
+    public static bool AreSame<T>(scoped ref readonly T left, scoped ref readonly T right)
     {
-        return Unsafe.AreSame(ref Unsafe.AsRef(left), ref Unsafe.AsRef(right));
+        return Unsafe.AreSame(ref Unsafe.AsRef(in left), ref Unsafe.AsRef(in right));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static unsafe void* AsPointer<T>(in T value)
+    public static unsafe void* AsPointer<T>(ref readonly T value)
     {
         return Unsafe.AsPointer(ref Unsafe.AsRef(in value));
     }

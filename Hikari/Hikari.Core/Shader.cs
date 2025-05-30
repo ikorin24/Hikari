@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Immutable;
+using System.Threading;
 
 namespace Hikari;
 
@@ -33,12 +34,13 @@ public sealed partial class Shader
 
     private void Release()
     {
-        _released = true;
         Release(true);
     }
 
     private void Release(bool manualRelease)
     {
+        if(Interlocked.Exchange(ref _released, true) == false) {
+        }
     }
 
     internal void PrepareForRender(FrameObject frameObject, IMaterial material)

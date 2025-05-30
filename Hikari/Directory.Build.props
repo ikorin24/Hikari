@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>Nullable,CS9193,CS9191</WarningsAsErrors>
-    <LangVersion>12</LangVersion>
+    <LangVersion>13</LangVersion>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 

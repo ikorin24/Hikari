@@ -183,7 +183,7 @@ namespace Hikari.Imaging
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<ColorByte> GetPixels()
         {
-            return MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(_firstRowLine.GetReference()), _firstRowLine.Length * _height);
+            return MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in _firstRowLine.GetReference()), _firstRowLine.Length * _height);
         }
 
         /// <summary>Get span of the specified row line pixels.</summary>
@@ -195,7 +195,7 @@ namespace Hikari.Imaging
             if((uint)row >= _height) {
                 ThrowHelper.ThrowArgOutOfRange(nameof(row));
             }
-            return MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(_firstRowLine.At(row * Width)), Width);
+            return MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in _firstRowLine.At(row * Width)), Width);
         }
 
         /// <summary>Create copy image</summary>

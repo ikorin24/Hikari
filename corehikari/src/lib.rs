@@ -1731,60 +1731,6 @@ impl Slice<'_, u8> {
 }
 
 #[repr(C)]
-#[derive(Debug)]
-pub(crate) struct DrawBufferArg<'a> {
-    pub vertex_buffer: SlotBufSlice<'a>,
-    pub vertices_range: RangeU32,
-    pub instances_range: RangeU32,
-}
-
-#[repr(C)]
-#[derive(Debug)]
-pub(crate) struct DrawBufferIndexedArg<'a> {
-    pub vertex_buffer_slice: BufferSlice<'a>,
-    pub slot: u32,
-    pub index_buffer_slice: BufferSlice<'a>,
-    pub index_format: wgpu::IndexFormat,
-    pub index_start: u32,
-    pub index_end_excluded: u32,
-    pub instance_start: u32,
-    pub instance_end_excluded: u32,
-}
-
-#[repr(C)]
-#[derive(Debug)]
-pub(crate) struct DrawBuffersIndexedArg<'a> {
-    pub vertex_buffers: Slice<'a, SlotBufSlice<'a>>,
-    pub index_buffer_slice: BufferSlice<'a>,
-    pub index_format: wgpu::IndexFormat,
-    pub index_start: u32,
-    pub index_end_excluded: u32,
-    pub instance_start: u32,
-    pub instance_end_excluded: u32,
-}
-
-#[repr(C)]
-#[derive(Debug)]
-pub(crate) struct SlotBufSlice<'a> {
-    pub buffer_slice: BufferSlice<'a>,
-    pub slot: u32,
-}
-
-#[repr(C)]
-#[derive(Debug)]
-pub(crate) struct IndexBufSlice<'a> {
-    pub buffer_slice: BufferSlice<'a>,
-    pub format: wgpu::IndexFormat,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct RangeU64 {
-    pub start: u64,
-    pub end_excluded: u64,
-}
-
-#[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct RangeU32 {
     pub start: u32,
@@ -1976,7 +1922,7 @@ pub(crate) type ResizedEventFn = extern "cdecl" fn(screen_id: ScreenId, width: u
 // TODO:
 pub(crate) type KeyboardEventFn = extern "cdecl" fn(screen_id: ScreenId, key: u32, pressed: bool);
 
-pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen_id: ScreenId, input: char);
+pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen_id: ScreenId, input: u32);
 pub(crate) type MouseButtonEventFn =
     extern "cdecl" fn(screen_id: ScreenId, button: MouseButton, pressed: bool);
 pub(crate) type ImeInputEventFn = extern "cdecl" fn(screen_id: ScreenId, input: &ImeInputData);

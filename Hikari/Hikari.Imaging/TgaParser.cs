@@ -414,9 +414,9 @@ namespace Hikari.Imaging
         public void Dispose()
         {
             // Not dispose inner stream
-            Unsafe.AsRef(_stream) = null!;
+            Unsafe.AsRef(in _stream) = null!;
             ArrayPool<byte>.Shared.Return(_buf);
-            Unsafe.AsRef(_buf) = null!;
+            Unsafe.AsRef(in _buf) = null!;
         }
 
         public override bool Equals(object? obj) => obj is ZBinaryReader reader && Equals(reader);
