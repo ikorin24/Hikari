@@ -10,13 +10,7 @@ public sealed class App
 
     public static App BuildPipelines(Screen screen)
     {
-        var gBuffer = GBufferProvider.CreateScreenSize(screen,
-        [
-            TextureFormat.Rgba32Float,
-            TextureFormat.Rgba32Float,
-            TextureFormat.Rgba32Float,
-            TextureFormat.Rgba32Float,
-        ]).DisposeOn(screen.Closed);
+        var gBuffer = GBufferProvider.CreateScreenSize(screen).DisposeOn(screen.Closed);
 
         screen.Scheduler.SetRenderPass([
             .. screen.Lights.DirectionalLight.ShadowMapPassDefinitions,
@@ -33,7 +27,6 @@ public sealed class App
                             new ColorAttachment { Target = textures[0], LoadOp = ColorBufferLoadOp.Clear(), },
                             new ColorAttachment { Target = textures[1], LoadOp = ColorBufferLoadOp.Clear(), },
                             new ColorAttachment { Target = textures[2], LoadOp = ColorBufferLoadOp.Clear(), },
-                            new ColorAttachment { Target = textures[3], LoadOp = ColorBufferLoadOp.Clear(), },
                         ],
                         new DepthStencilAttachment
                         {

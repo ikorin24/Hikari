@@ -8,7 +8,7 @@ namespace Hikari;
 public sealed partial class Shader
 {
     private readonly Screen _screen;
-    private readonly ImmutableArray<ShaderPassData> _materialPassData;
+    private readonly ImmutableArray<ShaderPassData> _shaderPassData;
     private EventSource<Shader> _disposed;
     private bool _released;
     private readonly Action<FrameObject, IMaterial>? _prepareForRender;
@@ -17,7 +17,7 @@ public sealed partial class Shader
 
     public Screen Screen => _screen;
 
-    public ReadOnlySpan<ShaderPassData> ShaderPasses => _materialPassData.AsSpan();
+    public ReadOnlySpan<ShaderPassData> ShaderPasses => _shaderPassData.AsSpan();
 
     [Owned(nameof(Release))]
     private Shader(Screen screen, ReadOnlySpan<ShaderPassDescriptor> passes, Action<FrameObject, IMaterial>? prepareForRender)
@@ -26,9 +26,9 @@ public sealed partial class Shader
         _screen = screen;
         var array = new ShaderPassData[passes.Length];
         for(var i = 0; i < passes.Length; i++) {
-            array[i] = passes[i].CreateMaterialPassData(this, i, Disposed);
+            array[i] = passes[i].CreateShaderPassData(this, i, Disposed);
         }
-        _materialPassData = array.AsImmutableArray();
+        _shaderPassData = array.AsImmutableArray();
         _prepareForRender = prepareForRender;
     }
 

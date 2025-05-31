@@ -35,11 +35,9 @@ public static class DeferredProcessShader
         struct LightData {
             ambient_strength: f32,
         }
-        @group(0) @binding(0) var g_sampler: sampler;
-        @group(0) @binding(1) var g0: texture_2d<f32>;
-        @group(0) @binding(2) var g1: texture_2d<f32>;
-        @group(0) @binding(3) var g2: texture_2d<f32>;
-        @group(0) @binding(4) var g3: texture_2d<f32>;
+        @group(0) @binding(0) var g0: texture_2d<f32>;
+        @group(0) @binding(1) var g1: texture_2d<f32>;
+        @group(0) @binding(2) var g2: texture_2d<u32>;
         @group(1) @binding(0) var<uniform> camera: CameraMatrix;
         @group(2) @binding(0) var<storage, read> dir_light: DirLightData;
         @group(2) @binding(1) var<storage, read> light: LightData;
@@ -61,20 +59,26 @@ public static class DeferredProcessShader
         const INV_U32_MAX_VALUE = 2.3283064E-10;    // 1.0 / u32.max_value
 
         @fragment fn fs_main(in: V2F) -> Fout {
-            let c0: vec4<f32> = textureSample(g0, g_sampler, in.uv);
-            let c1: vec4<f32> = textureSample(g1, g_sampler, in.uv);
-            let c2: vec4<f32> = textureSample(g2, g_sampler, in.uv);
-            let c3: vec4<f32> = textureSample(g3, g_sampler, in.uv);
+            let g_buffer_size: vec2<u32> = textureDimensions(g0, 0);
+            let texel_pos: vec2<u32> = vec2<u32>(vec2<f32>(g_buffer_size) * in.uv);
+            let c0: vec4<f32> = textureLoad(g0, texel_pos, 0);
+            let c1: vec4<f32> = textureLoad(g1, texel_pos, 0);
+            let c2: vec4<u32> = textureLoad(g2, texel_pos, 0);
             let pos_camera_coord: vec3<f32> = c0.rgb;
             let n: vec3<f32> = c1.rgb;    // normal direction in eye space, normalized
-            let albedo: vec3<f32> = c2.rgb;
-            let metallic: f32 = c0.a;
-            let roughness: f32 = c1.a;
+            let albedo: vec4<f32> = vec4<f32>(
+                f32(c2.r & 0xFF) / 255.0,
+                f32((c2.r & 0xFF00) >> 8) / 255.0,
+                f32(c2.g & 0xFF) / 255.0,
+                f32((c2.g & 0xFF00) >> 8) / 255.0,
+            );
+            let metallic: f32 = f32(c2.b & 0xFF) / 255.0;
+            let roughness: f32 = f32((c2.b & 0xFF00) >> 8) / 255.0;
             let alpha: f32 = roughness * roughness;
             let v: vec3<f32> = -normalize(pos_camera_coord);    // camera direction in camera space, normalized
             let dot_nv: f32 = abs(dot(n, v));
             let reflectivity: f32 = mix(DIELECTRIC_F0, 1.0, metallic);
-            let f0: vec3<f32> = mix(vec3<f32>(DIELECTRIC_F0, DIELECTRIC_F0, DIELECTRIC_F0), albedo, metallic);
+            let f0: vec3<f32> = mix(vec3<f32>(DIELECTRIC_F0, DIELECTRIC_F0, DIELECTRIC_F0), albedo.rgb, metallic);
 
             var fragColor: vec3<f32>;
 
@@ -88,7 +92,7 @@ public static class DeferredProcessShader
 
             // Diffuse
             // You can use Burley instead of Lambert.
-            let diffuse: vec3<f32> = (1.0 - reflectivity) * Lambert() * irradiance * albedo;
+            let diffuse: vec3<f32> = (1.0 - reflectivity) * Lambert() * irradiance * albedo.rgb;
 
             // Specular
             let dot_nh: f32 = dot(n, h);
@@ -137,7 +141,7 @@ public static class DeferredProcessShader
                 visibility = 1.0 - (1.0 - visibility) * coeff;
             }
 
-            fragColor = (diffuse + specular) * visibility + albedo * light.ambient_strength;
+            fragColor = (diffuse + specular) * visibility + albedo.rgb * light.ambient_strength;
 
             //fragColor *= c3.r;  // ao
             let ssao: f32 = 1.0;
@@ -303,7 +307,7 @@ public static class DeferredProcessShader
         """u8.ToImmutableArray();
     });
 
-    public static Own<Shader> Create(Screen screen)
+    public static Own<Shader> Create(Screen screen, IGBufferProvider gBuffer)
     {
         var shader = Shader.Create(
             screen,
@@ -312,7 +316,16 @@ public static class DeferredProcessShader
                 {
                     Source = ShaderSource.Value,
                     SortOrder = 2000,
-                    LayoutDescriptor = BuildPipelineLayout(screen, out var disposable),
+                    LayoutDescriptor = new()
+                    {
+                        BindGroupLayouts =
+                        [
+                            gBuffer.BindGroupLayout,
+                            screen.Camera.CameraDataBindGroupLayout,
+                            screen.Lights.DataBindGroup.Layout,
+                            screen.Lights.DirectionalLight.ShadowMapBindGroup.Layout,
+                        ],
+                    },
                     PipelineDescriptorFactory = PipelineFactory,
                     PassKind = PassKind.Surface,
                     OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, IMaterial material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
@@ -326,8 +339,6 @@ public static class DeferredProcessShader
                 },
             ],
             null);
-        var shaderValue = shader.AsValue();
-        disposable.DisposeOn(shaderValue.Disposed);
         return shader;
     }
 
@@ -382,64 +393,6 @@ public static class DeferredProcessShader
             },
             Multisample = MultisampleState.Default,
             Multiview = 0,
-        };
-    }
-
-    private static PipelineLayoutDescriptor BuildPipelineLayout(Screen screen, out DisposableBag disposable)
-    {
-        disposable = new DisposableBag();
-        return new()
-        {
-            BindGroupLayouts =
-            [
-                BindGroupLayout.Create(screen, new()
-                {
-                    Entries =
-                    [
-                        BindGroupLayoutEntry.Sampler(0, ShaderStages.Fragment, SamplerBindingType.NonFiltering),
-                        BindGroupLayoutEntry.Texture(1, ShaderStages.Fragment, new()
-                        {
-                            Multisampled = false,
-                            ViewDimension = TextureViewDimension.D2,
-                            SampleType = TextureSampleType.FloatNotFilterable,
-                        }),
-                        BindGroupLayoutEntry.Texture(2, ShaderStages.Fragment, new()
-                        {
-                            Multisampled = false,
-                            ViewDimension = TextureViewDimension.D2,
-                            SampleType = TextureSampleType.FloatNotFilterable,
-                        }),
-                        BindGroupLayoutEntry.Texture(3, ShaderStages.Fragment, new()
-                        {
-                            Multisampled = false,
-                            ViewDimension = TextureViewDimension.D2,
-                            SampleType = TextureSampleType.FloatNotFilterable,
-                        }),
-                        BindGroupLayoutEntry.Texture(4, ShaderStages.Fragment, new()
-                        {
-                            Multisampled = false,
-                            ViewDimension = TextureViewDimension.D2,
-                            SampleType = TextureSampleType.FloatNotFilterable,
-                        }),
-                    ]
-                }).AddTo(disposable),
-                screen.Camera.CameraDataBindGroupLayout,
-                screen.Lights.DataBindGroupLayout,
-                BindGroupLayout.Create(screen, new()
-                {
-                    Entries =
-                    [
-                        BindGroupLayoutEntry.Texture(0, ShaderStages.Fragment, new()
-                        {
-                            ViewDimension = TextureViewDimension.D2,
-                            Multisampled = false,
-                            SampleType = TextureSampleType.Depth,
-                        }),
-                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
-                        BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
-                    ],
-                }).AddTo(disposable),
-            ],
         };
     }
 }

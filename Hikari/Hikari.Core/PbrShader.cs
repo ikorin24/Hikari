@@ -40,8 +40,7 @@ public static class PbrShader
         struct GBuffer {
             @location(0) g0 : vec4<f32>,
             @location(1) g1 : vec4<f32>,
-            @location(2) g2 : vec4<f32>,
-            @location(3) g3 : vec4<f32>,
+            @location(2) g2 : vec4<u32>,
         }
         struct UniformValue {
             model: mat4x4<f32>,
@@ -90,12 +89,42 @@ public static class PbrShader
             var mrao: vec3<f32> = textureSample(mr_tex, mr_sampler, in.uv).rgb;
             var normal_camera_coord: vec3<f32> = tbn * (textureSample(normal_tex, normal_sampler, in.uv).rgb * 2.0 - 1.0);
 
+            let albedo: vec4<u32> = f32x4_to_u8x4_clamp(textureSample(albedo_tex, albedo_sampler, in.uv));  // 8bit x 4
+            let metalic: u32 = f32_to_u8_clamp(mrao.r);     // 8bit
+            let roughness: u32 = f32_to_u8_clamp(mrao.g);   // 8bit
+
             var output: GBuffer;
-            output.g0 = vec4(in.pos_camera_coord, mrao.r);
-            output.g1 = vec4(normal_camera_coord, mrao.g);
-            output.g2 = textureSample(albedo_tex, albedo_sampler, in.uv);
-            output.g3 = vec4(mrao.b, 1.0, 1.0, 1.0);
+            output.g0 = vec4<f32>(
+                in.pos_camera_coord,            // position: f32x3
+                0.0,                            // unused
+            );
+            output.g1 = vec4<f32>(
+                normal_camera_coord,            // normal: f32x3 (f16x3 in Texture)
+                0.0,                            // unused
+            );
+            output.g2 = vec4<u32>(
+                albedo.r + (albedo.g << 8),     // [0 ~ 2^16) 16bit | r: u8,       g: u8
+                albedo.b + (albedo.a << 8),     // [0 ~ 2^16) 16bit | b: u8,       a: u8
+                metalic + (roughness << 8),     // [0 ~ 2^16) 16bit | metalic: u8, roughness: u8
+                0x0000,                         // [0 ~ 2^16) 16bit | flags: u16
+            );
             return output;
+        }
+
+        fn f32x4_to_u8x4_clamp(value: vec4<f32>) -> vec4<u32> {
+            return vec4<u32>(
+                clamp(
+                    value * vec4<f32>(255.0, 255.0, 255.0, 255.0),
+                    vec4<f32>(0.0, 0.0, 0.0, 0.0),
+                    vec4<f32>(255.0, 255.0, 255.0, 255.0),
+                ),
+            );
+        }
+
+        fn f32_to_u8_clamp(value: f32) -> u32 {
+            return u32(
+                clamp(value * 255.0, 0.0, 255.0),
+            );
         }
 
         fn mat44_to_33(m: mat4x4<f32>) -> mat3x3<f32> {
@@ -118,7 +147,7 @@ public static class PbrShader
             }
 
             @group(0) @binding(0) var<uniform> model: mat4x4<f32>;
-            @group(0) @binding(1) var<storage, read> lightMatrices: array<mat4x4<f32>>;
+            @group(1) @binding(0) var<storage, read> lightMatrices: array<mat4x4<f32>>;
             @vertex fn vs_main(
                 @location(0) pos: vec3<f32>,
                 @builtin(instance_index) cascade: u32,
@@ -156,13 +185,27 @@ public static class PbrShader
 
     public static Own<Shader> Create(Screen screen, IGBufferProvider gBufferProvider)
     {
+        var disposable = new DisposableBag();
         var shader = Shader.Create(
             screen,
             [
                 new()
                 {
                     Source = _shadowShader.Value,
-                    LayoutDescriptor = GetShadowLayoutDesc(screen, out var disposable),
+                    LayoutDescriptor = new()
+                    {
+                        BindGroupLayouts =
+                        [
+                            BindGroupLayout.Create(screen, new()
+                            {
+                                Entries =
+                                [
+                                    BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new() { Type = BufferBindingType.Uniform }),
+                                ],
+                            }).AddTo(disposable),
+                            screen.Lights.DirectionalLight.RenderShadowBindGroup.Layout,
+                        ],
+                    },
                     PipelineDescriptorFactory = GetShadowDescriptor,
                     SortOrder = -1000,
                     PassKind = PassKind.ShadowMap,
@@ -203,7 +246,8 @@ public static class PbrShader
                         Model = model.GetModel(out var isUniformScale),
                         IsUniformScale = isUniformScale ? 1 : 0,
                     });
-                };
+                }
+                ;
             });
 
         var shaderValue = shader.AsValue();
@@ -301,19 +345,13 @@ public static class PbrShader
                     },
                     new ColorTargetState
                     {
-                        Format = TextureFormat.Rgba32Float,
+                        Format = TextureFormat.Rgba16Float,
                         Blend = null,
                         WriteMask = ColorWrites.All,
                     },
                     new ColorTargetState
                     {
-                        Format = TextureFormat.Rgba32Float,
-                        Blend = null,
-                        WriteMask = ColorWrites.All,
-                    },
-                    new ColorTargetState
-                    {
-                        Format = TextureFormat.Rgba32Float,
+                        Format = TextureFormat.Rgba16Uint,
                         Blend = null,
                         WriteMask = ColorWrites.All,
                     },
@@ -337,25 +375,6 @@ public static class PbrShader
             },
             Multisample = MultisampleState.Default,
             Multiview = 0,
-        };
-    }
-
-    private static PipelineLayoutDescriptor GetShadowLayoutDesc(Screen screen, out DisposableBag disposable)
-    {
-        disposable = new DisposableBag();
-        return new()
-        {
-            BindGroupLayouts =
-            [
-                BindGroupLayout.Create(screen, new()
-                {
-                    Entries =
-                    [
-                        BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new() { Type = BufferBindingType.Uniform }),
-                        BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex, new() { Type = BufferBindingType.StorageReadOnly }),
-                    ],
-                }).AddTo(disposable),
-            ],
         };
     }
 

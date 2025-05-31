@@ -7,7 +7,7 @@ public sealed partial class Lights
 {
     private readonly Screen _screen;
     private readonly DirectionalLight _dirLight;
-    private readonly CachedOwnBuffer<BufferData> _lightData;
+    private readonly CachedOwnBuffer<BufferData> _ambientLightData;
     private readonly Own<BindGroupLayout> _bindGroupLayout;
     private readonly Own<BindGroup> _bindGroup;
 
@@ -17,24 +17,23 @@ public sealed partial class Lights
 
     public float AmbientStrength
     {
-        get => _lightData.Data.AmbientStrength;
+        get => _ambientLightData.Data.AmbientStrength;
         set
         {
-            _lightData.WriteData(new BufferData
+            _ambientLightData.WriteData(new BufferData
             {
                 AmbientStrength = value,
             });
         }
     }
 
-    public BindGroupLayout DataBindGroupLayout => _bindGroupLayout.AsValue();
     public BindGroup DataBindGroup => _bindGroup.AsValue();
 
     internal Lights(Screen screen)
     {
         _screen = screen;
         _dirLight = new DirectionalLight(screen);
-        _lightData = new(screen, new BufferData
+        _ambientLightData = new(screen, new BufferData
         {
             AmbientStrength = 0.06f,
         }, BufferUsages.Storage | BufferUsages.CopyDst);
@@ -58,7 +57,7 @@ public sealed partial class Lights
             Entries =
             [
                 BindGroupEntry.Buffer(0, _dirLight.DataBuffer),
-                BindGroupEntry.Buffer(1, _lightData),
+                BindGroupEntry.Buffer(1, _ambientLightData),
             ],
         });
     }
@@ -66,7 +65,7 @@ public sealed partial class Lights
     internal void DisposeInternal()
     {
         _dirLight.DisposeInternal();
-        _lightData.Dispose();
+        _ambientLightData.Dispose();
         _bindGroupLayout.Dispose();
         _bindGroup.Dispose();
     }

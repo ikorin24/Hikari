@@ -40,6 +40,11 @@ internal static class DisposableBagExtensions
         bag.Add(item);
         return item.AsValue();
     }
+    public static T AddTo<T>(this MaybeOwn<T> item, DisposableBag bag) where T : notnull
+    {
+        bag.Add(item);
+        return item.AsValue();
+    }
 }
 
 internal static class DisposableExtensions

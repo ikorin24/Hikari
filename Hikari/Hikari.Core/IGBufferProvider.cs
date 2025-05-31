@@ -5,6 +5,7 @@ namespace Hikari;
 
 public interface IGBufferProvider
 {
+    BindGroupLayout BindGroupLayout { get; }
     GBuffer GetCurrentGBuffer();
     Event<IGBufferProvider> GBufferChanged { get; }
 }

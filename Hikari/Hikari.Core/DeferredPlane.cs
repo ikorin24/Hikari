@@ -7,7 +7,7 @@ public sealed class DeferredPlane
 {
     public static void AddRenderer(Screen screen, IGBufferProvider gBuffer)
     {
-        var shader = DeferredProcessShader.Create(screen).DisposeOn(screen.Closed);
+        var shader = DeferredProcessShader.Create(screen, gBuffer).DisposeOn(screen.Closed);
         var material = DeferredProcessMaterial.Create(shader, gBuffer);
         const float Z = 0;
         ReadOnlySpan<VertexSlim> vertices =

@@ -1,4 +1,6 @@
 ﻿#nullable enable
+using Cysharp.Threading.Tasks;
+using Hikari.Internal;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -20,20 +22,23 @@ public sealed partial class DirectionalLight
     private TypedOwnBuffer<CascadeFarArray> _cascadeFars;
     private readonly Own<Texture2D> _shadowMap;
     private readonly Own<Texture2D> _depthOnRenderShadowMap;
+    private readonly BindGroup _renderShadowBindGroup;
+    private readonly BindGroup _shadowMapBindGroup;
+    private readonly DisposableBag _disposables;
     private readonly SubscriptionBag _subscriptionBag = new();
 
     public Screen Screen => _screen;
 
     public Texture2D ShadowMap => _shadowMap.AsValue();
 
-    internal Buffer LightMatricesBuffer => _lightMatrices.AsBuffer();
-    internal Buffer CascadeFarsBuffer => _cascadeFars.AsBuffer();
-
     public uint CascadeCount => CascadeCountConst;
 
     public Vector3 Direction => _lightData.Data.Direction;
 
     public Color3 Color => _lightData.Data.Color;
+
+    public BindGroup RenderShadowBindGroup => _renderShadowBindGroup;
+    public BindGroup ShadowMapBindGroup => _shadowMapBindGroup;
 
     internal Buffer DataBuffer => _lightData.AsBuffer();
 
@@ -93,10 +98,57 @@ public sealed partial class DirectionalLight
             SampleCount = 1,
             Usage = TextureUsages.TextureBinding | TextureUsages.RenderAttachment | TextureUsages.CopySrc,
         });
-        _lightMatrices = new(screen, LightMatrixArray.IdentityArray, BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
-        _cascadeFars = new(screen, default, BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
+        _lightMatrices = new TypedOwnBuffer<LightMatrixArray>(
+            screen,
+            LightMatrixArray.IdentityArray,
+            BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
+        _cascadeFars = new TypedOwnBuffer<CascadeFarArray>(
+            screen,
+            default,
+            BufferUsages.Storage | BufferUsages.Uniform | BufferUsages.CopyDst);
         screen.Camera.MatrixChanged.Subscribe(_ => UpdateLightMatrix()).AddTo(_subscriptionBag);
         UpdateLightMatrix();
+
+        var disposables = new DisposableBag();
+        _renderShadowBindGroup = BindGroup.Create(screen, new()
+        {
+            Layout = BindGroupLayout.Create(screen, new()
+            {
+                Entries =
+                [
+                    BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new() { Type = BufferBindingType.StorageReadOnly }),
+                ],
+            }).AddTo(disposables),
+            Entries =
+            [
+                BindGroupEntry.Buffer(0, _lightMatrices.AsBuffer()),
+            ],
+        }).AddTo(disposables);
+
+        _shadowMapBindGroup = BindGroup.Create(screen, new()
+        {
+            Layout = BindGroupLayout.Create(screen, new()
+            {
+                Entries =
+                [
+                    BindGroupLayoutEntry.Texture(0, ShaderStages.Fragment, new()
+                    {
+                        ViewDimension = TextureViewDimension.D2,
+                        Multisampled = false,
+                        SampleType = TextureSampleType.Depth,
+                    }),
+                    BindGroupLayoutEntry.Buffer(1, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
+                    BindGroupLayoutEntry.Buffer(2, ShaderStages.Fragment, new() { Type = BufferBindingType.StorageReadOnly }),
+                ],
+            }).AddTo(disposables),
+            Entries =
+            [
+                BindGroupEntry.TextureView(0, ShadowMap.View),
+                BindGroupEntry.Buffer(1, _lightMatrices.AsBuffer()),
+                BindGroupEntry.Buffer(2, _cascadeFars.AsBuffer()),
+            ],
+        }).AddTo(disposables);
+        _disposables = disposables;
     }
 
     internal void DisposeInternal()
@@ -107,6 +159,7 @@ public sealed partial class DirectionalLight
         _lightMatrices.Dispose();
         _cascadeFars.Dispose();
         _subscriptionBag.Dispose();
+        _disposables.Dispose();
     }
 
     [SkipLocalsInit]

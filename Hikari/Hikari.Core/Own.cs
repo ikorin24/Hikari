@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -194,6 +195,7 @@ public readonly struct Own<T> : IDisposable, IEquatable<Own<T>> where T : notnul
     }
 
     public static explicit operator T(Own<T> own) => own.AsValue();
+    public static implicit operator Own<T>(Own.OwnNone _) => None;
 
     [DoesNotReturn]
     [DebuggerHidden]
@@ -222,6 +224,8 @@ public static class Own
     internal readonly struct ValueTypeMarker { }
     internal readonly struct RefTypeMarker { }
 
+    public static OwnNone None => default;
+
     public static Own<T> New<T>(T value, Action<object> release) where T : class
     {
         return new Own<T>(value, release, RefType);
@@ -243,4 +247,7 @@ public static class Own
             static void Throw(string? paramName) => throw new ArgumentException("the value is none", paramName);
         }
     }
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public readonly record struct OwnNone;
 }

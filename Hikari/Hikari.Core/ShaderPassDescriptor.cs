@@ -13,7 +13,7 @@ public readonly record struct ShaderPassDescriptor
     public required PassKind PassKind { get; init; }
     public required RenderPassAction OnRenderPass { get; init; }
 
-    internal ShaderPassData CreateMaterialPassData<_>(Shader shader, int passIndex, Event<_> lifetimeLimit)
+    internal ShaderPassData CreateShaderPassData<_>(Shader shader, int passIndex, Event<_> lifetimeLimit)
     {
         var screen = shader.Screen;
         var module = ShaderModule.Create(screen, Source.AsSpan()).DisposeOn(lifetimeLimit);
