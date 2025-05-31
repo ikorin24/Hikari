@@ -70,7 +70,7 @@ public static class GlbModelLoader
     {
         var gltf = state.Gltf;
         if(gltf.asset.version != "2.0"u8) {
-            throw new NotSupportedException("only supports gltf v2.0");
+            throw new NotSupportedException($"only supports gltf v2.0 (version: '{gltf.asset.version}')");
         }
 
         var root = new EmptyTreeModel();

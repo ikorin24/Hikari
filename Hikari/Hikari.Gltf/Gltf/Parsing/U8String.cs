@@ -24,7 +24,7 @@ internal readonly struct U8String : IEquatable<U8String>
 
     public int ByteLength => _bytes?.Length ?? 0;
 
-    public ref byte this[int index]
+    public ref readonly byte this[int index]
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get

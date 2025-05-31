@@ -17,24 +17,6 @@ internal unsafe static class GltfParser
 {
     private const uint ChunkType_Json = 0x4E4F534A;
     private const uint ChunkType_Bin = 0x004E4942;
-    private static readonly JsonSerializerOptions _options = new()
-    {
-        IncludeFields = true,
-        Converters =
-        {
-            new NUIntConverter(),
-        },
-    };
-
-    private sealed class NUIntConverter : JsonConverter<nuint>
-    {
-        public override nuint Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            return checked((nuint)reader.GetUInt64());
-        }
-
-        public override void Write(Utf8JsonWriter writer, nuint value, JsonSerializerOptions options) => throw new NotSupportedException();
-    }
 
     public static GltfObject ParseGltfFile(string filePath)
     {
@@ -44,7 +26,7 @@ internal unsafe static class GltfParser
         using var buf = new NativeBuffer(fileSize);
         if(buf.TryGetSpan(out var span)) {
             RandomAccess.Read(handle, span, 0);
-            var gltf = JsonSerializer.Deserialize<GltfObject>(span, _options);
+            var gltf = JsonSerializer.Deserialize(span, GltfObjectContext.Default.GltfObject);
             ThrowIfGltfIsNull(gltf);
             return gltf;
         }
@@ -52,7 +34,7 @@ internal unsafe static class GltfParser
             var memories = buf.GetMemories();
             RandomAccess.Read(handle, memories, 0);
             using var stream = buf.GetStream();
-            var gltf = JsonSerializer.Deserialize<GltfObject>(stream, _options);
+            var gltf = JsonSerializer.Deserialize(stream, GltfObjectContext.Default.GltfObject);
             ThrowIfGltfIsNull(gltf);
             return gltf;
         }
@@ -60,7 +42,7 @@ internal unsafe static class GltfParser
 
     public static GltfObject ParseGltf(ReadOnlySpan<byte> data)
     {
-        var gltf = JsonSerializer.Deserialize<GltfObject>(data, _options);
+        var gltf = JsonSerializer.Deserialize(data, GltfObjectContext.Default.GltfObject);
         ThrowIfGltfIsNull(gltf);
         return gltf;
     }
@@ -69,13 +51,13 @@ internal unsafe static class GltfParser
     {
         if(length > int.MaxValue) {
             using var stream = new PointerMemoryStream((byte*)data, length);
-            var gltf = JsonSerializer.Deserialize<GltfObject>(stream, _options);
+            var gltf = JsonSerializer.Deserialize(stream, GltfObjectContext.Default.GltfObject);
             ThrowIfGltfIsNull(gltf);
             return gltf;
         }
         else {
             var span = MemoryMarshal.CreateReadOnlySpan(ref *(byte*)data, (int)length);
-            var gltf = JsonSerializer.Deserialize<GltfObject>(span, _options);
+            var gltf = JsonSerializer.Deserialize(span, GltfObjectContext.Default.GltfObject);
             ThrowIfGltfIsNull(gltf);
             return gltf;
         }
@@ -86,14 +68,14 @@ internal unsafe static class GltfParser
         if(length > int.MaxValue) {
             fixed(byte* ptr = &data) {
                 using var stream = new PointerMemoryStream(ptr, length);
-                var gltf = JsonSerializer.Deserialize<GltfObject>(stream, _options);
+                var gltf = JsonSerializer.Deserialize(stream, GltfObjectContext.Default.GltfObject);
                 ThrowIfGltfIsNull(gltf);
                 return gltf;
             }
         }
         else {
             var span = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in data), (int)length);
-            var gltf = JsonSerializer.Deserialize<GltfObject>(span, _options);
+            var gltf = JsonSerializer.Deserialize(span, GltfObjectContext.Default.GltfObject);
             ThrowIfGltfIsNull(gltf);
             return gltf;
         }

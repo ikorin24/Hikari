@@ -1,4 +1,7 @@
 ﻿#nullable enable
+using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Hikari.Gltf.Parsing;
 
@@ -28,4 +31,20 @@ internal sealed class GltfObject
     public Texture[]? textures { get; set; }
 
 #pragma warning restore IDE1006 // naming rule
+}
+
+[JsonSourceGenerationOptions(WriteIndented = true, IncludeFields = true, Converters = [typeof(NUIntConverter)])]
+[JsonSerializable(typeof(GltfObject))]
+internal partial class GltfObjectContext : JsonSerializerContext
+{
+}
+
+internal sealed class NUIntConverter : JsonConverter<nuint>
+{
+    public override nuint Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return checked((nuint)reader.GetUInt64());
+    }
+
+    public override void Write(Utf8JsonWriter writer, nuint value, JsonSerializerOptions options) => throw new NotSupportedException();
 }
