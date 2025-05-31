@@ -1,15 +1,10 @@
 ﻿#nullable enable
 using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Text.Json;
 
 namespace Hikari.UI;
 
-public sealed class Label : UIElement
-#if HIKARI_JSON_SERDE
-    , IFromJson<Label>
-#endif
+public sealed partial class Label : UIElement
 {
     private LabelInfo _info;
     private LabelPseudoInfo? _hoverInfo;
@@ -79,116 +74,29 @@ public sealed class Label : UIElement
 
     static Label()
     {
-#if HIKARI_JSON_SERDE
-        Serializer.RegisterConstructor(FromJson);
-#endif
+        RegistorSerdeConstructor();
         UITree.RegisterMaterial<Label>(static screen =>
         {
             return LabelMaterial.Create(UIShader.CreateOrCached(screen)).Cast<IUIMaterial>();
         });
     }
 
-#if HIKARI_JSON_SERDE
-    public static Label FromJson(in ObjectSource source) => new Label(source);
-
-    protected override void ToJsonProtected(Utf8JsonWriter writer)
-    {
-        base.ToJsonProtected(writer);
-        writer.WriteString(nameof(Text), Text);
-        writer.Write(nameof(FontSize), FontSize);
-    }
-
-    protected override void ApplyDiffProtected(in ObjectSource source)
-    {
-        base.ApplyDiffProtected(source);
-        Text = source.ApplyProperty(nameof(Text), Text, () => LabelInfo.DefaultText, out _);
-        FontSize = source.ApplyProperty(nameof(FontSize), FontSize, () => LabelInfo.DefaultFontSize, out _);
-    }
-#endif
+    static partial void RegistorSerdeConstructor();
 
     public Label() : base()
     {
         _info = LabelInfo.Default;
     }
-
-#if HIKARI_JSON_SERDE
-    private Label(in ObjectSource source) : base(source)
-    {
-        _info = LabelInfo.Default;
-        if(source.TryGetProperty(nameof(Text), out var text)) {
-            Text = Serializer.Instantiate<string>(text);
-        }
-        if(source.TryGetProperty(nameof(FontSize), out var fontSize)) {
-            FontSize = Serializer.Instantiate<FontSize>(fontSize);
-        }
-        if(source.TryGetProperty(PseudoInfo.HoverName, out var hover)) {
-            _hoverInfo = LabelPseudoInfo.FromJson(hover);
-        }
-        if(source.TryGetProperty(PseudoInfo.ActiveName, out var active)) {
-            _activeInfo = LabelPseudoInfo.FromJson(active);
-        }
-    }
-#endif
 }
 
-public sealed record LabelPseudoInfo
-    : PseudoInfo
-#if HIKARI_JSON_SERDE
-    , IFromJson<LabelPseudoInfo>
-#endif
+public sealed partial record LabelPseudoInfo : PseudoInfo
 {
-#if HIKARI_JSON_SERDE
-    static LabelPseudoInfo() => Serializer.RegisterConstructor(FromJson);
-#endif
+    static LabelPseudoInfo() => RegistorSerdeConstructor();
+
+    static partial void RegistorSerdeConstructor();
 
     public string? Text { get; init; }
     public FontSize? FontSize { get; init; }
-
-#if HIKARI_JSON_SERDE
-
-    public static LabelPseudoInfo FromJson(in ObjectSource source)
-    {
-        return new LabelPseudoInfo
-        {
-            Width = GetValueProp<LayoutLength>(source, nameof(Width)),
-            Height = GetValueProp<LayoutLength>(source, nameof(Height)),
-            Margin = GetValueProp<Thickness>(source, nameof(Margin)),
-            Padding = GetValueProp<Thickness>(source, nameof(Padding)),
-            HorizontalAlignment = GetValueProp<HorizontalAlignment>(source, nameof(HorizontalAlignment)),
-            VerticalAlignment = GetValueProp<VerticalAlignment>(source, nameof(VerticalAlignment)),
-            Background = GetValueProp<Brush>(source, nameof(Background)),
-            BorderWidth = GetValueProp<Thickness>(source, nameof(BorderWidth)),
-            BorderRadius = GetValueProp<CornerRadius>(source, nameof(BorderRadius)),
-            BorderColor = GetValueProp<Brush>(source, nameof(BorderColor)),
-            BoxShadow = GetValueProp<BoxShadow>(source, nameof(BoxShadow)),
-            Flow = GetValueProp<Flow>(source, nameof(Flow)),
-            Color = GetValueProp<Color4>(source, nameof(Color)),
-            Text = GetClassProp<string>(source, nameof(Text)),
-            FontSize = GetValueProp<FontSize>(source, nameof(FontSize)),
-        };
-
-        static T? GetValueProp<T>(in ObjectSource source, string propName) where T : struct
-        {
-            return source.TryGetProperty(propName, out var value) ? value.Instantiate<T>() : default(T?);
-        }
-
-        static T? GetClassProp<T>(in ObjectSource source, string propName) where T : class
-        {
-            return source.TryGetProperty(propName, out var value) ? value.Instantiate<T>() : default(T?);
-        }
-    }
-
-    protected override void ToJsonProtected(Utf8JsonWriter writer)
-    {
-        base.ToJsonProtected(writer);
-        if(Text != null) {
-            writer.WriteString(nameof(Text), Text);
-        }
-        if(FontSize.HasValue) {
-            writer.Write(nameof(FontSize), FontSize.Value);
-        }
-    }
-#endif
 }
 
 internal record struct LabelInfo

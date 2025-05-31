@@ -2,18 +2,11 @@
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 
 namespace Hikari.UI;
 
 [DebuggerDisplay("{DebugView}")]
-public readonly struct LayoutLength
-    : IEquatable<LayoutLength>
-#if HIKARI_JSON_SERDE
-    ,
-      IFromJson<LayoutLength>,
-      IToJson
-#endif
+public readonly partial struct LayoutLength : IEquatable<LayoutLength>
 {
     public required float Value { get; init; }
     public required LayoutLengthType Type { get; init; }
@@ -26,9 +19,9 @@ public readonly struct LayoutLength
         _ => "?",
     };
 
-#if HIKARI_JSON_SERDE
-    static LayoutLength() => Serializer.RegisterConstructor(FromJson);
-#endif
+    static LayoutLength() => RegistorSerdeConstructor();
+
+    static partial void RegistorSerdeConstructor();
 
     [SetsRequiredMembers]
     public LayoutLength(float value, LayoutLengthType type)
@@ -41,61 +34,6 @@ public readonly struct LayoutLength
 
         [DoesNotReturn] static void ThrowOutOfRange() => throw new ArgumentOutOfRangeException(nameof(value));
     }
-
-
-#if HIKARI_JSON_SERDE
-    public static LayoutLength FromJson(in ObjectSource source)
-    {
-        // 10
-        // "10px"
-        // "80%"
-
-        switch(source.ValueKind) {
-            case JsonValueKind.Number: {
-                return new LayoutLength(source.GetNumber<float>(), LayoutLengthType.Length);
-            }
-            case JsonValueKind.String: {
-                var str = source.GetStringNotNull();
-                if(str.EndsWith('%')) {
-                    return new()
-                    {
-                        Value = float.Parse(str.AsSpan()[..^1]) * 0.01f,
-                        Type = LayoutLengthType.Proportion,
-                    };
-                }
-                if(str.EndsWith("px")) {
-                    return new()
-                    {
-                        Value = float.Parse(str.AsSpan()[..^2]),
-                        Type = LayoutLengthType.Length,
-                    };
-                }
-                throw new FormatException(str);
-            }
-            default: {
-                source.ThrowInvalidFormat();
-                return default;
-            }
-        }
-    }
-
-    public JsonValueKind ToJson(Utf8JsonWriter writer)
-    {
-        switch(Type) {
-            case LayoutLengthType.Length: {
-                writer.WriteNumberValue(Value);
-                return JsonValueKind.Number;
-            }
-            case LayoutLengthType.Proportion: {
-                writer.WriteStringValue($"{Value * 100f}%");
-                return JsonValueKind.String;
-            }
-            default: {
-                throw new UnreachableException();
-            }
-        }
-    }
-#endif
 
     public static LayoutLength Length(float length) => new LayoutLength(length, LayoutLengthType.Length);
 

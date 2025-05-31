@@ -1,15 +1,10 @@
 ﻿#nullable enable
 using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Text.Json;
 
 namespace Hikari.UI;
 
-public sealed class Button : UIElement
-#if HIKARI_JSON_SERDE
-    , IFromJson<Button>
-#endif
+public sealed partial class Button : UIElement
 {
     private ButtonInfo _info;
     private ButtonPseudoInfo? _hoverInfo;
@@ -63,9 +58,7 @@ public sealed class Button : UIElement
 
     static Button()
     {
-#if HIKARI_JSON_SERDE
-        Serializer.RegisterConstructor(FromJson);
-#endif
+        RegistorSerdeConstructor();
         UITree.RegisterMaterial<Button>(static screen =>
         {
             return ButtonMaterial.Create(UIShader.CreateOrCached(screen)).Cast<IUIMaterial>();
@@ -73,47 +66,12 @@ public sealed class Button : UIElement
 
     }
 
-#if HIKARI_JSON_SERDE
-    public static Button FromJson(in ObjectSource source) => new Button(source);
-
-    protected override void ToJsonProtected(Utf8JsonWriter writer)
-    {
-        base.ToJsonProtected(writer);
-        writer.WriteString(nameof(Text), Text);
-        writer.Write(nameof(FontSize), FontSize);
-    }
-
-    protected override void ApplyDiffProtected(in ObjectSource source)
-    {
-        base.ApplyDiffProtected(source);
-        Text = source.ApplyProperty(nameof(Text), Text, () => ButtonInfo.DefaultText, out _);
-        FontSize = source.ApplyProperty(nameof(FontSize), FontSize, () => ButtonInfo.DefaultFontSize, out _);
-    }
-#endif
+    static partial void RegistorSerdeConstructor();
 
     public Button() : base()
     {
         _info = ButtonInfo.Default;
     }
-
-#if HIKARI_JSON_SERDE
-    private Button(in ObjectSource source) : base(source)
-    {
-        _info = ButtonInfo.Default;
-        if(source.TryGetProperty(nameof(Text), out var text)) {
-            Text = Serializer.Instantiate<string>(text);
-        }
-        if(source.TryGetProperty(nameof(FontSize), out var fontSize)) {
-            FontSize = Serializer.Instantiate<FontSize>(fontSize);
-        }
-        if(source.TryGetProperty(PseudoInfo.HoverName, out var hover)) {
-            _hoverInfo = ButtonPseudoInfo.FromJson(hover);
-        }
-        if(source.TryGetProperty(PseudoInfo.ActiveName, out var active)) {
-            _activeInfo = ButtonPseudoInfo.FromJson(active);
-        }
-    }
-#endif
 
     protected override ButtonPseudoInfo? GetHoverProps() => _hoverInfo;
 
@@ -132,63 +90,14 @@ public sealed class Button : UIElement
     }
 }
 
-public sealed record ButtonPseudoInfo
-    : PseudoInfo
-#if HIKARI_JSON_SERDE
-    , IFromJson<ButtonPseudoInfo>
-#endif
+public sealed partial record ButtonPseudoInfo : PseudoInfo
 {
-#if HIKARI_JSON_SERDE
-    static ButtonPseudoInfo() => Serializer.RegisterConstructor(FromJson);
-#endif
+    static ButtonPseudoInfo() => RegistorSerdeConstructor();
+
+    static partial void RegistorSerdeConstructor();
 
     public string? Text { get; init; }
     public FontSize? FontSize { get; init; }
-
-#if HIKARI_JSON_SERDE
-    public static ButtonPseudoInfo FromJson(in ObjectSource source)
-    {
-        return new ButtonPseudoInfo
-        {
-            Width = GetValueProp<LayoutLength>(source, nameof(Width)),
-            Height = GetValueProp<LayoutLength>(source, nameof(Height)),
-            Margin = GetValueProp<Thickness>(source, nameof(Margin)),
-            Padding = GetValueProp<Thickness>(source, nameof(Padding)),
-            HorizontalAlignment = GetValueProp<HorizontalAlignment>(source, nameof(HorizontalAlignment)),
-            VerticalAlignment = GetValueProp<VerticalAlignment>(source, nameof(VerticalAlignment)),
-            Background = GetValueProp<Brush>(source, nameof(Background)),
-            BorderWidth = GetValueProp<Thickness>(source, nameof(BorderWidth)),
-            BorderRadius = GetValueProp<CornerRadius>(source, nameof(BorderRadius)),
-            BorderColor = GetValueProp<Brush>(source, nameof(BorderColor)),
-            BoxShadow = GetValueProp<BoxShadow>(source, nameof(BoxShadow)),
-            Flow = GetValueProp<Flow>(source, nameof(Flow)),
-            Color = GetValueProp<Color4>(source, nameof(Color)),
-            Text = GetClassProp<string>(source, nameof(Text)),
-            FontSize = GetValueProp<FontSize>(source, nameof(FontSize)),
-        };
-
-        static T? GetValueProp<T>(in ObjectSource source, string propName) where T : struct
-        {
-            return source.TryGetProperty(propName, out var value) ? value.Instantiate<T>() : default(T?);
-        }
-
-        static T? GetClassProp<T>(in ObjectSource source, string propName) where T : class
-        {
-            return source.TryGetProperty(propName, out var value) ? value.Instantiate<T>() : default(T?);
-        }
-    }
-
-    protected override void ToJsonProtected(Utf8JsonWriter writer)
-    {
-        base.ToJsonProtected(writer);
-        if(Text != null) {
-            writer.WriteString(nameof(Text), Text);
-        }
-        if(FontSize.HasValue) {
-            writer.Write(nameof(FontSize), FontSize.Value);
-        }
-    }
-#endif
 }
 
 internal record struct ButtonInfo

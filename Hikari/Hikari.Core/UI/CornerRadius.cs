@@ -2,17 +2,11 @@
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 
 namespace Hikari.UI;
 
 [DebuggerDisplay("{DebugView}")]
-public readonly struct CornerRadius :
-#if HIKARI_JSON_SERDE
-    IFromJson<CornerRadius>,
-    IToJson,
-#endif
-    IEquatable<CornerRadius>
+public readonly partial struct CornerRadius : IEquatable<CornerRadius>
 {
     public required float TopLeft { get; init; }
     public required float TopRight { get; init; }
@@ -24,9 +18,9 @@ public readonly struct CornerRadius :
 
     public static CornerRadius Zero => default;
 
-#if HIKARI_JSON_SERDE
-    static CornerRadius() => Serializer.RegisterConstructor(FromJson);
-#endif
+    static CornerRadius() => RegistorSerdeConstructor();
+
+    static partial void RegistorSerdeConstructor();
 
     [SetsRequiredMembers]
     public CornerRadius(float value)
@@ -81,47 +75,6 @@ public readonly struct CornerRadius :
     {
         return HashCode.Combine(TopLeft, TopRight, BottomRight, BottomLeft);
     }
-
-#if HIKARI_JSON_SERDE
-    public static CornerRadius FromJson(in ObjectSource source)
-    {
-        switch(source.ValueKind) {
-            case JsonValueKind.Number: {
-                return new CornerRadius(source.GetNumber<float>());
-            }
-            case JsonValueKind.String: {
-                var str = source.GetStringNotNull();
-                var splits = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                return splits switch
-                {
-                    { Length: 1 } => new CornerRadius(ParseValue(splits[0])),
-                    { Length: 2 } => new CornerRadius(ParseValue(splits[0]), ParseValue(splits[1])),
-                    { Length: 3 } => new CornerRadius(ParseValue(splits[0]), ParseValue(splits[1]), ParseValue(splits[2])),
-                    { Length: 4 } => new CornerRadius(ParseValue(splits[0]), ParseValue(splits[1]), ParseValue(splits[2]), ParseValue(splits[3])),
-                    _ => throw new FormatException($"cannot create {nameof(CornerRadius)} from string \"{str}\""),
-                };
-            }
-            default: {
-                source.ThrowInvalidFormat();
-                return default;
-            }
-        }
-
-        static float ParseValue(ReadOnlySpan<char> x)
-        {
-            if(x.EndsWith("px")) {
-                return float.Parse(x[..^2]);
-            }
-            throw new FormatException();
-        }
-    }
-
-    public JsonValueKind ToJson(Utf8JsonWriter writer)
-    {
-        writer.WriteStringValue($"{TopLeft}px {TopRight}px {BottomRight}px {BottomLeft}px");
-        return JsonValueKind.String;
-    }
-#endif
 
     public Vector4 ToVector4() => new Vector4(TopLeft, TopRight, BottomRight, BottomLeft);
 

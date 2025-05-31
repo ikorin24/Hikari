@@ -1,18 +1,14 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Hikari.UI;
 
-public sealed class UITree
+public sealed partial class UITree
 {
     private readonly Screen _screen;
     private UIElement? _rootElement;
     private bool _isLayoutDirty = false;
-#if HIKARI_JSON_SERDE
-    private IReactive? _root;
-#endif
 
     private static readonly ConcurrentDictionary<Type, Func<Screen, Own<IUIMaterial>>> _materialProviders = new();
 
@@ -101,37 +97,4 @@ public sealed class UITree
             _rootElement = element;
         });
     }
-
-#if HIKARI_JSON_SERDE
-    public void RenderRoot([StringSyntax(StringSyntaxAttribute.Json)] ObjectSourceBuilder builder)
-    {
-        var source = builder.ToSourceClear();
-        var root = source.Apply(_root, out var applied);
-        switch(applied.Result) {
-            case ApplySourceResult.InstanceReplaced: {
-                switch(root) {
-                    case UIElement element: {
-                        SetRoot(element);
-                        break;
-                    }
-                    case IReactComponent component: {
-                        var element = component.BuildUIElement();
-                        SetRoot(element);
-                        break;
-                    }
-                    default: {
-                        throw new ArgumentException($"invalid object type: {root.GetType()}");
-                    }
-                }
-                _root = root;
-                break;
-            }
-            case ApplySourceResult.PropertyDiffApplied:
-            case ApplySourceResult.ArrayDiffApplied:
-            default: {
-                break;
-            }
-        }
-    }
-#endif
 }

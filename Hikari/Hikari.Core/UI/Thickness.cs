@@ -2,18 +2,11 @@
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 
 namespace Hikari.UI;
 
 [DebuggerDisplay("{DebugDisplay}")]
-public readonly struct Thickness
-    : IEquatable<Thickness>
-#if HIKARI_JSON_SERDE
-    ,
-      IFromJson<Thickness>,
-      IToJson
-#endif
+public readonly partial struct Thickness : IEquatable<Thickness>
 {
     public required float Top { get; init; }
     public required float Right { get; init; }
@@ -25,9 +18,9 @@ public readonly struct Thickness
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebugDisplay => $"{Top}px {Right}px {Bottom}px {Left}px";
 
-#if HIKARI_JSON_SERDE
-    static Thickness() => Serializer.RegisterConstructor(FromJson);
-#endif
+    static Thickness() => RegistorSerdeConstructor();
+
+    static partial void RegistorSerdeConstructor();
 
     [SetsRequiredMembers]
     public Thickness(float value)
@@ -72,53 +65,6 @@ public readonly struct Thickness
     public bool Equals(Thickness other) => Left == other.Left && Top == other.Top && Right == other.Right && Bottom == other.Bottom;
 
     public override int GetHashCode() => HashCode.Combine(Left, Top, Right, Bottom);
-
-#if HIKARI_JSON_SERDE
-    public static Thickness FromJson(in ObjectSource source)
-    {
-        // 10
-        // "10px"
-        // "10px"
-        // "10px 10px 10px"
-        // "10px 10px 10px 10px"
-
-        switch(source.ValueKind) {
-            case JsonValueKind.Number: {
-                return new Thickness(source.GetNumber<float>());
-            }
-            case JsonValueKind.String: {
-                var str = source.GetStringNotNull();
-                var splits = str.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                return splits switch
-                {
-                    { Length: 1 } => new Thickness(Px(splits[0])),
-                    { Length: 2 } => new Thickness(Px(splits[0]), Px(splits[1])),
-                    { Length: 3 } => new Thickness(Px(splits[0]), Px(splits[1]), Px(splits[2])),
-                    { Length: 4 } => new Thickness(Px(splits[0]), Px(splits[1]), Px(splits[2]), Px(splits[3])),
-                    _ => throw new FormatException($"cannot create {nameof(Thickness)} from string \"{str}\""),
-                };
-            }
-            default: {
-                source.ThrowInvalidFormat();
-                return default;
-            }
-        }
-
-        static float Px(ReadOnlySpan<char> s)
-        {
-            if(s.EndsWith("px")) {
-                return float.Parse(s[..^2]);
-            }
-            throw new FormatException();
-        }
-    }
-
-    public JsonValueKind ToJson(Utf8JsonWriter writer)
-    {
-        writer.WriteStringValue($"{Top}px {Right}px {Bottom}px {Left}px");
-        return JsonValueKind.String;
-    }
-#endif
 
     public static bool operator ==(Thickness left, Thickness right) => left.Equals(right);
 

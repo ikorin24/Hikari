@@ -1,24 +1,17 @@
 ﻿#nullable enable
 using Hikari;
-using Hikari.Mathematics;
 using Hikari.Collections;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text.Json;
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 
 namespace Hikari.UI;
 
 [DebuggerDisplay("{DebugView}")]
-public readonly struct Brush :
-#if HIKARI_JSON_SERDE
-    IFromJson<Brush>,
-    IToJson,
-#endif
-    IEquatable<Brush>
+public readonly partial struct Brush : IEquatable<Brush>
 {
     private readonly BrushType _type;
     private readonly Color4 _solidColor;
@@ -39,9 +32,9 @@ public readonly struct Brush :
 
     public BrushType Type => _type;
 
-#if HIKARI_JSON_SERDE
-    static Brush() => Serializer.RegisterConstructor(FromJson);
-#endif
+    static Brush() => RegistorSerdeConstructor();
+
+    static partial void RegistorSerdeConstructor();
 
     private Brush(Color4 solidColor)
     {
@@ -114,50 +107,6 @@ public readonly struct Brush :
     {
         return new Brush(directionRadian, gradientStops.ToArray());
     }
-
-#if HIKARI_JSON_SERDE
-    public static Brush FromJson(in ObjectSource source)
-    {
-        // "#ffee23"
-        // "red"
-
-        switch(source.ValueKind) {
-            case JsonValueKind.String: {
-                var str = source.GetStringNotNull();
-                if(str.StartsWith("LinearGradient(") && str.EndsWith(")")) {
-                    var (directionDegree, stops) = LinearGradientParser.ParseContent(str.AsSpan()[15..^1]);
-                    return new Brush(directionDegree.ToRadian(), stops);
-                }
-                else {
-                    var color = ExternalConstructor.Color4FromJson(source);
-                    return new Brush(color);
-                }
-            }
-            default: {
-                source.ThrowInvalidFormat();
-                return default;
-            }
-        }
-    }
-
-    public JsonValueKind ToJson(Utf8JsonWriter writer)
-    {
-        writer.WriteStartObject();
-        writer.WriteString("@type", typeof(Brush).FullName);
-        writer.WriteEnum(nameof(Type), _type);
-        switch(_type) {
-            case BrushType.Solid: {
-                writer.Write(nameof(SolidColor), _solidColor);
-                break;
-            }
-            default: {
-                throw new UnreachableException();
-            }
-        }
-        writer.WriteEndObject();
-        return JsonValueKind.Object;
-    }
-#endif
 
     internal int GetBufferDataSize() => _type switch
     {

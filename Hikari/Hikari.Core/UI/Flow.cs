@@ -1,15 +1,9 @@
 ﻿#nullable enable
-using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 
 namespace Hikari.UI;
 
-public readonly record struct Flow
-#if HIKARI_JSON_SERDE
-    : IFromJson<Flow>,
-      IToJson
-#endif
+public readonly partial record struct Flow
 {
     public required FlowDirection Direction { get; init; }
     public FlowWrapMode Wrap { get; init; }
@@ -20,9 +14,9 @@ public readonly record struct Flow
         Wrap = FlowWrapMode.NoWrap,
     };
 
-#if HIKARI_JSON_SERDE
-    static Flow() => Serializer.RegisterConstructor(FromJson);
-#endif
+    static Flow() => RegistorSerdeConstructor();
+
+    static partial void RegistorSerdeConstructor();
 
     [SetsRequiredMembers]
     public Flow(FlowDirection direction)
@@ -38,50 +32,6 @@ public readonly record struct Flow
         Wrap = wrap;
     }
 
-
-#if HIKARI_JSON_SERDE
-    public JsonValueKind ToJson(Utf8JsonWriter writer)
-    {
-        if(Direction == FlowDirection.None) {
-            writer.WriteStringValue(Direction.ToString());
-            return JsonValueKind.String;
-        }
-        else {
-            writer.WriteStringValue($"{Direction} {Wrap}");
-            return JsonValueKind.String;
-        }
-    }
-
-    public static Flow FromJson(in ObjectSource source)
-    {
-        // "<direction>"
-        // "<direction> <wrap>"
-        switch(source.ValueKind) {
-            case JsonValueKind.String: {
-                var value = source.GetStringNotNull().AsSpan();
-                var (dir, wrap) = value.Split2(' ');
-                if(wrap.IsEmpty || wrap.Trim().IsEmpty) {
-                    return new Flow
-                    {
-                        Direction = Enum.Parse<FlowDirection>(dir),
-                        Wrap = FlowWrapMode.NoWrap,
-                    };
-                }
-                else {
-                    return new Flow
-                    {
-                        Direction = Enum.Parse<FlowDirection>(dir),
-                        Wrap = Enum.Parse<FlowWrapMode>(wrap),
-                    };
-                }
-            }
-            default: {
-                source.ThrowInvalidFormat();
-                return default;
-            }
-        }
-    }
-#endif
 
     internal FlowLayoutInfo NewChildrenFlowInfo(in RectF contentArea)
     {

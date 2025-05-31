@@ -1,57 +1,21 @@
 ﻿#nullable enable
 using System;
-using System.Text.Json;
 
 namespace Hikari.UI;
 
-public readonly struct FontSize
-    : IEquatable<FontSize>
-#if HIKARI_JSON_SERDE
-    ,
-      IFromJson<FontSize>,
-      IToJson
-#endif
+public readonly partial struct FontSize : IEquatable<FontSize>
 {
     private readonly float _px;
     public float Px => _px;
 
-#if HIKARI_JSON_SERDE
-    static FontSize() => Serializer.RegisterConstructor(FromJson);
-#endif
+    static FontSize() => RegistorSerdeConstructor();
+
+    static partial void RegistorSerdeConstructor();
 
     public FontSize(float px)
     {
         _px = px;
     }
-
-
-#if HIKARI_JSON_SERDE
-    public static FontSize FromJson(in ObjectSource source)
-    {
-        switch(source.ValueKind) {
-            case JsonValueKind.String: {
-                var str = source.GetStringNotNull();
-                if(str.EndsWith("px")) {
-                    return new FontSize(float.Parse(str.AsSpan()[..^2]));
-                }
-                throw new FormatException(str);
-            }
-            case JsonValueKind.Number: {
-                return new FontSize(source.GetNumber<float>());
-            }
-            default: {
-                source.ThrowInvalidFormat();
-                return default;
-            }
-        }
-    }
-
-    public JsonValueKind ToJson(Utf8JsonWriter writer)
-    {
-        writer.WriteStringValue($"{_px}px");
-        return JsonValueKind.String;
-    }
-#endif
 
     public static implicit operator FontSize(float value) => new(value);
 

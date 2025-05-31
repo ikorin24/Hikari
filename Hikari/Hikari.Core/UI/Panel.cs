@@ -1,14 +1,9 @@
 ﻿#nullable enable
 using System;
-using System.Collections.Concurrent;
-using System.Text.Json;
 
 namespace Hikari.UI;
 
-public sealed class Panel : UIElement
-#if HIKARI_JSON_SERDE
-    , IFromJson<Panel>
-#endif
+public sealed partial class Panel : UIElement
 {
     private PanelPseudoInfo? _hoverInfo;
     private PanelPseudoInfo? _activeInfo;
@@ -37,37 +32,18 @@ public sealed class Panel : UIElement
 
     static Panel()
     {
-#if HIKARI_JSON_SERDE
-        Serializer.RegisterConstructor(FromJson);
-#endif
+        RegistorSerdeConstructor();
         UITree.RegisterMaterial<Panel>(static screen =>
         {
             return PanelMaterial.Create(UIShader.CreateOrCached(screen)).Cast<IUIMaterial>();
         });
-
     }
+
+    static partial void RegistorSerdeConstructor();
 
     public Panel()
     {
     }
-
-#if HIKARI_JSON_SERDE
-    private Panel(in ObjectSource source) : base(source)
-    {
-    }
-
-    public static Panel FromJson(in ObjectSource source) => new Panel(source);
-
-    protected override void ToJsonProtected(Utf8JsonWriter writer)
-    {
-        base.ToJsonProtected(writer);
-    }
-
-    protected override void ApplyDiffProtected(in ObjectSource source)
-    {
-        base.ApplyDiffProtected(source);
-    }
-#endif
 
     protected override PanelPseudoInfo? GetHoverProps() => _hoverInfo;
 
@@ -79,40 +55,11 @@ public sealed class Panel : UIElement
     }
 }
 
-public sealed record PanelPseudoInfo
-    : PseudoInfo
-#if HIKARI_JSON_SERDE
-    , IFromJson<PanelPseudoInfo>
-#endif
+public sealed partial record PanelPseudoInfo : PseudoInfo
 {
-#if HIKARI_JSON_SERDE
-    static PanelPseudoInfo() => Serializer.RegisterConstructor(FromJson);
+    static PanelPseudoInfo() => RegistorSerdeConstructor();
 
-    public static PanelPseudoInfo FromJson(in ObjectSource source)
-    {
-        return new()
-        {
-            Width = Get<LayoutLength>(source, nameof(Width)),
-            Height = Get<LayoutLength>(source, nameof(Height)),
-            Margin = Get<Thickness>(source, nameof(Margin)),
-            Padding = Get<Thickness>(source, nameof(Padding)),
-            HorizontalAlignment = Get<HorizontalAlignment>(source, nameof(HorizontalAlignment)),
-            VerticalAlignment = Get<VerticalAlignment>(source, nameof(VerticalAlignment)),
-            Background = Get<Brush>(source, nameof(Background)),
-            BorderWidth = Get<Thickness>(source, nameof(BorderWidth)),
-            BorderRadius = Get<CornerRadius>(source, nameof(BorderRadius)),
-            BorderColor = Get<Brush>(source, nameof(BorderColor)),
-            BoxShadow = Get<BoxShadow>(source, nameof(BoxShadow)),
-            Flow = Get<Flow>(source, nameof(Flow)),
-            Color = Get<Color4>(source, nameof(Color)),
-        };
-
-        static T? Get<T>(in ObjectSource source, string propName) where T : struct
-        {
-            return source.TryGetProperty(propName, out var value) ? value.Instantiate<T>() : default(T?);
-        }
-    }
-#endif
+    static partial void RegistorSerdeConstructor();
 }
 
 file sealed class PanelMaterial : IUIMaterial
