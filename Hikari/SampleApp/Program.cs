@@ -53,12 +53,14 @@ internal class Program
         SetLight(screen, 0);
         screen.Lights.AmbientStrength = 0.1f;
 
+        FrameObject cameraModel = null!;
         await UniTask.WhenAll(
             UniTask.Run(() =>
             {
                 var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"resources\AntiqueCamera.glb");
                 model.Position = new Vector3(0, 0, 0);
                 model.Scale = new Vector3(0.2f);
+                cameraModel = model;
             }),
             UniTask.Run(() =>
             {
@@ -81,7 +83,7 @@ internal class Program
         await screen.Update.Switch();
 
         var rand = new Xorshift32();
-        var avocados = new Queue<ITreeModel>();
+        var avocados = new Queue<FrameObject>();
         bool loading = false;
         var createAvocado = () =>
         {
@@ -92,7 +94,7 @@ internal class Program
             {
                 loading = true;
                 try {
-                    ITreeModel avocado;
+                    FrameObject avocado;
                     if(avocados.Count <= 4) {
                         avocado = await UniTask.Run(() =>
                         {

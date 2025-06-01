@@ -12,7 +12,7 @@ public sealed class RenderPassScheduler
 {
     private readonly Screen _screen;
     private ImmutableArray<RenderPassDefinition> _passDefs;
-    private FrozenDictionary<PassKind, List<Data>> _passDataDic;
+    private FrozenDictionary<PassKind, Dictionary<Renderer, List<Data>>> _passDataDic;
     private FastSpinLock _lock;
 
     private static readonly RenderPassDefinition EmptyPass = new()
@@ -41,7 +41,7 @@ public sealed class RenderPassScheduler
     {
         _screen = screen;
         _passDefs = [];
-        _passDataDic = new Dictionary<PassKind, List<Data>>(0).ToFrozenDictionary();
+        _passDataDic = new Dictionary<PassKind, Dictionary<Renderer, List<Data>>>(0).ToFrozenDictionary();
     }
 
     public void SetRenderPass(ImmutableArray<RenderPassDefinition> passDefs)
@@ -51,7 +51,7 @@ public sealed class RenderPassScheduler
         }
         using(_lock.Scope()) {
             _passDefs = passDefs;
-            var dic = new Dictionary<PassKind, List<Data>>();
+            var dic = new Dictionary<PassKind, Dictionary<Renderer, List<Data>>>();
             foreach(var passDef in passDefs) {
                 dic.TryAdd(passDef.Kind, new());
             }
@@ -63,9 +63,8 @@ public sealed class RenderPassScheduler
     {
         foreach(var (material, mesh, submesh) in renderer.GetSubrenderers()) {
             var passes = material.Shader.ShaderPasses;
-
             for(int i = 0; i < passes.Length; i++) {
-                if(_passDataDic.TryGetValue(passes[i].PassKind, out var list)) {
+                if(_passDataDic.TryGetValue(passes[i].PassKind, out var renderers)) {
                     var data = new Data
                     {
                         OnRenderPass = passes[i].OnRenderPass,
@@ -75,16 +74,32 @@ public sealed class RenderPassScheduler
                         Pipeline = passes[i].Pipeline,
                         PassIndex = i,
                     };
-                    list.Add(data);     // TODO: lazy add
-                    //                                        // TODO: sort
+
+                    // TODO: lazy add
+                    if(renderers.TryGetValue(renderer, out var dataList)) {
+                        dataList.Add(data);
+                    }
+                    else {
+                        renderers.Add(renderer, [data]);
+                    }
+                    // TODO: need sort?
                 }
             }
         }
     }
 
-    internal void RemoveRenderer()      // TODO:
+    internal void RemoveRenderer(Renderer renderer)
     {
-        throw new NotImplementedException();
+        foreach(var (material, mesh, submesh) in renderer.GetSubrenderers()) {
+            var passes = material.Shader.ShaderPasses;
+
+            for(int i = 0; i < passes.Length; i++) {
+                if(_passDataDic.TryGetValue(passes[i].PassKind, out var renderers)) {
+                    // TODO: lazy remove
+                    renderers.Remove(renderer);
+                }
+            }
+        }
     }
 
     internal void Execute()
@@ -101,10 +116,11 @@ public sealed class RenderPassScheduler
         foreach(var passDef in passDefs) {
             using var renderPassOwn = passDef.Factory(screen, passDef.UserData);
             var renderPass = renderPassOwn.AsValue();
-
-            if(_passDataDic.TryGetValue(passDef.Kind, out var list)) {
-                foreach(var data in list.AsSpan()) {
-                    data.Render(renderPass);
+            if(_passDataDic.TryGetValue(passDef.Kind, out var renderers)) {
+                foreach(var dataList in renderers.Values) {
+                    foreach(var data in dataList.AsSpan()) {
+                        data.Render(renderPass);
+                    }
                 }
             }
         }

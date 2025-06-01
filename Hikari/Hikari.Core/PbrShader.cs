@@ -239,15 +239,11 @@ public static class PbrShader
             ],
             static (obj, material) =>
             {
-                if(obj is IModel model) {
-
-                    ((PbrMaterial)material).WriteModelUniform(new()
-                    {
-                        Model = model.GetModel(out var isUniformScale),
-                        IsUniformScale = isUniformScale ? 1 : 0,
-                    });
-                }
-                ;
+                ((PbrMaterial)material).WriteModelUniform(new()
+                {
+                    Model = obj.GetModel(out var isUniformScale),
+                    IsUniformScale = isUniformScale ? 1 : 0,
+                });
             });
 
         var shaderValue = shader.AsValue();

@@ -523,8 +523,10 @@ public abstract partial class UIElement
                 new Vector4(0, 0, 1, 0),
                 new Vector4(0, 0, 0, 1));
 
-        Debug.Assert(model.Renderer.SubrendererCount == 1);
-        var material = model.Renderer.GetMaterial<IUIMaterial>(0);
+        var renderer = model.Renderer;
+        Debug.Assert(renderer != null);
+        Debug.Assert(renderer.SubrendererCount == 1);
+        var material = renderer.GetMaterial<IUIMaterial>(0);
         material.UpdateMaterial(this, cache, uiProjection * modelMatrix, scaleFactor);
     }
 }

@@ -14,7 +14,7 @@ namespace Hikari.Gltf;
 
 public static class GlbModelLoader
 {
-    public static ITreeModel LoadGlbFile(Shader shader, string filePath, CancellationToken ct = default)
+    public static FrameObject LoadGlbFile(Shader shader, string filePath, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlbFile(filePath, ct);
@@ -27,7 +27,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public static ITreeModel LoadGlb(Shader shader, ResourceFile file, CancellationToken ct = default)
+    public static FrameObject LoadGlb(Shader shader, ResourceFile file, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(file, ct);
@@ -40,7 +40,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public static ITreeModel LoadGlb(Shader shader, ReadOnlySpan<byte> data, CancellationToken ct = default)
+    public static FrameObject LoadGlb(Shader shader, ReadOnlySpan<byte> data, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(data, ct);
@@ -53,7 +53,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public unsafe static ITreeModel LoadGlb(Shader shader, void* data, nuint length, CancellationToken ct = default)
+    public unsafe static FrameObject LoadGlb(Shader shader, void* data, nuint length, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(data, length, ct);
@@ -66,14 +66,14 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    private static ITreeModel LoadRoot(in LoaderState state)
+    private static FrameObject LoadRoot(in LoaderState state)
     {
         var gltf = state.Gltf;
         if(gltf.asset.version != "2.0"u8) {
             throw new NotSupportedException($"only supports gltf v2.0 (version: '{gltf.asset.version}')");
         }
 
-        var root = new EmptyTreeModel();
+        var root = new FrameObject(state.Screen);
         if(gltf.scene is uint sceneNum) {
             ref readonly var scene = ref gltf.scenes.GetOrThrow(sceneNum);
             foreach(var nodeNum in scene.nodes.AsSpan()) {
@@ -84,12 +84,12 @@ public static class GlbModelLoader
         return root;
     }
 
-    private unsafe static ITreeModel LoadNode(in LoaderState state, in Node node)
+    private unsafe static FrameObject LoadNode(in LoaderState state, in Node node)
     {
         state.Ct.ThrowIfCancellationRequested();
         var gltf = state.Gltf;
 
-        ITreeModel model;
+        FrameObject model;
         if(node.mesh is uint meshNum) {
             var meshPrimitives = gltf.meshes.GetOrThrow(meshNum).primitives.AsSpan();
 
@@ -145,7 +145,7 @@ public static class GlbModelLoader
             };
         }
         else {
-            model = new EmptyTreeModel()
+            model = new FrameObject(state.Screen)
             {
                 Name = node.name?.ToString(),
             };

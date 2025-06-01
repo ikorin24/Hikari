@@ -322,7 +322,7 @@ public sealed class Screen
         store.UseObjects(static objects =>
         {
             foreach(var obj in objects) {
-                obj.Renderer.PrepareForRender(obj);
+                obj.Renderer?.PrepareForRender(obj);
             }
         });
 
