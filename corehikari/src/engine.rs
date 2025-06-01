@@ -7,11 +7,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, RwLock};
 use winit;
 use winit::application::ApplicationHandler;
-use winit::event::{MouseScrollDelta, TouchPhase, WindowEvent};
+use winit::event::{self, MouseScrollDelta, TouchPhase, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::platform::run_on_demand::EventLoopExtRunOnDemand;
-use winit::window::WindowId;
-use winit::{event, window};
+use winit::window::{self, WindowId};
 
 pub(crate) struct Engine {
     config: EngineCoreConfig,
@@ -77,23 +76,15 @@ impl Engine {
         f(screen_id, width, height)
     }
 
-    // pub fn event_keyboard(
-    //     screen_id: ScreenId,
-    //     key: &event::VirtualKeyCode,
-    //     state: &event::ElementState,
-    // ) {
-    //     let f = Self::get_engine_field(|engine| engine.config.event_keyboard).unwrap();
-    //     let pressed = match state {
-    //         event::ElementState::Pressed => true,
-    //         event::ElementState::Released => false,
-    //     };
-    //     f(screen_id, *key, pressed)
-    // }
+    fn event_keyboard(&self, screen_id: ScreenId, key: crate::KeyCode, pressed: bool) {
+        let f = self.config.event_keyboard;
+        f(screen_id, key, pressed);
+    }
 
-    // fn event_char_received(&self, screen_id: ScreenId, c: char) {
-    //     let f = self.config.event_char_received;
-    //     f(screen_id, c as u32)
-    // }
+    fn event_char_received(&self, screen_id: ScreenId, c: char) {
+        let f = self.config.event_char_received;
+        f(screen_id, c as u32)
+    }
 
     fn event_mouse_button(
         &self,
@@ -209,9 +200,6 @@ impl ApplicationHandler<ProxyMessage> for Engine {
                 let data = ImeInputData::new(&ime);
                 self.event_ime(target.1, &data);
             }
-            // WindowEvent::ReceivedCharacter(c) => {
-            //     Engine::event_char_received(target.1, *c);
-            // }
             WindowEvent::MouseInput { state, button, .. } => {
                 self.event_mouse_button(target.1, &button, &state);
             }
@@ -230,27 +218,26 @@ impl ApplicationHandler<ProxyMessage> for Engine {
                     event_loop.exit();
                 }
             }
-            // WindowEvent::KeyboardInput {
-            //     input:
-            //         KeyboardInput {
-            //             state,
-            //             virtual_keycode: Some(key),
-            //             ..
-            //         },
-            //     ..
-            // } => {
-            //     Engine::event_keyboard(target.1, key, state);
-            // }
-            WindowEvent::KeyboardInput {
-                device_id,
-                event,
-                is_synthetic,
-            } => {
-                _ = device_id;
-                _ = event;
-                _ = is_synthetic;
-                // TODO
-                // Engine::event_keyboard(target.1, key, &event.state);
+            WindowEvent::KeyboardInput { event, .. } => {
+                use winit::keyboard::PhysicalKey;
+                if let PhysicalKey::Code(keycode) = &event.physical_key {
+                    if let Ok(key) = keycode.try_into() {
+                        let pressed = match event.state {
+                            event::ElementState::Pressed => true,
+                            event::ElementState::Released => false,
+                        };
+                        self.event_keyboard(target.1, key, pressed);
+                    }
+                }
+
+                if let Some(text) = event.text.as_ref() {
+                    let text = text.as_ref();
+                    if text.is_empty() == false {
+                        text.chars().for_each(|c| {
+                            self.event_char_received(target.1, c);
+                        });
+                    }
+                }
             }
             WindowEvent::Resized(physical_size) => {
                 self.event_resized(target.1, physical_size.width, physical_size.height);
@@ -275,12 +262,6 @@ impl ApplicationHandler<ProxyMessage> for Engine {
                     }
                 }
             }
-            // WindowEvent::MainEventsCleared => {
-            //     let screens = SCREENS.lock().unwrap();
-            //     screens.iter().for_each(|x| {
-            //         Engine::event_cleared(x.1);
-            //     });
-            // }
             _ => {}
         }
     }

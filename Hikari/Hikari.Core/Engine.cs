@@ -129,8 +129,8 @@ public static class Engine
             _screens[id].OnResized(width, height);
         };
 
-    private static readonly Action<CH.ScreenId, Winit.VirtualKeyCode, bool> _onKeyboardInput =
-        (CH.ScreenId id, Winit.VirtualKeyCode key, bool pressed) =>
+    private static readonly Action<CH.ScreenId, CH.KeyCode, bool> _onKeyboardInput =
+        (CH.ScreenId id, CH.KeyCode key, bool pressed) =>
         {
             _screens[id].Keyboard.OnKeyboardInput(key, pressed);
         };

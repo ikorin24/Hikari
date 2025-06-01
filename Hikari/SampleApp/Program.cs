@@ -238,29 +238,29 @@ internal class Program
         var cameraPos = camera.Position;
         var target = cameraPos + camera.Direction * 2f;
         var posChanged = false;
-        if(keyboard.IsPressed(Keys.W) || keyboard.IsPressed(Keys.A) || keyboard.IsPressed(Keys.S) || keyboard.IsPressed(Keys.D)
-                || keyboard.IsPressed(Keys.E) || keyboard.IsPressed(Keys.Q)) {
+        if(keyboard.IsPressed(KeyCode.KeyW) || keyboard.IsPressed(KeyCode.KeyA) || keyboard.IsPressed(KeyCode.KeyS) || keyboard.IsPressed(KeyCode.KeyD)
+                || keyboard.IsPressed(KeyCode.KeyE) || keyboard.IsPressed(KeyCode.KeyQ)) {
             const float S = 0.04f;
             var v = camera.Direction * S;
             Vector3 vec = default;
-            if(keyboard.IsPressed(Keys.W)) {
+            if(keyboard.IsPressed(KeyCode.KeyW)) {
                 vec += v;
             }
-            if(keyboard.IsPressed(Keys.S)) {
+            if(keyboard.IsPressed(KeyCode.KeyS)) {
                 vec -= v;
             }
-            if(keyboard.IsPressed(Keys.A)) {
+            if(keyboard.IsPressed(KeyCode.KeyA)) {
                 var left = Matrix2.GetRotation(-90.ToRadian()) * v.Xz;
                 vec += new Vector3(left.X, 0, left.Y);
             }
-            if(keyboard.IsPressed(Keys.D)) {
+            if(keyboard.IsPressed(KeyCode.KeyD)) {
                 var right = Matrix2.GetRotation(90.ToRadian()) * v.Xz;
                 vec += new Vector3(right.X, 0, right.Y);
             }
-            if(keyboard.IsPressed(Keys.E)) {
+            if(keyboard.IsPressed(KeyCode.KeyE)) {
                 vec += Vector3.UnitY * S;
             }
-            if(keyboard.IsPressed(Keys.Q)) {
+            if(keyboard.IsPressed(KeyCode.KeyQ)) {
                 vec -= Vector3.UnitY * S;
             }
             target += vec;

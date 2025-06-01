@@ -101,7 +101,7 @@ internal unsafe static partial class EngineCore
         }
 
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void EventKeyboard(CH.ScreenId id, Winit.VirtualKeyCode key, bool pressed)
+        static void EventKeyboard(CH.ScreenId id, CH.KeyCode key, bool pressed)
         {
             _config.OnKeyboardInput(id, key, pressed);
         }
@@ -811,7 +811,7 @@ internal readonly struct EngineCoreConfig
 
     public required Action<CH.ScreenId, u32, u32> OnResized { get; init; }
 
-    public required Action<CH.ScreenId, Winit.VirtualKeyCode, bool> OnKeyboardInput { get; init; }
+    public required Action<CH.ScreenId, CH.KeyCode, bool> OnKeyboardInput { get; init; }
     public required Action<CH.ScreenId, Rune> OnCharReceived { get; init; }
     public required Action<CH.ScreenId, CH.MouseButton, bool> OnMouseButton { get; init; }
     public required EngineCoreImeInputAction OnImeInput { get; init; }
