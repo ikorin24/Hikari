@@ -18,7 +18,7 @@
     </None>
   </ItemGroup>
 
-  <Target Name="Build Native Library - Rust" BeforeTargets="Build" Condition="'$(RustTarget)' != ''" Inputs="$(RustProjectPath)**\*;$(RustProjectPath)\src\**\*.*;" Outputs="$(DeploymentLibPath)">
+  <Target Name="Build Native Library - Rust" BeforeTargets="Build" Condition="'$(RustTarget)' != ''" Inputs="$(RustProjectPath)*;$(RustProjectPath)src\**\*.*;" Outputs="$(DeploymentLibPath)">
     <Message Text="------ Build Rust native library (target: '$(RustTarget)') ------" Importance="high" />
     <Exec Command="cargo build --release --target $(RustTarget)" WorkingDirectory="$(RustProjectPath)" />
   </Target>

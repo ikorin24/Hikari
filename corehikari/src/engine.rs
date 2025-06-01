@@ -288,12 +288,12 @@ pub(crate) fn send_proxy_message(message: ProxyMessage) -> Result<(), Box<dyn Er
     Ok(())
 }
 
-static DEBUG_PRINTLN: RwLock<Option<DebugPrintlnFn>> = RwLock::new(None);
+pub(crate) static DEBUG_PRINTLN: RwLock<Option<DebugPrintlnFn>> = RwLock::new(None);
 
 #[macro_export]
 macro_rules! debug_println {
     ($($arg:tt)*) => {
-        if let Some(ref f) = *DEBUG_PRINTLN.read().unwrap() {
+        if let Some(ref f) = *crate::engine::DEBUG_PRINTLN.read().unwrap() {
             let message: String = format!($($arg)*);
             f(message.as_ptr(), message.len());
             true

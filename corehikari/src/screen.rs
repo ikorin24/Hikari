@@ -36,11 +36,12 @@ impl Screen {
     ) -> Result<Screen, Box<dyn Error>> {
         let window = platform::create_window(&config, event_loop)?;
         if let Some(monitor) = window.current_monitor() {
-            let monitor_size = monitor.size();
-            let window_size = window.outer_size();
+            let monitor_pos = monitor.position();
+            let monitor_size = monitor.size().cast::<i32>();
+            let window_size = window.outer_size().cast::<i32>();
             let pos = dpi::PhysicalPosition::new(
-                ((monitor_size.width - window_size.width) / 2u32) as i32,
-                ((monitor_size.height - window_size.height) / 2u32) as i32,
+                monitor_pos.x + (monitor_size.width - window_size.width) / 2,
+                monitor_pos.y + (monitor_size.height - window_size.height) / 2,
             );
             window.set_outer_position(dpi::Position::Physical(pos));
         }
