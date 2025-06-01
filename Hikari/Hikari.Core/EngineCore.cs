@@ -45,6 +45,7 @@ internal unsafe static partial class EngineCore
             event_cursor_entered_left = new(&EventCursorEnteredLeft),
             event_closing = new(&EventClosing),
             event_closed = new(&EventClosed),
+            debug_println = new(&DebugPrintln),
         };
 
         var screenConfigNative = screenConfig.ToCoreType();
@@ -152,6 +153,14 @@ internal unsafe static partial class EngineCore
         static NativePointer EventClosed(CH.ScreenId id)
         {
             return _config.OnClosed(id).AsPtr();
+        }
+
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+        static void DebugPrintln(u8* message, usize len)
+        {
+            var length = (int)usize.Min(len, int.MaxValue);
+            var str = Encoding.UTF8.GetString(message, length);
+            Debug.WriteLine(str);
         }
     }
 

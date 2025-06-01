@@ -328,6 +328,7 @@ internal static class CH
         public required CursorEnteredLeftEventFn event_cursor_entered_left;
         public required ClosingEventFn event_closing;
         public required ClosedEventFn event_closed;
+        public required DebugPrintlnFn debug_println;
     }
 
     internal struct ScreenConfig
@@ -455,6 +456,12 @@ internal static class CH
         {
             _func = (delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionBox<Screen>>)f;
         }
+    }
+
+    internal unsafe readonly struct DebugPrintlnFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<u8*, usize, void> _func;
+        public DebugPrintlnFn(delegate* unmanaged[Cdecl]<u8*, usize, void> f) => _func = f;
     }
 
     internal readonly struct ScreenId : IEquatable<ScreenId>

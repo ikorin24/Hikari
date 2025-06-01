@@ -13,7 +13,7 @@ use winit::event::Ime;
 use winit::window;
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct EngineCoreConfig {
     pub on_screen_init: ScreenInitFn,
     pub on_unhandled_error: EngineUnhandledErrorFn,
@@ -29,6 +29,7 @@ pub(crate) struct EngineCoreConfig {
     pub event_cursor_entered_left: CursorEnteredLeftEventFn,
     pub event_closing: ClosingEventFn,
     pub event_closed: ClosedEventFn,
+    pub debug_println: DebugPrintlnFn,
 }
 
 #[repr(C)]
@@ -1932,3 +1933,4 @@ pub(crate) type CursorMovedEventFn = extern "cdecl" fn(screen_id: ScreenId, x: f
 pub(crate) type CursorEnteredLeftEventFn = extern "cdecl" fn(screen_id: ScreenId, entered: bool);
 pub(crate) type ClosingEventFn = extern "cdecl" fn(screen_id: ScreenId, cancel: &mut bool);
 pub(crate) type ClosedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> Option<Box<Screen>>;
+pub(crate) type DebugPrintlnFn = extern "cdecl" fn(message: *const u8, len: usize);

@@ -4,7 +4,7 @@ use std::cell::Cell;
 use std::error::Error;
 use std::fmt::Debug;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
+use std::sync::{Mutex, RwLock};
 use winit;
 use winit::application::ApplicationHandler;
 use winit::event::{MouseScrollDelta, TouchPhase, WindowEvent};
@@ -307,6 +307,21 @@ pub(crate) fn send_proxy_message(message: ProxyMessage) -> Result<(), Box<dyn Er
     Ok(())
 }
 
+static DEBUG_PRINTLN: RwLock<Option<DebugPrintlnFn>> = RwLock::new(None);
+
+#[macro_export]
+macro_rules! debug_println {
+    ($($arg:tt)*) => {
+        if let Some(ref f) = *DEBUG_PRINTLN.read().unwrap() {
+            let message: String = format!($($arg)*);
+            f(message.as_ptr(), message.len());
+            true
+        } else {
+            false
+        }
+    };
+}
+
 static IS_ENGINE_RUNNING: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn engine_start(
@@ -316,8 +331,14 @@ pub(crate) fn engine_start(
     if IS_ENGINE_RUNNING.swap(true, Ordering::Relaxed) {
         return Err(EngineErr::ALREADY_RUNNING.into());
     }
+    DEBUG_PRINTLN
+        .write()
+        .unwrap()
+        .replace(engine_config.debug_println);
     let mut event_loop = EventLoop::with_user_event().build()?;
     event_loop.set_control_flow(ControlFlow::Poll);
+
+    debug_println!("[corehikari] engine start");
     let mut engine = Engine::new(engine_config);
     {
         let mut proxy = LOOP_PROXY.lock().unwrap();
@@ -330,6 +351,9 @@ pub(crate) fn engine_start(
         .send_event(ProxyMessage::CreateScreen(*screen_config))?;
     event_loop.run_app_on_demand(&mut engine)?;
     IS_ENGINE_RUNNING.store(false, Ordering::Relaxed);
+
+    debug_println!("[corehikari] engine stop");
+    DEBUG_PRINTLN.write().unwrap().take();
     Ok(())
 }
 
