@@ -105,6 +105,7 @@ internal sealed class ObjectStore
     }
 
     internal void UseObjects<T>(T arg, ReadOnlySpanAction<FrameObject, T> action)
+        where T : allows ref struct
     {
         Debug.Assert(Screen.MainThread.IsCurrentThread);
         var objects = _list.AsSpan();

@@ -54,20 +54,16 @@ internal class Program
         SetLight(screen, 0);
         screen.Lights.AmbientStrength = 0.1f;
 
-        FrameObject cameraModel = null!;
         await UniTask.WhenAll(
-            UniTask.Run(() =>
+            GlbModelLoader.LoadGlbFileAsync(pbrShader, "resources/AntiqueCamera.glb", new FrameObjectInitArg
             {
-                var model = GlbModelLoader.LoadGlbFile(pbrShader, @"resources\AntiqueCamera.glb");
-                model.Position = new Vector3(0, 0, 0);
-                model.Scale = new Vector3(0.2f);
-                cameraModel = model;
+                Position = new Vector3(0, 0, 0),
+                Scale = new Vector3(0.2f),
             }),
-            UniTask.Run(() =>
+            GlbModelLoader.LoadGlbFileAsync(pbrShader, "resources/Avocado.glb", new FrameObjectInitArg
             {
-                var model2 = GlbModelLoader.LoadGlbFile(pbrShader, @"resources\Avocado.glb");
-                model2.Position = new Vector3(0, 0, -1.3f);
-                model2.Scale = new Vector3(25f);
+                Position = new Vector3(0, 0, -1.3f),
+                Scale = new Vector3(25f),
             }),
             UniTask.Run(() =>
             {

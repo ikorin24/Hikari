@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Cysharp.Threading.Tasks;
 using Hikari.Gltf.Internal;
 using Hikari.Gltf.Parsing;
 using System;
@@ -22,6 +23,23 @@ public static class GlbModelLoader
         {
             Glb = glb,
             Shader = shader,
+            Init = null,
+            ApplyVisible = true,
+            Ct = ct,
+        };
+        return LoadRoot(state);
+    }
+
+    public static FrameObject LoadGlbFile(Shader shader, string filePath, FrameObjectInitArg init, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(shader);
+        using var glb = GltfParser.ParseGlbFile(filePath, ct);
+        var state = new LoaderState
+        {
+            Glb = glb,
+            Shader = shader,
+            Init = init,
+            ApplyVisible = true,
             Ct = ct,
         };
         return LoadRoot(state);
@@ -35,6 +53,23 @@ public static class GlbModelLoader
         {
             Glb = glb,
             Shader = shader,
+            Init = null,
+            ApplyVisible = true,
+            Ct = ct,
+        };
+        return LoadRoot(state);
+    }
+
+    public static FrameObject LoadGlb(Shader shader, ResourceFile file, FrameObjectInitArg init, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(shader);
+        using var glb = GltfParser.ParseGlb(file, ct);
+        var state = new LoaderState
+        {
+            Glb = glb,
+            Shader = shader,
+            Init = init,
+            ApplyVisible = true,
             Ct = ct,
         };
         return LoadRoot(state);
@@ -48,6 +83,23 @@ public static class GlbModelLoader
         {
             Glb = glb,
             Shader = shader,
+            Init = null,
+            ApplyVisible = true,
+            Ct = ct,
+        };
+        return LoadRoot(state);
+    }
+
+    public static FrameObject LoadGlb(Shader shader, ReadOnlySpan<byte> data, FrameObjectInitArg init, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(shader);
+        using var glb = GltfParser.ParseGlb(data, ct);
+        var state = new LoaderState
+        {
+            Glb = glb,
+            Shader = shader,
+            Init = init,
+            ApplyVisible = true,
             Ct = ct,
         };
         return LoadRoot(state);
@@ -61,9 +113,106 @@ public static class GlbModelLoader
         {
             Glb = glb,
             Shader = shader,
+            Init = null,
+            ApplyVisible = true,
             Ct = ct,
         };
         return LoadRoot(state);
+    }
+
+    public unsafe static FrameObject LoadGlb(Shader shader, void* data, nuint length, FrameObjectInitArg init, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(shader);
+        using var glb = GltfParser.ParseGlb(data, length, ct);
+        var state = new LoaderState
+        {
+            Glb = glb,
+            Shader = shader,
+            Init = init,
+            ApplyVisible = true,
+            Ct = ct,
+        };
+        return LoadRoot(state);
+    }
+
+    public static async UniTask<FrameObject> LoadGlbFileAsync(Shader shader, string filePath, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(shader);
+        var obj = await UniTask.Run(() =>
+        {
+            using var glb = GltfParser.ParseGlbFile(filePath, ct);
+            var state = new LoaderState
+            {
+                Glb = glb,
+                Shader = shader,
+                Init = null,
+                ApplyVisible = false,
+                Ct = ct,
+            };
+            return LoadRoot(state);
+        });
+        obj.IsVisible = true;
+        return obj;
+    }
+
+    public static async UniTask<FrameObject> LoadGlbFileAsync(Shader shader, string filePath, FrameObjectInitArg init, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(shader);
+        var obj = await UniTask.Run(() =>
+        {
+            using var glb = GltfParser.ParseGlbFile(filePath, ct);
+            var state = new LoaderState
+            {
+                Glb = glb,
+                Shader = shader,
+                Init = init,
+                ApplyVisible = false,
+                Ct = ct,
+            };
+            return LoadRoot(state);
+        });
+        obj.IsVisible = init.IsVisible ?? true;
+        return obj;
+    }
+
+    public static async UniTask<FrameObject> LoadGlbAsync(Shader shader, ReadOnlyMemory<byte> data, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(shader);
+        var obj = await UniTask.Run(() =>
+        {
+            using var glb = GltfParser.ParseGlb(data.Span, ct);
+            var state = new LoaderState
+            {
+                Glb = glb,
+                Shader = shader,
+                Init = null,
+                ApplyVisible = false,
+                Ct = ct,
+            };
+            return LoadRoot(state);
+        });
+        obj.IsVisible = true;
+        return obj;
+    }
+
+    public static async UniTask<FrameObject> LoadGlbAsync(Shader shader, ReadOnlyMemory<byte> data, FrameObjectInitArg init, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(shader);
+        var obj = await UniTask.Run(() =>
+        {
+            using var glb = GltfParser.ParseGlb(data.Span, ct);
+            var state = new LoaderState
+            {
+                Glb = glb,
+                Shader = shader,
+                Init = init,
+                ApplyVisible = false,
+                Ct = ct,
+            };
+            return LoadRoot(state);
+        });
+        obj.IsVisible = init.IsVisible ?? true;
+        return obj;
     }
 
     private static FrameObject LoadRoot(in LoaderState state)
@@ -73,13 +222,24 @@ public static class GlbModelLoader
             throw new NotSupportedException($"only supports gltf v2.0 (version: '{gltf.asset.version}')");
         }
 
-        var root = new FrameObject(state.Screen);
+        var init = state.Init switch
+        {
+            FrameObjectInitArg a => a with { IsVisible = false },
+            null => new() { IsVisible = false }
+        };
+        var root = new FrameObject(state.Screen, init)
+        {
+            IsVisible = false,
+        };
         if(gltf.scene is uint sceneNum) {
             ref readonly var scene = ref gltf.scenes.GetOrThrow(sceneNum);
             foreach(var nodeNum in scene.nodes.AsSpan()) {
                 var child = LoadNode(in state, in gltf.nodes.GetOrThrow(nodeNum));
                 root.AddChild(child);
             }
+        }
+        if(state.ApplyVisible) {
+            root.IsVisible = state.Init?.IsVisible ?? true;
         }
         return root;
     }
@@ -141,13 +301,13 @@ public static class GlbModelLoader
 
             model = new FrameObject(mesh, materials.AsImmutableArray())
             {
-                Name = node.name?.ToString(),
+                Name = node.name?.ToString() ?? "",
             };
         }
         else {
             model = new FrameObject(state.Screen)
             {
-                Name = node.name?.ToString(),
+                Name = node.name?.ToString() ?? "",
             };
         }
 
@@ -766,6 +926,8 @@ public static class GlbModelLoader
         public required GlbObject Glb { get; init; }
         public required CancellationToken Ct { get; init; }
         public required Shader Shader { get; init; }
+        public required FrameObjectInitArg? Init { get; init; }
+        public required bool ApplyVisible { get; init; }
 
         public Screen Screen => Shader.Screen;
 

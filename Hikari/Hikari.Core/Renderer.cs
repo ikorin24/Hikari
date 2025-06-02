@@ -4,17 +4,33 @@ using System.Collections.Immutable;
 
 namespace Hikari;
 
-public sealed class Renderer
+public sealed class Renderer : IRenderer
 {
     private readonly Screen _screen;
     private readonly MaybeOwn<Mesh> _mesh;
     private readonly ImmutableArray<Own<IMaterial>> _materials;
+    private bool _isVisible = true;
+    private bool _areAllAncestorsVisible = true;
 
     public Screen Screen => _screen;
 
     public Mesh Mesh => _mesh.AsValue();
 
     public int SubrendererCount => _materials.Length;
+
+    public bool IsVisible
+    {
+        get => _isVisible;
+        set => _isVisible = value;
+    }
+
+    public bool IsVisibleInHierarchy => _isVisible && _areAllAncestorsVisible;
+
+    bool IRenderer.AreAllAncestorsVisible
+    {
+        get => _areAllAncestorsVisible;
+        set => _areAllAncestorsVisible = value;
+    }
 
     internal Renderer(MaybeOwn<Mesh> mesh, Own<IMaterial> material) : this(mesh, [material])
     {
@@ -51,6 +67,8 @@ public sealed class Renderer
     }
 
     internal Subrenderers GetSubrenderers() => new Subrenderers(this);
+
+    void IRenderer.DisposeInternal() => DisposeInternal();
 
     internal void DisposeInternal()
     {
@@ -89,6 +107,45 @@ public sealed class Renderer
             return ++_index < _materials.Length;
         }
     }
+}
+
+internal sealed class NoneRenderer : IRenderer
+{
+    private readonly Screen _screen;
+    private bool _isVisible = true;
+    private bool _areAllAncestorsVisible = true;
+
+    public Screen Screen => _screen;
+
+    public bool IsVisible
+    {
+        get => _isVisible;
+        set => _isVisible = value;
+    }
+    public bool AreAllAncestorsVisible
+    {
+        get => _areAllAncestorsVisible;
+        set => _areAllAncestorsVisible = value;
+    }
+    public bool IsVisibleInHierarchy => _isVisible && _areAllAncestorsVisible;
+
+    public NoneRenderer(Screen screen)
+    {
+        _screen = screen;
+    }
+
+    public void DisposeInternal()
+    {
+    }
+}
+
+internal interface IRenderer
+{
+    Screen Screen { get; }
+    bool IsVisible { get; set; }
+    bool IsVisibleInHierarchy { get; }
+    bool AreAllAncestorsVisible { get; set; }
+    void DisposeInternal();
 }
 
 internal readonly record struct Subrenderer

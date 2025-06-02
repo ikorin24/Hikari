@@ -13,7 +13,7 @@ public sealed class RenderPassScheduler
 {
     private readonly Screen _screen;
     private ImmutableArray<RenderPassDefinition> _passDefs;
-    private FrozenDictionary<PassKind, Dictionary<Renderer, List<Data>>> _passDataDic;
+    private FrozenDictionary<PassKind, Dictionary<Renderer, List<RenderPassData>>> _passDataDic;
     private FastSpinLock _lock;
 
     private static readonly RenderPassDefinition EmptyPass = new()
@@ -42,7 +42,7 @@ public sealed class RenderPassScheduler
     {
         _screen = screen;
         _passDefs = [];
-        _passDataDic = new Dictionary<PassKind, Dictionary<Renderer, List<Data>>>(0).ToFrozenDictionary();
+        _passDataDic = new Dictionary<PassKind, Dictionary<Renderer, List<RenderPassData>>>(0).ToFrozenDictionary();
     }
 
     public DefaultGBufferProvider SetDefault()
@@ -113,9 +113,11 @@ public sealed class RenderPassScheduler
         ];
         ReadOnlySpan<ushort> indices = [0, 1, 2, 2, 3, 0];
         var mesh = Mesh.Create<VertexSlim, ushort>(screen, vertices, indices);
-        var renderer = new Renderer(mesh, material.Cast<IMaterial>());
-        screen.RenderScheduler.Add(renderer);
-        resourceLifetime.Subscribe(_ => renderer.DisposeInternal());
+        var obj = new FrameObject(mesh, material.Cast<IMaterial>())
+        {
+            Name = "Deferred Plane",
+        };
+        resourceLifetime.Subscribe(_ => obj.Terminate());
         return gBuffer;
     }
 
@@ -126,7 +128,7 @@ public sealed class RenderPassScheduler
         }
         using(_lock.Scope()) {
             _passDefs = passDefs;
-            var dic = new Dictionary<PassKind, Dictionary<Renderer, List<Data>>>();
+            var dic = new Dictionary<PassKind, Dictionary<Renderer, List<RenderPassData>>>();
             foreach(var passDef in passDefs) {
                 dic.TryAdd(passDef.Kind, new());
             }
@@ -140,7 +142,7 @@ public sealed class RenderPassScheduler
             var passes = material.Shader.ShaderPasses;
             for(int i = 0; i < passes.Length; i++) {
                 if(_passDataDic.TryGetValue(passes[i].PassKind, out var renderers)) {
-                    var data = new Data
+                    var data = new RenderPassData
                     {
                         OnRenderPass = passes[i].OnRenderPass,
                         Material = material,
@@ -193,17 +195,18 @@ public sealed class RenderPassScheduler
             using var renderPassOwn = passDef.Factory(screen, passDef.UserData);
             var renderPass = renderPassOwn.AsValue();
             if(_passDataDic.TryGetValue(passDef.Kind, out var renderers)) {
-                foreach(var dataList in renderers.Values) {
-                    foreach(var data in dataList.AsSpan()) {
-                        data.Render(renderPass);
+                foreach(var (renderer, dataList) in renderers) {
+                    if(renderer.IsVisibleInHierarchy) {
+                        foreach(var data in dataList.AsSpan()) {
+                            data.Render(renderPass);
+                        }
                     }
                 }
             }
         }
     }
 
-
-    private readonly record struct Data
+    internal readonly record struct RenderPassData
     {
         public required RenderPassAction OnRenderPass { get; init; }
         public required IMaterial Material { get; init; }
