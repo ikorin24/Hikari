@@ -32,13 +32,15 @@ public sealed class DeferredProcessMaterial : IMaterial
         }).DisposeOn(Disposed);
     }
 
-    public ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
+    public void SetBindGroupsTo(in RenderPass renderPass, int passIndex, Renderer renderer)
     {
-        return passIndex switch
-        {
-            0 => _pass0BindGroups.AsSpan(),
-            _ => throw new ArgumentOutOfRangeException(nameof(passIndex))
-        };
+        switch(passIndex) {
+            case 0:
+                renderPass.SetBindGroups(_pass0BindGroups);
+                break;
+            default:
+                break;
+        }
     }
 
     private void Release()

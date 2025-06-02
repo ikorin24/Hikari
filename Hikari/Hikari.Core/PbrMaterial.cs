@@ -1,7 +1,6 @@
 ﻿#nullable enable
 using Hikari.Internal;
 using System;
-using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 
 namespace Hikari;
@@ -15,10 +14,9 @@ public sealed partial class PbrMaterial : IMaterial
     private readonly Sampler _albedoSampler;
     private readonly Sampler _metallicRoughnessSampler;
     private readonly Sampler _normalSampler;
+    private readonly BindGroup _bindGroup1;
     private readonly DisposableBag _disposables;
 
-    private readonly TypedOwnBuffer<UniformValue> _modelUniform;
-    private readonly ImmutableArray<ImmutableArray<BindGroupData>> _passBindGroups;
     private EventSource<PbrMaterial> _disposed;
 
     public Event<PbrMaterial> Disposed => _disposed.Event;
@@ -34,28 +32,21 @@ public sealed partial class PbrMaterial : IMaterial
 
     private PbrMaterial(
         Shader shader,
-        TypedOwnBuffer<UniformValue> uniform,
         Texture2D albedo, Sampler albedoSampler,
         Texture2D metallicRoughness, Sampler metallicRoughnessSampler,
         Texture2D normal, Sampler normalSampler,
-        ImmutableArray<ImmutableArray<BindGroupData>> passBindGroups,
+        BindGroup bindGroup1,
         DisposableBag disposables)
     {
         _shader = shader;
-        _modelUniform = uniform;
         _albedo = albedo;
         _albedoSampler = albedoSampler;
         _metallicRoughness = metallicRoughness;
         _metallicRoughnessSampler = metallicRoughnessSampler;
         _normal = normal;
         _normalSampler = normalSampler;
-        _passBindGroups = passBindGroups;
+        _bindGroup1 = bindGroup1;
         _disposables = disposables;
-    }
-
-    public ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
-    {
-        return _passBindGroups[passIndex].AsSpan();
     }
 
     private void Release()
@@ -66,7 +57,6 @@ public sealed partial class PbrMaterial : IMaterial
     private void Release(bool manualRelease)
     {
         if(manualRelease) {
-            _modelUniform.Dispose();
             _disposables.Dispose();
             _disposed.Invoke(this);
         }
@@ -113,7 +103,6 @@ public sealed partial class PbrMaterial : IMaterial
         normalSampler.ThrowArgumentExceptionIfNone();
 
         var screen = shader.Screen;
-        var uniformBuffer = new TypedOwnBuffer<UniformValue>(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
 
         var disposables = new DisposableBag();
         var albedoValue = albedo.AddTo(disposables);
@@ -123,59 +112,49 @@ public sealed partial class PbrMaterial : IMaterial
         var normalValue = normal.AddTo(disposables);
         var normalSamplerValue = normalSampler.AddTo(disposables);
 
-        var shadowBindGroup0 = BindGroup.Create(screen, new()
+        var bindGroup1 = BindGroup.Create(screen, new()
         {
-            Layout = shader.ShaderPasses[0].Pipeline.Layout.BindGroupLayouts[0],
+            Layout = shader.ShaderPasses[1].Pipeline.Layout.BindGroupLayouts[1],
             Entries =
             [
-                BindGroupEntry.Buffer(0, uniformBuffer),
+                BindGroupEntry.TextureView(0, albedoValue.View),
+                BindGroupEntry.Sampler(1, albedoSamplerValue),
+                BindGroupEntry.TextureView(2, metallicRoughnessValue.View),
+                BindGroupEntry.Sampler(3, metallicRoughnessSamplerValue),
+                BindGroupEntry.TextureView(4, normalValue.View),
+                BindGroupEntry.Sampler(5, normalSamplerValue),
             ],
         }).AddTo(disposables);
-
-        var bindGroup0 = BindGroup.Create(screen, new()
-        {
-            Layout = shader.ShaderPasses[1].Pipeline.Layout.BindGroupLayouts[0],
-            Entries =
-            [
-                BindGroupEntry.Buffer(0, uniformBuffer),
-                BindGroupEntry.TextureView(1, albedoValue.View),
-                BindGroupEntry.Sampler(2, albedoSamplerValue),
-                BindGroupEntry.TextureView(3, metallicRoughnessValue.View),
-                BindGroupEntry.Sampler(4, metallicRoughnessSamplerValue),
-                BindGroupEntry.TextureView(5, normalValue.View),
-                BindGroupEntry.Sampler(6, normalSamplerValue),
-            ],
-        }).AddTo(disposables);
-
-        ImmutableArray<ImmutableArray<BindGroupData>> passBindGroups =
-        [
-            [
-                new BindGroupData(0, shadowBindGroup0),
-                new BindGroupData(1, screen.Lights.DirectionalLight.RenderShadowBindGroup),
-            ],
-            [
-                new BindGroupData(0, bindGroup0),
-                new BindGroupData(1, screen.Camera.CameraDataBindGroup),
-            ],
-        ];
 
         var material = new PbrMaterial(
             shader,
-            uniformBuffer,
             albedoValue,
             albedoSamplerValue,
             metallicRoughnessValue,
             metallicRoughnessSamplerValue,
             normalValue,
             normalSamplerValue,
-            passBindGroups,
+            bindGroup1,
             disposables);
         return Own.New(material, static x => SafeCast.As<PbrMaterial>(x).Release());
     }
 
-    internal void WriteModelUniform(in UniformValue value)
+    public void SetBindGroupsTo(in RenderPass renderPass, int passIndex, Renderer renderer)
     {
-        _modelUniform.WriteData(value);
+        var screen = Screen;
+        switch(passIndex) {
+            case 0:
+                renderPass.SetBindGroup(0, renderer.ModelDataBindGroup);
+                renderPass.SetBindGroup(1, screen.Lights.DirectionalLight.RenderShadowBindGroup);
+                break;
+            case 1:
+                renderPass.SetBindGroup(0, renderer.ModelDataBindGroup);
+                renderPass.SetBindGroup(1, _bindGroup1);
+                renderPass.SetBindGroup(2, screen.Camera.CameraDataBindGroup);
+                break;
+            default:
+                break;
+        }
     }
 
     [BufferDataStruct]

@@ -150,7 +150,10 @@ file sealed class LabelMaterial : IUIMaterial
         return Own.New(self, static x => SafeCast.As<LabelMaterial>(x).Release());
     }
 
-    public ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex) => _base.GetBindGroups(passIndex);
+    public void SetBindGroupsTo(in RenderPass renderPass, int passIndex, Renderer renderer)
+    {
+        _base.SetBindGroupsTo(renderPass, passIndex, renderer);
+    }
 
     public void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)
     {

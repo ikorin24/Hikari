@@ -169,5 +169,8 @@ file sealed class ButtonMaterial : IUIMaterial
         }
     }
 
-    public ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex) => _base.GetBindGroups(passIndex);
+    public void SetBindGroupsTo(in RenderPass renderPass, int passIndex, Renderer renderer)
+    {
+        _base.SetBindGroupsTo(renderPass, passIndex, renderer);
+    }
 }

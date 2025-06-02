@@ -262,7 +262,7 @@ public static class GlbModelLoader
             var tangents = new SpanU32<Vector3>(tangentsBuf.Ptr, vc);
             var indices = new SpanU32<uint>(indicesBuf.Ptr, ic);
 
-            var materials = new Own<IMaterial>[meshPrimitives.Length];
+            var materials = new MaybeOwn<IMaterial>[meshPrimitives.Length];
             uint vPos = 0;
             uint iPos = 0;
             for(int i = 0; i < meshPrimitives.Length; i++) {

@@ -1,14 +1,18 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 
 namespace Hikari;
 
-public sealed class Renderer : IRenderer
+public sealed partial class Renderer : IRenderer
 {
     private readonly Screen _screen;
     private readonly MaybeOwn<Mesh> _mesh;
-    private readonly ImmutableArray<Own<IMaterial>> _materials;
+    private readonly ImmutableArray<MaybeOwn<IMaterial>> _materials;
+    private readonly TypedOwnBuffer<ModelUniformValue> _modelDataBuffer;
+    private readonly Own<BindGroupLayout> _modelDataBindGroupLayout;
+    private readonly Own<BindGroup> _modelDataBindGroup;
     private bool _isVisible = true;
     private bool _areAllAncestorsVisible = true;
 
@@ -17,6 +21,8 @@ public sealed class Renderer : IRenderer
     public Mesh Mesh => _mesh.AsValue();
 
     public int SubrendererCount => _materials.Length;
+
+    public BindGroup ModelDataBindGroup => _modelDataBindGroup.AsValue();
 
     public bool IsVisible
     {
@@ -32,23 +38,46 @@ public sealed class Renderer : IRenderer
         set => _areAllAncestorsVisible = value;
     }
 
-    internal Renderer(MaybeOwn<Mesh> mesh, Own<IMaterial> material) : this(mesh, [material])
-    {
-    }
-
-    internal Renderer(MaybeOwn<Mesh> mesh, ImmutableArray<Own<IMaterial>> materials)
+    internal Renderer(MaybeOwn<Mesh> mesh, ImmutableArray<MaybeOwn<IMaterial>> materials)
     {
         var meshValue = mesh.AsValue();
         if(meshValue.Submeshes.Length != materials.Length) {
             ThrowHelper.ThrowArgument(nameof(materials), "The number of materials does not equal the number of submeshes");
         }
-        _screen = meshValue.Screen;
+        var screen = meshValue.Screen;
+        _screen = screen;
         _mesh = mesh;
         _materials = materials;
+
+        var modelDataBuffer = new TypedOwnBuffer<ModelUniformValue>(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
+        var bgl = BindGroupLayout.Create(screen, new()
+        {
+            Entries =
+            [
+                BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new() { Type = BufferBindingType.Uniform }),
+            ],
+        });
+        _modelDataBindGroupLayout = bgl;
+        _modelDataBindGroup = BindGroup.Create(screen, new()
+        {
+            Layout = bgl.AsValue(),
+            Entries =
+            [
+                BindGroupEntry.Buffer(0, modelDataBuffer),
+            ],
+        });
+        _modelDataBuffer = modelDataBuffer;
     }
 
     internal void PrepareForRender(FrameObject obj)
     {
+        var model = obj.GetModel(out var isUniformScale);
+        _modelDataBuffer.WriteData(new()
+        {
+            Model = model,
+            IsUniformScale = isUniformScale ? 1 : 0,
+        });
+
         foreach(var material in _materials) {
             var materialValue = material.AsValue();
             materialValue.Shader.PrepareForRender(obj, materialValue);
@@ -76,6 +105,9 @@ public sealed class Renderer : IRenderer
         foreach(var material in _materials) {
             material.Dispose();
         }
+        _modelDataBuffer.Dispose();
+        _modelDataBindGroupLayout.Dispose();
+        _modelDataBindGroup.Dispose();
     }
 
     internal readonly record struct Subrenderers
@@ -89,7 +121,7 @@ public sealed class Renderer : IRenderer
     {
         private readonly Mesh _mesh;
         private readonly ReadOnlySpan<SubmeshData> _submeshes;
-        private readonly ReadOnlySpan<Own<IMaterial>> _materials;
+        private readonly ReadOnlySpan<MaybeOwn<IMaterial>> _materials;
         private int _index;
 
         public readonly Subrenderer Current => new Subrenderer(_materials[_index].AsValue(), _mesh, _submeshes[_index]);
@@ -106,6 +138,15 @@ public sealed class Renderer : IRenderer
         {
             return ++_index < _materials.Length;
         }
+    }
+
+    [BufferDataStruct]
+    internal partial struct ModelUniformValue
+    {
+        [FieldOffset(OffsetOf.Model)]
+        public required Matrix4 Model;
+        [FieldOffset(OffsetOf.IsUniformScale)]
+        public required int IsUniformScale;  // true: 1, false: 0
     }
 }
 

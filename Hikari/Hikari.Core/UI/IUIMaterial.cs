@@ -85,13 +85,15 @@ internal struct UIMaterialBase
         _texContentSizeBuffer.Dispose();
     }
 
-    public readonly ReadOnlySpan<BindGroupData> GetBindGroups(int passIndex)
+    public void SetBindGroupsTo(in RenderPass renderPass, int passIndex, Renderer renderer)
     {
-        return passIndex switch
-        {
-            0 => _pass0Bindgroups.AsSpan(),
-            _ => throw new ArgumentOutOfRangeException(nameof(passIndex)),
-        };
+        switch(passIndex) {
+            case 0:
+                renderPass.SetBindGroups(_pass0Bindgroups);
+                break;
+            default:
+                break;
+        }
     }
 
     public void UpdateMaterial(UIElement element, in LayoutCache result, in Matrix4 mvp, float scaleFactor)

@@ -198,7 +198,7 @@ public sealed class RenderPassScheduler
                 foreach(var (renderer, dataList) in renderers) {
                     if(renderer.IsVisibleInHierarchy) {
                         foreach(var data in dataList.AsSpan()) {
-                            data.Render(renderPass);
+                            data.Render(renderPass, renderer);
                         }
                     }
                 }
@@ -215,9 +215,19 @@ public sealed class RenderPassScheduler
         public required RenderPipeline Pipeline { get; init; }
         public required int PassIndex { get; init; }
 
-        public void Render(in RenderPass renderPass)
+        public void Render(in RenderPass renderPass, Renderer renderer)
         {
-            OnRenderPass.Invoke(renderPass, Pipeline, Material, Mesh, Submesh, PassIndex);
+            var state = new RenderPassState
+            {
+                RenderPass = renderPass,
+                Pipeline = Pipeline,
+                Material = Material,
+                Mesh = Mesh,
+                Submesh = Submesh,
+                PassIndex = PassIndex,
+                Renderer = renderer,
+            };
+            OnRenderPass.Invoke(in state);
         }
     }
 }
