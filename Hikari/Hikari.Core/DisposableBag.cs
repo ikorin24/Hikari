@@ -2,9 +2,9 @@
 using System;
 using System.Collections.Generic;
 
-namespace Hikari.Internal;
+namespace Hikari;
 
-internal sealed class DisposableBag : IDisposable
+public sealed class DisposableBag : IDisposable
 {
     private readonly List<IDisposable> _list;
 
@@ -32,7 +32,7 @@ internal sealed class DisposableBag : IDisposable
     }
 }
 
-internal static class DisposableBagExtensions
+public static class DisposableBagExtensions
 {
     public static void AddTo(this IDisposable item, DisposableBag bag) => bag.Add(item);
     public static T AddTo<T>(this Own<T> item, DisposableBag bag) where T : notnull
@@ -47,7 +47,7 @@ internal static class DisposableBagExtensions
     }
 }
 
-internal static class DisposableExtensions
+public static class DisposableExtensions
 {
     public static void DisposeOn<TDisposable, _>(this TDisposable self, Event<_> lifetimeLimit) where TDisposable : IDisposable
     {

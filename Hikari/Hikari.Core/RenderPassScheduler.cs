@@ -113,11 +113,13 @@ public sealed class RenderPassScheduler
         ];
         ReadOnlySpan<ushort> indices = [0, 1, 2, 2, 3, 0];
         var mesh = Mesh.Create<VertexSlim, ushort>(screen, vertices, indices);
-        var obj = new FrameObject(mesh, material.Cast<IMaterial>())
+        var obj = new FrameObject(mesh.AsValue(), material.AsValue())
         {
             Name = "Deferred Plane",
         };
         resourceLifetime.Subscribe(_ => obj.Terminate());
+        mesh.DisposeOn(obj.Dead);
+        material.DisposeOn(obj.Dead);
         return gBuffer;
     }
 

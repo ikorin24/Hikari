@@ -71,8 +71,8 @@ internal class Program
                 var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
                 var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
                 var plane = new FrameObject(
-                    Shapes.Plane(screen, true),
-                    PbrMaterial.Create(pbrShader, albedo, mr, normal).Cast<IMaterial>());
+                    Shapes.Plane(screen, true).DisposeOn(screen.Closed),
+                    PbrMaterial.Create(pbrShader, albedo, mr, normal).DisposeOn(screen.Closed));
                 plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
                 plane.Scale = new Vector3(3);
             }));
@@ -92,11 +92,13 @@ internal class Program
                 loading = true;
                 try {
                     FrameObject avocado;
+                    DisposableBag disposable;
                     if(avocados.Count <= 4) {
-                        avocado = await UniTask.Run(() =>
+                        (avocado, disposable) = await UniTask.Run(() =>
                         {
                             return GlbModelLoader.LoadGlbFile(pbrShader, @"resources\Avocado.glb");
                         });
+                        disposable.DisposeOn(screen.Closed);
                         Debug.WriteLine("create avocado");
                         avocado.Scale = new Vector3(5f);
                         avocados.Enqueue(avocado);

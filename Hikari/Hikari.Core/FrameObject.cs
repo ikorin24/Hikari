@@ -107,22 +107,22 @@ public sealed class FrameObject : ITreeModel<FrameObject>
     {
     }
 
-    public FrameObject(MaybeOwn<Mesh> mesh, MaybeOwn<IMaterial> material)
+    public FrameObject(Mesh mesh, IMaterial material)
         : this(new Renderer(mesh, [material]), null)
     {
     }
 
-    public FrameObject(MaybeOwn<Mesh> mesh, MaybeOwn<IMaterial> material, FrameObjectInitArg arg)
+    public FrameObject(Mesh mesh, IMaterial material, FrameObjectInitArg arg)
         : this(new Renderer(mesh, [material]), arg)
     {
     }
 
-    public FrameObject(MaybeOwn<Mesh> mesh, ImmutableArray<MaybeOwn<IMaterial>> materials)
+    public FrameObject(Mesh mesh, ImmutableArray<IMaterial> materials)
         : this(new Renderer(mesh, materials), null)
     {
     }
 
-    public FrameObject(MaybeOwn<Mesh> mesh, ImmutableArray<MaybeOwn<IMaterial>> materials, FrameObjectInitArg arg)
+    public FrameObject(Mesh mesh, ImmutableArray<IMaterial> materials, FrameObjectInitArg arg)
         : this(new Renderer(mesh, materials), arg)
     {
 

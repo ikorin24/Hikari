@@ -8,8 +8,8 @@ namespace Hikari;
 public sealed partial class Renderer : IRenderer
 {
     private readonly Screen _screen;
-    private readonly MaybeOwn<Mesh> _mesh;
-    private readonly ImmutableArray<MaybeOwn<IMaterial>> _materials;
+    private readonly Mesh _mesh;
+    private readonly ImmutableArray<IMaterial> _materials;
     private readonly TypedOwnBuffer<ModelUniformValue> _modelDataBuffer;
     private readonly Own<BindGroupLayout> _modelDataBindGroupLayout;
     private readonly Own<BindGroup> _modelDataBindGroup;
@@ -18,7 +18,7 @@ public sealed partial class Renderer : IRenderer
 
     public Screen Screen => _screen;
 
-    public Mesh Mesh => _mesh.AsValue();
+    public Mesh Mesh => _mesh;
 
     public int SubrendererCount => _materials.Length;
 
@@ -38,13 +38,12 @@ public sealed partial class Renderer : IRenderer
         set => _areAllAncestorsVisible = value;
     }
 
-    internal Renderer(MaybeOwn<Mesh> mesh, ImmutableArray<MaybeOwn<IMaterial>> materials)
+    internal Renderer(Mesh mesh, ImmutableArray<IMaterial> materials)
     {
-        var meshValue = mesh.AsValue();
-        if(meshValue.Submeshes.Length != materials.Length) {
+        if(mesh.Submeshes.Length != materials.Length) {
             ThrowHelper.ThrowArgument(nameof(materials), "The number of materials does not equal the number of submeshes");
         }
-        var screen = meshValue.Screen;
+        var screen = mesh.Screen;
         _screen = screen;
         _mesh = mesh;
         _materials = materials;
@@ -79,19 +78,18 @@ public sealed partial class Renderer : IRenderer
         });
 
         foreach(var material in _materials) {
-            var materialValue = material.AsValue();
-            materialValue.Shader.PrepareForRender(obj, materialValue);
+            material.Shader.PrepareForRender(obj, material);
         }
     }
 
     public IMaterial GetMaterial(int submeshIndex)
     {
-        return _materials[submeshIndex].AsValue();
+        return _materials[submeshIndex];
     }
 
     public T GetMaterial<T>(int submeshIndex) where T : IMaterial
     {
-        var material = _materials[submeshIndex].AsValue();
+        var material = _materials[submeshIndex];
         return (T)material;
     }
 
@@ -101,10 +99,6 @@ public sealed partial class Renderer : IRenderer
 
     internal void DisposeInternal()
     {
-        _mesh.Dispose();
-        foreach(var material in _materials) {
-            material.Dispose();
-        }
         _modelDataBuffer.Dispose();
         _modelDataBindGroupLayout.Dispose();
         _modelDataBindGroup.Dispose();
@@ -121,10 +115,10 @@ public sealed partial class Renderer : IRenderer
     {
         private readonly Mesh _mesh;
         private readonly ReadOnlySpan<SubmeshData> _submeshes;
-        private readonly ReadOnlySpan<MaybeOwn<IMaterial>> _materials;
+        private readonly ReadOnlySpan<IMaterial> _materials;
         private int _index;
 
-        public readonly Subrenderer Current => new Subrenderer(_materials[_index].AsValue(), _mesh, _submeshes[_index]);
+        public readonly Subrenderer Current => new Subrenderer(_materials[_index], _mesh, _submeshes[_index]);
 
         public SubrendererEnumerator(Renderer renderer)
         {
