@@ -23,6 +23,8 @@ public sealed class FrameObject : ITreeModel<FrameObject>
     private EventSource<FrameObject> _terminated;
     private EventSource<FrameObject> _dead;
 
+    // [NOTE] If yout add fields, be careful about Clone() method
+
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebugView => $"{nameof(FrameObject)} (Name: \"{Name}\")";
 
@@ -125,7 +127,6 @@ public sealed class FrameObject : ITreeModel<FrameObject>
     public FrameObject(Mesh mesh, ImmutableArray<IMaterial> materials, FrameObjectInitArg arg)
         : this(new Renderer(mesh, materials), arg)
     {
-
     }
 
     private FrameObject(IRenderer renderer, FrameObjectInitArg? arg)
@@ -161,10 +162,42 @@ public sealed class FrameObject : ITreeModel<FrameObject>
         // *** Initialize fields and properties before here ***
         // After the following, the object is on the rendering pipeline and may be rendererd right now. (This constructor can be called from non-main thread)
         // ----------------------------------
-        screen.Store.Add(this);
-        if(renderer is Renderer r) {
-            screen.RenderScheduler.Add(r);
+        Init();
+    }
+
+    private FrameObject(Screen screen, IRenderer renderer, string name, bool isFrozen, Vector3 pos, Quaternion rot, Vector3 scale)
+    {
+        // This constructor is only for Clone
+
+        _screen = screen;
+        _renderer = renderer;
+        _name = name;
+        _isFrozen = isFrozen;
+        _state = LifeState.New;
+
+        Position = pos;
+        Rotation = rot;
+        Scale = scale;
+    }
+
+    private void Init()
+    {
+        _screen.Store.Add(this);
+        if(_renderer is Renderer r) {
+            _screen.RenderScheduler.Add(r);
         }
+    }
+
+    public FrameObject Clone()
+    {
+        var screen = _screen;
+        var clone = new FrameObject(screen, _renderer.Clone(), _name, _isFrozen, Position, Rotation, Scale);
+        clone.Init();
+        foreach(var child in Children) {
+            var childClone = child.Clone();
+            clone.AddChild(childClone);
+        }
+        return clone;
     }
 
     void ITreeNode<FrameObject>.OnAddedToChildren(FrameObject parent) => _treeModelImpl.OnAddedToChildren(parent);

@@ -16,6 +16,8 @@ public sealed partial class Renderer : IRenderer
     private bool _isVisible = true;
     private bool _areAllAncestorsVisible = true;
 
+    // [NOTE] If yout add fields, be careful about Clone() method
+
     public Screen Screen => _screen;
 
     public Mesh Mesh => _mesh;
@@ -66,6 +68,14 @@ public sealed partial class Renderer : IRenderer
             ],
         });
         _modelDataBuffer = modelDataBuffer;
+    }
+
+    IRenderer IRenderer.Clone()
+    {
+        var clone = new Renderer(_mesh, _materials);
+        clone._isVisible = _isVisible;
+        clone._areAllAncestorsVisible = _areAllAncestorsVisible;
+        return clone;
     }
 
     internal void PrepareForRender(FrameObject obj)
@@ -150,6 +160,8 @@ internal sealed class NoneRenderer : IRenderer
     private bool _isVisible = true;
     private bool _areAllAncestorsVisible = true;
 
+    // [NOTE] If yout add fields, be careful about Clone() method
+
     public Screen Screen => _screen;
 
     public bool IsVisible
@@ -172,6 +184,14 @@ internal sealed class NoneRenderer : IRenderer
     public void DisposeInternal()
     {
     }
+
+    public IRenderer Clone()
+    {
+        var clone = new NoneRenderer(_screen);
+        clone._isVisible = _isVisible;
+        clone._areAllAncestorsVisible = _areAllAncestorsVisible;
+        return clone;
+    }
 }
 
 internal interface IRenderer
@@ -181,6 +201,7 @@ internal interface IRenderer
     bool IsVisibleInHierarchy { get; }
     bool AreAllAncestorsVisible { get; set; }
     void DisposeInternal();
+    IRenderer Clone();
 }
 
 internal readonly record struct Subrenderer

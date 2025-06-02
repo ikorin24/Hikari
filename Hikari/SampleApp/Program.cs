@@ -54,78 +54,71 @@ internal class Program
         SetLight(screen, 0);
         screen.Lights.AmbientStrength = 0.1f;
 
-        await UniTask.WhenAll(
-            GlbModelLoader.LoadGlbFileAsync(pbrShader, "resources/AntiqueCamera.glb", new FrameObjectInitArg
+        var (antiqueCamera, avocado, plane) = await UniTask.WhenAll(
+            UniTask.Create(async () =>
             {
-                Position = new Vector3(0, 0, 0),
-                Scale = new Vector3(0.2f),
+                var (obj, disposables) = await GlbModelLoader.LoadGlbFileAsync(pbrShader, "resources/AntiqueCamera.glb", new FrameObjectInitArg
+                {
+                    Position = new Vector3(0, 0, 0),
+                    Scale = new Vector3(0.2f),
+                });
+                disposables.DisposeOn(screen.Closed);
+                return obj;
             }),
-            GlbModelLoader.LoadGlbFileAsync(pbrShader, "resources/Avocado.glb", new FrameObjectInitArg
+            UniTask.Create(async () =>
             {
-                Position = new Vector3(0, 0, -1.3f),
-                Scale = new Vector3(25f),
+                var (obj, disposables) = await GlbModelLoader.LoadGlbFileAsync(pbrShader, "resources/Avocado.glb", new FrameObjectInitArg
+                {
+                    Position = new Vector3(0, 0, -1.3f),
+                    Scale = new Vector3(25f),
+                });
+                disposables.DisposeOn(screen.Closed);
+                return obj;
             }),
             UniTask.Run(() =>
             {
-                var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true);
-                var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg");
-                var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
-                var plane = new FrameObject(
-                    Shapes.Plane(screen, true).DisposeOn(screen.Closed),
-                    PbrMaterial.Create(pbrShader, albedo, mr, normal).DisposeOn(screen.Closed));
+                var disposables = new DisposableBag();
+                var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true).AddTo(disposables);
+                var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg").AddTo(disposables);
+                var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false).AddTo(disposables);
+                var material = PbrMaterial.Create(pbrShader, albedo, mr, normal).AddTo(disposables);
+                var mesh = Shapes.Plane(screen, true).AddTo(disposables);
+                var plane = new FrameObject(mesh, material);
                 plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
                 plane.Scale = new Vector3(3);
+                return (plane, disposables);
             }));
         Debug.WriteLine("all loaded");
         await screen.Update.Switch();
 
         var rand = new Xorshift32();
-        var avocados = new Queue<FrameObject>();
-        bool loading = false;
+        var queue = new Queue<FrameObject>();
         var createAvocado = () =>
         {
-            if(loading) {
-                return;
+            FrameObject currentAvocado;
+            if(queue.Count <= 40) {
+                currentAvocado = avocado.Clone();
+                currentAvocado.Scale = new Vector3(5f);
+                queue.Enqueue(currentAvocado);
             }
-            UniTask.Void(async () =>
+            else {
+                currentAvocado = queue.Dequeue();
+                queue.Enqueue(currentAvocado);
+            }
+            currentAvocado.Position = new Vector3
             {
-                loading = true;
-                try {
-                    FrameObject avocado;
-                    DisposableBag disposable;
-                    if(avocados.Count <= 4) {
-                        (avocado, disposable) = await UniTask.Run(() =>
-                        {
-                            return GlbModelLoader.LoadGlbFile(pbrShader, @"resources\Avocado.glb");
-                        });
-                        disposable.DisposeOn(screen.Closed);
-                        Debug.WriteLine("create avocado");
-                        avocado.Scale = new Vector3(5f);
-                        avocados.Enqueue(avocado);
-                    }
-                    else {
-                        avocado = avocados.Dequeue();
-                        avocados.Enqueue(avocado);
-                    }
-                    avocado.Position = new Vector3
-                    {
-                        X = rand.Single() * 2 - 1,
-                        Y = rand.Single() * 0.2f + 0.2f,
-                        Z = rand.Single() * 2 - 1,
-                    };
-                    avocado.Rotation = Quaternion.FromAxisAngle(
-                        new Vector3
-                        {
-                            X = rand.Single() + 0.0001f,
-                            Y = rand.Single(),
-                            Z = rand.Single(),
-                        }.Normalized(),
-                        (rand.Single() * 360f).ToRadian());
-                }
-                finally {
-                    loading = false;
-                }
-            });
+                X = rand.Single() * 2 - 1,
+                Y = rand.Single() * 0.2f + 0.2f,
+                Z = rand.Single() * 2 - 1,
+            };
+            currentAvocado.Rotation = Quaternion.FromAxisAngle(
+                new Vector3
+                {
+                    X = rand.Single() + 0.0001f,
+                    Y = rand.Single(),
+                    Z = rand.Single(),
+                }.Normalized(),
+                (rand.Single() * 360f).ToRadian());
         };
         Debug.WriteLine("create UI");
         CreateUI(screen, createAvocado);
