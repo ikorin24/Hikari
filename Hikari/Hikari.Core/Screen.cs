@@ -70,7 +70,7 @@ public sealed class Screen
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
 
     internal ObjectStore Store => _objectStore;
-    public RenderPassScheduler Scheduler => _scheduler;
+    public RenderPassScheduler RenderScheduler => _scheduler;
     public UITree UITree => _uiTree;
     public Mouse Mouse => _mouse;
     public Keyboard Keyboard => _keyboard;

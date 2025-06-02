@@ -86,7 +86,7 @@ public sealed class FrameObject : ITreeModel<FrameObject>
         _isFrozen = false;
         _renderer = renderer;
         screen.Store.Add(this);
-        screen.Scheduler.Add(renderer);
+        screen.RenderScheduler.Add(renderer);
     }
 
     void ITreeModel<FrameObject>.OnAddedToChildren(FrameObject parent) => _treeModelImpl.OnAddedToChildren(parent);
@@ -151,7 +151,7 @@ public sealed class FrameObject : ITreeModel<FrameObject>
                 self.Screen.Store.Remove(self);
                 var renderer = self.Renderer;
                 if(renderer != null) {
-                    self.Screen.Scheduler.RemoveRenderer(renderer);
+                    self.Screen.RenderScheduler.RemoveRenderer(renderer);
                 }
                 self.OnTerminated();
             }

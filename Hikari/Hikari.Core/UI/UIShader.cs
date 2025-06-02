@@ -111,7 +111,7 @@ internal static class UIShader
                         SortOrder = 3000,
                         LayoutDescriptor = PipelineLayoutFactory(screen, out var diposable),
                         PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
-                        PassKind = PassKind.Surface,
+                        PassKind = PassKind.Forward,
                         OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, IMaterial material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
                         {
                             renderPass.SetPipeline(pipeline);

@@ -36,10 +36,11 @@ internal class Program
         screen.Lights.DirectionalLight.SetLightData(vec.Normalized(), Color3.White);
     }
 
-    private static async void OnInitialized(Screen screen)
+    private static async UniTask OnInitialized(Screen screen)
     {
-        var app = App.BuildPipelines(screen);
         screen.Title = "SampleApp";
+        var gBuffer = screen.RenderScheduler.SetDefault();
+        var pbrShader = PbrShader.Create(screen, gBuffer).DisposeOn(screen.Closed);
 
         var camera = screen.Camera;
         camera.SetNearFar(0.5f, 1000);
@@ -57,14 +58,14 @@ internal class Program
         await UniTask.WhenAll(
             UniTask.Run(() =>
             {
-                var model = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"resources\AntiqueCamera.glb");
+                var model = GlbModelLoader.LoadGlbFile(pbrShader, @"resources\AntiqueCamera.glb");
                 model.Position = new Vector3(0, 0, 0);
                 model.Scale = new Vector3(0.2f);
                 cameraModel = model;
             }),
             UniTask.Run(() =>
             {
-                var model2 = GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"resources\Avocado.glb");
+                var model2 = GlbModelLoader.LoadGlbFile(pbrShader, @"resources\Avocado.glb");
                 model2.Position = new Vector3(0, 0, -1.3f);
                 model2.Scale = new Vector3(25f);
             }),
@@ -75,7 +76,7 @@ internal class Program
                 var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false);
                 var plane = new FrameObject(
                     Shapes.Plane(screen, true),
-                    PbrMaterial.Create(app.PbrBasicShader, albedo, mr, normal).Cast<IMaterial>());
+                    PbrMaterial.Create(pbrShader, albedo, mr, normal).Cast<IMaterial>());
                 plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
                 plane.Scale = new Vector3(3);
             }));
@@ -98,7 +99,7 @@ internal class Program
                     if(avocados.Count <= 4) {
                         avocado = await UniTask.Run(() =>
                         {
-                            return GlbModelLoader.LoadGlbFile(app.PbrBasicShader, @"resources\Avocado.glb");
+                            return GlbModelLoader.LoadGlbFile(pbrShader, @"resources\Avocado.glb");
                         });
                         Debug.WriteLine("create avocado");
                         avocado.Scale = new Vector3(5f);

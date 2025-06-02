@@ -4,6 +4,7 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Hikari;
@@ -17,7 +18,7 @@ public sealed class RenderPassScheduler
 
     private static readonly RenderPassDefinition EmptyPass = new()
     {
-        Kind = PassKind.Surface,
+        Kind = PassKind.Forward,
         Factory = static (screen, _) => RenderPass.Create(screen,
             new ColorAttachment
             {
@@ -42,6 +43,80 @@ public sealed class RenderPassScheduler
         _screen = screen;
         _passDefs = [];
         _passDataDic = new Dictionary<PassKind, Dictionary<Renderer, List<Data>>>(0).ToFrozenDictionary();
+    }
+
+    public DefaultGBufferProvider SetDefault()
+    {
+        return SetDefault(_screen.Closed);
+    }
+
+    public DefaultGBufferProvider SetDefault<_>(Event<_> resourceLifetime)
+    {
+        var screen = _screen;
+        var gBuffer = DefaultGBufferProvider.CreateScreenSize(screen).DisposeOn(resourceLifetime);
+        SetRenderPass([
+            ..screen.Lights.DirectionalLight.ShadowMapPassDefinitions,
+            new RenderPassDefinition
+            {
+                Kind = PassKind.Deferred,
+                UserData = gBuffer,
+                Factory = static (screen, gBuffer) =>
+                {
+                    var textures = SafeCast.NotNullAs<IGBufferProvider>(gBuffer).GetCurrentGBuffer().Textures;
+                    return RenderPass.Create(
+                        screen,
+                        [
+                            new ColorAttachment { Target = textures[0], LoadOp = ColorBufferLoadOp.Clear(), },
+                            new ColorAttachment { Target = textures[1], LoadOp = ColorBufferLoadOp.Clear(), },
+                            new ColorAttachment { Target = textures[2], LoadOp = ColorBufferLoadOp.Clear(), },
+                        ],
+                        new DepthStencilAttachment
+                        {
+                            Target = screen.DepthStencil,
+                            LoadOp = new DepthStencilBufferLoadOp
+                            {
+                                Depth = DepthBufferLoadOp.Clear(0f),
+                                Stencil = null,
+                            },
+                        });
+                }
+            },
+            new RenderPassDefinition
+            {
+                Kind = PassKind.Forward,
+                Factory = static (screen, _) =>
+                {
+                    return RenderPass.Create(
+                        screen,
+                        new ColorAttachment { Target = screen.Surface, LoadOp = ColorBufferLoadOp.Clear(), },
+                        new DepthStencilAttachment
+                        {
+                            Target = screen.DepthStencil,
+                            LoadOp = new DepthStencilBufferLoadOp
+                            {
+                                Depth = DepthBufferLoadOp.Clear(0f),
+                                Stencil = null,
+                            },
+                        });
+                },
+            },
+        ]);
+        var shader = DeferredProcessShader.Create(screen, gBuffer).DisposeOn(resourceLifetime);
+        var material = DeferredProcessMaterial.Create(shader, gBuffer);
+        const float Z = 0;
+        ReadOnlySpan<VertexSlim> vertices =
+        [
+            new(new(-1, -1, Z), new(0, 1)),
+            new(new(1, -1, Z), new(1, 1)),
+            new(new(1, 1, Z), new(1, 0)),
+            new(new(-1, 1, Z), new(0, 0)),
+        ];
+        ReadOnlySpan<ushort> indices = [0, 1, 2, 2, 3, 0];
+        var mesh = Mesh.Create<VertexSlim, ushort>(screen, vertices, indices);
+        var renderer = new Renderer(mesh, material.Cast<IMaterial>());
+        screen.RenderScheduler.Add(renderer);
+        resourceLifetime.Subscribe(_ => renderer.DisposeInternal());
+        return gBuffer;
     }
 
     public void SetRenderPass(ImmutableArray<RenderPassDefinition> passDefs)
@@ -110,6 +185,7 @@ public sealed class RenderPassScheduler
         }
         if(passDefs.Length == 0) {
             passDefs = new ReadOnlySpan<RenderPassDefinition>(in EmptyPass);
+            Debug.WriteLine($"No RenderPass is set. Set RenderPass to '{nameof(Hikari.Screen)}.{nameof(Hikari.Screen.RenderScheduler)}'");
         }
 
         var screen = _screen;

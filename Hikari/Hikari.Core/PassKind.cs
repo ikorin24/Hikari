@@ -12,16 +12,16 @@ public readonly record struct PassKind
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebugView => _kind switch
     {
-        KindInternal.Surface => nameof(Surface),
+        KindInternal.Forward => nameof(Forward),
         KindInternal.ShadowMap => nameof(ShadowMap),
-        KindInternal.GBuffer => nameof(GBuffer),
+        KindInternal.Deferred => nameof(Deferred),
         KindInternal.Custom => $"{nameof(Custom)}(\"{_customName}\")",
         _ => "",
     };
 
-    public static PassKind Surface => new(KindInternal.Surface);
+    public static PassKind Forward => new(KindInternal.Forward);
 
-    public static PassKind GBuffer => new(KindInternal.GBuffer);
+    public static PassKind Deferred => new(KindInternal.Deferred);
 
     public static PassKind ShadowMap => new(KindInternal.ShadowMap);
 
@@ -36,7 +36,7 @@ public readonly record struct PassKind
         _customName = null;
     }
 
-    public PassKind(string customName)
+    private PassKind(string customName)
     {
         _kind = KindInternal.Custom;
         _customName = customName;
@@ -46,9 +46,9 @@ public readonly record struct PassKind
 
     internal enum KindInternal
     {
-        Surface = 0,
+        Forward = 0,
         ShadowMap,
-        GBuffer,
+        Deferred,
         Custom,
     }
 }

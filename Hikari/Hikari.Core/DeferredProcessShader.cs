@@ -327,7 +327,7 @@ public static class DeferredProcessShader
                         ],
                     },
                     PipelineDescriptorFactory = PipelineFactory,
-                    PassKind = PassKind.Surface,
+                    PassKind = PassKind.Forward,
                     OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, IMaterial material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
                     {
                         renderPass.SetPipeline(pipeline);

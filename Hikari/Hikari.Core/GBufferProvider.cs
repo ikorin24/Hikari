@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 
 namespace Hikari;
 
-public sealed partial class GBufferProvider : IGBufferProvider
+public sealed partial class DefaultGBufferProvider : IGBufferProvider
 {
     private static readonly ImmutableArray<TextureFormat> _formats =
     [
@@ -25,7 +25,7 @@ public sealed partial class GBufferProvider : IGBufferProvider
     public BindGroupLayout BindGroupLayout => _bindGroupLayout.AsValue();
 
     [Owned(nameof(Release))]
-    private GBufferProvider(Screen screen, Vector2u size)
+    private DefaultGBufferProvider(Screen screen, Vector2u size)
     {
         _screen = screen;
         _bindGroupLayout = BindGroupLayout.Create(screen, new()
@@ -67,7 +67,7 @@ public sealed partial class GBufferProvider : IGBufferProvider
         }
     }
 
-    public static Own<GBufferProvider> CreateScreenSize(Screen screen)
+    public static Own<DefaultGBufferProvider> CreateScreenSize(Screen screen)
     {
         var value = Create(screen, screen.ClientSize);
         screen.Resized.Subscribe(x => value.AsValue().Resize(x.Size));

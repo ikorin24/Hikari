@@ -224,7 +224,7 @@ public static class PbrShader
                     LayoutDescriptor = GetLayoutDesc(screen, out var disposable2),
                     PipelineDescriptorFactory = static (module, layout) => GetDescriptor(module, layout, module.Screen.DepthStencil.Format),
                     SortOrder = 0,
-                    PassKind = PassKind.GBuffer,
+                    PassKind = PassKind.Deferred,
                     OnRenderPass = (in RenderPass renderPass, RenderPipeline pipeline, IMaterial material, Mesh mesh, in SubmeshData submesh, int passIndex) =>
                     {
                         renderPass.SetPipeline(pipeline);
