@@ -20,6 +20,7 @@
     <ProjectReference Include="..\Hikari.Core\Hikari.Core.csproj" />
     <ProjectReference Include="..\Hikari.Gltf\Hikari.Gltf.csproj" />
     <ProjectReference Include="..\Hikari.InternalTools\Hikari.InternalTools.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Hikari.Generator\Hikari.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>

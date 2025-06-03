@@ -54,7 +54,8 @@ internal class Program
         SetLight(screen, 0);
         screen.Lights.AmbientStrength = 0.1f;
 
-        var (antiqueCamera, avocado, plane) = await UniTask.WhenAll(
+        FrameObject avocado = null!;
+        await UniTask.WhenAll(
             UniTask.Create(async () =>
             {
                 var (obj, disposables) = await GlbModelLoader.LoadGlbFileAsync(pbrShader, "resources/AntiqueCamera.glb", new FrameObjectInitArg
@@ -73,7 +74,19 @@ internal class Program
                     Scale = new Vector3(25f),
                 });
                 disposables.DisposeOn(screen.Closed);
+                avocado = obj;
                 return obj;
+            }),
+            UniTask.Run(() =>
+            {
+                var disposables = new DisposableBag();
+                var shader = SkyShader.Create(screen).AddTo(disposables);
+                var material = SkyMaterial.Create(shader).AddTo(disposables);
+                var mesh = PrimitiveShapes.SkySphere(screen, false).AddTo(disposables);
+                var sky = new FrameObject(mesh, material);
+                sky.Scale = new Vector3(1500);
+                disposables.DisposeOn(screen.Closed);
+                return sky;
             }),
             UniTask.Run(() =>
             {
@@ -90,7 +103,6 @@ internal class Program
             }));
         Debug.WriteLine("all loaded");
         await screen.Update.Switch();
-
         var rand = new Xorshift32();
         var queue = new Queue<FrameObject>();
         var createAvocado = () =>

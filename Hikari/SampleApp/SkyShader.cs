@@ -1,10 +1,12 @@
 ﻿#nullable enable
+using Hikari;
 using System;
 using System.Collections.Immutable;
 
-namespace Hikari;
+namespace SampleApp;
 
-public sealed partial class UnlitTextureShader : ITypedShader
+
+public sealed partial class SkyShader : ITypedShader
 {
     private readonly Shader _shader;
     private readonly DisposableBag _disposables;
@@ -37,10 +39,8 @@ public sealed partial class UnlitTextureShader : ITypedShader
             @location(0) color : vec4<f32>,
         }
 
-        @group(0) @binding(0) var tex: texture_2d<f32>;
-        @group(0) @binding(1) var tex_sampler: sampler;
-        @group(1) @binding(0) var<uniform> model_data: ModelData;
-        @group(2) @binding(0) var<uniform> camera: CameraMatrix;
+        @group(0) @binding(0) var<uniform> model_data: ModelData;
+        @group(1) @binding(0) var<uniform> camera: CameraMatrix;
 
         @vertex fn vs_main(
             vin: Vin,
@@ -52,8 +52,29 @@ public sealed partial class UnlitTextureShader : ITypedShader
         }
 
         @fragment fn fs_main(v2f: V2F) -> Vout {
+            let t = v2f.uv.y;
+            let c1 = vec3(0.02, 0.03, 0.09);
+            let c2 = vec3(0.556, 0.8, 1);
+            let c3 =  vec3(0.239, 0.66, 1);
+            var color: vec3<f32>;
+
+            let a0 = 0.5;
+            let a1 = 0.51;
+            let a2 = 0.55;
+            if (t < a0) {
+                color = c1;
+            }
+            else if (t < a1) {
+                color = mix(c1, c2, (t - a0) / (a1 - a0));
+            }
+            else if (t < a2) {
+                color = mix(c2, c3, (t - a1) / (a2 - a1));
+            }
+            else {
+                color = c3;
+            }
             var vout: Vout;
-            vout.color = textureSample(tex, tex_sampler, v2f.uv);
+            vout.color = vec4(color, 1.0);
             return vout;
         }
         """u8;
@@ -63,7 +84,7 @@ public sealed partial class UnlitTextureShader : ITypedShader
     public ImmutableArray<ShaderPassData> ShaderPasses => _shader.ShaderPasses;
 
     [Owned(nameof(Release))]
-    private UnlitTextureShader(Screen screen)
+    private SkyShader(Screen screen)
     {
         var disposables = new DisposableBag();
         var shader = Shader.Create(
@@ -78,19 +99,6 @@ public sealed partial class UnlitTextureShader : ITypedShader
                     {
                         BindGroupLayouts =
                         [
-                            BindGroupLayout.Create(screen, new()
-                            {
-                                Entries =
-                                [
-                                    BindGroupLayoutEntry.Texture(0, ShaderStages.Fragment, new()
-                                    {
-                                        ViewDimension = TextureViewDimension.D2,
-                                        Multisampled = false,
-                                        SampleType = TextureSampleType.FloatFilterable,
-                                    }),
-                                    BindGroupLayoutEntry.Sampler(1, ShaderStages.Fragment, SamplerBindingType.Filtering),
-                                ],
-                            }).AddTo(disposables),
                             screen.UtilResource.ModelDataBindGroupLayout,
                             screen.Camera.CameraDataBindGroupLayout,
                         ]
@@ -159,51 +167,29 @@ public sealed partial class UnlitTextureShader : ITypedShader
     }
 }
 
-public sealed partial class UnlitTextureMaterial : IMaterial
+public sealed partial class SkyMaterial : IMaterial
 {
-    private readonly UnlitTextureShader _shader;
-    private readonly Texture2D _texture;
-    private readonly BindGroup _bindGroup0;
-    private readonly DisposableBag _disposables;
+    private readonly SkyShader _shader;
 
     public Screen Screen => _shader.Screen;
 
-    public UnlitTextureShader Shader => _shader;
+    public SkyShader Shader => _shader;
 
     ITypedShader IMaterial.Shader => Shader;
 
-    public Texture2D Texture => _texture;
-
     [Owned(nameof(Release))]
-    private UnlitTextureMaterial(UnlitTextureShader shader, Texture2D texture)
+    private SkyMaterial(SkyShader shader)
     {
-        var screen = shader.Screen;
-        var disposables = new DisposableBag();
-        var bindGroup0 = BindGroup.Create(screen, new()
-        {
-            Layout = shader.ShaderPasses[0].Pipeline.Layout.BindGroupLayouts[0],
-            Entries =
-            [
-                BindGroupEntry.TextureView(0, texture.View),
-                BindGroupEntry.Sampler(1, screen.UtilResource.LinearSampler),
-            ],
-        }).AddTo(disposables);
-
         _shader = shader;
-        _texture = texture;
-        _bindGroup0 = bindGroup0;
-        _disposables = disposables;
     }
 
     private void Release()
     {
-        _disposables.Dispose();
     }
 
     void IMaterial.SetBindGroupsTo(in RenderPass renderPass, int passIndex, Renderer renderer)
     {
-        renderPass.SetBindGroup(0, _bindGroup0);
-        renderPass.SetBindGroup(1, renderer.ModelDataBindGroup);
-        renderPass.SetBindGroup(2, renderer.Screen.Camera.CameraDataBindGroup);
+        renderPass.SetBindGroup(0, renderer.ModelDataBindGroup);
+        renderPass.SetBindGroup(1, renderer.Screen.Camera.CameraDataBindGroup);
     }
 }

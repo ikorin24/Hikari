@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics;
 
 namespace Hikari;
 
@@ -205,6 +206,47 @@ public static class PrimitiveShapes
             20, 21, 22, 22, 23, 20,     // down
         ];
 #pragma warning restore IDE0055 // auto code formatting
+        return useTangent ?
+            Mesh.CreateWithTangent<Vertex, ushort>(screen, vertices, indices) :
+            Mesh.Create<Vertex, ushort>(screen, vertices, indices);
+    }
+
+    public static Own<Mesh> SkySphere(Screen screen, bool useTangent)
+    {
+        const float r = 0.5f;
+        const int a = 16;
+        const int b = 16;
+
+        Span<Vertex> vertices = stackalloc Vertex[(a + 1) * (b + 1)];
+        Span<ushort> indices = stackalloc ushort[a * b * 6];
+        Debug.Assert(vertices.Length <= ushort.MaxValue);
+
+        for(int j = 0; j < a + 1; j++) {
+            var phi = MathF.PI * 0.5f - MathF.PI / a * j;
+            for(int i = 0; i < b + 1; i++) {
+                var theta = MathF.PI * 2f / b * i;
+                var cosPhi = MathF.Cos(phi);
+                var cosTheta = MathF.Cos(theta);
+                var sinPhi = MathF.Sin(phi);
+                var sinTheta = MathF.Sin(theta);
+                var pos = new Vector3((float)(r * cosPhi * cosTheta), (float)(r * sinPhi), (float)(r * cosPhi * sinTheta));
+                var normal = -pos.Normalized();
+                var uv = new Vector2((float)i / b, 1 - (float)j / a);
+                vertices[(b + 1) * j + i] = new Vertex(pos, normal, uv);
+            }
+        }
+        for(int j = 0; j < a; j++) {
+            for(int i = 0; i < b; i++) {
+                var l = (b * j + i) * 6;
+                indices[l + 0] = (ushort)((b + 1) * j + i);
+                indices[l + 1] = (ushort)((b + 1) * (j + 1) + i);
+                indices[l + 2] = (ushort)((b + 1) * (j + 1) + (i + 1) % (b + 1));
+                indices[l + 3] = (ushort)((b + 1) * j + i);
+                indices[l + 4] = (ushort)((b + 1) * (j + 1) + (i + 1) % (b + 1));
+                indices[l + 5] = (ushort)((b + 1) * j + (i + 1) % (b + 1));
+            }
+        }
+
         return useTangent ?
             Mesh.CreateWithTangent<Vertex, ushort>(screen, vertices, indices) :
             Mesh.Create<Vertex, ushort>(screen, vertices, indices);
