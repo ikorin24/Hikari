@@ -174,7 +174,7 @@ public sealed partial class Camera
         var mode = CameraProjectionMode.Perspective(25f / 180f * MathF.PI);
         var aspect = 1f;
         var near = 0.5f;
-        var far = 1000f;
+        var far = 3000f;
         var rot = Quaternion.Identity;
         var projection = CalcProjection(mode, near, far, aspect);
         Matrix4 view;

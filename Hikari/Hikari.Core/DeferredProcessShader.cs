@@ -64,9 +64,15 @@ public sealed partial class DeferredProcessShader : ITypedShader
         @fragment fn fs_main(in: V2F) -> Fout {
             let g_buffer_size: vec2<u32> = textureDimensions(g0, 0);
             let texel_pos: vec2<u32> = vec2<u32>(vec2<f32>(g_buffer_size) * in.uv);
+
+            let c2: vec4<u32> = textureLoad(g2, texel_pos, 0);
+            if ((c2.w & 0x01) != 0x01) {
+                // this texel is not drawn
+                discard;
+            }
             let c0: vec4<f32> = textureLoad(g0, texel_pos, 0);
             let c1: vec4<f32> = textureLoad(g1, texel_pos, 0);
-            let c2: vec4<u32> = textureLoad(g2, texel_pos, 0);
+
             let pos_camera_coord: vec3<f32> = c0.rgb;
             let n: vec3<f32> = c1.rgb;    // normal direction in eye space, normalized
             let albedo: vec4<f32> = vec4<f32>(
@@ -152,7 +158,6 @@ public sealed partial class DeferredProcessShader : ITypedShader
 
             var out: Fout;
             out.color = vec4<f32>(fragColor, 1.0);
-            //out.color = vec4<f32>(visibility, visibility, visibility, 1.0);
             let pos_dnc = camera.proj * vec4(pos_camera_coord, 1.0);
             out.depth = (pos_dnc.z / pos_dnc.w) * 0.5 + 0.5;
             return out;

@@ -112,7 +112,7 @@ public sealed partial class PbrShader : ITypedShader
                 albedo.r + (albedo.g << 8),     // [0 ~ 2^16) 16bit | r: u8,       g: u8
                 albedo.b + (albedo.a << 8),     // [0 ~ 2^16) 16bit | b: u8,       a: u8
                 metalic + (roughness << 8),     // [0 ~ 2^16) 16bit | metalic: u8, roughness: u8
-                0x0000,                         // [0 ~ 2^16) 16bit | flags: u16
+                0x0001,                         // [0 ~ 2^16) 16bit | flags: u16  (LSB is drawn flag. If it is 0, nothing is drawn.)
             );
             return output;
         }

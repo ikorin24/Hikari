@@ -11,7 +11,6 @@ public sealed partial class Renderer : IRenderer
     private readonly Mesh _mesh;
     private readonly ImmutableArray<IMaterial> _materials;
     private readonly TypedOwnBuffer<ModelUniformValue> _modelDataBuffer;
-    private readonly Own<BindGroupLayout> _modelDataBindGroupLayout;
     private readonly Own<BindGroup> _modelDataBindGroup;
     private bool _isVisible = true;
     private bool _areAllAncestorsVisible = true;
@@ -53,17 +52,9 @@ public sealed partial class Renderer : IRenderer
         _materials = materials;
 
         var modelDataBuffer = new TypedOwnBuffer<ModelUniformValue>(screen, default, BufferUsages.Uniform | BufferUsages.CopyDst | BufferUsages.Storage);
-        var bgl = BindGroupLayout.Create(screen, new()
-        {
-            Entries =
-            [
-                BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new() { Type = BufferBindingType.Uniform }),
-            ],
-        });
-        _modelDataBindGroupLayout = bgl;
         _modelDataBindGroup = BindGroup.Create(screen, new()
         {
-            Layout = bgl.AsValue(),
+            Layout = screen.UtilResource.ModelDataBindGroupLayout,
             Entries =
             [
                 BindGroupEntry.Buffer(0, modelDataBuffer),
@@ -108,7 +99,6 @@ public sealed partial class Renderer : IRenderer
     internal void DisposeInternal()
     {
         _modelDataBuffer.Dispose();
-        _modelDataBindGroupLayout.Dispose();
         _modelDataBindGroup.Dispose();
     }
 

@@ -82,7 +82,7 @@ internal class Program
                 var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg").AddTo(disposables);
                 var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false).AddTo(disposables);
                 var material = PbrMaterial.Create(pbrShader, albedo, mr, normal).AddTo(disposables);
-                var mesh = Shapes.Plane(screen, true).AddTo(disposables);
+                var mesh = PrimitiveShapes.Plane(screen, true).AddTo(disposables);
                 var plane = new FrameObject(mesh, material);
                 plane.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian());
                 plane.Scale = new Vector3(3);

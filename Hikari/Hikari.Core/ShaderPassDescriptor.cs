@@ -40,4 +40,13 @@ public readonly ref struct RenderPassState
     public required SubmeshData Submesh { get; init; }
     public required int PassIndex { get; init; }
     public required Renderer Renderer { get; init; }
+
+    public void DefaultDrawIndexed()
+    {
+        RenderPass.SetPipeline(Pipeline);
+        Material.SetBindGroupsTo(RenderPass, PassIndex, Renderer);
+        RenderPass.SetVertexBuffer(0, Mesh.VertexBuffer);
+        RenderPass.SetIndexBuffer(Mesh.IndexBuffer, Mesh.IndexFormat);
+        RenderPass.DrawIndexed(Submesh.IndexOffset, Submesh.IndexCount, Submesh.VertexOffset, 0, 1);
+    }
 }

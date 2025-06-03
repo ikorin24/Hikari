@@ -3,7 +3,7 @@ using System;
 
 namespace Hikari;
 
-public static class Shapes
+public static class PrimitiveShapes
 {
     public static Own<Mesh> Cube(Screen screen, bool useTangent)
     {
@@ -87,6 +87,111 @@ public static class Shapes
             new Vertex(new(-a, -a, -a), new(0, -1, 0), new(b1, c3)),
             new Vertex(new(a, -a, -a), new(0, -1, 0), new(b2, c3)),
             new Vertex(new(a, -a, a), new(0, -1, 0), new(b2, c2)),
+        ];
+
+#pragma warning disable IDE0055 // auto code formatting
+        ReadOnlySpan<ushort> indices =
+        [
+            0, 1, 2, 2, 3, 0,           // up
+            4, 5, 6, 6, 7, 4,           // left
+            8, 9, 10, 10, 11, 8,        // front
+            12, 13, 14, 14, 15, 12,     // right
+            16, 17, 18, 18, 19, 16,     // back
+            20, 21, 22, 22, 23, 20,     // down
+        ];
+#pragma warning restore IDE0055 // auto code formatting
+        return useTangent ?
+            Mesh.CreateWithTangent<Vertex, ushort>(screen, vertices, indices) :
+            Mesh.Create<Vertex, ushort>(screen, vertices, indices);
+    }
+
+    public static Own<Mesh> Skybox(Screen screen, bool useTangent)
+    {
+        // [indices]
+        //             0 ------- 1
+        //             |         |
+        //             |   up    |
+        //             |         |
+        //             3 ------- 2
+        // 4 ------- 5 8 ------- 9 12-------13 16-------17
+        // |         | |         | |         | |         |
+        // |  left   | |  front  | |  right  | |  back   |
+        // |         | |         | |         | |         |
+        // 7 ------- 6 11-------10 15-------14 19-------18
+        //             20-------21
+        //             |         |
+        //             |  down   |
+        //             |         |
+        //             23-------22
+        //
+        // [uv]
+        //
+        //       0 ------ 1/4 ----- 1/2 ----- 3/4 ------ 1
+        //
+        //   0   o --> u   + ------- +
+        //   |   |         |         |
+        //   |   v         |   up    |
+        //   |             |         |
+        //  1/3  + ------- + ------- + ------- + ------- +
+        //   |   |         |         |         |         |
+        //   |   |  left   |  front  |  right  |  back   |
+        //   |   |         |         |         |         |
+        //  2/3  + ------- + ------- + ------- + ------- +
+        //   |             |         |
+        //   |             |  down   |
+        //   |             |         |
+        //   1             + ------- +
+        //
+        //     + ------- +
+        //    /   up    /|
+        //   + ------- + |
+        //   |         | ← right
+        //   |  front  | +
+        //   |         |/
+        //   + ------- +
+
+        const float a = 0.5f;
+        const float b0 = 0f;
+        const float b1 = 1f / 4f;
+        const float b2 = 2f / 4f;
+        const float b3 = 3f / 4f;
+        const float b4 = 1f;
+        const float c0 = 0f;
+        const float c1 = 1f / 3f;
+        const float c2 = 2f / 3f;
+        const float c3 = 1f;
+
+        ReadOnlySpan<Vertex> vertices =
+        [
+            new Vertex(new(-a, a, -a), new(0, 1, 0), new(b1, c0)),
+            new Vertex(new(a, a, -a), new(0, 1, 0), new(b2, c0)),
+            new Vertex(new(a, a, a), new(0, 1, 0), new(b2, c1)),
+            new Vertex(new(-a, a, a), new(0, 1, 0), new(b1, c1)),
+
+            new Vertex(new(-a, a, -a), new(-1, 0, 0), new(b0, c1)),
+            new Vertex(new(-a, a, a), new(-1, 0, 0), new(b1, c1)),
+            new Vertex(new(-a, -a, a), new(-1, 0, 0), new(b1, c2)),
+            new Vertex(new(-a, -a, -a), new(-1, 0, 0), new(b0, c2)),
+
+            new Vertex(new(-a, a, a), new(0, 0, 1), new(b1, c1)),
+            new Vertex(new(a, a, a), new(0, 0, 1), new(b2, c1)),
+            new Vertex(new(a, -a, a), new(0, 0, 1), new(b2, c2)),
+            new Vertex(new(-a, -a, a), new(0, 0, 1), new(b1, c2)),
+
+            new Vertex(new(a, a, a), new(1, 0, 0), new(b2, c1)),
+            new Vertex(new(a, a, -a), new(1, 0, 0), new(b3, c1)),
+            new Vertex(new(a, -a, -a), new(1, 0, 0), new(b3, c2)),
+            new Vertex(new(a, -a, a), new(1, 0, 0), new(b2, c2)),
+
+            new Vertex(new(a, a, -a), new(0, 0, -1), new(b3, c1)),
+            new Vertex(new(-a, a, -a), new(0, 0, -1), new(b4, c1)),
+            new Vertex(new(-a, -a, -a), new(0, 0, -1), new(b4, c2)),
+            new Vertex(new(a, -a, -a), new(0, 0, -1), new(b3, c2)),
+
+            new Vertex(new(-a, -a, a), new(0, -1, 0), new(b1, c2)),
+            new Vertex(new(a, -a, a), new(0, -1, 0), new(b2, c2)),
+            new Vertex(new(a, -a, -a), new(0, -1, 0), new(b2, c3)),
+            new Vertex(new(-a, -a, -a), new(0, -1, 0), new(b1, c3)),
         ];
 
 #pragma warning disable IDE0055 // auto code formatting

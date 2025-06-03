@@ -10,9 +10,11 @@ public sealed class DeferredProcessMaterial : IMaterial
     private ImmutableArray<BindGroupData> _pass0BindGroups;
     private EventSubscription<IGBufferProvider> _subscription;
 
-    public ITypedShader Shader => _shader;
+    public DeferredProcessShader Shader => _shader;
+    ITypedShader IMaterial.Shader => Shader;
 
     public Screen Screen => _shader.Screen;
+
 
     private DeferredProcessMaterial(DeferredProcessShader shader, IGBufferProvider gBuffer)
     {
