@@ -64,76 +64,60 @@ public sealed partial class PbrMaterial : IMaterial
 
     public static Own<PbrMaterial> Create(
         Shader shader,
-        MaybeOwn<Texture2D> albedo,
-        MaybeOwn<Texture2D> metallicRoughness,
-        MaybeOwn<Texture2D> normal)
+        Texture2D albedo,
+        Texture2D metallicRoughness,
+        Texture2D normal)
     {
         var screen = shader.Screen;
-        var samplerOwn = Sampler.Create(screen, new()
-        {
-            AddressModeU = AddressMode.ClampToEdge,
-            AddressModeV = AddressMode.ClampToEdge,
-            AddressModeW = AddressMode.ClampToEdge,
-            MagFilter = FilterMode.Linear,
-            MinFilter = FilterMode.Linear,
-            MipmapFilter = FilterMode.Linear,
-        });
+        var sampler = screen.UtilResource.LinearSampler;
         return Create(
             shader,
-            albedo, samplerOwn,
-            metallicRoughness, samplerOwn.AsValue(),
-            normal, samplerOwn.AsValue());
+            albedo, sampler,
+            metallicRoughness, sampler,
+            normal, sampler);
     }
 
     public static Own<PbrMaterial> Create(
         Shader shader,
-        MaybeOwn<Texture2D> albedo,
-        MaybeOwn<Sampler> albedoSampler,
-        MaybeOwn<Texture2D> metallicRoughness,
-        MaybeOwn<Sampler> metallicRoughnessSampler,
-        MaybeOwn<Texture2D> normal,
-        MaybeOwn<Sampler> normalSampler)
+        Texture2D albedo,
+        Sampler albedoSampler,
+        Texture2D metallicRoughness,
+        Sampler metallicRoughnessSampler,
+        Texture2D normal,
+        Sampler normalSampler)
     {
         ArgumentNullException.ThrowIfNull(shader);
-        albedo.ThrowArgumentExceptionIfNone();
-        albedoSampler.ThrowArgumentExceptionIfNone();
-        metallicRoughness.ThrowArgumentExceptionIfNone();
-        metallicRoughnessSampler.ThrowArgumentExceptionIfNone();
-        normal.ThrowArgumentExceptionIfNone();
-        normalSampler.ThrowArgumentExceptionIfNone();
+        ArgumentNullException.ThrowIfNull(albedo);
+        ArgumentNullException.ThrowIfNull(albedoSampler);
+        ArgumentNullException.ThrowIfNull(metallicRoughness);
+        ArgumentNullException.ThrowIfNull(metallicRoughnessSampler);
+        ArgumentNullException.ThrowIfNull(normal);
+        ArgumentNullException.ThrowIfNull(normalSampler);
 
         var screen = shader.Screen;
-
         var disposables = new DisposableBag();
-        var albedoValue = albedo.AddTo(disposables);
-        var albedoSamplerValue = albedoSampler.AddTo(disposables);
-        var metallicRoughnessValue = metallicRoughness.AddTo(disposables);
-        var metallicRoughnessSamplerValue = metallicRoughnessSampler.AddTo(disposables);
-        var normalValue = normal.AddTo(disposables);
-        var normalSamplerValue = normalSampler.AddTo(disposables);
-
         var bindGroup1 = BindGroup.Create(screen, new()
         {
             Layout = shader.ShaderPasses[1].Pipeline.Layout.BindGroupLayouts[1],
             Entries =
             [
-                BindGroupEntry.TextureView(0, albedoValue.View),
-                BindGroupEntry.Sampler(1, albedoSamplerValue),
-                BindGroupEntry.TextureView(2, metallicRoughnessValue.View),
-                BindGroupEntry.Sampler(3, metallicRoughnessSamplerValue),
-                BindGroupEntry.TextureView(4, normalValue.View),
-                BindGroupEntry.Sampler(5, normalSamplerValue),
+                BindGroupEntry.TextureView(0, albedo.View),
+                BindGroupEntry.Sampler(1, albedoSampler),
+                BindGroupEntry.TextureView(2, metallicRoughness.View),
+                BindGroupEntry.Sampler(3, metallicRoughnessSampler),
+                BindGroupEntry.TextureView(4, normal.View),
+                BindGroupEntry.Sampler(5, normalSampler),
             ],
         }).AddTo(disposables);
 
         var material = new PbrMaterial(
             shader,
-            albedoValue,
-            albedoSamplerValue,
-            metallicRoughnessValue,
-            metallicRoughnessSamplerValue,
-            normalValue,
-            normalSamplerValue,
+            albedo,
+            albedoSampler,
+            metallicRoughness,
+            metallicRoughnessSampler,
+            normal,
+            normalSampler,
             bindGroup1,
             disposables);
         return Own.New(material, static x => SafeCast.As<PbrMaterial>(x).Release());

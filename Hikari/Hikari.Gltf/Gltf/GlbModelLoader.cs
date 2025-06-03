@@ -283,12 +283,12 @@ public static class GlbModelLoader
                 iPos += iConsumed;
                 materials[i] = PbrMaterial.Create(
                     state.Shader,
-                    materialData.Pbr.BaseColor,
-                    materialData.Pbr.BaseColorSampler,
-                    materialData.Pbr.MetallicRoughness,
-                    materialData.Pbr.MetallicRoughnessSampler,
-                    materialData.Normal.Texture,
-                    materialData.Normal.Sampler).AddTo(state.Disposables);
+                    materialData.Pbr.BaseColor.AddTo(state.Disposables),
+                    materialData.Pbr.BaseColorSampler.AddTo(state.Disposables),
+                    materialData.Pbr.MetallicRoughness.AddTo(state.Disposables),
+                    materialData.Pbr.MetallicRoughnessSampler.AddTo(state.Disposables),
+                    materialData.Normal.Texture.AddTo(state.Disposables),
+                    materialData.Normal.Sampler.AddTo(state.Disposables)).AddTo(state.Disposables);
             }
             Debug.Assert(vPos == vc);
             Debug.Assert(iPos == ic);
@@ -347,32 +347,6 @@ public static class GlbModelLoader
         }
         checked {
             return ((uint)vertexCount, (uint)indexCount);
-        }
-    }
-
-    private unsafe static (Own<Mesh>, Own<PbrMaterial>) LoadMeshAndMaterial<TVertex>(in LoaderState state, in MeshPrimitive meshPrimitive)
-        where TVertex : unmanaged, IVertex, IVertexPosition, IVertexUV, IVertexNormal
-    {
-        return LoadMeshAndMaterial<TVertex, (Own<Mesh>, Own<PbrMaterial>)>(in state, in meshPrimitive, &CreateMeshAndMaterial);
-
-        static (Own<Mesh>, Own<PbrMaterial>) CreateMeshAndMaterial(
-            in LoaderState state,
-            ReadOnlySpanU32<TVertex> vertices,
-            ReadOnlySpanU32<uint> indices,
-            ReadOnlySpanU32<Vector3> tangents,
-            in MaterialData materialData)
-        {
-            var mesh = Mesh.CreateWithTangent(state.Screen, vertices, indices, tangents);
-
-            var material = PbrMaterial.Create(
-                state.Shader,
-                materialData.Pbr.BaseColor,
-                materialData.Pbr.BaseColorSampler,
-                materialData.Pbr.MetallicRoughness,
-                materialData.Pbr.MetallicRoughnessSampler,
-                materialData.Normal.Texture,
-                materialData.Normal.Sampler);
-            return (mesh, material);
         }
     }
 

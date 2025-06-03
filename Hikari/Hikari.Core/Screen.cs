@@ -21,6 +21,7 @@ public sealed class Screen
     private readonly UITree _uiTree;
     private readonly ObjectStore _objectStore;
     private readonly RenderPassScheduler _scheduler;
+    private readonly UtilResource _utilResource;
     private readonly Timing _earlyUpdate;
     private readonly Timing _update;
     private readonly Timing _lateUpdate;
@@ -150,6 +151,8 @@ public sealed class Screen
     public Camera Camera => _camera;
     public Lights Lights => _lights;
 
+    public UtilResource UtilResource => _utilResource;
+
     internal Screen(Rust.Box<CH.Screen> screen, ThreadId mainThread, Action<Screen>? onPrepare)
     {
         _native = screen;
@@ -169,6 +172,7 @@ public sealed class Screen
         _objectStore = new ObjectStore(this);
         _uiTree = new UITree(this);
         _scheduler = new RenderPassScheduler(this);
+        _utilResource = new UtilResource(this);
         _info = Buffer.Create(this, new ScreenInfo
         {
             Size = Vector2u.Zero,
@@ -396,6 +400,7 @@ public sealed class Screen
         _lights.DisposeInternal();
         _resized.Clear();
         _subscriptions.Dispose();
+        _utilResource.DisposeInternal();
         _info.Dispose();
         return native;
     }
