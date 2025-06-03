@@ -133,9 +133,10 @@ file sealed class ButtonMaterial : IUIMaterial
 
     public Screen Screen => _base.Screen;
 
-    public Shader Shader => _base.Shader;
+    public UIShader Shader => _base.Shader;
+    ITypedShader IMaterial.Shader => Shader;
 
-    private ButtonMaterial(Shader shader)
+    private ButtonMaterial(UIShader shader)
     {
         _base = new UIMaterialBase(shader);
     }
@@ -145,7 +146,7 @@ file sealed class ButtonMaterial : IUIMaterial
         _base.Release();
     }
 
-    internal static Own<ButtonMaterial> Create(Shader shader)
+    internal static Own<ButtonMaterial> Create(UIShader shader)
     {
         var self = new ButtonMaterial(shader);
         return Own.New(self, static x => SafeCast.As<ButtonMaterial>(x).Release());

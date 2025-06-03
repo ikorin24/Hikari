@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Hikari.Internal;
 using System;
 using System.Collections.Immutable;
 
@@ -7,20 +6,20 @@ namespace Hikari;
 
 public sealed class DeferredProcessMaterial : IMaterial
 {
-    private readonly Shader _shader;
+    private readonly DeferredProcessShader _shader;
     private ImmutableArray<BindGroupData> _pass0BindGroups;
-    private EventSource<DeferredProcessMaterial> _disposed;
+    private EventSubscription<IGBufferProvider> _subscription;
 
-    public Shader Shader => _shader;
+    public ITypedShader Shader => _shader;
 
     public Screen Screen => _shader.Screen;
 
-    public Event<DeferredProcessMaterial> Disposed => _disposed.Event;
-
-    private DeferredProcessMaterial(Shader shader, IGBufferProvider gBuffer)
+    private DeferredProcessMaterial(DeferredProcessShader shader, IGBufferProvider gBuffer)
     {
+        ArgumentNullException.ThrowIfNull(gBuffer);
+        ArgumentNullException.ThrowIfNull(shader);
         _shader = shader;
-        gBuffer.Observe(gBuffer =>
+        _subscription = gBuffer.Observe(gBuffer =>
         {
             var screen = gBuffer.Screen;
             _pass0BindGroups = [
@@ -29,7 +28,7 @@ public sealed class DeferredProcessMaterial : IMaterial
                 new BindGroupData(2, screen.Lights.DataBindGroup),
                 new BindGroupData(3, screen.Lights.DirectionalLight.ShadowMapBindGroup),
             ];
-        }).DisposeOn(Disposed);
+        });
     }
 
     public void SetBindGroupsTo(in RenderPass renderPass, int passIndex, Renderer renderer)
@@ -45,13 +44,11 @@ public sealed class DeferredProcessMaterial : IMaterial
 
     private void Release()
     {
+        _subscription.Dispose();
     }
 
-    internal static Own<DeferredProcessMaterial> Create(Shader shader, IGBufferProvider gBuffer)
+    internal static Own<DeferredProcessMaterial> Create(DeferredProcessShader shader, IGBufferProvider gBuffer)
     {
-        ArgumentNullException.ThrowIfNull(gBuffer);
-        ArgumentNullException.ThrowIfNull(shader);
-
         var material = new DeferredProcessMaterial(shader, gBuffer);
         return Own.New(material, static x => SafeCast.As<DeferredProcessMaterial>(x).Release());
     }

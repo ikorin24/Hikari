@@ -3,7 +3,6 @@ using Cysharp.Threading.Tasks;
 using Hikari.Gltf.Internal;
 using Hikari.Gltf.Parsing;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -16,7 +15,7 @@ namespace Hikari.Gltf;
 
 public static class GlbModelLoader
 {
-    public static (FrameObject, DisposableBag) LoadGlbFile(Shader shader, string filePath, CancellationToken ct = default)
+    public static (FrameObject, DisposableBag) LoadGlbFile(PbrShader shader, string filePath, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlbFile(filePath, ct);
@@ -31,7 +30,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public static (FrameObject, DisposableBag) LoadGlbFile(Shader shader, string filePath, FrameObjectInitArg init, CancellationToken ct = default)
+    public static (FrameObject, DisposableBag) LoadGlbFile(PbrShader shader, string filePath, FrameObjectInitArg init, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlbFile(filePath, ct);
@@ -46,7 +45,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public static (FrameObject, DisposableBag) LoadGlb(Shader shader, ResourceFile file, CancellationToken ct = default)
+    public static (FrameObject, DisposableBag) LoadGlb(PbrShader shader, ResourceFile file, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(file, ct);
@@ -61,7 +60,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public static (FrameObject, DisposableBag) LoadGlb(Shader shader, ResourceFile file, FrameObjectInitArg init, CancellationToken ct = default)
+    public static (FrameObject, DisposableBag) LoadGlb(PbrShader shader, ResourceFile file, FrameObjectInitArg init, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(file, ct);
@@ -76,7 +75,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public static (FrameObject, DisposableBag) LoadGlb(Shader shader, ReadOnlySpan<byte> data, CancellationToken ct = default)
+    public static (FrameObject, DisposableBag) LoadGlb(PbrShader shader, ReadOnlySpan<byte> data, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(data, ct);
@@ -91,7 +90,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public static (FrameObject, DisposableBag) LoadGlb(Shader shader, ReadOnlySpan<byte> data, FrameObjectInitArg init, CancellationToken ct = default)
+    public static (FrameObject, DisposableBag) LoadGlb(PbrShader shader, ReadOnlySpan<byte> data, FrameObjectInitArg init, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(data, ct);
@@ -106,7 +105,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public unsafe static (FrameObject, DisposableBag) LoadGlb(Shader shader, void* data, nuint length, CancellationToken ct = default)
+    public unsafe static (FrameObject, DisposableBag) LoadGlb(PbrShader shader, void* data, nuint length, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(data, length, ct);
@@ -121,7 +120,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public unsafe static (FrameObject, DisposableBag) LoadGlb(Shader shader, void* data, nuint length, FrameObjectInitArg init, CancellationToken ct = default)
+    public unsafe static (FrameObject, DisposableBag) LoadGlb(PbrShader shader, void* data, nuint length, FrameObjectInitArg init, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         using var glb = GltfParser.ParseGlb(data, length, ct);
@@ -136,7 +135,7 @@ public static class GlbModelLoader
         return LoadRoot(state);
     }
 
-    public static async UniTask<(FrameObject, DisposableBag)> LoadGlbFileAsync(Shader shader, string filePath, CancellationToken ct = default)
+    public static async UniTask<(FrameObject, DisposableBag)> LoadGlbFileAsync(PbrShader shader, string filePath, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         var (obj, disposables) = await UniTask.Run(() =>
@@ -156,7 +155,7 @@ public static class GlbModelLoader
         return (obj, disposables);
     }
 
-    public static async UniTask<(FrameObject, DisposableBag)> LoadGlbFileAsync(Shader shader, string filePath, FrameObjectInitArg init, CancellationToken ct = default)
+    public static async UniTask<(FrameObject, DisposableBag)> LoadGlbFileAsync(PbrShader shader, string filePath, FrameObjectInitArg init, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         var (obj, disposables) = await UniTask.Run(() =>
@@ -176,7 +175,7 @@ public static class GlbModelLoader
         return (obj, disposables);
     }
 
-    public static async UniTask<(FrameObject, DisposableBag)> LoadGlbAsync(Shader shader, ReadOnlyMemory<byte> data, CancellationToken ct = default)
+    public static async UniTask<(FrameObject, DisposableBag)> LoadGlbAsync(PbrShader shader, ReadOnlyMemory<byte> data, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         var (obj, disposables) = await UniTask.Run(() =>
@@ -196,7 +195,7 @@ public static class GlbModelLoader
         return (obj, disposables);
     }
 
-    public static async UniTask<(FrameObject, DisposableBag)> LoadGlbAsync(Shader shader, ReadOnlyMemory<byte> data, FrameObjectInitArg init, CancellationToken ct = default)
+    public static async UniTask<(FrameObject, DisposableBag)> LoadGlbAsync(PbrShader shader, ReadOnlyMemory<byte> data, FrameObjectInitArg init, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(shader);
         var (obj, disposables) = await UniTask.Run(() =>
@@ -900,7 +899,7 @@ public static class GlbModelLoader
     {
         public required GlbObject Glb { get; init; }
         public required CancellationToken Ct { get; init; }
-        public required Shader Shader { get; init; }
+        public required PbrShader Shader { get; init; }
         public required FrameObjectInitArg? Init { get; init; }
         public required bool ApplyVisible { get; init; }
         public DisposableBag Disposables { get; }

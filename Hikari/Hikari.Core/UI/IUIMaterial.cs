@@ -12,7 +12,7 @@ internal interface IUIMaterial : IMaterial
 
 internal struct UIMaterialBase
 {
-    private readonly Shader _shader;
+    private readonly UIShader _shader;
     private readonly Own<BindGroup> _bindGroup0;
     private Own<BindGroup> _bindGroup1;
     private Own<BindGroup> _bindGroup2;
@@ -28,16 +28,16 @@ internal struct UIMaterialBase
 
     private const BufferUsages BackgroundBufferUsage = BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst;
 
-    public readonly Shader Shader => _shader;
+    public readonly UIShader Shader => _shader;
     public readonly Screen Screen => _shader.Screen;
     public readonly Texture2D? Texture => _texture.TryAsValue(out var texture) ? texture : null;
 
 
-    public UIMaterialBase(Shader shader) : this(shader, UIShader.GetEmptyTexture2D(shader.Screen), UIShader.GetEmptySampler(shader.Screen))
+    public UIMaterialBase(UIShader shader) : this(shader, UIShader.GetEmptyTexture2D(shader.Screen), UIShader.GetEmptySampler(shader.Screen))
     {
     }
 
-    public UIMaterialBase(Shader shader, MaybeOwn<Texture2D> texture, MaybeOwn<Sampler> sampler)
+    public UIMaterialBase(UIShader shader, MaybeOwn<Texture2D> texture, MaybeOwn<Sampler> sampler)
     {
         texture.ThrowArgumentExceptionIfNone(nameof(texture));
         sampler.ThrowArgumentExceptionIfNone(nameof(sampler));

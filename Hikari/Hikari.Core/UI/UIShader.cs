@@ -7,11 +7,11 @@ using Utf8StringInterpolation;
 
 namespace Hikari.UI;
 
-internal static class UIShader
+internal sealed class UIShader : ITypedShader
 {
     private static readonly ConcurrentDictionary<Screen, Own<Texture2D>> _textureCache = new();
     private static readonly ConcurrentDictionary<Screen, Own<Sampler>> _samplerCache = new();
-    private static readonly ConcurrentDictionary<Screen, Own<Shader>> _shaderCache = new();
+    private static readonly ConcurrentDictionary<Screen, Own<UIShader>> _shaderCache = new();
 
     private static readonly Lazy<ImmutableArray<byte>> _defaultShaderSource = new(() =>
     {
@@ -52,6 +52,50 @@ internal static class UIShader
         }
         return bw.WrittenSpan.ToImmutableArray();
     });
+
+    private readonly Shader _shader;
+    private readonly DisposableBag _disposables;
+
+    public Screen Screen => _shader.Screen;
+
+    public ImmutableArray<ShaderPassData> ShaderPasses => _shader.ShaderPasses;
+
+    private UIShader(Screen screen)
+    {
+        var disposables = new DisposableBag();
+        var shader = Shader.Create(
+            screen,
+            [
+                new()
+                {
+                    Source = _defaultShaderSource.Value,
+                    SortOrder = 3000,
+                    LayoutDescriptor = PipelineLayoutFactory(screen, disposables),
+                    PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
+                    PassKind = PassKind.Forward,
+                    OnRenderPass = static (in RenderPassState state) =>
+                    {
+                        state.RenderPass.SetPipeline(state.Pipeline);
+                        state.Material.SetBindGroupsTo(state.RenderPass, state.PassIndex, state.Renderer);
+                        state.RenderPass.SetVertexBuffer(0, state.Mesh.VertexBuffer);
+                        state.RenderPass.SetIndexBuffer(state.Mesh.IndexBuffer, state.Mesh.IndexFormat);
+                        state.RenderPass.DrawIndexed(state.Submesh.IndexOffset, state.Submesh.IndexCount, state.Submesh.VertexOffset, 0, 1);
+                    },
+                },
+            ]).AddTo(disposables);
+        _shader = shader;
+        _disposables = disposables;
+    }
+
+    private void Release()
+    {
+        _disposables.Dispose();
+    }
+
+    private static Own<UIShader> Create(Screen screen)
+    {
+        return Own.New(new UIShader(screen), static s => SafeCast.As<UIShader>(s).Release());
+    }
 
     public static Texture2D GetEmptyTexture2D(Screen screen)
     {
@@ -98,33 +142,11 @@ internal static class UIShader
         }).AsValue();
     }
 
-    public static Shader CreateOrCached(Screen screen)
+    public static UIShader CreateOrCached(Screen screen)
     {
         return _shaderCache.GetOrAdd(screen, static screen =>
         {
-            var shader = Shader.Create(
-                screen,
-                [
-                    new()
-                    {
-                        Source = _defaultShaderSource.Value,
-                        SortOrder = 3000,
-                        LayoutDescriptor = PipelineLayoutFactory(screen, out var diposable),
-                        PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
-                        PassKind = PassKind.Forward,
-                        OnRenderPass = static (in RenderPassState state) =>
-                        {
-                            state.RenderPass.SetPipeline(state.Pipeline);
-                            state.Material.SetBindGroupsTo(state.RenderPass, state.PassIndex, state.Renderer);
-                            state.RenderPass.SetVertexBuffer(0, state.Mesh.VertexBuffer);
-                            state.RenderPass.SetIndexBuffer(state.Mesh.IndexBuffer, state.Mesh.IndexFormat);
-                            state.RenderPass.DrawIndexed(state.Submesh.IndexOffset, state.Submesh.IndexCount, state.Submesh.VertexOffset, 0, 1);
-                        },
-                    },
-                ],
-                null);
-            var shaderValue = shader.AsValue();
-            diposable.DisposeOn(shaderValue.Disposed);
+            var shader = Create(screen);
             screen.Closed.Subscribe(static screen =>
             {
                 if(_shaderCache.TryRemove(screen, out var shader)) {
@@ -135,13 +157,11 @@ internal static class UIShader
         }).AsValue();
     }
 
-    //public abstract Own<UIMaterial> CreateMaterial();
 
     private static PipelineLayoutDescriptor PipelineLayoutFactory(
         Screen screen,
-        out DisposableBag disposable)
+        DisposableBag disposables)
     {
-        disposable = new DisposableBag();
         return new()
         {
             BindGroupLayouts =
@@ -153,7 +173,7 @@ internal static class UIShader
                         BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform }),
                         BindGroupLayoutEntry.Buffer(1, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform }),
                     ],
-                }).AddTo(disposable),
+                }).AddTo(disposables),
                 BindGroupLayout.Create(screen, new()
                 {
                     Entries =
@@ -167,14 +187,14 @@ internal static class UIShader
                         BindGroupLayoutEntry.Sampler(1, ShaderStages.Vertex | ShaderStages.Fragment, SamplerBindingType.NonFiltering),
                         BindGroupLayoutEntry.Buffer(2, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.Uniform }),
                     ],
-                }).AddTo(disposable),
+                }).AddTo(disposables),
                 BindGroupLayout.Create(screen, new()
                 {
                     Entries =
                     [
                         BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex | ShaderStages.Fragment, new BufferBindingData { Type = BufferBindingType.StorageReadOnly }),
                     ],
-                }).AddTo(disposable),
+                }).AddTo(disposables),
             ],
         };
     }

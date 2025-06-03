@@ -39,8 +39,8 @@ internal class Program
     private static async UniTask OnInitialized(Screen screen)
     {
         screen.Title = "SampleApp";
-        var gBuffer = screen.RenderScheduler.SetDefault();
-        var pbrShader = PbrShader.Create(screen, gBuffer).DisposeOn(screen.Closed);
+        screen.RenderScheduler.SetDefaultRenderPass();
+        var pbrShader = PbrShader.Create(screen).DisposeOn(screen.Closed);
 
         var camera = screen.Camera;
         camera.SetNearFar(0.5f, 1000);

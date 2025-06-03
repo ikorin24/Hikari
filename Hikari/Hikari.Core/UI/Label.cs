@@ -130,7 +130,7 @@ file sealed class LabelMaterial : IUIMaterial
     private float? _scaleFactor;
     private UIMaterialBase _base;
 
-    private LabelMaterial(Shader shader)
+    private LabelMaterial(UIShader shader)
     {
         _base = new UIMaterialBase(shader);
     }
@@ -142,9 +142,11 @@ file sealed class LabelMaterial : IUIMaterial
 
     public Screen Screen => _base.Screen;
 
-    public Shader Shader => _base.Shader;
+    public UIShader Shader => _base.Shader;
 
-    internal static Own<LabelMaterial> Create(Shader shader)
+    ITypedShader IMaterial.Shader => Shader;
+
+    internal static Own<LabelMaterial> Create(UIShader shader)
     {
         var self = new LabelMaterial(shader);
         return Own.New(self, static x => SafeCast.As<LabelMaterial>(x).Release());

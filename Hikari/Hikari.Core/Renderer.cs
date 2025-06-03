@@ -88,10 +88,6 @@ public sealed partial class Renderer : IRenderer
             Model = model,
             IsUniformScale = isUniformScale ? 1 : 0,
         });
-
-        foreach(var material in _materials) {
-            material.Shader.PrepareForRender(obj, material);
-        }
     }
 
     public IMaterial GetMaterial(int submeshIndex)

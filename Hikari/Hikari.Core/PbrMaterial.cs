@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Hikari.Internal;
 using System;
 using System.Runtime.InteropServices;
 
@@ -7,7 +6,7 @@ namespace Hikari;
 
 public sealed partial class PbrMaterial : IMaterial
 {
-    private readonly Shader _shader;
+    private readonly PbrShader _shader;
     private readonly Texture2D _albedo;
     private readonly Texture2D _metallicRoughness;
     private readonly Texture2D _normal;
@@ -20,7 +19,8 @@ public sealed partial class PbrMaterial : IMaterial
     private EventSource<PbrMaterial> _disposed;
 
     public Event<PbrMaterial> Disposed => _disposed.Event;
-    public Shader Shader => _shader;
+    public PbrShader Shader => _shader;
+    ITypedShader IMaterial.Shader => _shader;
     public Screen Screen => _shader.Screen;
     public Texture2D Albedo => _albedo;
     public Texture2D MetallicRoughness => _metallicRoughness;
@@ -31,7 +31,7 @@ public sealed partial class PbrMaterial : IMaterial
     public Sampler NormalSampler => _normalSampler;
 
     private PbrMaterial(
-        Shader shader,
+        PbrShader shader,
         Texture2D albedo, Sampler albedoSampler,
         Texture2D metallicRoughness, Sampler metallicRoughnessSampler,
         Texture2D normal, Sampler normalSampler,
@@ -63,7 +63,7 @@ public sealed partial class PbrMaterial : IMaterial
     }
 
     public static Own<PbrMaterial> Create(
-        Shader shader,
+        PbrShader shader,
         Texture2D albedo,
         Texture2D metallicRoughness,
         Texture2D normal)
@@ -78,7 +78,7 @@ public sealed partial class PbrMaterial : IMaterial
     }
 
     public static Own<PbrMaterial> Create(
-        Shader shader,
+        PbrShader shader,
         Texture2D albedo,
         Sampler albedoSampler,
         Texture2D metallicRoughness,

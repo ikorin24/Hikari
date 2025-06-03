@@ -66,16 +66,18 @@ file sealed class PanelMaterial : IUIMaterial
 {
     private UIMaterialBase _base;
 
-    private PanelMaterial(Shader shader)
+    private PanelMaterial(UIShader shader)
     {
         _base = new UIMaterialBase(shader);
     }
 
     public Screen Screen => _base.Screen;
 
-    public Shader Shader => _base.Shader;
+    public UIShader Shader => _base.Shader;
 
-    internal static Own<PanelMaterial> Create(Shader shader)
+    ITypedShader IMaterial.Shader => Shader;
+
+    internal static Own<PanelMaterial> Create(UIShader shader)
     {
         var self = new PanelMaterial(shader);
         return Own.New(self, static x => SafeCast.As<PanelMaterial>(x).Release());

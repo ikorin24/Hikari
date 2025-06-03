@@ -8,8 +8,14 @@ using V = Hikari.Vertex;
 
 namespace Hikari;
 
-public static class PbrShader
+public sealed partial class PbrShader : ITypedShader
 {
+    private readonly Shader _shader;
+    private readonly DisposableBag _disposables;
+
+    public Screen Screen => _shader.Screen;
+    public ImmutableArray<ShaderPassData> ShaderPasses => _shader.ShaderPasses;
+
     private static readonly Lazy<ImmutableArray<byte>> _source = new(() =>
     {
         using var bw = new PooledArrayBufferWriter<byte>();
@@ -188,9 +194,11 @@ public static class PbrShader
         return bw.WrittenSpan.ToImmutableArray();
     });
 
-    public static Own<Shader> Create(Screen screen, IGBufferProvider gBufferProvider)
+
+    [Owned(nameof(Release))]
+    private PbrShader(Screen screen)
     {
-        var disposable = new DisposableBag();
+        var disposables = new DisposableBag();
         var shader = Shader.Create(
             screen,
             [
@@ -207,7 +215,7 @@ public static class PbrShader
                                 [
                                     BindGroupLayoutEntry.Buffer(0, ShaderStages.Vertex, new() { Type = BufferBindingType.Uniform }),
                                 ],
-                            }).AddTo(disposable),
+                            }).AddTo(disposables),
                             screen.Lights.DirectionalLight.RenderShadowBindGroup.Layout,
                         ],
                     },
@@ -226,7 +234,7 @@ public static class PbrShader
                 new()
                 {
                     Source = _source.Value,
-                    LayoutDescriptor = GetLayoutDesc(screen, out var disposable2),
+                    LayoutDescriptor = GetLayoutDesc(screen, disposables),
                     PipelineDescriptorFactory = static (module, layout) => GetDescriptor(module, layout, module.Screen.DepthStencil.Format),
                     SortOrder = 0,
                     PassKind = PassKind.Deferred,
@@ -241,18 +249,18 @@ public static class PbrShader
                         state.RenderPass.DrawIndexed(state.Submesh.IndexOffset, state.Submesh.IndexCount, state.Submesh.VertexOffset, 0, 1);
                     },
                 },
-            ],
-            null);
-
-        var shaderValue = shader.AsValue();
-        disposable2.DisposeOn(shaderValue.Disposed);
-        disposable.DisposeOn(shaderValue.Disposed);
-        return shader;
+            ]).AddTo(disposables);
+        _shader = shader;
+        _disposables = disposables;
     }
 
-    private static PipelineLayoutDescriptor GetLayoutDesc(Screen screen, out DisposableBag disposable)
+    private void Release()
     {
-        disposable = new DisposableBag();
+        _disposables.Dispose();
+    }
+
+    private static PipelineLayoutDescriptor GetLayoutDesc(Screen screen, DisposableBag disposable)
+    {
         return new PipelineLayoutDescriptor
         {
             BindGroupLayouts = [

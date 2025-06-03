@@ -45,12 +45,12 @@ public sealed class RenderPassScheduler
         _passDataDic = new Dictionary<PassKind, Dictionary<Renderer, List<RenderPassData>>>(0).ToFrozenDictionary();
     }
 
-    public DefaultGBufferProvider SetDefault()
+    public void SetDefaultRenderPass()
     {
-        return SetDefault(_screen.Closed);
+        SetDefaultRenderPass(_screen.Closed);
     }
 
-    public DefaultGBufferProvider SetDefault<_>(Event<_> resourceLifetime)
+    public void SetDefaultRenderPass<_>(Event<_> resourceLifetime)
     {
         var screen = _screen;
         var gBuffer = DefaultGBufferProvider.CreateScreenSize(screen).DisposeOn(resourceLifetime);
@@ -120,7 +120,6 @@ public sealed class RenderPassScheduler
         resourceLifetime.Subscribe(_ => obj.Terminate());
         mesh.DisposeOn(obj.Dead);
         material.DisposeOn(obj.Dead);
-        return gBuffer;
     }
 
     public void SetRenderPass(ImmutableArray<RenderPassDefinition> passDefs)

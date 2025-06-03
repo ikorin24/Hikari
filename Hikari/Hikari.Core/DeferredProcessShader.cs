@@ -1,12 +1,15 @@
 ﻿#nullable enable
-using Hikari.Internal;
 using System;
 using System.Collections.Immutable;
 
 namespace Hikari;
 
-public static class DeferredProcessShader
+public sealed partial class DeferredProcessShader : ITypedShader
 {
+    private readonly Own<Shader> _shader;
+    private readonly Screen _screen;
+    private readonly ImmutableArray<ShaderPassData> _passes;
+
     private static readonly Lazy<ImmutableArray<byte>> ShaderSource = new(() =>
     {
         return """
@@ -307,8 +310,14 @@ public static class DeferredProcessShader
         """u8.ToImmutableArray();
     });
 
-    public static Own<Shader> Create(Screen screen, IGBufferProvider gBuffer)
+    public Screen Screen => _screen;
+
+    public ImmutableArray<ShaderPassData> ShaderPasses => _passes;
+
+    [Owned(nameof(Release))]
+    private DeferredProcessShader(Screen screen, IGBufferProvider gBuffer)
     {
+        _screen = screen;
         var shader = Shader.Create(
             screen,
             [
@@ -337,9 +346,14 @@ public static class DeferredProcessShader
                         state.RenderPass.DrawIndexed(state.Submesh.IndexOffset, state.Submesh.IndexCount, state.Submesh.VertexOffset, 0, 1);
                     },
                 },
-            ],
-            null);
-        return shader;
+            ]);
+        _shader = shader;
+        _passes = shader.AsValue().ShaderPasses;
+    }
+
+    private void Release()
+    {
+        _shader.Dispose();
     }
 
     private static RenderPipelineDescriptor PipelineFactory(ShaderModule module, PipelineLayout layout)
