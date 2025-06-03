@@ -24,6 +24,8 @@ public sealed partial class Renderer : IRenderer
 
     public int SubrendererCount => _materials.Length;
 
+    public ImmutableArray<IMaterial> Materials => _materials;
+
     public BindGroup ModelDataBindGroup => _modelDataBindGroup.AsValue();
 
     public bool IsVisible

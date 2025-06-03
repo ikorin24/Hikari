@@ -285,6 +285,7 @@ public sealed class Screen
         }
 
         store.ApplyAdd();
+        scheduler.ApplyAdd();
         // ----------------------------
 
         // early update
@@ -331,6 +332,7 @@ public sealed class Screen
         scheduler.Execute();
 
         store.ApplyRemove();
+        scheduler.ApplyRemove();
 
         // ----------------------------
 
@@ -383,6 +385,7 @@ public sealed class Screen
     internal Rust.OptionBox<CH.Screen> OnClosed()
     {
         _objectStore.OnClosed();
+        _scheduler.OnClosed();
         _closed.Invoke(this);
 
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CH.Screen>.None);
