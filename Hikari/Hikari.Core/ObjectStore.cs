@@ -1,5 +1,5 @@
 ﻿#nullable enable
-using Hikari.Collections;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -8,9 +8,10 @@ namespace Hikari;
 internal sealed class ObjectStore
 {
     private readonly List<FrameObject> _list;
-    private readonly List<FrameObject> _addedList;
-    private readonly List<FrameObject> _removedList;
-    private readonly object _sync = new object();
+    private readonly Dictionary<FrameObject, int> _indexDic;
+    private readonly List<FrameObject> _addedTmp;
+    private readonly List<FrameObject> _removedTmp;
+    private bool _iterating = false;
 
     private readonly Screen _screen;
 
@@ -19,88 +20,67 @@ internal sealed class ObjectStore
     internal ObjectStore(Screen screen)
     {
         _screen = screen;
-        _list = new();
-        _addedList = new();
-        _removedList = new();
+        _list = [];
+        _indexDic = [];
+        _addedTmp = [];
+        _removedTmp = [];
     }
 
-    internal void OnClosed()
+    internal void TerminateAll()
     {
         Debug.Assert(_screen.MainThread.IsCurrentThread);
-        foreach(var obj in _list.AsSpan()) {
-            obj.Terminate();
-        }
-        ApplyRemove();
+        UseObjects(static objects =>
+        {
+            foreach(var obj in objects) {
+                obj.Terminate();
+            }
+        });
     }
 
     internal void Add(FrameObject frameObject)
     {
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
         Debug.Assert(frameObject.LifeState == LifeState.New);
-        lock(_sync) {
-            _addedList.Add(frameObject);
+        if(_iterating) {
+            _addedTmp.Add(frameObject);
         }
-    }
+        else {
+            _list.Add(frameObject);
+            _indexDic.Add(frameObject, _list.Count);
 
-    internal void ApplyAdd()
-    {
-        Debug.Assert(Screen.MainThread.IsCurrentThread);
-
-        // To avoid deadlock, copy the added list to a local variable and add it to the '_list'.
-        // This is because the user can call the 'Add' method during the Alive event of the added object.
-        RefTypeRentMemory<FrameObject> tmp;
-        lock(_sync) {
-            if(_addedList.Count == 0) { return; }
-            tmp = new RefTypeRentMemory<FrameObject>(_addedList.AsReadOnlySpan());
-            _addedList.Clear();
-        }
-        try {
-            var addedList = tmp.AsReadOnlySpan();
-            foreach(var addedObject in addedList) {
-                if(addedObject.LifeState != LifeState.New) { continue; }
-                _list.Add(addedObject);
-            }
-            foreach(var addedObject in addedList) {
-                if(addedObject.LifeState != LifeState.New) { continue; }
-                addedObject.SetLifeStateAlive();
-                addedObject.OnAlive();
-            }
-        }
-        finally {
-            tmp.Dispose();
+            frameObject.SetLifeStateAlive();
+            frameObject.OnAlive();
         }
     }
 
     internal void Remove(FrameObject frameObject)
     {
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
         Debug.Assert(frameObject.LifeState == LifeState.Terminating);
-        lock(_sync) {
-            _removedList.Add(frameObject);
+        if(_iterating) {
+            _removedTmp.Add(frameObject);
+        }
+        else {
+            var index = _indexDic[frameObject];
+            var lastItem = _list[^1];
+            if(_list.SwapRemoveAt(index)) {
+                _indexDic[lastItem] = index;
+                _indexDic.Remove(frameObject);
+            }
+            frameObject.SetLifeStateDead();
+            frameObject.OnDead();
         }
     }
 
-    internal void ApplyRemove()
+    private void ProcessPendingObjects()
     {
-        Debug.Assert(Screen.MainThread.IsCurrentThread);
-
-        // To avoid deadlock, copy the removed list to a local variable and remove it from the '_list'.
-        // This is because the user can call the 'Remove' method during the Dead event of the removed object.
-        RefTypeRentMemory<FrameObject> tmp;
-        lock(_sync) {
-            if(_removedList.Count == 0) { return; }
-            tmp = new RefTypeRentMemory<FrameObject>(_removedList.AsReadOnlySpan());
-            _removedList.Clear();
+        var removedTmp = _removedTmp;
+        while(removedTmp.TryPop(out var obj)) {
+            Remove(obj);
         }
-        try {
-            var removedList = tmp.AsReadOnlySpan();
-            foreach(var removedItem in removedList) {
-                if(_list.SwapRemove(removedItem)) {
-                    removedItem.SetLifeStateDead();
-                    removedItem.OnDead();
-                }
-            }
-        }
-        finally {
-            tmp.Dispose();
+        var addedTmp = _addedTmp;
+        while(addedTmp.TryPop(out var obj)) {
+            Add(obj);
         }
     }
 
@@ -109,13 +89,33 @@ internal sealed class ObjectStore
     {
         Debug.Assert(Screen.MainThread.IsCurrentThread);
         var objects = _list.AsSpan();
-        action.Invoke(objects, arg);
+        if(_iterating) {
+            throw new InvalidOperationException("invalid reentrant");
+        }
+        _iterating = true;
+        try {
+            action.Invoke(objects, arg);
+        }
+        finally {
+            _iterating = false;
+            ProcessPendingObjects();
+        }
     }
 
     internal void UseObjects(ReadOnlySpanAction<FrameObject> action)
     {
         Debug.Assert(Screen.MainThread.IsCurrentThread);
         var objects = _list.AsSpan();
-        action.Invoke(objects);
+        if(_iterating) {
+            throw new InvalidOperationException("invalid reentrant");
+        }
+        _iterating = true;
+        try {
+            action.Invoke(objects);
+        }
+        finally {
+            _iterating = false;
+            ProcessPendingObjects();
+        }
     }
 }

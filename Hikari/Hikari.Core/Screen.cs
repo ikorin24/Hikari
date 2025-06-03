@@ -22,10 +22,12 @@ public sealed class Screen
     private readonly ObjectStore _objectStore;
     private readonly RenderPassScheduler _scheduler;
     private readonly UtilResource _utilResource;
+    private readonly Timing _createObjectInternal;
     private readonly Timing _earlyUpdate;
     private readonly Timing _update;
     private readonly Timing _lateUpdate;
     private readonly Timing _prepareForRender;
+    private readonly Timing _destroyObjectInternal;
     private GraphicsBackend _backend;
     private bool _initialized;
     private string _title = "";
@@ -77,10 +79,12 @@ public sealed class Screen
     public Keyboard Keyboard => _keyboard;
     public ulong FrameNum => _frameNum;
 
+    internal Timing CreateObjectInternal => _createObjectInternal;
     public Timing EarlyUpdate => _earlyUpdate;
     public Timing Update => _update;
     public Timing LateUpdate => _lateUpdate;
     public Timing PrepareForRender => _prepareForRender;
+    internal Timing DestroyObjectInternal => _destroyObjectInternal;
 
     public RenderTextureProvider DepthStencil => _depthStencil.AsValue();
 
@@ -162,10 +166,12 @@ public sealed class Screen
         _subscriptions = new SubscriptionBag();
         _camera = new Camera(this);
         _lights = new Lights(this);
+        _createObjectInternal = new Timing(this);
         _earlyUpdate = new Timing(this);
         _update = new Timing(this);
         _lateUpdate = new Timing(this);
         _prepareForRender = new Timing(this);
+        _destroyObjectInternal = new Timing(this);
         _mouse = new Mouse(this);
         _surface = new Surface(this);
         _keyboard = new Keyboard(this);
@@ -288,8 +294,8 @@ public sealed class Screen
             _onPrepare?.Invoke(this);
         }
 
-        store.ApplyAdd();
-        scheduler.ApplyAdd();
+        // object alive
+        _createObjectInternal.DoQueuedEvents();
         // ----------------------------
 
         // early update
@@ -335,10 +341,9 @@ public sealed class Screen
         _camera.UpdateUniformBuffer();
         scheduler.Execute();
 
-        store.ApplyRemove();
-        scheduler.ApplyRemove();
-
         // ----------------------------
+        // object dead
+        _destroyObjectInternal.DoQueuedEvents();
 
         _keyboard.PrepareNextFrame();
         _mouse.PrepareNextFrame();
@@ -388,8 +393,8 @@ public sealed class Screen
 
     internal Rust.OptionBox<CH.Screen> OnClosed()
     {
-        _objectStore.OnClosed();
-        _scheduler.OnClosed();
+        _objectStore.TerminateAll();
+        _destroyObjectInternal.DoQueuedEvents();
         _closed.Invoke(this);
 
         var native = InterlockedEx.Exchange(ref _native, Rust.OptionBox<CH.Screen>.None);

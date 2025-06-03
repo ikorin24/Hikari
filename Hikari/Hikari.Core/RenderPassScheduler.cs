@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -15,8 +14,6 @@ public sealed class RenderPassScheduler
     private readonly Screen _screen;
     private ImmutableArray<RenderPassDefinition> _passDefs;
     private FrozenDictionary<PassKind, Dictionary<Renderer, List<RenderPassData>>> _passDataDic;
-    private readonly ConcurrentQueue<(PassKind PassKind, Renderer Renderer, RenderPassData Data)> _addedList;
-    private readonly ConcurrentQueue<(PassKind PassKind, Renderer Renderer)> _removedList;
     private readonly Lock _lock = new();
 
     private static readonly RenderPassDefinition EmptyPass = new()
@@ -46,8 +43,6 @@ public sealed class RenderPassScheduler
         _screen = screen;
         _passDefs = [];
         _passDataDic = new Dictionary<PassKind, Dictionary<Renderer, List<RenderPassData>>>(0).ToFrozenDictionary();
-        _addedList = [];
-        _removedList = [];
     }
 
     public DefaultGBufferProvider SetDefault()
@@ -133,18 +128,20 @@ public sealed class RenderPassScheduler
         if(passDefs.IsDefault) {
             ThrowHelper.ThrowArgument(nameof(passDefs));
         }
+        var dic = new Dictionary<PassKind, Dictionary<Renderer, List<RenderPassData>>>();
+        foreach(var passDef in passDefs) {
+            dic.TryAdd(passDef.Kind, new());
+        }
+        var passDataDic = dic.ToFrozenDictionary();
         lock(_lock) {
             _passDefs = passDefs;
-            var dic = new Dictionary<PassKind, Dictionary<Renderer, List<RenderPassData>>>();
-            foreach(var passDef in passDefs) {
-                dic.TryAdd(passDef.Kind, new());
-            }
-            _passDataDic = dic.ToFrozenDictionary();
+            _passDataDic = passDataDic;
         }
     }
 
     internal void Add(Renderer renderer)
     {
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
         foreach(var (material, mesh, submesh) in renderer.GetSubrenderers()) {
             var passes = material.Shader.ShaderPasses;
             for(int i = 0; i < passes.Length; i++) {
@@ -157,51 +154,31 @@ public sealed class RenderPassScheduler
                     Pipeline = passes[i].Pipeline,
                     PassIndex = i,
                 };
-                _addedList.Enqueue((passes[i].PassKind, renderer, data));
-            }
-        }
-    }
+                var passKind = passes[i].PassKind;
 
-    internal void ApplyAdd()
-    {
-        Debug.Assert(Screen.MainThread.IsCurrentThread);
-        var count = _addedList.Count;
-        while(count-- > 0 && _addedList.TryDequeue(out var value)) {
-            if(_passDataDic.TryGetValue(value.PassKind, out var renderers)) {
-                if(renderers.TryGetValue(value.Renderer, out var dataList)) {
-                    dataList.Add(value.Data);
+                if(_passDataDic.TryGetValue(passKind, out var renderers)) {
+                    if(renderers.TryGetValue(renderer, out var dataList)) {
+                        dataList.Add(data);
+                    }
+                    else {
+                        renderers.Add(renderer, [data]);
+                    }
                 }
-                else {
-                    renderers.Add(value.Renderer, [value.Data]);
-                }
+
             }
         }
     }
 
     internal void RemoveRenderer(Renderer renderer)
     {
+        Debug.Assert(Screen.MainThread.IsCurrentThread);
         foreach(var material in renderer.Materials.AsSpan()) {
             foreach(var pass in material.Shader.ShaderPasses) {
-                _removedList.Enqueue((pass.PassKind, renderer));
+                if(_passDataDic.TryGetValue(pass.PassKind, out var renderers)) {
+                    renderers.Remove(renderer);
+                }
             }
         }
-    }
-
-    internal void ApplyRemove()
-    {
-        Debug.Assert(_screen.MainThread.IsCurrentThread);
-        var count = _removedList.Count;
-        while(count-- > 0 && _removedList.TryDequeue(out var value)) {
-            if(_passDataDic.TryGetValue(value.PassKind, out var renderers)) {
-                renderers.Remove(value.Renderer);
-            }
-        }
-    }
-
-    internal void OnClosed()
-    {
-        Debug.Assert(_screen.MainThread.IsCurrentThread);
-        ApplyRemove();
     }
 
     internal void Execute()

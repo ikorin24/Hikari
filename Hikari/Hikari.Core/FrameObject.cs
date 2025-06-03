@@ -178,21 +178,26 @@ public sealed class FrameObject : ITreeModel<FrameObject>
         Position = pos;
         Rotation = rot;
         Scale = scale;
+
+        Init();
     }
 
     private void Init()
     {
-        _screen.Store.Add(this);
-        if(_renderer is Renderer r) {
-            _screen.RenderScheduler.Add(r);
-        }
+        _screen.CreateObjectInternal.Post(a =>
+        {
+            var self = SafeCast.NotNullAs<FrameObject>(a);
+            self._screen.Store.Add(self);
+            if(self._renderer is Renderer r) {
+                self._screen.RenderScheduler.Add(r);
+            }
+        }, this);
     }
 
     public FrameObject Clone()
     {
         var screen = _screen;
         var clone = new FrameObject(screen, _renderer.Clone(), _name, _isFrozen, Position, Rotation, Scale);
-        clone.Init();
         foreach(var child in Children) {
             var childClone = child.Clone();
             clone.AddChild(childClone);
@@ -308,18 +313,25 @@ public sealed class FrameObject : ITreeModel<FrameObject>
 
         static void Terminate(FrameObject self)
         {
-            Debug.Assert(self.Screen.MainThread.IsCurrentThread);
+            var screen = self.Screen;
+            Debug.Assert(screen.MainThread.IsCurrentThread);
             if(self._state == LifeState.Alive || self._state == LifeState.New) {
                 foreach(var obj in self.GetDescendants()) {
                     obj.Terminate();
                 }
                 self._state = LifeState.Terminating;
-                self.Screen.Store.Remove(self);
-                var renderer = self.Renderer;
-                if(renderer != null) {
-                    self.Screen.RenderScheduler.RemoveRenderer(renderer);
-                }
                 self.OnTerminated();
+
+                screen.DestroyObjectInternal.Post(static a =>
+                {
+                    var self = SafeCast.NotNullAs<FrameObject>(a);
+                    var screen = self.Screen;
+                    screen.Store.Remove(self);
+                    var renderer = self.Renderer;
+                    if(renderer != null) {
+                        screen.RenderScheduler.RemoveRenderer(renderer);
+                    }
+                }, self);
             }
         }
     }
