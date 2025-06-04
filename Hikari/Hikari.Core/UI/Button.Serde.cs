@@ -18,6 +18,9 @@ partial class Button : IFromJson<Button>
         if(source.TryGetProperty(nameof(TextAlignment), out var textAlignment)) {
             TextAlignment = Serializer.Instantiate<TextAlignment>(textAlignment);
         }
+        if(source.TryGetProperty(nameof(Typeface), out var typeface)) {
+            Typeface = Serializer.Instantiate<Typeface>(typeface);
+        }
         if(source.TryGetProperty(PseudoInfo.HoverName, out var hover)) {
             _hoverInfo = ButtonPseudoInfo.FromJson(hover);
         }
@@ -39,6 +42,7 @@ partial class Button : IFromJson<Button>
         writer.WriteString(nameof(Text), Text);
         writer.Write(nameof(FontSize), FontSize);
         writer.WriteEnum(nameof(TextAlignment), TextAlignment);
+        writer.Write(nameof(Typeface), Typeface);
     }
 
     protected override void ApplyDiffProtected(in ObjectSource source)
@@ -47,6 +51,7 @@ partial class Button : IFromJson<Button>
         Text = source.ApplyProperty(nameof(Text), Text, () => ButtonInfo.DefaultText, out _);
         FontSize = source.ApplyProperty(nameof(FontSize), FontSize, () => ButtonInfo.DefaultFontSize, out _);
         TextAlignment = source.ApplyProperty(nameof(TextAlignment), TextAlignment, () => ButtonInfo.DefaultTextAlignment, out _);
+        Typeface = source.ApplyProperty(nameof(Typeface), Typeface, () => ButtonInfo.DefaultTypeface, out _);
     }
 }
 
@@ -77,6 +82,7 @@ partial record ButtonPseudoInfo : IFromJson<ButtonPseudoInfo>
             Text = GetClassProp<string>(source, nameof(Text)),
             FontSize = GetValueProp<FontSize>(source, nameof(FontSize)),
             TextAlignment = GetValueProp<TextAlignment>(source, nameof(TextAlignment)),
+            Typeface = GetValueProp<Typeface>(source, nameof(Typeface)),
         };
 
         static T? GetValueProp<T>(in ObjectSource source, string propName) where T : struct
@@ -101,6 +107,9 @@ partial record ButtonPseudoInfo : IFromJson<ButtonPseudoInfo>
         }
         if(TextAlignment.HasValue) {
             writer.WriteEnum(nameof(TextAlignment), TextAlignment.Value);
+        }
+        if(Typeface.HasValue) {
+            writer.Write(nameof(Typeface), Typeface.Value);
         }
     }
 }

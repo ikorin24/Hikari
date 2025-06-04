@@ -44,6 +44,16 @@ public sealed partial class Label : UIElement
         }
     }
 
+    public Typeface Typeface
+    {
+        get => _info.Typeface;
+        set
+        {
+            if(value == _info.Typeface) { return; }
+            _info.Typeface = value;
+        }
+    }
+
     public LabelPseudoInfo? HoverProps
     {
         get => GetHoverProps();
@@ -108,6 +118,7 @@ public sealed partial record LabelPseudoInfo : PseudoInfo
     public string? Text { get; init; }
     public FontSize? FontSize { get; init; }
     public TextAlignment? TextAlignment { get; init; }
+    public Typeface? Typeface { get; init; }
 }
 
 internal record struct LabelInfo
@@ -115,17 +126,20 @@ internal record struct LabelInfo
     public required string Text { get; set; }
     public required FontSize FontSize { get; set; }
     public required TextAlignment TextAlignment { get; set; }
+    public required Typeface Typeface { get; set; }
 
     public static LabelInfo Default => new()
     {
         Text = DefaultText,
         FontSize = DefaultFontSize,
         TextAlignment = DefaultTextAlignment,
+        Typeface = DefaultTypeface,
     };
 
     public static string DefaultText => "";
     public static FontSize DefaultFontSize => 16;
     public static TextAlignment DefaultTextAlignment => TextAlignment.Center;
+    public static Typeface DefaultTypeface => Typeface.Default;
 
     public LabelInfo Merged(LabelPseudoInfo p)
     {
@@ -134,6 +148,7 @@ internal record struct LabelInfo
             Text = p.Text ?? Text,
             FontSize = p.FontSize ?? FontSize,
             TextAlignment = p.TextAlignment ?? TextAlignment,
+            Typeface = p.Typeface ?? Typeface,
         };
     }
 }
@@ -189,6 +204,7 @@ file sealed class LabelMaterial : IUIMaterial
                 Color = result.AppliedInfo.Color.ToColorByte(),
                 ScaleFactor = scaleFactor,
                 TextAlignment = applied.TextAlignment,
+                Typeface = applied.Typeface,
             };
             var (newTexture, contentSize, changed) = TextMaterialHelper.UpdateTextTexture(Screen, _base.Texture, arg);
             if(changed) {

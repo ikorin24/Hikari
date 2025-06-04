@@ -44,6 +44,16 @@ public sealed partial class Button : UIElement
         }
     }
 
+    public Typeface Typeface
+    {
+        get => _info.Typeface;
+        set
+        {
+            if(value == _info.Typeface) { return; }
+            _info.Typeface = value;
+        }
+    }
+
     public ButtonPseudoInfo? HoverProps
     {
         get => GetHoverProps();
@@ -109,6 +119,7 @@ public sealed partial record ButtonPseudoInfo : PseudoInfo
     public string? Text { get; init; }
     public FontSize? FontSize { get; init; }
     public TextAlignment? TextAlignment { get; init; }
+    public Typeface? Typeface { get; init; }
 }
 
 internal record struct ButtonInfo
@@ -116,17 +127,20 @@ internal record struct ButtonInfo
     public required string Text { get; set; }
     public required FontSize FontSize { get; set; }
     public required TextAlignment TextAlignment { get; set; }
+    public required Typeface Typeface { get; set; }
 
     public static ButtonInfo Default => new()
     {
         Text = DefaultText,
         FontSize = DefaultFontSize,
         TextAlignment = DefaultTextAlignment,
+        Typeface = DefaultTypeface,
     };
 
     public static string DefaultText => "";
     public static FontSize DefaultFontSize => 16;
     public static TextAlignment DefaultTextAlignment => TextAlignment.Center;
+    public static Typeface DefaultTypeface => Typeface.Default;
 
     public ButtonInfo Merged(ButtonPseudoInfo p)
     {
@@ -135,6 +149,7 @@ internal record struct ButtonInfo
             Text = p.Text ?? Text,
             FontSize = p.FontSize ?? FontSize,
             TextAlignment = p.TextAlignment ?? TextAlignment,
+            Typeface = p.Typeface ?? Typeface,
         };
     }
 }
@@ -184,6 +199,7 @@ file sealed class ButtonMaterial : IUIMaterial
                 Color = result.AppliedInfo.Color.ToColorByte(),
                 ScaleFactor = scaleFactor,
                 TextAlignment = applied.TextAlignment,
+                Typeface = applied.Typeface,
             };
             var (newTexture, contentSize, changed) = TextMaterialHelper.UpdateTextTexture(Screen, _base.Texture, arg);
             if(changed) {

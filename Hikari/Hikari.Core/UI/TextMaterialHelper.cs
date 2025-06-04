@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System.Diagnostics;
-using SkiaSharp;
 
 namespace Hikari.UI;
 
@@ -8,12 +7,7 @@ internal static class TextMaterialHelper
 {
     public static (MaybeOwn<Texture2D> NewTexture, Vector2u ContentSize, bool Changed) UpdateTextTexture(Screen screen, Texture2D? texture, in UpdateTextTextureArg arg)
     {
-        using var font = new SKFont();
-        // TODO:
-        //using var typeface = SKTypeface.FromFile(fontFilePath);
-        //using var font = new SKFont(typeface);
-
-        font.Size = arg.FontSize.Px * arg.ScaleFactor;
+        using var font = arg.Typeface.CreateFont(arg.FontSize.Px * arg.ScaleFactor);
         var options = new TextDrawOptions
         {
             TextBackground = ColorByte.Transparent,
@@ -60,4 +54,5 @@ internal readonly record struct UpdateTextTextureArg
     public required ColorByte Color { get; init; }
     public required float ScaleFactor { get; init; }
     public required TextAlignment TextAlignment { get; init; }
+    public required Typeface Typeface { get; init; }
 }
