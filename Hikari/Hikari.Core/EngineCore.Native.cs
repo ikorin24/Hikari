@@ -11,8 +11,7 @@ namespace Hikari;
 
 static unsafe partial class EngineCore
 {
-    private const string DllDir = "native/x86_64-windows/";
-    private const string CoreDll = $"{DllDir}corehikari";
+    private const string CoreDll = "corehikari";
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial ApiResult hikari_engine_start(

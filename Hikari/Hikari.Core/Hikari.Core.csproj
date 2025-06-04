@@ -9,7 +9,7 @@
 
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <RustTarget>x86_64-pc-windows-msvc</RustTarget>
-    <DeploymentLibPath>native\x86_64-windows\corehikari.dll</DeploymentLibPath>
+    <DeploymentLibPath>corehikari.dll</DeploymentLibPath>
   </PropertyGroup>
   
   <ItemGroup>

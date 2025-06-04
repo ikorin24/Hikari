@@ -1,12 +1,5 @@
-mod macos;
-mod windows;
-
-#[cfg(target_os = "macos")]
-use macos as platform;
-#[cfg(target_os = "windows")]
-use windows as platform;
-
 use crate::*;
+use dpi::{PhysicalSize, Size};
 use once_cell::sync::Lazy;
 use pollster::FutureExt;
 use regex::Regex;
@@ -34,7 +27,7 @@ impl Screen {
         event_loop: &ActiveEventLoop,
         on_unhandled_error: impl Fn(&str) + Send + Sync + 'static,
     ) -> Result<Screen, Box<dyn Error>> {
-        let window = platform::create_window(&config, event_loop)?;
+        let window = create_window(&config, event_loop)?;
         if let Some(monitor) = window.current_monitor() {
             let monitor_pos = monitor.position();
             let monitor_size = monitor.size().cast::<i32>();
@@ -220,4 +213,36 @@ fn new_default_surface_config(
         view_formats: vec![],
         desired_maximum_frame_latency: 2,
     }
+}
+
+fn create_window(
+    config: &ScreenConfig,
+    event_loop: &ActiveEventLoop,
+) -> Result<window::Window, winit::error::OsError> {
+    use winit::window::{Fullscreen, WindowButtons};
+
+    let window = event_loop.create_window(
+        winit::window::Window::default_attributes()
+            .with_title("")
+            .with_inner_size(Size::Physical(PhysicalSize::new(
+                config.width,
+                config.height,
+            )))
+            .with_min_inner_size(Size::Physical(PhysicalSize::new(1, 1)))
+            .with_theme(None),
+    )?;
+    match config.style {
+        WindowStyle::Default => {
+            window.set_resizable(true);
+            window.set_enabled_buttons(WindowButtons::all())
+        }
+        WindowStyle::Fixed => {
+            window.set_resizable(false);
+            window.set_enabled_buttons(WindowButtons::CLOSE | WindowButtons::MINIMIZE);
+        }
+        WindowStyle::Fullscreen => {
+            window.set_fullscreen(Some(Fullscreen::Borderless(None)));
+        }
+    }
+    Ok(window)
 }

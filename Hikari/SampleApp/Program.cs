@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace SampleApp;
 
@@ -18,11 +19,15 @@ internal class Program
     private static void Main(string[] args)
     {
         Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1");
+        var backend =
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? GraphicsBackend.Dx12 :
+            RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? GraphicsBackend.Metal :
+            GraphicsBackend.Vulkan;
         var screenConfig = new ScreenConfig
         {
-            Backend = GraphicsBackend.Dx12,
-            Width = 1920,
-            Height = 1080,
+            Backend = backend,
+            Width = 1280,
+            Height = 720,
             Style = WindowStyle.Default,
             PresentMode = SurfacePresentMode.VsyncOn,
         };
@@ -38,7 +43,7 @@ internal class Program
 
     private static async UniTask OnInitialized(Screen screen)
     {
-        screen.Title = "SampleApp";
+        screen.Title = $"SampleApp ({screen.Backend})";
         screen.RenderScheduler.SetDefaultRenderPass();
         var pbrShader = PbrShader.Create(screen).DisposeOn(screen.Closed);
 

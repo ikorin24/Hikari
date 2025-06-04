@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using Hikari.NativeBind;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -75,6 +76,7 @@ public static class Engine
     public static void Run(in ScreenConfig screenConfig, Action<Screen> onScreenInit)
     {
         ArgumentNullException.ThrowIfNull(onScreenInit);
+        CheckPlatformBackend(screenConfig.Backend);
         if(Interlocked.CompareExchange(ref _onScreenInit, onScreenInit, null) != null) {
             throw new InvalidOperationException("The engine is already running.");
         }
@@ -95,6 +97,25 @@ public static class Engine
             OnClosed = _onClosed,
         };
         EngineCore.EngineStart(engineConfig, screenConfig);
+    }
+
+    private static void CheckPlatformBackend(GraphicsBackend backend)
+    {
+        if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            var ok = backend is GraphicsBackend.Dx12 or GraphicsBackend.Vulkan;
+            if(ok == false) {
+                throw new PlatformNotSupportedException($"'{nameof(GraphicsBackend.Dx12)}' or '{nameof(GraphicsBackend.Vulkan)}' is only supported backend in the current platform");
+            }
+        }
+        else if(RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+            var ok = backend is GraphicsBackend.Metal;
+            if(ok == false) {
+                throw new PlatformNotSupportedException($"'{nameof(GraphicsBackend.Metal)}' is only supported backend in the current platform");
+            }
+        }
+        else {
+            throw new PlatformNotSupportedException($"The current platform is not supported.");
+        }
     }
 
     private static readonly Func<Rust.Box<CH.Screen>, CH.ScreenInfo, CH.ScreenId> _onStart =

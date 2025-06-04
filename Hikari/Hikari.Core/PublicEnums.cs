@@ -36,27 +36,6 @@ public enum GraphicsBackend : byte
     /// <summary>Browser WebGPU</summary>
     [EnumMapTo(Wgpu.Backends.BROWSER_WEBGPU)]
     BrowserWebGpu = 6,
-
-    /// <summary>
-    /// Automatically selected one of the following that is available;
-    /// Vulkan, OpenGL, Metal, Direct3D 12, Direct3D 11, Browser WebGPU
-    /// </summary>
-    [EnumMapTo(Wgpu.Backends.VULKAN | Wgpu.Backends.GL | Wgpu.Backends.METAL | Wgpu.Backends.DX12 | Wgpu.Backends.DX11 | Wgpu.Backends.BROWSER_WEBGPU)]
-    AllAvailable = 255,
-
-    /// <summary>
-    /// Automatically selected one of the following that is available;
-    /// Vulkan, Metal, Direct3D 12, Browser WebGPU
-    /// </summary>
-    [EnumMapTo(Wgpu.Backends.VULKAN | Wgpu.Backends.METAL | Wgpu.Backends.DX12 | Wgpu.Backends.BROWSER_WEBGPU)]
-    Primary = 254,
-
-    /// <summary>
-    /// Automatically selected one of the following that is available;
-    /// OpenGL, Direct3D 11
-    /// </summary>
-    [EnumMapTo(Wgpu.Backends.GL | Wgpu.Backends.DX11)]
-    Legacy = 253,
 }
 
 public enum SurfacePresentMode
