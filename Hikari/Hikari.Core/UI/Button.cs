@@ -34,6 +34,16 @@ public sealed partial class Button : UIElement
         }
     }
 
+    public TextAlignment TextAlignment
+    {
+        get => _info.TextAlignment;
+        set
+        {
+            if(value == _info.TextAlignment) { return; }
+            _info.TextAlignment = value;
+        }
+    }
+
     public ButtonPseudoInfo? HoverProps
     {
         get => GetHoverProps();
@@ -98,21 +108,25 @@ public sealed partial record ButtonPseudoInfo : PseudoInfo
 
     public string? Text { get; init; }
     public FontSize? FontSize { get; init; }
+    public TextAlignment? TextAlignment { get; init; }
 }
 
 internal record struct ButtonInfo
 {
     public required string Text { get; set; }
     public required FontSize FontSize { get; set; }
+    public required TextAlignment TextAlignment { get; set; }
 
     public static ButtonInfo Default => new()
     {
         Text = DefaultText,
         FontSize = DefaultFontSize,
+        TextAlignment = DefaultTextAlignment,
     };
 
     public static string DefaultText => "";
     public static FontSize DefaultFontSize => 16;
+    public static TextAlignment DefaultTextAlignment => TextAlignment.Center;
 
     public ButtonInfo Merged(ButtonPseudoInfo p)
     {
@@ -120,6 +134,7 @@ internal record struct ButtonInfo
         {
             Text = p.Text ?? Text,
             FontSize = p.FontSize ?? FontSize,
+            TextAlignment = p.TextAlignment ?? TextAlignment,
         };
     }
 }
@@ -162,7 +177,15 @@ file sealed class ButtonMaterial : IUIMaterial
             _buttonInfo = applied;
             _color = result.AppliedInfo.Color;
             _scaleFactor = scaleFactor;
-            var (newTexture, contentSize, changed) = TextMaterialHelper.UpdateTextTexture(Screen, _base.Texture, applied.Text, applied.FontSize, result.AppliedInfo.Color.ToColorByte(), scaleFactor);
+            var arg = new UpdateTextTextureArg
+            {
+                Text = applied.Text,
+                FontSize = applied.FontSize,
+                Color = result.AppliedInfo.Color.ToColorByte(),
+                ScaleFactor = scaleFactor,
+                TextAlignment = applied.TextAlignment,
+            };
+            var (newTexture, contentSize, changed) = TextMaterialHelper.UpdateTextTexture(Screen, _base.Texture, arg);
             if(changed) {
                 _base.UpdateTexture(newTexture);
             }

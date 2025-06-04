@@ -1,24 +1,29 @@
 ﻿#nullable enable
-using Hikari.Mathematics;
 using System.Diagnostics;
+using SkiaSharp;
 
 namespace Hikari.UI;
 
 internal static class TextMaterialHelper
 {
-    public static (MaybeOwn<Texture2D> NewTexture, Vector2u ContentSize, bool Changed) UpdateTextTexture(Screen screen, Texture2D? texture, string text, FontSize fontSize, ColorByte color, float scaleFactor)
+    public static (MaybeOwn<Texture2D> NewTexture, Vector2u ContentSize, bool Changed) UpdateTextTexture(Screen screen, Texture2D? texture, in UpdateTextTextureArg arg)
     {
-        using var font = new SkiaSharp.SKFont();
-        font.Size = fontSize.Px * scaleFactor;
+        using var font = new SKFont();
+        // TODO:
+        //using var typeface = SKTypeface.FromFile(fontFilePath);
+        //using var font = new SKFont(typeface);
+
+        font.Size = arg.FontSize.Px * arg.ScaleFactor;
         var options = new TextDrawOptions
         {
-            Background = ColorByte.Transparent,
-            Foreground = color,
-            PowerOfTwoSizeRequired = true,
+            TextBackground = ColorByte.Transparent,
+            RectBackground = ColorByte.Transparent,
+            Foreground = arg.Color,
             Font = font,
+            TextAlignment = arg.TextAlignment,
         };
-        var arg = (screen, texture);
-        return TextDrawer.Draw(text, options, arg, static result =>
+        var drawArg = (screen, texture);
+        return TextDrawer.Draw(arg.Text, options, drawArg, static result =>
         {
             var (screen, t) = result.Arg;
             var image = result.Image;
@@ -27,8 +32,6 @@ internal static class TextMaterialHelper
                 var emptyTexture = UIShader.GetEmptyTexture2D(screen);
                 return (emptyTexture, Vector2u.One, true);
             }
-            Debug.Assert(MathTool.IsPowerOfTwo(image.Size.X));
-            Debug.Assert(MathTool.IsPowerOfTwo(image.Size.Y));
             if(t is Texture2D texture && texture.Usage.HasFlag(TextureUsages.CopyDst) && texture.Size == (Vector2u)image.Size) {
                 Debug.Assert(texture.Format == TextureFormat.Rgba8UnormSrgb);
                 Debug.Assert(texture.MipLevelCount == 1);
@@ -44,8 +47,17 @@ internal static class TextMaterialHelper
                     Size = (Vector2u)image.Size,
                     Usage = TextureUsages.TextureBinding | TextureUsages.CopyDst,
                 }, image.GetPixels().AsBytes());
-                return (MaybeOwn.New(newTexture), result.TextBoundsSize, true);
+                return ((MaybeOwn<Texture2D>)newTexture, result.TextBoundsSize, true);
             }
         });
     }
+}
+
+internal readonly record struct UpdateTextTextureArg
+{
+    public required string Text { get; init; }
+    public required FontSize FontSize { get; init; }
+    public required ColorByte Color { get; init; }
+    public required float ScaleFactor { get; init; }
+    public required TextAlignment TextAlignment { get; init; }
 }

@@ -72,3 +72,10 @@ public enum VerticalAlignment
     Top,
     Bottom,
 }
+
+public enum TextAlignment
+{
+    Center = 0,
+    Left,
+    Right,
+}

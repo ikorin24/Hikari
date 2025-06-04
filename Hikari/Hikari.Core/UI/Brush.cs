@@ -26,10 +26,6 @@ public readonly partial struct Brush : IEquatable<Brush>
         _ => "?",
     };
 
-    public static Brush Transparent => new Brush(Color4.Transparent);
-    public static Brush White => new Brush(Color4.White);
-    public static Brush Black => new Brush(Color4.Black);
-
     public BrushType Type => _type;
 
     static Brush() => RegistorSerdeConstructor();

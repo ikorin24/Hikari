@@ -15,6 +15,9 @@ partial class Button : IFromJson<Button>
         if(source.TryGetProperty(nameof(FontSize), out var fontSize)) {
             FontSize = Serializer.Instantiate<FontSize>(fontSize);
         }
+        if(source.TryGetProperty(nameof(TextAlignment), out var textAlignment)) {
+            TextAlignment = Serializer.Instantiate<TextAlignment>(textAlignment);
+        }
         if(source.TryGetProperty(PseudoInfo.HoverName, out var hover)) {
             _hoverInfo = ButtonPseudoInfo.FromJson(hover);
         }
@@ -35,6 +38,7 @@ partial class Button : IFromJson<Button>
         base.ToJsonProtected(writer);
         writer.WriteString(nameof(Text), Text);
         writer.Write(nameof(FontSize), FontSize);
+        writer.WriteEnum(nameof(TextAlignment), TextAlignment);
     }
 
     protected override void ApplyDiffProtected(in ObjectSource source)
@@ -42,6 +46,7 @@ partial class Button : IFromJson<Button>
         base.ApplyDiffProtected(source);
         Text = source.ApplyProperty(nameof(Text), Text, () => ButtonInfo.DefaultText, out _);
         FontSize = source.ApplyProperty(nameof(FontSize), FontSize, () => ButtonInfo.DefaultFontSize, out _);
+        TextAlignment = source.ApplyProperty(nameof(TextAlignment), TextAlignment, () => ButtonInfo.DefaultTextAlignment, out _);
     }
 }
 
@@ -71,6 +76,7 @@ partial record ButtonPseudoInfo : IFromJson<ButtonPseudoInfo>
             Color = GetValueProp<Color4>(source, nameof(Color)),
             Text = GetClassProp<string>(source, nameof(Text)),
             FontSize = GetValueProp<FontSize>(source, nameof(FontSize)),
+            TextAlignment = GetValueProp<TextAlignment>(source, nameof(TextAlignment)),
         };
 
         static T? GetValueProp<T>(in ObjectSource source, string propName) where T : struct
@@ -92,6 +98,9 @@ partial record ButtonPseudoInfo : IFromJson<ButtonPseudoInfo>
         }
         if(FontSize.HasValue) {
             writer.Write(nameof(FontSize), FontSize.Value);
+        }
+        if(TextAlignment.HasValue) {
+            writer.WriteEnum(nameof(TextAlignment), TextAlignment.Value);
         }
     }
 }
