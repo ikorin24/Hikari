@@ -12,7 +12,7 @@
     <DeploymentLibPath>corehikari.dll</DeploymentLibPath>
   </PropertyGroup>
   
-  <ItemGroup>
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <None Include="$(RustProjectPath)target\$(RustTarget)\release\corehikari.dll" Link="$(DeploymentLibPath)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
