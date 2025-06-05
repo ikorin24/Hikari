@@ -257,6 +257,7 @@ public abstract partial class UIElement
         Debug.Assert(_model == null);
         var material = tree.GetRegisteredMaterial(GetType());
         var model = new FrameObject(GetMesh(tree.Screen), material.AsValue());
+        model.Name = GetType().Name;
         material.DisposeOn(model.Dead);
         model.Alive
             .Subscribe(_ => _modelAlive.Invoke(this))

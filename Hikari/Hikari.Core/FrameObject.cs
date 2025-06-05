@@ -26,7 +26,7 @@ public sealed class FrameObject : ITreeModel<FrameObject>
     // [NOTE] If yout add fields, be careful about Clone() method
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private string DebugView => $"{nameof(FrameObject)} (Name: \"{Name}\")";
+    private string DebugView => $"{nameof(FrameObject)} (Name: \"{Name}\", {LifeState})";
 
     public Vector3 Position
     {
@@ -44,7 +44,16 @@ public sealed class FrameObject : ITreeModel<FrameObject>
         set => _treeModelImpl.Scale = value;
     }
     public FrameObject? Parent => _treeModelImpl.Parent;
-    public IReadOnlyList<FrameObject> Children => _treeModelImpl.Children;
+    public IReadOnlyList<FrameObject> Children
+    {
+        get => _treeModelImpl.Children;
+        init
+        {
+            foreach(var child in value) {
+                AddChild(child);
+            }
+        }
+    }
 
     public Event<FrameObject> Alive => _alive.Event;
     public Event<FrameObject> Terminated => _terminated.Event;
