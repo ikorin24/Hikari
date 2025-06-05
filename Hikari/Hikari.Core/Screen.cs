@@ -28,6 +28,7 @@ public sealed class Screen
     private readonly Timing _lateUpdate;
     private readonly Timing _prepareForRender;
     private readonly Timing _destroyObjectInternal;
+    private readonly SyncContextReceiver? _syncContextreceiver;
     private GraphicsBackend _backend;
     private bool _initialized;
     private string _title = "";
@@ -157,10 +158,11 @@ public sealed class Screen
 
     public UtilResource UtilResource => _utilResource;
 
-    internal Screen(Rust.Box<CH.Screen> screen, ThreadId mainThread, Action<Screen>? onPrepare)
+    internal Screen(Rust.Box<CH.Screen> screen, ThreadId mainThread, Action<Screen>? onPrepare, SyncContextReceiver? syncContextreceiver)
     {
         _native = screen;
         _mainThread = mainThread;
+        _syncContextreceiver = syncContextreceiver;
         _onPrepare = onPrepare;
         _state = RunningState.Running;
         _subscriptions = new SubscriptionBag();
@@ -309,6 +311,7 @@ public sealed class Screen
         });
 
         // update
+        _syncContextreceiver?.DoAll();
         _update.DoQueuedEvents();
         store.UseObjects(static objects =>
         {
@@ -460,6 +463,11 @@ public readonly record struct ScreenConfig
     public required u32 Height { get; init; }
     public required GraphicsBackend Backend { get; init; }
     public required SurfacePresentMode PresentMode { get; init; }
+    public bool UseSynchronizationContext { get; init; } = true;
+
+    public ScreenConfig()
+    {
+    }
 
     internal CH.ScreenConfig ToCoreType()
     {

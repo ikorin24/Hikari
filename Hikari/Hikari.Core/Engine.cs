@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using Hikari.NativeBind;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -80,6 +81,9 @@ public static class Engine
         if(Interlocked.CompareExchange(ref _onScreenInit, onScreenInit, null) != null) {
             throw new InvalidOperationException("The engine is already running.");
         }
+        if(screenConfig.UseSynchronizationContext) {
+            HikariSynchronizationContext.Install(out _);
+        }
         var engineConfig = new EngineCoreConfig
         {
             OnStart = _onStart,
@@ -122,7 +126,8 @@ public static class Engine
         (Rust.Box<CH.Screen> screenHandle, CH.ScreenInfo info) =>
         {
             var mainThread = ThreadId.CurrentThread();
-            var screen = new Screen(screenHandle, mainThread, _onScreenInit);
+            var syncContextReceiver = (AsyncOperationManager.SynchronizationContext as HikariSynchronizationContext)?.Receiver;
+            var screen = new Screen(screenHandle, mainThread, _onScreenInit, syncContextReceiver);
             var id = screen.ScreenId;
             _screens.Add(id, screen);
             screen.OnInitialize(info);
@@ -203,6 +208,7 @@ public static class Engine
             if(_screens.Remove(id, out var screen) == false) {
                 return Rust.OptionBox<CH.Screen>.None;
             }
-            return screen.OnClosed();
+            var screenRaw = screen.OnClosed();
+            return screenRaw;
         };
 }
