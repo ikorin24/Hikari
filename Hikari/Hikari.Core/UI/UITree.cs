@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace Hikari.UI;
 
@@ -87,6 +88,7 @@ public sealed partial class UITree
     public void SetRoot(UIElement element)
     {
         ArgumentNullException.ThrowIfNull(element);
+        _screen.MainThread.ThrowIfNotMatched();
         if(element.Parent != null) {
             throw new ArgumentException("the element is already in UI tree");
         }
@@ -95,6 +97,11 @@ public sealed partial class UITree
         {
             _rootElement?.Model?.Terminate();
             _rootElement = element;
+        });
+        element.ModelDead.Subscribe(element =>
+        {
+            Debug.Assert(element == _rootElement);
+            _rootElement = null;
         });
     }
 }

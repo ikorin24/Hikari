@@ -360,7 +360,6 @@ public sealed class FrameObject : ITreeModel<FrameObject>
 
     internal void OnDead()
     {
-        _subscriptions.Dispose();
         _renderer.DisposeInternal();
         _dead.Invoke(this);
 
@@ -370,6 +369,7 @@ public sealed class FrameObject : ITreeModel<FrameObject>
         _alive.Clear();
         _terminated.Clear();
         _dead.Clear();
+        _subscriptions.Dispose();
     }
 }
 
