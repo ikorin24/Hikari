@@ -67,7 +67,7 @@ public sealed class Screen
     public Event<(Screen Screen, Vector2u Size)> Resized => _resized.Event;
 
     internal CH.ScreenId ScreenId => new CH.ScreenId(_native.Unwrap());
-    internal ThreadId MainThread => _mainThread;
+    public ThreadId MainThread => _mainThread;
 
     internal BufferSlice InfoBuffer => _info.AsValue().Slice();
     public SubscriptionRegister Subscriptions => _subscriptions.Register;

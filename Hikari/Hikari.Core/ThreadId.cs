@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace Hikari;
 
-internal readonly struct ThreadId : IEquatable<ThreadId>
+public readonly struct ThreadId : IEquatable<ThreadId>
 {
     private readonly int _threadId;
 
