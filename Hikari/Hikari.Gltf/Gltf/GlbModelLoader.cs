@@ -625,7 +625,7 @@ public static class GlbModelLoader
                     BaseColor = pbr.baseColorTexture switch
                     {
                         TextureInfo baseColor => LoadTexture(state, textures.GetOrThrow(baseColor.index), TextureFormat.Rgba8UnormSrgb),
-                        null => MaterialData.PbrData.DefaultBaseColor(screen),
+                        null => MaterialData.PbrData.BaseColorFromValue(screen, new Color4(pbr.baseColorFactor.X, pbr.baseColorFactor.Y, pbr.baseColorFactor.Z, pbr.baseColorFactor.W)),
                     },
                     BaseColorSampler = pbr.baseColorTexture switch
                     {
@@ -635,7 +635,7 @@ public static class GlbModelLoader
                     MetallicRoughness = pbr.metallicRoughnessTexture switch
                     {
                         TextureInfo metallicRoughness => LoadTexture(state, textures.GetOrThrow(metallicRoughness.index), TextureFormat.Rgba8Unorm),
-                        null => MaterialData.PbrData.DefaultMetallicRoughness(screen),
+                        null => MaterialData.PbrData.MetallicRoughnessFromValue(screen, pbr.metallicFactor, pbr.roughnessFactor),
                     },
                     MetallicRoughnessSampler = pbr.metallicRoughnessTexture switch
                     {
@@ -967,8 +967,11 @@ public static class GlbModelLoader
             public static float DefaultMetallicFactor() => 1.0f;
             public static float DefaultRoughnessFactor() => 1.0f;
             public static Own<Texture2D> DefaultBaseColor(Screen screen) => Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, ColorByte.White);
+            public static Own<Texture2D> BaseColorFromValue(Screen screen, Color4 baseColor) => Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, baseColor.ToColorByte());
             public static Own<Sampler> DefaultBaseColorSampler(Screen screen) => DefaultSampler(screen);
             public static Own<Texture2D> DefaultMetallicRoughness(Screen screen) => Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, ColorByte.White);
+            public static Own<Texture2D> MetallicRoughnessFromValue(Screen screen, float metallic, float roughness)
+                => Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding | TextureUsages.CopySrc, new Color4(metallic, roughness, 0, 0).ToColorByte());
             public static Own<Sampler> DefaultMetallicRoughnessSampler(Screen screen) => DefaultSampler(screen);
         }
 
