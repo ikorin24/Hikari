@@ -2,15 +2,21 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
 namespace Hikari.UI;
 
-public sealed partial class UIElementCollection : IEnumerable<UIElement>
+[DebuggerDisplay("{DebugView,nq}")]
+[DebuggerTypeProxy(typeof(UIElementCollectionDebugProxy))]
+public sealed partial class UIElementCollection : IEnumerable<UIElement>, IReadOnlyCollection<UIElement>, IReadOnlyList<UIElement>
 {
     private UIElement? _parent;
     private readonly List<UIElement> _children = new();
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebugView => $"{nameof(UIElement)}[{Count}]";
 
     internal UIElement? Parent
     {
@@ -96,5 +102,19 @@ public sealed partial class UIElementCollection : IEnumerable<UIElement>
         public bool MoveNext() => _enumerator.MoveNext();
 
         void IEnumerator.Reset() => ((IEnumerator)_enumerator).Reset();
+    }
+
+    private sealed class UIElementCollectionDebugProxy
+    {
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private readonly UIElement[] _array;
+
+        [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+        public UIElement[] Items => _array;
+
+        public UIElementCollectionDebugProxy(UIElementCollection collection)
+        {
+            _array = collection._children.ToArray();
+        }
     }
 }

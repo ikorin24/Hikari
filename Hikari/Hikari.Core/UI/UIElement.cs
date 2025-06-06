@@ -6,10 +6,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Hikari.UI;
 
+[DebuggerDisplay("{DebugView,nq}")]
 public abstract partial class UIElement
 {
     private FrameObject? _model;
     private UIElement? _parent;
+    private string _name = "";
     private readonly UIElementCollection _children;
     private EventSource<UIElement> _modelAlive;
     private EventSource<UIElement> _modelEarlyUpdate;
@@ -24,6 +26,9 @@ public abstract partial class UIElement
     private bool _isClickHolding;
     private bool _needToInvokeClicked;
     private bool _needToLayoutUpdate;
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebugView => $"{GetType().Name} (Name: \"{Name}\")";
 
     internal Event<UIElement> ModelAlive => _modelAlive.Event;
     internal Event<UIElement> ModelEarlyUpdate => _modelEarlyUpdate.Event;
@@ -50,6 +55,11 @@ public abstract partial class UIElement
         Model?.Terminate();
     }
 
+    public string Name
+    {
+        get => _name;
+        set => _name = value ?? "";
+    }
 
     public LayoutLength Width
     {
@@ -261,7 +271,7 @@ public abstract partial class UIElement
         Debug.Assert(_model == null);
         var material = tree.GetRegisteredMaterial(GetType());
         var model = new FrameObject(GetMesh(tree.Screen), material.AsValue());
-        model.Name = GetType().Name;
+        model.Name = $"{GetType().Name} (Name: \"{Name}\")";
         material.DisposeOn(model.Dead);
         model.Alive
             .Subscribe(_ => _modelAlive.Invoke(this))
