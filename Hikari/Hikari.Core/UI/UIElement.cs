@@ -123,6 +123,7 @@ public abstract partial class UIElement
         {
             if(value == _info.Background) { return; }
             _info.Background = value;
+            _needToLayoutUpdate = true;
         }
     }
 
@@ -155,6 +156,7 @@ public abstract partial class UIElement
         {
             if(value == _info.BorderColor) { return; }
             _info.BorderColor = value;
+            _needToLayoutUpdate = true;
         }
     }
 
@@ -165,6 +167,7 @@ public abstract partial class UIElement
         {
             if(value == _info.BoxShadow) { return; }
             _info.BoxShadow = value;
+            _needToLayoutUpdate = true;
         }
     }
 
@@ -186,6 +189,7 @@ public abstract partial class UIElement
         {
             if(value == _info.Color) { return; }
             _info.Color = value;
+            _needToLayoutUpdate = true;
         }
     }
 
