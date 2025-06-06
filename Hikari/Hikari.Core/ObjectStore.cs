@@ -46,7 +46,7 @@ internal sealed class ObjectStore
         }
         else {
             _list.Add(frameObject);
-            _indexDic.Add(frameObject, _list.Count);
+            _indexDic.Add(frameObject, _list.Count - 1);
 
             frameObject.SetLifeStateAlive();
             frameObject.OnAlive();
@@ -61,14 +61,18 @@ internal sealed class ObjectStore
             _removedTmp.Add(frameObject);
         }
         else {
-            var index = _indexDic[frameObject];
-            var lastItem = _list[^1];
-            if(_list.SwapRemoveAt(index)) {
-                _indexDic[lastItem] = index;
-                _indexDic.Remove(frameObject);
+            if(_indexDic.TryGetValue(frameObject, out var index)) {
+                var lastItem = _list[^1];
+                if(_list.SwapRemoveAt(index)) {
+                    _indexDic[lastItem] = index;
+                    _indexDic.Remove(frameObject);
+                }
+                frameObject.SetLifeStateDead();
+                frameObject.OnDead();
             }
-            frameObject.SetLifeStateDead();
-            frameObject.OnDead();
+            else {
+                Debug.Fail(null);
+            }
         }
     }
 
