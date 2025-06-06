@@ -94,6 +94,16 @@ public readonly partial struct Brush : IEquatable<Brush>
         }
     }
 
+    public static Brush Solid(float r, float g, float b)
+    {
+        return new Brush(new Color4(r, g, b));
+    }
+
+    public static Brush Solid(float r, float g, float b, float a)
+    {
+        return new Brush(new Color4(r, g, b, a));
+    }
+
     public static Brush Solid(Color4 color)
     {
         return new Brush(color);
