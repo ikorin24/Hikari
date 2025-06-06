@@ -111,17 +111,16 @@ public sealed partial class Renderer : IRenderer
 
     internal ref struct SubrendererEnumerator
     {
-        private readonly Mesh _mesh;
         private readonly ReadOnlySpan<SubmeshData> _submeshes;
         private readonly ReadOnlySpan<IMaterial> _materials;
         private int _index;
 
-        public readonly Subrenderer Current => new Subrenderer(_materials[_index], _mesh, _submeshes[_index]);
+        public readonly Subrenderer Current => new Subrenderer(_materials[_index], _submeshes[_index]);
 
         public SubrendererEnumerator(Renderer renderer)
         {
-            _mesh = renderer.Mesh;
-            _submeshes = _mesh.Submeshes;
+            var mesh = renderer.Mesh;
+            _submeshes = mesh.Submeshes.AsSpan();
             _materials = renderer._materials.AsSpan();
             _index = -1;
         }
@@ -195,20 +194,17 @@ internal interface IRenderer
 internal readonly record struct Subrenderer
 {
     public IMaterial Material { get; }
-    public Mesh Mesh { get; }
     public SubmeshData Submesh { get; }
 
-    public Subrenderer(IMaterial material, Mesh mesh, SubmeshData submesh)
+    public Subrenderer(IMaterial material, SubmeshData submesh)
     {
         Material = material;
-        Mesh = mesh;
         Submesh = submesh;
     }
 
-    public void Deconstruct(out IMaterial material, out Mesh mesh, out SubmeshData submesh)
+    public void Deconstruct(out IMaterial material, out SubmeshData submesh)
     {
         material = Material;
-        mesh = Mesh;
         submesh = Submesh;
     }
 }

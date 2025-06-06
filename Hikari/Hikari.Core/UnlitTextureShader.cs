@@ -73,7 +73,7 @@ public sealed partial class UnlitTextureShader : ITypedShader
                 {
                     PassKind = PassKind.Forward,
                     Source = Source.ToImmutableArray(),
-                    SortOrder = 0,
+                    SortOrderInPass = 0,
                     LayoutDescriptor = new PipelineLayoutDescriptor
                     {
                         BindGroupLayouts =

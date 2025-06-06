@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading;
 
 namespace Hikari;
 
@@ -13,8 +12,8 @@ public sealed class RenderPassScheduler
 {
     private readonly Screen _screen;
     private ImmutableArray<RenderPassDefinition> _passDefs;
-    private FrozenDictionary<PassKind, Dictionary<Renderer, List<RenderPassData>>> _passDataDic;
-    private readonly Lock _lock = new();
+    private FrozenDictionary<PassKind, SortedList<int, List<RenderData>>> _passKinds;
+    private bool _isRenderPassSet;
 
     private static readonly RenderPassDefinition EmptyPass = new()
     {
@@ -42,7 +41,7 @@ public sealed class RenderPassScheduler
     {
         _screen = screen;
         _passDefs = [];
-        _passDataDic = new Dictionary<PassKind, Dictionary<Renderer, List<RenderPassData>>>(0).ToFrozenDictionary();
+        _passKinds = new Dictionary<PassKind, SortedList<int, List<RenderData>>>(0).ToFrozenDictionary();
     }
 
     public void SetDefaultRenderPass()
@@ -127,43 +126,37 @@ public sealed class RenderPassScheduler
         if(passDefs.IsDefault) {
             ThrowHelper.ThrowArgument(nameof(passDefs));
         }
-        var dic = new Dictionary<PassKind, Dictionary<Renderer, List<RenderPassData>>>();
+        _screen.MainThread.ThrowIfNotMatched();
+        if(_isRenderPassSet) {
+            throw new InvalidOperationException("Already RenderPasses are defined");
+        }
+        var dic = new Dictionary<PassKind, SortedList<int, List<RenderData>>>();
         foreach(var passDef in passDefs) {
-            dic.TryAdd(passDef.Kind, new());
+            dic.TryAdd(passDef.Kind, []);
         }
-        var passDataDic = dic.ToFrozenDictionary();
-        lock(_lock) {
-            _passDefs = passDefs;
-            _passDataDic = passDataDic;
-        }
+        _passDefs = passDefs;
+        _passKinds = dic.ToFrozenDictionary();
+        _isRenderPassSet = true;
     }
 
     internal void Add(Renderer renderer)
     {
         Debug.Assert(_screen.MainThread.IsCurrentThread);
-        foreach(var (material, mesh, submesh) in renderer.GetSubrenderers()) {
+        foreach(var (material, submesh) in renderer.GetSubrenderers()) {
             var passes = material.Shader.ShaderPasses;
-            for(int i = 0; i < passes.Length; i++) {
-                var data = new RenderPassData
-                {
-                    OnRenderPass = passes[i].OnRenderPass,
-                    Material = material,
-                    Mesh = mesh,
-                    Submesh = submesh,
-                    Pipeline = passes[i].Pipeline,
-                    PassIndex = i,
-                };
-                var passKind = passes[i].PassKind;
-
-                if(_passDataDic.TryGetValue(passKind, out var renderers)) {
-                    if(renderers.TryGetValue(renderer, out var dataList)) {
-                        dataList.Add(data);
+            for(int passIndex = 0; passIndex < passes.Length; passIndex++) {
+                var pass = passes[passIndex];
+                if(_passKinds.TryGetValue(pass.PassKind, out var sortedList)) {
+                    var passData = new RenderData(renderer, material, submesh, pass, passIndex);
+                    var order = passData.SortOrderInPass;
+                    if(sortedList.TryGetValue(order, out var list)) {
+                        list.Add(passData);
                     }
                     else {
-                        renderers.Add(renderer, [data]);
+                        list = [passData];
+                        sortedList.Add(order, list);
                     }
                 }
-
             }
         }
     }
@@ -172,9 +165,27 @@ public sealed class RenderPassScheduler
     {
         Debug.Assert(Screen.MainThread.IsCurrentThread);
         foreach(var material in renderer.Materials.AsSpan()) {
-            foreach(var pass in material.Shader.ShaderPasses) {
-                if(_passDataDic.TryGetValue(pass.PassKind, out var renderers)) {
-                    renderers.Remove(renderer);
+            var passes = material.Shader.ShaderPasses.AsSpan();
+            for(int passIndex = 0; passIndex < passes.Length; passIndex++) {
+                var pass = passes[passIndex];
+
+                if(_passKinds.TryGetValue(pass.PassKind, out var sortedList)) {
+                    if(sortedList.TryGetValue(pass.SortOrderInPass, out var list)) {
+
+                        int indexInList = -1;
+                        {
+                            var span = list.AsSpan();
+                            for(int i = 0; i < span.Length; i++) {
+                                if(span[i].Renderer == renderer && span[i].PassIndex == passIndex) {
+                                    indexInList = i;
+                                }
+                            }
+                        }
+                        if(indexInList > 0) {
+                            list.RemoveAt(indexInList);
+                        }
+
+                    }
                 }
             }
         }
@@ -182,53 +193,67 @@ public sealed class RenderPassScheduler
 
     internal void Execute()
     {
-        ReadOnlySpan<RenderPassDefinition> passDefs;
-        lock(_lock) {
-            passDefs = _passDefs.AsSpan();
-        }
+        Debug.Assert(_screen.MainThread.IsCurrentThread);
+
+        var passDefs = _passDefs.AsSpan();
         if(passDefs.Length == 0) {
             passDefs = new ReadOnlySpan<RenderPassDefinition>(in EmptyPass);
             Debug.WriteLine($"No RenderPass is set. Set RenderPass to '{nameof(Hikari.Screen)}.{nameof(Hikari.Screen.RenderScheduler)}'");
         }
-
         var screen = _screen;
         foreach(var passDef in passDefs) {
             using var renderPassOwn = passDef.Factory(screen, passDef.UserData);
             var renderPass = renderPassOwn.AsValue();
-            if(_passDataDic.TryGetValue(passDef.Kind, out var renderers)) {
-                foreach(var (renderer, dataList) in renderers) {
-                    if(renderer.IsVisibleInHierarchy) {
-                        foreach(var data in dataList.AsSpan()) {
-                            data.Render(renderPass, renderer);
-                        }
+            if(_passKinds.TryGetValue(passDef.Kind, out var sortedList)) {
+                foreach(var list in sortedList.Values) {
+                    foreach(var data in list.AsSpan()) {
+                        data.Render(renderPass);
                     }
                 }
             }
         }
     }
 
-    internal readonly record struct RenderPassData
+    private sealed class RenderData
     {
-        public required RenderPassAction OnRenderPass { get; init; }
-        public required IMaterial Material { get; init; }
-        public required Mesh Mesh { get; init; }
-        public required SubmeshData Submesh { get; init; }
-        public required RenderPipeline Pipeline { get; init; }
-        public required int PassIndex { get; init; }
+        private readonly Renderer _renderer;
+        private readonly IMaterial _material;
+        private readonly Mesh _mesh;
+        private readonly SubmeshData _submeshData;
+        private readonly RenderPipeline _pipeline;
+        private readonly RenderPassAction _onRenderPass;
+        private readonly int _passIndex;
+        private readonly int _sortOrderInPass;
 
-        public void Render(in RenderPass renderPass, Renderer renderer)
+        public Renderer Renderer => _renderer;
+        public int PassIndex => _passIndex;
+        public int SortOrderInPass => _sortOrderInPass;
+
+        public RenderData(Renderer renderer, IMaterial material, SubmeshData submeshData, ShaderPassData shaderPass, int passIndex)
+        {
+            _renderer = renderer;
+            _material = material;
+            _mesh = renderer.Mesh;
+            _submeshData = submeshData;
+            _pipeline = shaderPass.Pipeline;
+            _onRenderPass = shaderPass.OnRenderPass;
+            _passIndex = passIndex;
+            _sortOrderInPass = shaderPass.SortOrderInPass;
+        }
+
+        public void Render(in RenderPass renderPass)
         {
             var state = new RenderPassState
             {
                 RenderPass = renderPass,
-                Pipeline = Pipeline,
-                Material = Material,
-                Mesh = Mesh,
-                Submesh = Submesh,
-                PassIndex = PassIndex,
-                Renderer = renderer,
+                Pipeline = _pipeline,
+                Material = _material,
+                Mesh = _mesh,
+                Submesh = _submeshData,
+                PassIndex = _passIndex,
+                Renderer = _renderer,
             };
-            OnRenderPass.Invoke(in state);
+            _onRenderPass.Invoke(in state);
         }
     }
 }

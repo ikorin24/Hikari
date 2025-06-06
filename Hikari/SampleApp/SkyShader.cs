@@ -94,7 +94,7 @@ public sealed partial class SkyShader : ITypedShader
                 {
                     PassKind = PassKind.Forward,
                     Source = Source.ToImmutableArray(),
-                    SortOrder = 0,
+                    SortOrderInPass = 3000,
                     LayoutDescriptor = new PipelineLayoutDescriptor
                     {
                         BindGroupLayouts =

@@ -69,10 +69,10 @@ internal sealed class UIShader : ITypedShader
                 new()
                 {
                     Source = _defaultShaderSource.Value,
-                    SortOrder = 3000,
                     LayoutDescriptor = PipelineLayoutFactory(screen, disposables),
                     PipelineDescriptorFactory = (module, layout) => PipelineFactory(module, layout, screen.Surface.Format, screen.DepthStencil.Format),
                     PassKind = PassKind.Forward,
+                    SortOrderInPass = 10000,
                     OnRenderPass = static (in RenderPassState state) =>
                     {
                         state.RenderPass.SetPipeline(state.Pipeline);
@@ -242,8 +242,8 @@ internal sealed class UIShader : ITypedShader
             DepthStencil = new DepthStencilState
             {
                 Format = depthStencilFormat,
-                DepthWriteEnabled = true,
-                DepthCompare = CompareFunction.GreaterEqual,
+                DepthWriteEnabled = false,
+                DepthCompare = CompareFunction.Always,
                 Stencil = StencilState.Default,
                 Bias = DepthBiasState.Default,
             },

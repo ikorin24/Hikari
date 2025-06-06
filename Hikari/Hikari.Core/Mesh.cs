@@ -19,7 +19,7 @@ public sealed partial class Mesh
     public BufferSlice? TangentBuffer => _data.OptTangentBuffer.TryAsValue(out var buf) ? buf.Slice() : (BufferSlice?)null;
 
     public ImmutableArray<VertexSlotData> VertexSlots => _data.VertexSlots;
-    public ReadOnlySpan<SubmeshData> Submeshes => _submeshes.AsSpan();
+    public ImmutableArray<SubmeshData> Submeshes => _submeshes;
 
     public IndexFormat IndexFormat => _data.IndexFormat;
 

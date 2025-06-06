@@ -329,7 +329,6 @@ public sealed partial class DeferredProcessShader : ITypedShader
                 new()
                 {
                     Source = ShaderSource.Value,
-                    SortOrder = 2000,
                     LayoutDescriptor = new()
                     {
                         BindGroupLayouts =
@@ -342,6 +341,7 @@ public sealed partial class DeferredProcessShader : ITypedShader
                     },
                     PipelineDescriptorFactory = PipelineFactory,
                     PassKind = PassKind.Forward,
+                    SortOrderInPass = 2000,
                     OnRenderPass = static (in RenderPassState state) =>
                     {
                         state.RenderPass.SetPipeline(state.Pipeline);

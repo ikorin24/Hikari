@@ -9,7 +9,7 @@ public readonly record struct ShaderPassDescriptor
     public required ImmutableArray<byte> Source { get; init; }
     public required PipelineLayoutDescriptor LayoutDescriptor { get; init; }
     public required Func<ShaderModule, PipelineLayout, RenderPipelineDescriptor> PipelineDescriptorFactory { get; init; }
-    public required int SortOrder { get; init; }
+    public required int SortOrderInPass { get; init; }
     public required PassKind PassKind { get; init; }
     public required RenderPassAction OnRenderPass { get; init; }
 
@@ -22,7 +22,7 @@ public readonly record struct ShaderPassDescriptor
         {
             Index = passIndex,
             PassKind = PassKind,
-            SortOrder = SortOrder,
+            SortOrderInPass = SortOrderInPass,
             Pipeline = RenderPipeline.Create(screen, PipelineDescriptorFactory(module, layout)).DisposeOn(lifetimeLimit),
             OnRenderPass = OnRenderPass,
         };

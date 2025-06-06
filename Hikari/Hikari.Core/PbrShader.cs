@@ -220,7 +220,7 @@ public sealed partial class PbrShader : ITypedShader
                         ],
                     },
                     PipelineDescriptorFactory = GetShadowDescriptor,
-                    SortOrder = -1000,
+                    SortOrderInPass = 0,
                     PassKind = PassKind.ShadowMap,
                     OnRenderPass = static (in RenderPassState state) =>
                     {
@@ -236,7 +236,7 @@ public sealed partial class PbrShader : ITypedShader
                     Source = _source.Value,
                     LayoutDescriptor = GetLayoutDesc(screen, disposables),
                     PipelineDescriptorFactory = static (module, layout) => GetDescriptor(module, layout, module.Screen.DepthStencil.Format),
-                    SortOrder = 0,
+                    SortOrderInPass = 0,
                     PassKind = PassKind.Deferred,
                     OnRenderPass = static (in RenderPassState state) =>
                     {
