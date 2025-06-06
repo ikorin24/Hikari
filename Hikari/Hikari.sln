@@ -28,6 +28,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikari.Gltf", "Hikari.Gltf\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hikari.Generator", "Hikari.Generator\Hikari.Generator.csproj", "{F5DBD850-94A3-4ED9-8024-40967D25DFC3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CannonCape", "CannonCape\CannonCape.csproj", "{56946BC2-0057-45B6-AEC4-EB9C126D3897}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -74,6 +76,10 @@ Global
 		{F5DBD850-94A3-4ED9-8024-40967D25DFC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F5DBD850-94A3-4ED9-8024-40967D25DFC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F5DBD850-94A3-4ED9-8024-40967D25DFC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56946BC2-0057-45B6-AEC4-EB9C126D3897}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56946BC2-0057-45B6-AEC4-EB9C126D3897}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56946BC2-0057-45B6-AEC4-EB9C126D3897}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56946BC2-0057-45B6-AEC4-EB9C126D3897}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
