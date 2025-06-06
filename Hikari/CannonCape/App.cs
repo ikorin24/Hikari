@@ -46,6 +46,7 @@ public static class App
         _input = new Input(screen);
         _pbrShader = PbrShader.Create(screen).DisposeOn(screen.Closed);
         screen.RenderScheduler.SetDefaultRenderPass();
+        screen.Lights.DirectionalLight.SetLightData(new Vector3(1f, -1f, -0.1f), Color3.White);
         var scenario = new Scenario();
         await scenario.Start();
     }

@@ -11,23 +11,28 @@ public sealed class Input
         _keyboard = screen.Keyboard;
     }
 
-    public bool IsLeftPressed()
+    public bool IsArrowLeftPressed()
     {
         return _keyboard.IsPressed(KeyCode.KeyA) || _keyboard.IsPressed(KeyCode.ArrowLeft);
     }
 
-    public bool IsRightPressed()
+    public bool IsArrowRightPressed()
     {
         return _keyboard.IsPressed(KeyCode.KeyD) || _keyboard.IsPressed(KeyCode.ArrowRight);
     }
 
-    public bool IsUpPressed()
+    public bool IsArrowUpPressed()
     {
         return _keyboard.IsPressed(KeyCode.KeyW) || _keyboard.IsPressed(KeyCode.ArrowUp);
     }
 
-    public bool IsDownPressed()
+    public bool IsArrowDownPressed()
     {
         return _keyboard.IsPressed(KeyCode.KeyS) || _keyboard.IsPressed(KeyCode.ArrowDown);
+    }
+
+    public bool IsOkDown()
+    {
+        return _keyboard.IsDown(KeyCode.Space);
     }
 }

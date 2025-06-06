@@ -1,5 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using Hikari;
+using Hikari.Mathematics;
 using Hikari.UI;
 using System;
 using System.Diagnostics;
@@ -188,13 +189,13 @@ public sealed class MainPlayScene
 {
     private readonly Cannon? _cannon;
     private readonly Ground? _ground;
-    private readonly CameraController _cameraController;
+    private readonly GameControl _cameraController;
 
     private MainPlayScene(Cannon cannon, Ground ground)
     {
         _cannon = cannon;
         _ground = ground;
-        _cameraController = new CameraController(cannon);
+        _cameraController = new GameControl(cannon);
     }
 
 
@@ -215,6 +216,25 @@ public sealed class MainPlayScene
     private static async UniTask<MainPlayScene> LoadScene()
     {
         var (cannon, ground) = await UniTask.WhenAll(Cannon.Load(), Ground.Load());
+        ground.Obj.Position = new Vector3(0, 5f, 0);
+        cannon.Obj.Position = new Vector3(0, 5f, 0);
+        //await Boat.Create();
         return new MainPlayScene(cannon, ground);
+    }
+}
+
+public sealed class Boat
+{
+    private readonly FrameObject _obj;
+
+    private Boat(FrameObject obj)
+    {
+        _obj = obj;
+    }
+
+    public static async UniTask<Boat> Create()
+    {
+        var boat = await GlbLoadHelper.LoadResource("boat.glb");
+        return new Boat(boat);
     }
 }

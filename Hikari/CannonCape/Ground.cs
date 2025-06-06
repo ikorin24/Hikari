@@ -7,6 +7,8 @@ public sealed class Ground
 {
     private readonly FrameObject _obj;
 
+    public FrameObject Obj => _obj;
+
     private Ground(FrameObject obj)
     {
         _obj = obj;
