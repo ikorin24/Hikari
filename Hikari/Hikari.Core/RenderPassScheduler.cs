@@ -181,7 +181,7 @@ public sealed class RenderPassScheduler
                                 }
                             }
                         }
-                        if(indexInList > 0) {
+                        if(indexInList >= 0) {
                             list.RemoveAt(indexInList);
                         }
 
