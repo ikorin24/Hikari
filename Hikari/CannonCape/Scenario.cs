@@ -264,7 +264,7 @@ public sealed class MainPlayScene
         _cannon.Obj.Update.Subscribe(_ => Update());
 
         while(true) {
-            await App.Screen.Update.Delay(TimeSpan.FromSeconds(5));
+            await App.Screen.Update.Delay(TimeSpan.FromSeconds(10));
             SpawnEnemyBoat(true);
         }
 
@@ -275,19 +275,32 @@ public sealed class MainPlayScene
     private void SpawnEnemyBoat(bool useSpawnAnimation)
     {
         const float AngleRangeDegree = 50f;
-        const float DistanceNear = 150f;
-        const float DistanceFar = 250f;
+        const float SpawnNear = 150f;
+        const float SpawnFar = 250f;
+        const float DestNear = 70f;
+        const float DestFar = 100f;
+
+
         var rand = Random.Shared;
         var theta = (rand.NextSingle() - 0.5f) * AngleRangeDegree.ToRadian();
-        var distance = rand.NextSingle() * (DistanceFar - DistanceNear) + DistanceNear;
-        Debug.WriteLine($"theta: {theta.ToDegree()}");
+        var distance = rand.NextSingle() * (SpawnFar - SpawnNear) + SpawnNear;
+
         var pos = new Vector3
         {
             X = distance * float.Sin(theta),
             Y = 0,
             Z = -distance * float.Cos(theta),
         };
-        var enemy = _boatSource.NewBoat(pos, useSpawnAnimation);
+
+        var theta2 = (rand.NextSingle() - 0.5f) * AngleRangeDegree.ToRadian();
+        var distance2 = rand.NextSingle() * (DestFar - DestNear) + DestNear;
+        var dest = new Vector3
+        {
+            X = distance2 * float.Sin(theta2),
+            Y = 0,
+            Z = -distance2 * float.Cos(theta2),
+        };
+        var enemy = _boatSource.NewBoat(pos, dest, useSpawnAnimation);
         enemy.OnDestroy += enemy => _enemies.Remove(enemy);
         _enemies.Add(enemy);
     }

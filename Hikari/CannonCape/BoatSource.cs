@@ -21,9 +21,9 @@ public sealed class BoatSource
         return new BoatSource(sourceObj);
     }
 
-    public Boat NewBoat(Vector3 pos, bool useSpawnAnimation)
+    public Boat NewBoat(Vector3 pos, Vector3 dest, bool useSpawnAnimation)
     {
-        return new Boat(_sourceObj, pos, useSpawnAnimation);
+        return new Boat(_sourceObj, pos, dest, useSpawnAnimation);
     }
 }
 
@@ -32,16 +32,21 @@ public sealed class Boat
     private static readonly TimeSpan SpawnAnimationTime = TimeSpan.FromSeconds(0.7);
     private static readonly TimeSpan DestroyAnimationTime = TimeSpan.FromSeconds(1.2);
     private readonly FrameObject _obj;
+    private readonly Vector3 _dest;
 
     public event Action<Boat>? OnDestroy;
 
-    public Boat(FrameObject sourceObj, Vector3 pos, bool useSpawnAnimation)
+    public Boat(FrameObject sourceObj, Vector3 pos, Vector3 dest, bool useSpawnAnimation)
     {
+        _dest = dest;
         var obj = sourceObj.Clone();
         obj.IsVisible = true;
         obj.Position = pos;
+        obj.Rotation = Quaternion.FromTwoVectors(-Vector3.UnitZ, (pos - dest).Normalized());
         _obj = obj;
         Debug.WriteLine($"Boat: {pos}");
+
+        obj.Update.Subscribe(_ => Update());
 
         if(useSpawnAnimation) {
             var scale = obj.Scale;
@@ -73,16 +78,27 @@ public sealed class Boat
         OnDestroy?.Invoke(this);
 
         var elapsed = TimeSpan.Zero;
+        var currentRot = _obj.Rotation;
         _obj.Update.Subscribe(obj =>
         {
             var ratio = (float)(elapsed.TotalSeconds / DestroyAnimationTime.TotalSeconds);
             var angle = 60.ToRadian() * float.Pow(ratio, 3f);
-            obj.Rotation = Quaternion.FromAxisAngle(Vector3.UnitZ, angle);
+            obj.Rotation = currentRot * Quaternion.FromAxisAngle(Vector3.UnitZ, angle);
 
             elapsed += obj.Screen.DeltaTime;
             if(elapsed >= DestroyAnimationTime) {
                 obj.Terminate();
             }
         });
+    }
+
+    private void Update()
+    {
+        var diff = _dest - _obj.Position;
+        if(diff.Z > 0) {
+            var vec = diff.Normalized();
+            const float Velocity = 1.5f;
+            _obj.Position += vec * Velocity * App.Screen.DeltaTimeSec;
+        }
     }
 }
