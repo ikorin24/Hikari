@@ -33,7 +33,7 @@ public sealed class Cannon
         var shotPos = _cannon.Position + new Vector3(0, 0.45f * 1.4f, 0);
         var vec = _cannon.Rotation * Quaternion.FromAxisAngle(Vector3.UnitX, _currentPitch) * -Vector3.UnitZ;
         var velocity = vec * 3f;
-        var shot = _shotSource.NewShot(shotPos, velocity);
+        _shotSource.NewShot(shotPos, velocity);
         Debug.WriteLine($"Fire: {velocity}, pitch: {_currentPitch.ToDegree()}");
     }
 

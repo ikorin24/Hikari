@@ -271,6 +271,34 @@ public static class PrimitiveShapes
         }
     }
 
+    public static Own<Mesh> Circle(Screen screen, bool useTangent)
+    {
+        const float R = 0.5f;
+        const int C = 64;
+        Span<Vertex> vertices = stackalloc Vertex[C + 1];
+        Span<ushort> indices = stackalloc ushort[C * 3];
+        for(int i = 0; i < C; i++) {
+            float a = (float)i / C;
+            float theta = 2f * float.Pi * a;
+            var p = new Vector3(float.Cos(theta), float.Sin(theta), 0f);
+            var uv = new Vector2(p.X * 0.5f + 0.5f, 1f - (p.Y * 0.5f + 0.5f));
+            vertices[i] = new Vertex(p * R, new Vector3(0, 0, 1), uv);
+        }
+        vertices[C] = new Vertex(new Vector3(0, 0, 0), new Vector3(0, 0, 1), new Vector2(0.5f, 0.5f));
+
+        for(int i = 0; i < C; i++) {
+            indices[i * 3 + 0] = (ushort)i;
+            indices[i * 3 + 1] = (ushort)((i + 1) % C);
+            indices[i * 3 + 2] = (ushort)C;
+        }
+        if(useTangent) {
+            return Mesh.CreateWithTangent<Vertex, ushort>(screen, vertices, indices);
+        }
+        else {
+            return Mesh.Create<Vertex, ushort>(screen, vertices, indices);
+        }
+    }
+
     public static Own<Mesh> RegularIcosahedron(Screen screen)
     {
         const float a = 1f;
