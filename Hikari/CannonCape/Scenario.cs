@@ -43,7 +43,7 @@ public sealed class Scenario
 
     public async UniTask Start()
     {
-        var state = ScenarioState.Home;
+        var state = ScenarioState.Play;
         while(true) {
             switch(state) {
                 default:
@@ -200,58 +200,116 @@ public sealed class Scenario
     }
 }
 
-
-
 public sealed class MainPlayScene
 {
-    private readonly Cannon? _cannon;
-    private readonly Ground? _ground;
-    private readonly GameControl _cameraController;
+    private readonly Scenario _scenario;
+    private readonly Cannon _cannon;
+    private readonly Ground _ground;
+    private readonly BoatSource _boatSource;
 
-    private MainPlayScene(Cannon cannon, Ground ground)
+    private static readonly float _yawSpeed = 0.1f.ToRadian();
+    private static readonly float _pitchSpeed = 0.1f.ToRadian();
+
+    private MainPlayScene(Scenario scenario, Cannon cannon, Ground ground, BoatSource boatSource)
     {
+        _scenario = scenario;
         _cannon = cannon;
         _ground = ground;
-        _cameraController = new GameControl(cannon);
+        _boatSource = boatSource;
     }
-
 
     public static async UniTask Start(Scenario scenario)
     {
         MainPlayScene scene;
         try {
-            scene = await LoadScene();
-            scene._cameraController.Start();
+            scene = await LoadScene(scenario);
         }
         finally {
             await scenario.FadeIn();
         }
+        await scene.Run();
+    }
+
+    private void AdjustCamera()
+    {
+        var cannonObj = _cannon.Obj;
+        var cannonBackward = cannonObj.Rotation * Vector3.UnitZ;
+        var camPos = cannonObj.Position + cannonBackward * 7f + new Vector3(0, 3f, 0);
+        var target = cannonObj.Position + new Vector3(0, 1.9f, 0);
+        App.Camera.LookAt(target, camPos);
+    }
+
+    private static async UniTask<MainPlayScene> LoadScene(Scenario scenario)
+    {
+        var (cannon, ground, boatSource) = await UniTask.WhenAll(Cannon.Load(), Ground.Load(), BoatSource.Create());
+        ground.Obj.Position = new Vector3(0, 5f, 0);
+        cannon.Obj.Position = new Vector3(0, 5f, 0);
+        var scene = new MainPlayScene(scenario, cannon, ground, boatSource);
+        scene.AdjustCamera();
+        for(int i = 0; i < 5; i++) {
+            scene.SpawnEnemyBoat(false);
+        }
+        return scene;
+    }
+
+    private async UniTask Run()
+    {
+        _cannon.Obj.Update.Subscribe(_ => Update());
+
+        while(true) {
+            await App.Screen.Update.Delay(TimeSpan.FromSeconds(1));
+            SpawnEnemyBoat(true);
+        }
+
         // TODO:
         await UniTask.Never(default);
     }
 
-    private static async UniTask<MainPlayScene> LoadScene()
+    private void SpawnEnemyBoat(bool useSpawnAnimation)
     {
-        var (cannon, ground) = await UniTask.WhenAll(Cannon.Load(), Ground.Load());
-        ground.Obj.Position = new Vector3(0, 5f, 0);
-        cannon.Obj.Position = new Vector3(0, 5f, 0);
-        //await Boat.Create();
-        return new MainPlayScene(cannon, ground);
+        const float AngleRangeDegree = 50f;
+        const float DistanceNear = 150f;
+        const float DistanceFar = 250f;
+        var rand = Random.Shared;
+        var theta = (rand.NextSingle() - 0.5f) * AngleRangeDegree.ToRadian();
+        var distance = rand.NextSingle() * (DistanceFar - DistanceNear) + DistanceNear;
+        Debug.WriteLine($"theta: {theta.ToDegree()}");
+        var pos = new Vector3
+        {
+            X = distance * float.Sin(theta),
+            Y = 0,
+            Z = -distance * float.Cos(theta),
+        };
+        _boatSource.NewBoat(pos, useSpawnAnimation);
     }
-}
 
-public sealed class Boat
-{
-    private readonly FrameObject _obj;
-
-    private Boat(FrameObject obj)
+    private void Update()
     {
-        _obj = obj;
-    }
-
-    public static async UniTask<Boat> Create()
-    {
-        var boat = await GlbLoadHelper.LoadResource("boat.glb");
-        return new Boat(boat);
+        var cannon = _cannon;
+        var input = App.Input;
+        var changed = false;
+        if(input.IsArrowLeftPressed()) {
+            cannon.RotateYaw(_yawSpeed);
+            changed = true;
+        }
+        if(input.IsArrowRightPressed()) {
+            cannon.RotateYaw(-_yawSpeed);
+            changed = true;
+        }
+        if(input.IsArrowUpPressed()) {
+            cannon.RotatePitch(-_pitchSpeed);
+            changed = true;
+        }
+        if(input.IsArrowDownPressed()) {
+            cannon.RotatePitch(_pitchSpeed);
+            changed = true;
+        }
+        if(input.IsOkDown()) {
+            cannon.Fire();
+        }
+        AdjustCamera();
+        if(changed) {
+            //Debug.WriteLine($"pitch: {cannon.CurrentPitch.ToDegree()}");
+        }
     }
 }

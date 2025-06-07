@@ -32,6 +32,21 @@ public sealed class Timing
         return TimingAwaitable.Create(this, ct);
     }
 
+    public async UniTask Delay(TimeSpan time, CancellationToken ct = default)
+    {
+        var elapsed = TimeSpan.Zero;
+        while(true) {
+            ct.ThrowIfCancellationRequested();
+            if(elapsed >= time) {
+                return;
+            }
+            else {
+                elapsed += _screen.DeltaTime;
+            }
+            await Switch(ct);
+        }
+    }
+
     public EventSubscription<Screen> Subscribe(Action<Screen> action)
     {
         return _eventSource.Event.Subscribe(action);
