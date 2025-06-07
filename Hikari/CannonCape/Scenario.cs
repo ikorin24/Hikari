@@ -121,10 +121,11 @@ public sealed class Scenario
     private static void CreateSea()
     {
         var screen = App.Screen;
-        var shader = UnlitTextureShader.Create(screen).DisposeOn(screen.Closed);
-        var tex = Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding, new ColorByte(45, 55, 110, 255)).DisposeOn(screen.Closed);
-        var material = UnlitTextureMaterial.Create(shader, tex).DisposeOn(screen.Closed);
-        var mesh = PrimitiveShapes.Plane(screen, false).DisposeOn(screen.Closed);
+        var albedo = Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding, new ColorByte(45, 55, 110, 255)).DisposeOn(screen.Closed);
+        var metallicRoughness = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 127, 0, 0)).DisposeOn(screen.Closed);
+        var normal = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(127, 127, 255, 255)).DisposeOn(screen.Closed);
+        var material = PbrMaterial.Create(App.PbrShader, albedo, metallicRoughness, normal).DisposeOn(screen.Closed);
+        var mesh = PrimitiveShapes.Plane(screen, true).DisposeOn(screen.Closed);
         var sea = new FrameObject(mesh, material)
         {
             Name = "sea",

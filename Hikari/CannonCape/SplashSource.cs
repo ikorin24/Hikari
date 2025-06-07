@@ -18,10 +18,11 @@ public sealed class SplashSource
         var screen = App.Screen;
         var source = await UniTask.Run(() =>
         {
-            var shader = UnlitTextureShader.Create(screen).DisposeOn(screen.Closed);
-            var tex = Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding, new ColorByte(240, 255, 255, 255)).DisposeOn(screen.Closed);
-            var material = UnlitTextureMaterial.Create(shader, tex).DisposeOn(screen.Closed);
-            var mesh = PrimitiveShapes.Circle(screen, false).DisposeOn(screen.Closed);
+            var albedo = Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding, new ColorByte(255, 255, 255, 255)).DisposeOn(screen.Closed);
+            var metallicRoughness = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 255, 0, 0)).DisposeOn(screen.Closed);
+            var normal = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(127, 127, 255, 255)).DisposeOn(screen.Closed);
+            var material = PbrMaterial.Create(App.PbrShader, albedo, metallicRoughness, normal).DisposeOn(screen.Closed);
+            var mesh = PrimitiveShapes.Circle(screen, true).DisposeOn(screen.Closed);
             return new FrameObject(mesh, material, new FrameObjectInitArg
             {
                 IsVisible = false,
