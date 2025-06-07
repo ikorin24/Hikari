@@ -37,6 +37,16 @@ public sealed partial class Mesh
         _isReleased = false;
     }
 
+    public bool HasSemantics(VertexFieldSemantics semantics)
+    {
+        if(semantics == VertexFieldSemantics.Tangent) {
+            return _data.Fields.Contains(semantics) || _data.OptTangentBuffer.IsNone == false;
+        }
+        else {
+            return _data.Fields.Contains(semantics);
+        }
+    }
+
     private void Release()
     {
         if(_isReleased) {
@@ -57,6 +67,7 @@ public sealed partial class Mesh
         public required IndexFormat IndexFormat { get; init; }
         public required Own<Buffer> OptTangentBuffer { get; init; }
         public required ImmutableArray<VertexSlotData> VertexSlots { get; init; }
+        public required VertexFields Fields { get; init; }
     }
 }
 

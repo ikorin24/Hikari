@@ -46,6 +46,14 @@ public sealed partial class Renderer : IRenderer
         if(mesh.Submeshes.Length != materials.Length) {
             ThrowHelper.ThrowArgument(nameof(materials), "The number of materials does not equal the number of submeshes");
         }
+        foreach(var material in materials.AsSpan()) {
+            foreach(var sem in material.Shader.NeededSemantics.AsSpan()) {
+                if(mesh.HasSemantics(sem) == false) {
+                    throw new ArgumentException($"Mesh does not have vertex semantics: '{sem}'");
+                }
+            }
+        }
+
         var screen = mesh.Screen;
         _screen = screen;
         _mesh = mesh;

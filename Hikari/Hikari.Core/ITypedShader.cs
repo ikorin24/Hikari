@@ -7,4 +7,5 @@ public interface ITypedShader
 {
     Screen Screen { get; }
     ImmutableArray<ShaderPassData> ShaderPasses { get; }
+    ImmutableArray<VertexFieldSemantics> NeededSemantics { get; }
 }

@@ -8,6 +8,12 @@ namespace SampleApp;
 
 public sealed partial class SkyShader : ITypedShader
 {
+    private static readonly ImmutableArray<VertexFieldSemantics> _neededSemantics =
+    [
+        VertexFieldSemantics.Position,
+        VertexFieldSemantics.UV,
+    ];
+
     private readonly Shader _shader;
     private readonly DisposableBag _disposables;
 
@@ -82,6 +88,8 @@ public sealed partial class SkyShader : ITypedShader
     public Screen Screen => _shader.Screen;
 
     public ImmutableArray<ShaderPassData> ShaderPasses => _shader.ShaderPasses;
+
+    public ImmutableArray<VertexFieldSemantics> NeededSemantics => _neededSemantics;
 
     [Owned(nameof(Release))]
     private SkyShader(Screen screen)

@@ -12,6 +12,11 @@ internal sealed class UIShader : ITypedShader
     private static readonly ConcurrentDictionary<Screen, Own<Texture2D>> _textureCache = new();
     private static readonly ConcurrentDictionary<Screen, Own<Sampler>> _samplerCache = new();
     private static readonly ConcurrentDictionary<Screen, Own<UIShader>> _shaderCache = new();
+    private static readonly ImmutableArray<VertexFieldSemantics> _neededSemantics =
+    [
+        VertexFieldSemantics.Position,
+        VertexFieldSemantics.UV,
+    ];
 
     private static readonly Lazy<ImmutableArray<byte>> _defaultShaderSource = new(() =>
     {
@@ -59,6 +64,8 @@ internal sealed class UIShader : ITypedShader
     public Screen Screen => _shader.Screen;
 
     public ImmutableArray<ShaderPassData> ShaderPasses => _shader.ShaderPasses;
+
+    public ImmutableArray<VertexFieldSemantics> NeededSemantics => _neededSemantics;
 
     private UIShader(Screen screen)
     {

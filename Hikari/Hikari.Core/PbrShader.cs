@@ -10,11 +10,21 @@ namespace Hikari;
 
 public sealed partial class PbrShader : ITypedShader
 {
+    private static readonly ImmutableArray<VertexFieldSemantics> _neededSemantics =
+    [
+        VertexFieldSemantics.Position,
+        VertexFieldSemantics.Normal,
+        VertexFieldSemantics.UV,
+        VertexFieldSemantics.Tangent,
+    ];
+
     private readonly Shader _shader;
     private readonly DisposableBag _disposables;
 
     public Screen Screen => _shader.Screen;
     public ImmutableArray<ShaderPassData> ShaderPasses => _shader.ShaderPasses;
+
+    public ImmutableArray<VertexFieldSemantics> NeededSemantics => _neededSemantics;
 
     private static readonly Lazy<ImmutableArray<byte>> _source = new(() =>
     {

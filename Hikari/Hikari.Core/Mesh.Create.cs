@@ -59,6 +59,7 @@ partial class Mesh
                     new(1, tangentBuffer.AsValue().Slice()),
                 ],
             },
+            Fields = TVertex.Fields,
         };
         var submeshes = desc.Submeshes switch
         {

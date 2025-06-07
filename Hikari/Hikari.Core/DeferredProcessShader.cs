@@ -10,6 +10,9 @@ public sealed partial class DeferredProcessShader : ITypedShader
     private readonly Screen _screen;
     private readonly ImmutableArray<ShaderPassData> _passes;
 
+    private static readonly ImmutableArray<VertexFieldSemantics> _neededSemantics =
+        [VertexFieldSemantics.Position, VertexFieldSemantics.UV];
+
     private static readonly Lazy<ImmutableArray<byte>> ShaderSource = new(() =>
     {
         return """
@@ -318,6 +321,8 @@ public sealed partial class DeferredProcessShader : ITypedShader
     public Screen Screen => _screen;
 
     public ImmutableArray<ShaderPassData> ShaderPasses => _passes;
+
+    public ImmutableArray<VertexFieldSemantics> NeededSemantics => _neededSemantics;
 
     [Owned(nameof(Release))]
     private DeferredProcessShader(Screen screen, IGBufferProvider gBuffer)
