@@ -38,12 +38,11 @@ public sealed class Cannon
         Debug.WriteLine($"Fire: {velocity}, pitch: {_currentPitch.ToDegree()}");
     }
 
-    public static async UniTask<Cannon> Load(IReadOnlyCollection<Boat> enemies)
+    public static async UniTask<Cannon> Load(ShotSource shotSource)
     {
-        var (cylinder, cannonBase, shotSource) = await UniTask.WhenAll(
+        var (cylinder, cannonBase) = await UniTask.WhenAll(
             GlbLoadHelper.LoadResource("cannon_cylinder.glb"),
-            GlbLoadHelper.LoadResource("cannon_base.glb"),
-            ShotSource.Create(enemies));
+            GlbLoadHelper.LoadResource("cannon_base.glb"));
         cylinder.Position = new Vector3(0, 0.45f, 0);
         cylinder.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, 30.ToRadian());
         var cannon = new FrameObject(App.Screen)

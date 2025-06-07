@@ -1,13 +1,22 @@
 ﻿using Cysharp.Threading.Tasks;
 using Hikari;
+using System;
 
 namespace CannonCape;
 
-public sealed class Ground
+public sealed class Ground : ISphereCollider
 {
     private readonly FrameObject _obj;
 
+    public event Action? EnemyShotHit;
+
     public FrameObject Obj => _obj;
+
+    public (Vector3 Center, float Radius) SphereCollider =>
+        (
+            Center: new Vector3(0, 6, 0),
+            Radius: 1f
+        );
 
     private Ground(FrameObject obj)
     {
@@ -18,5 +27,10 @@ public sealed class Ground
     {
         var ground = await GlbLoadHelper.LoadResource("ground.glb");
         return new Ground(ground);
+    }
+
+    void ISphereCollider.OnColliderHit()
+    {
+        EnemyShotHit?.Invoke();
     }
 }

@@ -13,7 +13,7 @@ public sealed class SplashSource
         _source = source;
     }
 
-    public static async UniTask<SplashSource> Create()
+    public static async UniTask<SplashSource> Load()
     {
         var screen = App.Screen;
         var source = await UniTask.Run(() =>
