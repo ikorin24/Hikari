@@ -3,6 +3,7 @@ using Hikari;
 using Hikari.Mathematics;
 using Hikari.UI;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace CannonCape;
@@ -206,16 +207,18 @@ public sealed class MainPlayScene
     private readonly Cannon _cannon;
     private readonly Ground _ground;
     private readonly BoatSource _boatSource;
+    private readonly HashSet<Boat> _enemies;
 
     private static readonly float _yawSpeed = 0.1f.ToRadian();
     private static readonly float _pitchSpeed = 0.1f.ToRadian();
 
-    private MainPlayScene(Scenario scenario, Cannon cannon, Ground ground, BoatSource boatSource)
+    private MainPlayScene(Scenario scenario, Cannon cannon, Ground ground, BoatSource boatSource, HashSet<Boat> enemies)
     {
         _scenario = scenario;
         _cannon = cannon;
         _ground = ground;
         _boatSource = boatSource;
+        _enemies = enemies;
     }
 
     public static async UniTask Start(Scenario scenario)
@@ -241,10 +244,11 @@ public sealed class MainPlayScene
 
     private static async UniTask<MainPlayScene> LoadScene(Scenario scenario)
     {
-        var (cannon, ground, boatSource) = await UniTask.WhenAll(Cannon.Load(), Ground.Load(), BoatSource.Create());
+        var enemies = new HashSet<Boat>();
+        var (cannon, ground, boatSource) = await UniTask.WhenAll(Cannon.Load(enemies), Ground.Load(), BoatSource.Create());
         ground.Obj.Position = new Vector3(0, 5f, 0);
         cannon.Obj.Position = new Vector3(0, 5f, 0);
-        var scene = new MainPlayScene(scenario, cannon, ground, boatSource);
+        var scene = new MainPlayScene(scenario, cannon, ground, boatSource, enemies);
         scene.AdjustCamera();
         for(int i = 0; i < 5; i++) {
             scene.SpawnEnemyBoat(false);
@@ -257,7 +261,7 @@ public sealed class MainPlayScene
         _cannon.Obj.Update.Subscribe(_ => Update());
 
         while(true) {
-            await App.Screen.Update.Delay(TimeSpan.FromSeconds(1));
+            await App.Screen.Update.Delay(TimeSpan.FromSeconds(5));
             SpawnEnemyBoat(true);
         }
 
@@ -280,7 +284,9 @@ public sealed class MainPlayScene
             Y = 0,
             Z = -distance * float.Cos(theta),
         };
-        _boatSource.NewBoat(pos, useSpawnAnimation);
+        var enemy = _boatSource.NewBoat(pos, useSpawnAnimation);
+        enemy.OnDestroy += enemy => _enemies.Remove(enemy);
+        _enemies.Add(enemy);
     }
 
     private void Update()

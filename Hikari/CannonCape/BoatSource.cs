@@ -1,5 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using Hikari;
+using Hikari.Mathematics;
 using System;
 using System.Diagnostics;
 
@@ -20,39 +21,68 @@ public sealed class BoatSource
         return new BoatSource(sourceObj);
     }
 
-    public void NewBoat(Vector3 pos, bool useSpawnAnimation)
+    public Boat NewBoat(Vector3 pos, bool useSpawnAnimation)
     {
-        _ = new Boat(_sourceObj, pos, useSpawnAnimation);
+        return new Boat(_sourceObj, pos, useSpawnAnimation);
+    }
+}
+
+public sealed class Boat
+{
+    private static readonly TimeSpan SpawnAnimationTime = TimeSpan.FromSeconds(0.7);
+    private static readonly TimeSpan DestroyAnimationTime = TimeSpan.FromSeconds(1.2);
+    private readonly FrameObject _obj;
+
+    public event Action<Boat>? OnDestroy;
+
+    public Boat(FrameObject sourceObj, Vector3 pos, bool useSpawnAnimation)
+    {
+        var obj = sourceObj.Clone();
+        obj.IsVisible = true;
+        obj.Position = pos;
+        _obj = obj;
+        Debug.WriteLine($"Boat: {pos}");
+
+        if(useSpawnAnimation) {
+            var scale = obj.Scale;
+            obj.Scale = new Vector3(0);
+            var elapsed = TimeSpan.Zero;
+
+            var subscription = EventSubscription<FrameObject>.None;
+            subscription = obj.Update.Subscribe(obj =>
+            {
+                var ratio = (float)(elapsed.TotalSeconds / SpawnAnimationTime.TotalSeconds);
+                obj.Scale = scale * ratio;
+                elapsed += obj.Screen.DeltaTime;
+                if(elapsed >= SpawnAnimationTime) {
+                    obj.Scale = scale;
+                    subscription.Dispose();
+                }
+            });
+        }
     }
 
-    private sealed class Boat
+    public (Vector3 Center, float Radius) SphereCollider =>
+        (
+            Center: _obj.Position + new Vector3(0, 0.6f, 0),
+            Radius: 1.7f
+        );
+
+    public void Destroy()
     {
-        private static readonly TimeSpan SpawnAnimationTime = TimeSpan.FromSeconds(0.7);
+        OnDestroy?.Invoke(this);
 
-        public Boat(FrameObject sourceObj, Vector3 pos, bool useSpawnAnimation)
+        var elapsed = TimeSpan.Zero;
+        _obj.Update.Subscribe(obj =>
         {
-            var obj = sourceObj.Clone();
-            obj.IsVisible = true;
-            obj.Position = pos;
-            Debug.WriteLine($"Boat: {pos}");
+            var ratio = (float)(elapsed.TotalSeconds / DestroyAnimationTime.TotalSeconds);
+            var angle = 60.ToRadian() * float.Pow(ratio, 3f);
+            obj.Rotation = Quaternion.FromAxisAngle(Vector3.UnitZ, angle);
 
-            if(useSpawnAnimation) {
-                var scale = obj.Scale;
-                obj.Scale = new Vector3(0);
-                var elapsed = TimeSpan.Zero;
-
-                var subscription = EventSubscription<FrameObject>.None;
-                subscription = obj.Update.Subscribe(obj =>
-                {
-                    var ratio = (float)(elapsed.TotalSeconds / SpawnAnimationTime.TotalSeconds);
-                    obj.Scale = scale * ratio;
-                    elapsed += obj.Screen.DeltaTime;
-                    if(elapsed >= SpawnAnimationTime) {
-                        obj.Scale = scale;
-                        subscription.Dispose();
-                    }
-                });
+            elapsed += obj.Screen.DeltaTime;
+            if(elapsed >= DestroyAnimationTime) {
+                obj.Terminate();
             }
-        }
+        });
     }
 }
