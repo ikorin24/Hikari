@@ -208,9 +208,11 @@ public sealed class MainPlayScene
     private readonly Ground _ground;
     private readonly BoatSource _boatSource;
     private readonly HashSet<Boat> _enemies;
+    private Vector3 _cameraShaking;
+    private bool _canFire;
 
-    private static readonly float _yawSpeed = 0.1f.ToRadian();
-    private static readonly float _pitchSpeed = 0.1f.ToRadian();
+    private static readonly float _yawSpeed = 0.08f.ToRadian();
+    private static readonly float _pitchSpeed = 0.08f.ToRadian();
 
     private MainPlayScene(Scenario scenario, Cannon cannon, Ground ground, BoatSource boatSource, HashSet<Boat> enemies)
     {
@@ -219,6 +221,7 @@ public sealed class MainPlayScene
         _ground = ground;
         _boatSource = boatSource;
         _enemies = enemies;
+        _canFire = true;
     }
 
     public static async UniTask Start(Scenario scenario)
@@ -238,7 +241,7 @@ public sealed class MainPlayScene
         var cannonObj = _cannon.Obj;
         var cannonBackward = cannonObj.Rotation * Vector3.UnitZ;
         var camPos = cannonObj.Position + cannonBackward * 7f + new Vector3(0, 3f, 0);
-        var target = cannonObj.Position + new Vector3(0, 1.9f, 0);
+        var target = cannonObj.Position + new Vector3(0, 1.9f, 0) + _cameraShaking;
         App.Camera.LookAt(target, camPos);
     }
 
@@ -310,8 +313,29 @@ public sealed class MainPlayScene
             cannon.RotatePitch(_pitchSpeed);
             changed = true;
         }
-        if(input.IsOkDown()) {
+        if(_canFire && input.IsOkDown()) {
             cannon.Fire();
+            _canFire = false;
+            UniTask.Void(async () =>
+            {
+                try {
+                    const int F = 25;
+                    for(int i = 0; i < F; i++) {
+                        _cameraShaking = App.Camera.Rotation * new Vector3()
+                        {
+                            X = (1f - (float)i / F) * 0.02f * float.Sin(i / 5f * float.Pi),
+                            Y = (1f - (float)i / F) * 0.01f * float.Sin(i / 4f * float.Pi),
+                        };
+                        await App.Screen.Update.Switch();
+                    }
+                    _cameraShaking = Vector3.Zero;
+                    await App.Screen.Update.Delay(TimeSpan.FromSeconds(1f));
+                }
+                finally {
+                    _cameraShaking = Vector3.Zero;
+                    _canFire = true;
+                }
+            });
         }
         AdjustCamera();
         if(changed) {
