@@ -21,6 +21,8 @@ public sealed class Scenario
 
     public Scenario()
     {
+        App.Camera.LookAt(new Vector3(0, 0, -100), new Vector3(0, 10, 0));
+        CreateSea();
         CreateSky();
         App.Screen.UITree.SetRoot(new Panel
         {
@@ -111,6 +113,21 @@ public sealed class Scenario
         var sky = new FrameObject(mesh, material)
         {
             Name = "sky",
+            Scale = new Vector3(1200),
+        };
+    }
+
+    private static void CreateSea()
+    {
+        var screen = App.Screen;
+        var shader = UnlitTextureShader.Create(screen).DisposeOn(screen.Closed);
+        var tex = Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding, new ColorByte(45, 55, 110, 255)).DisposeOn(screen.Closed);
+        var material = UnlitTextureMaterial.Create(shader, tex).DisposeOn(screen.Closed);
+        var mesh = PrimitiveShapes.Plane(screen, false).DisposeOn(screen.Closed);
+        var sea = new FrameObject(mesh, material)
+        {
+            Name = "sea",
+            Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, -90.ToRadian()),
             Scale = new Vector3(1200),
         };
     }

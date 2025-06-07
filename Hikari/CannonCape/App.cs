@@ -14,6 +14,7 @@ public static class App
     private static Stopwatch _sw = Stopwatch.StartNew();
 
     public static Screen Screen => _screen!;
+    public static Camera Camera => _screen!.Camera;
     public static Input Input => _input!;
     public static PbrShader PbrShader => _pbrShader!;
 
