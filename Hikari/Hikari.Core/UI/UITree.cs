@@ -100,8 +100,9 @@ public sealed partial class UITree
         });
         element.ModelDead.Subscribe(element =>
         {
-            Debug.Assert(element == _rootElement);
-            _rootElement = null;
+            if(element == _rootElement) {
+                _rootElement = null;
+            }
         });
     }
 }
