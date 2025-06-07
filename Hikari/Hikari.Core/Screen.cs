@@ -38,6 +38,9 @@ public sealed class Screen
     private readonly Own<Buffer> _info;     // ScreenInfo
     private readonly Keyboard _keyboard;
     private ulong _frameNum;
+    private readonly Stopwatch _sw;
+    private TimeSpan? _prevTime;
+    private TimeSpan _timeDelta;
     private readonly Action<Screen>? _onPrepare;
     private RunningState _state;
     private EventSource<ScreenClosingState> _closing;
@@ -79,6 +82,8 @@ public sealed class Screen
     public Mouse Mouse => _mouse;
     public Keyboard Keyboard => _keyboard;
     public ulong FrameNum => _frameNum;
+    public TimeSpan DeltaTime => _timeDelta;
+    public float DeltaTimeSec => (float)_timeDelta.TotalSeconds;
 
     internal Timing CreateObjectInternal => _createObjectInternal;
     public Timing EarlyUpdate => _earlyUpdate;
@@ -177,6 +182,7 @@ public sealed class Screen
         _mouse = new Mouse(this);
         _surface = new Surface(this);
         _keyboard = new Keyboard(this);
+        _sw = Stopwatch.StartNew();
         _objectStore = new ObjectStore(this);
         _uiTree = new UITree(this);
         _scheduler = new RenderPassScheduler(this);
@@ -291,6 +297,16 @@ public sealed class Screen
         var store = _objectStore;
         var scheduler = _scheduler;
         _mouse.InitFrame();
+
+        {
+            var currentTime = _sw.Elapsed;
+            var timeDelta = (_prevTime == null)
+                ? TimeSpan.FromSeconds(1.0 / 60)
+                : currentTime - _prevTime.Value;
+            _prevTime = currentTime;
+            _timeDelta = timeDelta;
+        }
+
 
         if(_frameNum == 0) {
             _onPrepare?.Invoke(this);

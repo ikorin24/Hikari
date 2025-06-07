@@ -59,7 +59,8 @@ public sealed class GameControl
     {
         var cannonObj = _cannon.Obj;
         var cannonBackward = cannonObj.Rotation * Vector3.UnitZ;
-        var camPos = cannonObj.Position + cannonBackward * 7f + new Vector3(0, 2.2f, 0);
-        _camera.LookAt(cannonObj.Position + new Vector3(0, 1.6f, 0), camPos);
+        var camPos = cannonObj.Position + cannonBackward * 7f + new Vector3(0, 3f, 0);
+        var target = cannonObj.Position + new Vector3(0, 1.9f, 0);
+        _camera.LookAt(target, camPos);
     }
 }
