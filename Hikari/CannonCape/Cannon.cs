@@ -13,7 +13,7 @@ public sealed class Cannon : IDisposable
     private readonly ShotSource _shotSource;
     private float _currentPitch;
 
-    private static readonly float _yawMaxAbs = 45f.ToRadian();
+    private static readonly float _yawMaxAbs = 25f.ToRadian();
     private static readonly float _pitchMax = 60f.ToRadian();
 
     public FrameObject Obj => _cannon;

@@ -300,7 +300,7 @@ public sealed class MainPlayScene
 
     private void SpawnEnemyBoat(bool useSpawnAnimation)
     {
-        const float AngleRangeDegree = 50f;
+        const float AngleRangeDegree = 45f;
         const float SpawnNear = 150f;
         const float SpawnFar = 250f;
         const float DestNear = 70f;
