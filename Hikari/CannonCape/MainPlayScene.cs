@@ -22,7 +22,9 @@ public sealed class MainPlayScene
     private int _gamePlayerLife;
 
     private const int GameTimeSec = 177;
-    private const int InitialLife = 4;
+    private const int InitialLife = 5;
+    private const int InitialEnemyCount = 4;
+    private const int EnemySpawnInterval = 10;
 
     private static readonly float _yawSpeed = 0.08f.ToRadian();
     private static readonly float _pitchSpeed = 0.08f.ToRadian();
@@ -89,53 +91,80 @@ public sealed class MainPlayScene
         UIElement uiOverlay;
         Label lifeLabel;
         Label pitchLabel;
+        Label resultLabel;
         App.Screen.UITree.SetRoot(new Panel
         {
             Name = "root",
             Background = Brush.Transparent,
             Children =
             [
+                resultLabel = new Label
+                {
+                    Background = Brush.Transparent,
+                    Color = Color4.White,
+                    FontSize = 90,
+                    Typeface = Typeface.FromFile(Resources.Path("07にくまるフォント.otf")),
+                },
                 new Panel
                 {
-                    Name = "gameUIRoot",
                     Background = Brush.LinearGradient(0,
                     [
-                        new(Color4.FromHexCode("#000D"), 0.5f),
-                        new(Color4.FromHexCode("#0000"), 0.8f),
+                        new(Color4.FromHexCode("#000B"), 0.8f),
+                        new(Color4.FromHexCode("#0005"), 0.9f),
+                        new(Color4.FromHexCode("#0000"), 1f),
                     ]),
                     VerticalAlignment = VerticalAlignment.Bottom,
-                    Height = LayoutLength.Length(100),
-                    Flow = new Flow(FlowDirection.Row),
+                    Height = LayoutLength.Length(110),
+                    Flow = new Flow(FlowDirection.Column),
                     Children =
                     [
-                        new Panel
+                        new Label
                         {
+                            Height = LayoutLength.Length(60),
+                            Flow = new Flow(FlowDirection.Row),
                             Background = Brush.Transparent,
-                            Width = LayoutLength.Proportion(0.5f),
                             Children =
                             [
-                                lifeLabel = new Label
+                                new Panel
                                 {
                                     Background = Brush.Transparent,
-                                    Color = Color4.White,
-                                    FontSize = 30,
-                                    Typeface = Typeface.FromFile(Resources.Path("07にくまるフォント.otf")),
+                                    Width = LayoutLength.Proportion(0.5f),
+                                    Children =
+                                    [
+                                        lifeLabel = new Label
+                                        {
+                                            Background = Brush.Transparent,
+                                            Color = Color4.White,
+                                            FontSize = 30,
+                                            Typeface = Typeface.FromFile(Resources.Path("07にくまるフォント.otf")),
+                                        },
+                                    ],
+                                },
+                                new Panel
+                                {
+                                    Background = Brush.Transparent,
+                                    Children =
+                                    [
+                                        pitchLabel = new Label
+                                        {
+                                            Background = Brush.Transparent,
+                                            Color = Color4.White,
+                                            FontSize = 30,
+                                            Typeface = Typeface.FromFile(Resources.Path("07にくまるフォント.otf")),
+                                        },
+                                    ],
                                 },
                             ],
                         },
-                        new Panel
+                        new Label
                         {
+                            Height = LayoutLength.Length(50),
+                            Flow = new Flow(FlowDirection.Row),
                             Background = Brush.Transparent,
-                            Children =
-                            [
-                                pitchLabel = new Label
-                                {
-                                    Background = Brush.Transparent,
-                                    Color = Color4.White,
-                                    FontSize = 30,
-                                    Typeface = Typeface.FromFile(Resources.Path("07にくまるフォント.otf")),
-                                },
-                            ],
+                            Color = Color4.White,
+                            FontSize = 22,
+                            Typeface = Typeface.FromFile(Resources.Path("07にくまるフォント.otf")),
+                            Text = "砲台回転 ← / →   砲身角度 ↑ / ↓   発射 Space",
                         },
                     ],
                 },
@@ -148,6 +177,7 @@ public sealed class MainPlayScene
         });
         return new MainSceneUI
         {
+            ResultLabel = resultLabel,
             PitchLabel = pitchLabel,
             LifeLabel = lifeLabel,
             UIOverlay = uiOverlay,
@@ -170,7 +200,7 @@ public sealed class MainPlayScene
         var scene = new MainPlayScene(ui, cannon, ground, boatSource, shotSource, enemies);
         scene.SetLifeUILabel();
         scene.AdjustCamera();
-        for(int i = 0; i < 5; i++) {
+        for(int i = 0; i < InitialEnemyCount; i++) {
             scene.SpawnEnemyBoat(true);
         }
         ground.EnemyShotHit += () =>
@@ -216,7 +246,7 @@ public sealed class MainPlayScene
                 // メインゲームが継続している間、一定時間ごとに敵をスポーンする
                 while(true) {
                     try {
-                        await App.Screen.Update.Delay(TimeSpan.FromSeconds(10), cts.Token);
+                        await App.Screen.Update.Delay(TimeSpan.FromSeconds(EnemySpawnInterval), cts.Token);
                     }
                     catch(OperationCanceledException) {
                         return;
@@ -228,14 +258,14 @@ public sealed class MainPlayScene
                 }
             }));
 
+        _canFire = false;
         if(gameClear) {
-            // TODO:
-            Debug.WriteLine("MainGame Clear");
+            _ui.ResultLabel.Text = "Game Clear!!!";
         }
         else {
-            // TODO:
-            Debug.WriteLine("MainGame Failed");
+            _ui.ResultLabel.Text = "Game Over";
         }
+        await App.Screen.Update.Delay(TimeSpan.FromSeconds(5));
     }
 
     private void SetLifeUILabel()
@@ -356,6 +386,7 @@ public sealed class MainPlayScene
 
     private record MainSceneUI
     {
+        public required Label ResultLabel { get; set; }
         public required Label LifeLabel { get; init; }
         public required Label PitchLabel { get; init; }
         public required UIElement UIOverlay { get; init; }
