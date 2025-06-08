@@ -1,6 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using Hikari;
 using Hikari.Mathematics;
+using Hikari.UI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,7 +12,6 @@ namespace CannonCape;
 public sealed class MainPlayScene
 {
     private readonly DisposableBag _disposables;
-    private readonly Scenario _scenario;
     private readonly Cannon _cannon;
     private readonly BoatSource _boatSource;
     private readonly HashSet<Boat> _enemies;
@@ -28,10 +28,9 @@ public sealed class MainPlayScene
 
     private bool IsGamePlayerDead => _gamePlayerLife == 0;
 
-    private MainPlayScene(Scenario scenario, Cannon cannon, Ground ground, BoatSource boatSource, ShotSource shotSource, HashSet<Boat> enemies)
+    private MainPlayScene(Cannon cannon, Ground ground, BoatSource boatSource, ShotSource shotSource, HashSet<Boat> enemies)
     {
         var disposables = new DisposableBag();
-        _scenario = scenario;
         _cannon = cannon;
         _boatSource = boatSource;
         _enemies = enemies;
@@ -45,25 +44,19 @@ public sealed class MainPlayScene
         _gamePlayerLife = InitialLife;
     }
 
-    public static async UniTask<ScenarioState> Run(Scenario scenario)
+    public static async UniTask<ScenarioState> Run()
     {
+        var uiOverlay = CreateUI();
         MainPlayScene scene;
         try {
-            scene = await LoadScene(scenario);
+            scene = await LoadScene();
         }
         finally {
-            await scenario.FadeIn();
+            await FadeHelper.FadeIn(uiOverlay);
         }
         try {
-            var success = await scene.RunMainGame();
-            if(success) {
-                // TODO:
-                Debug.WriteLine("MainGame Clear");
-            }
-            else {
-                // TODO:
-                Debug.WriteLine("MainGame Failed");
-            }
+            await scene.RunMainGame();
+            await FadeHelper.FadeOut(uiOverlay);
             return ScenarioState.Home;
         }
         finally {
@@ -89,7 +82,40 @@ public sealed class MainPlayScene
         App.Camera.LookAt(target, camPos);
     }
 
-    private static async UniTask<MainPlayScene> LoadScene(Scenario scenario)
+    private static UIElement CreateUI()
+    {
+        UIElement uiOverlay;
+        App.Screen.UITree.SetRoot(new Panel
+        {
+            Name = "root",
+            Background = Brush.Transparent,
+            Children =
+            [
+                new Panel
+                {
+                    Name = "gameUIRoot",
+                    Background = Brush.Transparent,
+                    Children =
+                    [
+                        //panel = new Panel
+                        //{
+                        //    Width = LayoutLength.Length(200),
+                        //    Height = LayoutLength.Length(200),
+                        //    Background = Brush.Gray,
+                        //},
+                    ],
+                },
+                uiOverlay = new Panel
+                {
+                    Name = "uiOverlay",
+                    Background = Brush.Black,
+                },
+            ],
+        });
+        return uiOverlay;
+    }
+
+    private static async UniTask<MainPlayScene> LoadScene()
     {
         var ground = await Ground.Load();
         var enemies = new HashSet<Boat>();
@@ -97,10 +123,10 @@ public sealed class MainPlayScene
         var (cannon, boatSource) = await UniTask.WhenAll(Cannon.Load(shotSource), BoatSource.Load(shotSource));
         ground.Obj.Position = new Vector3(0, 5f, 0);
         cannon.Obj.Position = new Vector3(0, 5f, 0);
-        var scene = new MainPlayScene(scenario, cannon, ground, boatSource, shotSource, enemies);
+        var scene = new MainPlayScene(cannon, ground, boatSource, shotSource, enemies);
         scene.AdjustCamera();
         for(int i = 0; i < 5; i++) {
-            scene.SpawnEnemyBoat(false);
+            scene.SpawnEnemyBoat(true);
         }
         ground.EnemyShotHit += () =>
         {
@@ -109,7 +135,7 @@ public sealed class MainPlayScene
         return scene;
     }
 
-    private async UniTask<bool> RunMainGame()
+    private async UniTask RunMainGame()
     {
         using var player = AudioPlayer.Play(Resources.Path("メインゲームBGM.wav"));
         using var control = App.Screen.Update.Subscribe(_ => ControlMainGame());
@@ -156,7 +182,15 @@ public sealed class MainPlayScene
                     SpawnEnemyBoat(true);
                 }
             }));
-        return gameClear;
+
+        if(gameClear) {
+            // TODO:
+            Debug.WriteLine("MainGame Clear");
+        }
+        else {
+            // TODO:
+            Debug.WriteLine("MainGame Failed");
+        }
     }
 
     private void OnEnemyShotHit()
