@@ -63,9 +63,12 @@ public sealed partial class UITree
             static void Recurse(UIElement element, Vector2u screenSize, float scaleFactor, in Matrix4 uiProjection, ref uint index)
             {
                 //var depth = float.Min(1, index++ / 1000f);  // TODO:
-                element.UpdateMaterial(screenSize, scaleFactor, uiProjection, 0f);
-                foreach(var child in element.Children) {
-                    Recurse(child, screenSize, scaleFactor, in uiProjection, ref index);
+                var model = element.Model;
+                if(model != null && model.LifeState != LifeState.New) {
+                    element.UpdateMaterial(screenSize, scaleFactor, uiProjection, 0f);
+                    foreach(var child in element.Children) {
+                        Recurse(child, screenSize, scaleFactor, in uiProjection, ref index);
+                    }
                 }
             }
 
