@@ -11,6 +11,10 @@
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" />
+  </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\Hikari.Core\Hikari.Core.csproj" />

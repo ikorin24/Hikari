@@ -43,7 +43,7 @@ public sealed class Scenario
 
     public async UniTask Start()
     {
-        var state = ScenarioState.Play;
+        var state = ScenarioState.Home;
         while(true) {
             switch(state) {
                 default:
@@ -95,6 +95,7 @@ public sealed class Scenario
 
     private async UniTask<ScenarioState> HomeScene()
     {
+        using var player = AudioPlayer.Play(Resources.Path("タイトル画面BGM.wav"));
         var tcs = new UniTaskCompletionSource<ScenarioState>();
         var ui = HomeUI(state => tcs.TrySetResult(state));
         _gameUIRoot.Children.Add(ui);

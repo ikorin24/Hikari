@@ -74,19 +74,22 @@ public sealed class MainPlayScene
 
     private async UniTask Run()
     {
-        _cannon.Obj.Update.Subscribe(_ => Update());
+        using(var player = AudioPlayer.Play(Resources.Path("メインゲームBGM.wav"))) {
+            _cannon.Obj.Update.Subscribe(_ => Update());
 
-        while(true) {
-            await App.Screen.Update.Delay(TimeSpan.FromSeconds(10));
-            SpawnEnemyBoat(true);
+            while(true) {
+                await App.Screen.Update.Delay(TimeSpan.FromSeconds(10));
+                SpawnEnemyBoat(true);
+            }
+
+            // TODO:
+            await UniTask.Never(default);
         }
-
-        // TODO:
-        await UniTask.Never(default);
     }
 
     private void OnEnemyShotHit()
     {
+        AudioPlayer.Play(Resources.Path("プレイヤー被弾.wav"));
         UniTask.Void(async () =>
         {
             const int FrameCount = 60;
@@ -163,6 +166,7 @@ public sealed class MainPlayScene
         if(_canFire && input.IsOkDown()) {
             cannon.Fire();
             _canFire = false;
+            AudioPlayer.Play(Resources.Path("大砲発射.wav"));
             UniTask.Void(async () =>
             {
                 const int FrameCount = 25;
