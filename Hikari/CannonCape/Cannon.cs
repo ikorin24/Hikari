@@ -13,6 +13,7 @@ public sealed class Cannon : IDisposable
     private readonly ShotSource _shotSource;
     private float _currentPitch;
 
+    private static readonly float _initialPitch = 15f.ToRadian();
     private static readonly float _yawMaxAbs = 25f.ToRadian();
     private static readonly float _pitchMax = 60f.ToRadian();
 
@@ -46,7 +47,7 @@ public sealed class Cannon : IDisposable
             GlbLoadHelper.LoadResource("cannon_cylinder.glb"),
             GlbLoadHelper.LoadResource("cannon_base.glb"));
         cylinder.Position = new Vector3(0, 0.45f, 0);
-        cylinder.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, 30.ToRadian());
+        cylinder.Rotation = Quaternion.FromAxisAngle(Vector3.UnitX, _initialPitch);
         var cannon = new FrameObject(App.Screen)
         {
             Scale = new Vector3(1.4f),
