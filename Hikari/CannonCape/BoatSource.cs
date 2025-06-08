@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace CannonCape;
 
-public sealed class BoatSource
+public sealed class BoatSource : IDisposable
 {
     private readonly FrameObject _sourceObj;
     private readonly ShotSource _shotSource;
@@ -27,9 +27,14 @@ public sealed class BoatSource
     {
         return new Boat(_sourceObj, pos, dest, _shotSource, useSpawnAnimation);
     }
+
+    public void Dispose()
+    {
+        _sourceObj.Terminate();
+    }
 }
 
-public sealed class Boat : ISphereCollider
+public sealed class Boat : ISphereCollider, IDisposable
 {
     private static readonly TimeSpan SpawnAnimationTime = TimeSpan.FromSeconds(0.7);
     private static readonly TimeSpan DestroyAnimationTime = TimeSpan.FromSeconds(1.0);
@@ -138,5 +143,10 @@ public sealed class Boat : ISphereCollider
             const float Velocity = 1.5f;
             _obj.Position += vec * Velocity * App.Screen.DeltaTimeSec;
         }
+    }
+
+    public void Dispose()
+    {
+        _obj.Terminate();
     }
 }

@@ -1,11 +1,12 @@
 ﻿using Cysharp.Threading.Tasks;
 using Hikari;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace CannonCape;
 
-public sealed class ShotSource
+public sealed class ShotSource : IDisposable
 {
     private readonly FrameObject _sourceObj;
     private readonly SplashSource _splashSource;
@@ -39,6 +40,12 @@ public sealed class ShotSource
     public void NewEnemyShot(Vector3 pos, Vector3 velocity)
     {
         _ = new EnemyShot(_sourceObj, pos, velocity, _player);
+    }
+
+    public void Dispose()
+    {
+        _sourceObj.Terminate();
+        _splashSource.Dispose();
     }
 
     private sealed class Shot

@@ -12,13 +12,6 @@ public sealed class Scenario
     private readonly UIElement _uiOverlay;
     private readonly UIElement _gameUIRoot;
 
-    private enum ScenarioState
-    {
-        Home,
-        Play,
-        Quit,
-    }
-
     public Scenario()
     {
         App.Camera.LookAt(new Vector3(0, 0, -100), new Vector3(0, 10, 0));
@@ -26,22 +19,25 @@ public sealed class Scenario
         CreateSky();
         App.Screen.UITree.SetRoot(new Panel
         {
+            Name = "root",
             Background = Brush.Transparent,
             Children =
             [
                 _gameUIRoot = new Panel
                 {
+                    Name = "gameUIRoot",
                     Background = Brush.Transparent,
                 },
                 _uiOverlay = new Panel
                 {
+                    Name = "uiOverlay",
                     Background = Brush.Transparent,
                 },
             ],
         });
     }
 
-    public async UniTask Start()
+    public async UniTask Run()
     {
         var state = ScenarioState.Home;
         while(true) {
@@ -52,8 +48,9 @@ public sealed class Scenario
                     continue;
                 }
                 case ScenarioState.Play:
-                    await MainPlayScene.Start(this);
-                    break;
+                    state = await MainPlayScene.Run(this);
+                    // TODO: 
+                    return;
                 case ScenarioState.Quit: {
                     return;
                 }
@@ -77,7 +74,7 @@ public sealed class Scenario
         }
     }
 
-    public async UniTask FadeOut(float seconds = 0.6f)
+    private async UniTask FadeOut(float seconds = 0.6f)
     {
         var span = TimeSpan.FromSeconds(seconds);
         var start = App.CurrentTime;
@@ -139,6 +136,7 @@ public sealed class Scenario
         Panel homeUI = null!;
         homeUI = new Panel
         {
+            Name = "homeUI",
             Background = Brush.Transparent,
             Children =
             [
@@ -162,7 +160,7 @@ public sealed class Scenario
                 },
                 new Panel
                 {
-                    Name = "HomeUI",
+                    Name = "Buttons Panel",
                     VerticalAlignment = VerticalAlignment.Center,
                     Margin = new Thickness(300, 0, 0, 0),
                     Height = LayoutLength.Length(160),
@@ -254,4 +252,11 @@ public sealed class Scenario
         modify?.Invoke(button);
         return button;
     }
+}
+
+public enum ScenarioState
+{
+    Home,
+    Play,
+    Quit,
 }

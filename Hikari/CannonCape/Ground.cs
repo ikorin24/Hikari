@@ -4,7 +4,7 @@ using System;
 
 namespace CannonCape;
 
-public sealed class Ground : ISphereCollider
+public sealed class Ground : ISphereCollider, IDisposable
 {
     private readonly FrameObject _obj;
 
@@ -32,5 +32,10 @@ public sealed class Ground : ISphereCollider
     void ISphereCollider.OnColliderHit()
     {
         EnemyShotHit?.Invoke();
+    }
+
+    public void Dispose()
+    {
+        _obj.Terminate();
     }
 }

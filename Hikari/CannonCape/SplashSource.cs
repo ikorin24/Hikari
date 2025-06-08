@@ -4,7 +4,7 @@ using System;
 
 namespace CannonCape;
 
-public sealed class SplashSource
+public sealed class SplashSource : IDisposable
 {
     private readonly FrameObject _source;
 
@@ -36,6 +36,11 @@ public sealed class SplashSource
     public void NewSplash(Vector3 splashPos)
     {
         _ = new Splash(_source, splashPos);
+    }
+
+    public void Dispose()
+    {
+        _source.Terminate();
     }
 
     private sealed class Splash

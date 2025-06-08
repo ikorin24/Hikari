@@ -1,12 +1,13 @@
 ﻿using Cysharp.Threading.Tasks;
 using Hikari;
 using Hikari.Mathematics;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace CannonCape;
 
-public sealed class Cannon
+public sealed class Cannon : IDisposable
 {
     private readonly FrameObject _cannon;
     private readonly FrameObject _cylinder;
@@ -81,5 +82,12 @@ public sealed class Cannon
         }
         _cylinder.Rotation = rot;
         _currentPitch = Vector3.AngleBetween(-Vector3.UnitZ, rot * -Vector3.UnitZ);
+    }
+
+    public void Dispose()
+    {
+        _cannon.Terminate();
+        _cylinder.Terminate();
+        _shotSource.Dispose();
     }
 }

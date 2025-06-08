@@ -4,34 +4,48 @@ using Hikari.Mathematics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 namespace CannonCape;
 
 public sealed class MainPlayScene
 {
+    private readonly DisposableBag _disposables;
     private readonly Scenario _scenario;
     private readonly Cannon _cannon;
-    private readonly Ground _ground;
     private readonly BoatSource _boatSource;
     private readonly HashSet<Boat> _enemies;
     private Vector3 _cameraShakingByFire;
     private Vector3 _cameraShakingByHit;
     private bool _canFire;
+    private int _gamePlayerLife;
+
+    private const int GameTimeSec = 177;
+    private const int InitialLife = 4;
 
     private static readonly float _yawSpeed = 0.08f.ToRadian();
     private static readonly float _pitchSpeed = 0.08f.ToRadian();
 
-    private MainPlayScene(Scenario scenario, Cannon cannon, Ground ground, BoatSource boatSource, HashSet<Boat> enemies)
+    private bool IsGamePlayerDead => _gamePlayerLife == 0;
+
+    private MainPlayScene(Scenario scenario, Cannon cannon, Ground ground, BoatSource boatSource, ShotSource shotSource, HashSet<Boat> enemies)
     {
+        var disposables = new DisposableBag();
         _scenario = scenario;
         _cannon = cannon;
-        _ground = ground;
         _boatSource = boatSource;
         _enemies = enemies;
         _canFire = true;
+
+        disposables.Add(cannon);
+        disposables.Add(ground);
+        disposables.Add(boatSource);
+        disposables.Add(shotSource);
+        _disposables = disposables;
+        _gamePlayerLife = InitialLife;
     }
 
-    public static async UniTask Start(Scenario scenario)
+    public static async UniTask<ScenarioState> Run(Scenario scenario)
     {
         MainPlayScene scene;
         try {
@@ -40,7 +54,30 @@ public sealed class MainPlayScene
         finally {
             await scenario.FadeIn();
         }
-        await scene.Run();
+        try {
+            var success = await scene.RunMainGame();
+            if(success) {
+                // TODO:
+                Debug.WriteLine("MainGame Clear");
+            }
+            else {
+                // TODO:
+                Debug.WriteLine("MainGame Failed");
+            }
+            return ScenarioState.Home;
+        }
+        finally {
+            scene.EndScene();
+        }
+    }
+
+    private void EndScene()
+    {
+        _disposables.Dispose();
+        foreach(var enemy in _enemies) {
+            enemy.Dispose();
+        }
+        _enemies.Clear();
     }
 
     private void AdjustCamera()
@@ -60,7 +97,7 @@ public sealed class MainPlayScene
         var (cannon, boatSource) = await UniTask.WhenAll(Cannon.Load(shotSource), BoatSource.Load(shotSource));
         ground.Obj.Position = new Vector3(0, 5f, 0);
         cannon.Obj.Position = new Vector3(0, 5f, 0);
-        var scene = new MainPlayScene(scenario, cannon, ground, boatSource, enemies);
+        var scene = new MainPlayScene(scenario, cannon, ground, boatSource, shotSource, enemies);
         scene.AdjustCamera();
         for(int i = 0; i < 5; i++) {
             scene.SpawnEnemyBoat(false);
@@ -72,24 +109,61 @@ public sealed class MainPlayScene
         return scene;
     }
 
-    private async UniTask Run()
+    private async UniTask<bool> RunMainGame()
     {
-        using(var player = AudioPlayer.Play(Resources.Path("メインゲームBGM.wav"))) {
-            _cannon.Obj.Update.Subscribe(_ => Update());
+        using var player = AudioPlayer.Play(Resources.Path("メインゲームBGM.wav"));
+        using var control = App.Screen.Update.Subscribe(_ => ControlMainGame());
 
-            while(true) {
-                await App.Screen.Update.Delay(TimeSpan.FromSeconds(10));
-                SpawnEnemyBoat(true);
+        // メインゲームの終了条件は二つ
+        // 1. プレイヤーが既定の時間生き残る
+        // 2. プレイヤーのライフが0になる
+        var gameClear = false;
+        var cts = new CancellationTokenSource();
+
+        // プレイヤーのライフを毎フレーム監視して0になっていたらメインゲームを終了
+        App.Screen.Update.Subscribe(_ =>
+        {
+            if(IsGamePlayerDead) {
+                cts.Cancel();
             }
-
-            // TODO:
-            await UniTask.Never(default);
-        }
+        });
+        await UniTask.WhenAll(
+            UniTask.Create(async () =>
+            {
+                // 既定の時間後にゲームクリアフラグを立ててメインゲームを終了
+                try {
+                    await App.Screen.Update.Delay(TimeSpan.FromSeconds(GameTimeSec), cts.Token);
+                }
+                catch(OperationCanceledException) {
+                    return;
+                }
+                gameClear = true;
+                cts.Cancel();
+            }),
+            UniTask.Create(async () =>
+            {
+                // メインゲームが継続している間、一定時間ごとに敵をスポーンする
+                while(true) {
+                    try {
+                        await App.Screen.Update.Delay(TimeSpan.FromSeconds(10), cts.Token);
+                    }
+                    catch(OperationCanceledException) {
+                        return;
+                    }
+                    if(gameClear || IsGamePlayerDead) {
+                        return;
+                    }
+                    SpawnEnemyBoat(true);
+                }
+            }));
+        return gameClear;
     }
 
     private void OnEnemyShotHit()
     {
         AudioPlayer.Play(Resources.Path("プレイヤー被弾.wav"));
+        _gamePlayerLife = int.Max(_gamePlayerLife - 1, 0);
+        Debug.WriteLine($"プレイヤー被弾, (残りライフ: {_gamePlayerLife})");
         UniTask.Void(async () =>
         {
             const int FrameCount = 60;
@@ -142,7 +216,7 @@ public sealed class MainPlayScene
         _enemies.Add(enemy);
     }
 
-    private void Update()
+    private void ControlMainGame()
     {
         var cannon = _cannon;
         var input = App.Input;
