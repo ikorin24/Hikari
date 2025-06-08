@@ -139,42 +139,99 @@ public sealed class Scenario
         Panel homeUI = null!;
         homeUI = new Panel
         {
-            Name = "HomeUI",
             Background = Brush.Transparent,
-            Width = LayoutLength.Proportion(0.6f),
-            Height = LayoutLength.Length(360),
-            Flow = new Flow(FlowDirection.Column, FlowWrapMode.NoWrap),
             Children =
             [
-                HomeUIButton(b =>
+                new Label
                 {
-                    b.Name = "ゲーム開始";
-                    b.Text = "ゲーム開始";
-                    b.Background = Brush.Red;
-                    b.Clicked.Subscribe(_ =>
-                    {
-                        onStateChanged.Invoke(ScenarioState.Play);
-                        return;
-                    });
-                }),
-                HomeUIButton(b =>
+                    Name = "title",
+                    Text = "Cannon Cape",
+                    Color = Color4.White,
+                    Background = Brush.LinearGradient(0,
+                    [
+                        new(Color4.FromHexCode("#8006"), 0.04f),
+                        new(Color4.FromHexCode("#0000"), 0.4f),
+                    ]),
+                    FontSize = 120,
+                    Typeface = Typeface.FromFile(@"D:\private\data\taiho\font\NikumaruFont\07にくまるフォント.otf"),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Width = LayoutLength.Length(900),
+                    Height = LayoutLength.Length(150),
+                    BorderRadius = new CornerRadius(3),
+                    Margin = new Thickness(0, 0, 200, 0),
+                },
+                new Panel
                 {
-                    b.Text = "遊び方";
-                    b.Background = Brush.Green;
-                    b.Clicked.Subscribe(_ =>
-                    {
-                    });
-                }),
-                HomeUIButton(b =>
-                {
-                    b.Text = "ゲーム終了";
-                    b.Background = Brush.Blue;
-                    b.Clicked.Subscribe(_ =>
-                    {
-                        onStateChanged.Invoke(ScenarioState.Quit);
-                        App.Screen.RequestClose();
-                    });
-                }),
+                    Name = "HomeUI",
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(300, 0, 0, 0),
+                    Height = LayoutLength.Length(160),
+                    Background = Brush.Transparent,
+                    Flow = new Flow(FlowDirection.Column, FlowWrapMode.NoWrap),
+                    Children =
+                    [
+                        HomeUIButton(b =>
+                        {
+                            b.Name = "ゲーム開始";
+                            b.Text = "ゲーム開始";
+                            b.Background = Brush.LinearGradient(0,
+                            [
+                                new(Color4.FromHexCode("#FF606E"), 0.72f),
+                                new(Color4.FromHexCode("#FF9BA7"), 0.9f),
+                            ]);
+                            b.HoverProps = new()
+                            {
+                                Background = Brush.LinearGradient(0,
+                                [
+                                    new(Color4.FromHexCode("#FF606E"), 0.72f),
+                                    new(Color4.FromHexCode("#F45368"), 0.9f),
+                                ]),
+                                BorderColor = Brush.Solid(Color4.FromHexCode("#FBB")),
+                                Color = Color4.FromHexCode("#FFF3F3"),
+                            };
+                            b.ActiveProps = new()
+                            {
+                                Background = Brush.Solid(Color4.FromHexCode("#C16A86")),
+                                Color = Color4.FromHexCode("#F3EEEE"),
+                            };
+                            b.Clicked.Subscribe(_ =>
+                            {
+                                AudioPlayer.Play(Resources.Path("ゲーム開始.wav"));
+                                onStateChanged.Invoke(ScenarioState.Play);
+                                return;
+                            });
+                        }),
+                        HomeUIButton(b =>
+                        {
+                            b.Name = "終了";
+                            b.Text = "終了";
+                            b.Background = Brush.LinearGradient(0,
+                            [
+                                new(Color4.FromHexCode("#363BD1"), 0.72f),
+                                new(Color4.FromHexCode("#6164CE"), 0.9f),
+                            ]);
+                            b.HoverProps = new()
+                            {
+                                Background = Brush.LinearGradient(0,
+                                [
+                                    new(Color4.FromHexCode("#363BD1"), 0.72f),
+                                    new(Color4.FromHexCode("#4A4D9B"), 0.9f),
+                                ]),
+                                BorderColor = Brush.Solid(Color4.FromHexCode("#BBF")),
+                                Color = Color4.FromHexCode("#F3F3FF"),
+                            };
+                            b.ActiveProps = new()
+                            {
+                                Background = Brush.Solid(Color4.FromHexCode("#22269E")),
+                            };
+                            b.Clicked.Subscribe(_ =>
+                            {
+                                onStateChanged.Invoke(ScenarioState.Quit);
+                                App.Screen.RequestClose();
+                            });
+                        }),
+                    ],
+                }
             ],
         };
         return homeUI;
@@ -186,16 +243,13 @@ public sealed class Scenario
         {
             Typeface = Typeface.FromFile(Resources.Path("mplus-1p-regular.otf")),
             FontSize = 30,
-            Width = LayoutLength.Length(600),
-            Height = LayoutLength.Length(100),
+            Color = Color4.White,
+            Width = LayoutLength.Length(400),
+            Height = LayoutLength.Length(60),
             Margin = new Thickness(10),
-            BorderRadius = new CornerRadius(20f),
-            BorderWidth = new Thickness(2),
+            BorderRadius = new CornerRadius(30f),
+            BorderWidth = new Thickness(3),
             BorderColor = Brush.White,
-            Background = Brush.Red,
-            HoverProps = new()
-            {
-            },
         };
         modify?.Invoke(button);
         return button;

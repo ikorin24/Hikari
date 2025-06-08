@@ -10,6 +10,7 @@ public static class AudioPlayer
     {
         var reader = new AudioFileReader(path);
         var waveOut = new WaveOutEvent();
+        waveOut.Volume = 1;
         waveOut.Init(reader);
         var player = new SimplePlayer(waveOut);
         waveOut.PlaybackStopped += (_, _) =>
@@ -26,6 +27,7 @@ public static class AudioPlayer
     {
         var reader = new AudioFileReader(path);
         var waveOut = new WaveOutEvent();
+        waveOut.Volume = 1;
         waveOut.Init(reader);
         var tcs = new TaskCompletionSource();
         waveOut.PlaybackStopped += (a, b) =>

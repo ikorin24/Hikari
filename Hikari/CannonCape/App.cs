@@ -42,7 +42,7 @@ public static class App
 
     private static async UniTask OnInitialized(Screen screen)
     {
-        screen.Title = "キャノンケープ";
+        screen.Title = "Cannon Cape";
         _screen = screen;
         _input = new Input(screen);
         _pbrShader = PbrShader.Create(screen).DisposeOn(screen.Closed);
