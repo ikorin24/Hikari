@@ -34,7 +34,6 @@ public static class App
             Backend = backend,
             Width = 1920,
             Height = 1080,
-            //Style = WindowStyle.Fullscreen,
             Style = WindowStyle.Default,
             PresentMode = SurfacePresentMode.VsyncOn,
         };

@@ -60,7 +60,7 @@ public sealed class MainPlayScene
         }
         try {
             await scene.RunMainGame();
-            await FadeHelper.FadeOut(ui.UIOverlay);
+            await FadeHelper.FadeOut(ui.UIOverlay, 2f);
             return ScenarioState.Home;
         }
         finally {
@@ -298,12 +298,19 @@ public sealed class MainPlayScene
 
         _canFire = false;
         if(gameClear) {
+            foreach(var enemy in _enemies) {
+                enemy.Destroy(false);
+            }
+
             _ui.ResultLabel.Text = "Game Clear!!!";
+            player.Dispose();
+            await AudioPlayer.PlayAwaitable(Resources.Path("ゲームクリア.wav"));
+            await App.Screen.Update.Delay(TimeSpan.FromSeconds(3));
         }
         else {
             _ui.ResultLabel.Text = "Game Over";
+            await App.Screen.Update.Delay(TimeSpan.FromSeconds(5));
         }
-        await App.Screen.Update.Delay(TimeSpan.FromSeconds(5));
     }
 
     private void SetLifeUILabel()

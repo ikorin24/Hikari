@@ -112,13 +112,15 @@ public sealed class Boat : ISphereCollider, IDisposable
 
     void ISphereCollider.OnColliderHit()
     {
-        Destroy();
+        Destroy(true);
     }
 
-    private void Destroy()
+    public void Destroy(bool useSoundEffect)
     {
         OnDestroy?.Invoke(this);
-        AudioPlayer.Play(Resources.Path("敵艦被弾.wav"));
+        if(useSoundEffect) {
+            AudioPlayer.Play(Resources.Path("敵艦被弾.wav"));
+        }
 
         var elapsed = TimeSpan.Zero;
         var currentRot = _obj.Rotation;

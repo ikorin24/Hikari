@@ -6,11 +6,11 @@ namespace CannonCape;
 
 public static class FadeHelper
 {
-    private const float FadeSeconds = 0.6f;
+    private const float DefaultFadeSeconds = 0.8f;
 
-    public static async UniTask FadeOut(UIElement element)
+    public static async UniTask FadeOut(UIElement element, float fadeSeconds = DefaultFadeSeconds)
     {
-        var span = TimeSpan.FromSeconds(FadeSeconds);
+        var span = TimeSpan.FromSeconds(fadeSeconds);
         var start = App.CurrentTime;
         while(true) {
             var elapsed = App.CurrentTime - start;
@@ -24,9 +24,9 @@ public static class FadeHelper
         }
     }
 
-    public static async UniTask FadeIn(UIElement element)
+    public static async UniTask FadeIn(UIElement element, float fadeSeconds = DefaultFadeSeconds)
     {
-        var span = TimeSpan.FromSeconds(FadeSeconds);
+        var span = TimeSpan.FromSeconds(fadeSeconds);
         var start = App.CurrentTime;
         while(true) {
             var elapsed = App.CurrentTime - start;
