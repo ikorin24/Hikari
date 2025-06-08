@@ -2,7 +2,6 @@
 using Hikari;
 using Hikari.Mathematics;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace CannonCape;
@@ -20,6 +19,8 @@ public sealed class Cannon : IDisposable
     public FrameObject Obj => _cannon;
 
     public float CurrentPitch => _currentPitch;
+
+    public event Action<float>? PitchChanged;
 
     private Cannon(FrameObject obj, FrameObject cylinder, ShotSource shotSource)
     {
@@ -82,6 +83,7 @@ public sealed class Cannon : IDisposable
         }
         _cylinder.Rotation = rot;
         _currentPitch = Vector3.AngleBetween(-Vector3.UnitZ, rot * -Vector3.UnitZ);
+        PitchChanged?.Invoke(_currentPitch);
     }
 
     public void Dispose()

@@ -12,6 +12,7 @@ namespace CannonCape;
 public sealed class MainPlayScene
 {
     private readonly DisposableBag _disposables;
+    private readonly MainSceneUI _ui;
     private readonly Cannon _cannon;
     private readonly BoatSource _boatSource;
     private readonly HashSet<Boat> _enemies;
@@ -28,9 +29,10 @@ public sealed class MainPlayScene
 
     private bool IsGamePlayerDead => _gamePlayerLife == 0;
 
-    private MainPlayScene(Cannon cannon, Ground ground, BoatSource boatSource, ShotSource shotSource, HashSet<Boat> enemies)
+    private MainPlayScene(MainSceneUI ui, Cannon cannon, Ground ground, BoatSource boatSource, ShotSource shotSource, HashSet<Boat> enemies)
     {
         var disposables = new DisposableBag();
+        _ui = ui;
         _cannon = cannon;
         _boatSource = boatSource;
         _enemies = enemies;
@@ -46,17 +48,17 @@ public sealed class MainPlayScene
 
     public static async UniTask<ScenarioState> Run()
     {
-        var uiOverlay = CreateUI();
+        var ui = CreateUI();
         MainPlayScene scene;
         try {
-            scene = await LoadScene();
+            scene = await LoadScene(ui);
         }
         finally {
-            await FadeHelper.FadeIn(uiOverlay);
+            await FadeHelper.FadeIn(ui.UIOverlay);
         }
         try {
             await scene.RunMainGame();
-            await FadeHelper.FadeOut(uiOverlay);
+            await FadeHelper.FadeOut(ui.UIOverlay);
             return ScenarioState.Home;
         }
         finally {
@@ -82,9 +84,11 @@ public sealed class MainPlayScene
         App.Camera.LookAt(target, camPos);
     }
 
-    private static UIElement CreateUI()
+    private static MainSceneUI CreateUI()
     {
         UIElement uiOverlay;
+        Label lifeLabel;
+        Label pitchLabel;
         App.Screen.UITree.SetRoot(new Panel
         {
             Name = "root",
@@ -94,15 +98,45 @@ public sealed class MainPlayScene
                 new Panel
                 {
                     Name = "gameUIRoot",
-                    Background = Brush.Transparent,
+                    Background = Brush.LinearGradient(0,
+                    [
+                        new(Color4.FromHexCode("#000D"), 0.5f),
+                        new(Color4.FromHexCode("#0000"), 0.8f),
+                    ]),
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    Height = LayoutLength.Length(100),
+                    Flow = new Flow(FlowDirection.Row),
                     Children =
                     [
-                        //panel = new Panel
-                        //{
-                        //    Width = LayoutLength.Length(200),
-                        //    Height = LayoutLength.Length(200),
-                        //    Background = Brush.Gray,
-                        //},
+                        new Panel
+                        {
+                            Background = Brush.Transparent,
+                            Width = LayoutLength.Proportion(0.5f),
+                            Children =
+                            [
+                                lifeLabel = new Label
+                                {
+                                    Background = Brush.Transparent,
+                                    Color = Color4.White,
+                                    FontSize = 30,
+                                    Typeface = Typeface.FromFile(Resources.Path("07にくまるフォント.otf")),
+                                },
+                            ],
+                        },
+                        new Panel
+                        {
+                            Background = Brush.Transparent,
+                            Children =
+                            [
+                                pitchLabel = new Label
+                                {
+                                    Background = Brush.Transparent,
+                                    Color = Color4.White,
+                                    FontSize = 30,
+                                    Typeface = Typeface.FromFile(Resources.Path("07にくまるフォント.otf")),
+                                },
+                            ],
+                        },
                     ],
                 },
                 uiOverlay = new Panel
@@ -112,10 +146,15 @@ public sealed class MainPlayScene
                 },
             ],
         });
-        return uiOverlay;
+        return new MainSceneUI
+        {
+            PitchLabel = pitchLabel,
+            LifeLabel = lifeLabel,
+            UIOverlay = uiOverlay,
+        };
     }
 
-    private static async UniTask<MainPlayScene> LoadScene()
+    private static async UniTask<MainPlayScene> LoadScene(MainSceneUI ui)
     {
         var ground = await Ground.Load();
         var enemies = new HashSet<Boat>();
@@ -123,7 +162,13 @@ public sealed class MainPlayScene
         var (cannon, boatSource) = await UniTask.WhenAll(Cannon.Load(shotSource), BoatSource.Load(shotSource));
         ground.Obj.Position = new Vector3(0, 5f, 0);
         cannon.Obj.Position = new Vector3(0, 5f, 0);
-        var scene = new MainPlayScene(cannon, ground, boatSource, shotSource, enemies);
+        ui.PitchLabel.Text = $"角度: {cannon.CurrentPitch.ToDegree():F1}°";
+        cannon.PitchChanged += newPitch =>
+        {
+            ui.PitchLabel.Text = $"角度: {newPitch.ToDegree():F1}°";
+        };
+        var scene = new MainPlayScene(ui, cannon, ground, boatSource, shotSource, enemies);
+        scene.SetLifeUILabel();
         scene.AdjustCamera();
         for(int i = 0; i < 5; i++) {
             scene.SpawnEnemyBoat(true);
@@ -193,10 +238,16 @@ public sealed class MainPlayScene
         }
     }
 
+    private void SetLifeUILabel()
+    {
+        _ui.LifeLabel.Text = $"ライフ: {new string('♡', _gamePlayerLife)}";
+    }
+
     private void OnEnemyShotHit()
     {
         AudioPlayer.Play(Resources.Path("プレイヤー被弾.wav"));
         _gamePlayerLife = int.Max(_gamePlayerLife - 1, 0);
+        SetLifeUILabel();
         Debug.WriteLine($"プレイヤー被弾, (残りライフ: {_gamePlayerLife})");
         UniTask.Void(async () =>
         {
@@ -301,5 +352,12 @@ public sealed class MainPlayScene
         if(changed) {
             //Debug.WriteLine($"pitch: {cannon.CurrentPitch.ToDegree()}");
         }
+    }
+
+    private record MainSceneUI
+    {
+        public required Label LifeLabel { get; init; }
+        public required Label PitchLabel { get; init; }
+        public required UIElement UIOverlay { get; init; }
     }
 }
