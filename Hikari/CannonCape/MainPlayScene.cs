@@ -92,12 +92,42 @@ public sealed class MainPlayScene
         Label lifeLabel;
         Label pitchLabel;
         Label resultLabel;
+        Panel timeBar;
         App.Screen.UITree.SetRoot(new Panel
         {
             Name = "root",
             Background = Brush.Transparent,
             Children =
             [
+                new Panel
+                {
+                    Background = Brush.Transparent,
+                    Color = Color4.White,
+                    Height = LayoutLength.Length(40),
+                    VerticalAlignment = VerticalAlignment.Top,
+                    Flow = new Flow(FlowDirection.Row),
+                    Children =
+                    [
+                        new Label
+                        {
+                            Text = "残り時間 持ちこたえろ！",
+                            Width = LayoutLength.Proportion(0.3f),
+                            Color = Color4.FromHexCode("#FF7200"),
+                            Background = Brush.Transparent,
+                            FontSize = 25,
+                            Typeface = Typeface.FromFile(Resources.Path("07にくまるフォント.otf")),
+                        },
+                        timeBar = new Panel
+                        {
+                            Height = LayoutLength.Length(24),
+                            Width = LayoutLength.Proportion(0.6f),
+                            BorderRadius = new CornerRadius(12),
+                            BorderWidth = new Thickness(5),
+                            BorderColor = Brush.Solid(Color4.FromHexCode("#FF8A38")),
+                            Background = Brush.Solid(Color4.FromHexCode("#FFAB6B")),
+                        },
+                    ],
+                },
                 resultLabel = new Label
                 {
                     Background = Brush.Transparent,
@@ -180,6 +210,7 @@ public sealed class MainPlayScene
             ResultLabel = resultLabel,
             PitchLabel = pitchLabel,
             LifeLabel = lifeLabel,
+            TimeBar = timeBar,
             UIOverlay = uiOverlay,
         };
     }
@@ -213,7 +244,14 @@ public sealed class MainPlayScene
     private async UniTask RunMainGame()
     {
         using var player = AudioPlayer.Play(Resources.Path("メインゲームBGM.wav"));
-        using var control = App.Screen.Update.Subscribe(_ => ControlMainGame());
+        var sw = Stopwatch.StartNew();
+        using var control = App.Screen.Update.Subscribe(_ =>
+        {
+            var elapsedSec = (float)sw.Elapsed.TotalSeconds;
+            var remainingTimeRatio = ((float)GameTimeSec - elapsedSec) / (float)GameTimeSec;
+            _ui.SetRemainingTimeRatio(remainingTimeRatio);
+            ControlMainGame();
+        });
 
         // メインゲームの終了条件は二つ
         // 1. プレイヤーが既定の時間生き残る
@@ -389,6 +427,16 @@ public sealed class MainPlayScene
         public required Label ResultLabel { get; set; }
         public required Label LifeLabel { get; init; }
         public required Label PitchLabel { get; init; }
+        public required Panel TimeBar { get; init; }
         public required UIElement UIOverlay { get; init; }
+
+        public void SetRemainingTimeRatio(float ratio)
+        {
+            TimeBar.Background = Brush.LinearGradient(90.ToRadian(),
+            [
+                new(Color4.FromHexCode("#FFAB6B"), ratio),
+                new(Color4.FromHexCode("#555"), ratio),
+            ]);
+        }
     }
 }
