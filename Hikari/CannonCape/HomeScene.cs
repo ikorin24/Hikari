@@ -63,7 +63,7 @@ public static class HomeScene
                         new(Color4.FromHexCode("#0000"), 0.4f),
                     ]),
                     FontSize = 120,
-                    Typeface = Typeface.FromFile(@"D:\private\data\taiho\font\NikumaruFont\07にくまるフォント.otf"),
+                    Typeface = Typeface.FromFile(Resources.Path("07にくまるフォント.otf")),
                     VerticalAlignment = VerticalAlignment.Center,
                     Width = LayoutLength.Length(900),
                     Height = LayoutLength.Length(150),
