@@ -304,8 +304,8 @@ public sealed class MainPlayScene
 
             _ui.ResultLabel.Text = "Game Clear!!!";
             player.Dispose();
-            await AudioPlayer.PlayAwaitable(Resources.Path("ゲームクリア.wav"));
-            await App.Screen.Update.Delay(TimeSpan.FromSeconds(3));
+            AudioPlayer.Play(Resources.Path("ゲームクリア.wav"));
+            await App.Screen.Update.Delay(TimeSpan.FromSeconds(5));
         }
         else {
             _ui.ResultLabel.Text = "Game Over";
