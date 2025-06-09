@@ -34,6 +34,8 @@ internal class Program
         Engine.Run(screenConfig, OnInitialized);
     }
 
+    private static string ResPath(string name) => Path.Combine(AppContext.BaseDirectory, "resources", name);
+
     private static void SetLight(Screen screen, float angle)
     {
         var (sin, cos) = MathF.SinCos(angle);
@@ -63,7 +65,7 @@ internal class Program
         await UniTask.WhenAll(
             UniTask.Create(async () =>
             {
-                var (obj, disposables) = await GlbModelLoader.LoadGlbFileAsync(pbrShader, "resources/AntiqueCamera.glb", new FrameObjectInitArg
+                var (obj, disposables) = await GlbModelLoader.LoadGlbFileAsync(pbrShader, ResPath("AntiqueCamera.glb"), new FrameObjectInitArg
                 {
                     Position = new Vector3(0, 0, 0),
                     Scale = new Vector3(0.2f),
@@ -73,7 +75,7 @@ internal class Program
             }),
             UniTask.Create(async () =>
             {
-                var (obj, disposables) = await GlbModelLoader.LoadGlbFileAsync(pbrShader, "resources/Avocado.glb", new FrameObjectInitArg
+                var (obj, disposables) = await GlbModelLoader.LoadGlbFileAsync(pbrShader, ResPath("Avocado.glb"), new FrameObjectInitArg
                 {
                     Position = new Vector3(0, 0, -1.3f),
                     Scale = new Vector3(25f),
@@ -96,9 +98,9 @@ internal class Program
             UniTask.Run(() =>
             {
                 var disposables = new DisposableBag();
-                var albedo = LoadTexture(screen, "resources/ground_0036_color_1k.jpg", true).AddTo(disposables);
-                var mr = LoadRoughnessAOTexture(screen, "resources/ground_0036_roughness_1k.jpg", "resources/ground_0036_ao_1k.jpg").AddTo(disposables);
-                var normal = LoadTexture(screen, "resources/ground_0036_normal_opengl_1k.png", false).AddTo(disposables);
+                var albedo = LoadTexture(screen, ResPath("ground_0036_color_1k.jpg"), true).AddTo(disposables);
+                var mr = LoadRoughnessAOTexture(screen, ResPath("ground_0036_roughness_1k.jpg"), ResPath("ground_0036_ao_1k.jpg")).AddTo(disposables);
+                var normal = LoadTexture(screen, ResPath("ground_0036_normal_opengl_1k.png"), false).AddTo(disposables);
                 var material = PbrMaterial.Create(pbrShader, albedo, mr, normal).AddTo(disposables);
                 var mesh = PrimitiveShapes.Plane(screen, true).AddTo(disposables);
                 var plane = new FrameObject(mesh, material);
