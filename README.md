@@ -25,7 +25,7 @@ async/await による非同期処理やマルチスレッド環境での使用�
 
 ### Mac (arm64)
 
-Mac では、下記のコマンドの後、ビルドされた Rust のネイティブライブラリ (`corehikari/target/libcorehikari.dylib`) を、実行したい C# 側の実行バイナリ (例えば `SampleApp` など) の出力ディレクトリに手動でコピーしてください。
+Mac では、下記のコマンドの後、ビルドされた Rust のネイティブライブラリ (`corehikari/target/aarch64-apple-darwin/release/libcorehikari.dylib`) を、実行したい C# 側の実行バイナリ (例えば `SampleApp` など) の出力ディレクトリに手動でコピーしてください。
 
 ```
 $ cargo build --manifest-path ./corehikari/Cargo.toml --release --target aarch64-apple-darwin
