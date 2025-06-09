@@ -1,18 +1,44 @@
 # Hikari
 
-これは作者がゲームエンジンの勉強のために作った、実験的な自作ゲームエンジンです。 実用性を考慮していません。Pull Request や issue は受け付けていません。
+## 概要
 
-C# (.NET9) + Rust + WebGPU です。.NET9 がインストールされていれば、ビルドや実行に特にセットアップは必要ありません。
+C# (.NET9) + Rust + WebGPU で作った自作ゲームエンジンです。Pull Request や issue は受け付けていません。
 
-Rust で WebGPU を使用し、それを C# 側から呼び出しています。Rust のネイティブコードは WebGPU の API を呼び出すグルーコードのみで、ゲームエンジンの実装は C# 側にあります。
+Windows (x64) と Mac (arm64) で動作します。Rust の実装部分は WebGPU の API を呼び出すグルーコードのみで、ゲームエンジンの実装のほとんどは C# 側にあります。
 
-SampleApp.csproj を実行すればサンプルが動きます。Windows のみ。C#, Rust 側ともクロスプラットフォームに動作するように作成していますが、Windows 以外では試していません。(Windows 用以外のネイティブライブラリのビルドと配置はしていません)
+Forward Rendering, Deferred Rendering, Cascaded Shadow, PBR, UI フレームワークなどを実装。
 
-```
-> cd Hikari/SampleApp
-> dotnet run -c Release
-```
-
-Forward Rendering, Deferred Rendering, Cascaded Shadow, PBR など
+async/await による非同期処理やマルチスレッド環境での使用などモダンな C# に合った記述が可能で、ガベージによる GC への負荷を抑えたハイパフォーマンスでありながらも、C# らしい使い方が可能なゲームエンジンを目指しています。NativeAOT に対応しています。
 
 ![scene-image](./img/image.gif)
+
+## ビルド
+
+.NET9 と Rust のビルドツールが必要です。
+
+### Windows (x64)
+
+```
+> cargo build --manifest-path .\corehikari\Cargo.toml --release --target x86_64-pc-windows-msvc
+> dotnet build .\HikariEngine\HikariEngine.sln -c Release
+```
+
+### Mac (arm64)
+
+```
+> cargo build --manifest-path .\corehikari\Cargo.toml --release --target aarch64-apple-darwin
+> dotnet build .\HikariEngine\HikariEngine.sln -c Release
+```
+
+## サンプル
+
+### CannonCape
+
+このゲームエンジンを使用して作成したゲームです。(`HikariEngine/CannonCape.csproj`)
+
+音声再生に使用しているライブラリが Windows のみ対応しているため、Mac では音が出ません。
+ゲーム内の 3D モデルは自作、音声ファイルは権利フリーの物と[魔王魂](https://maou.audio/)の物を使用しています。
+
+### SampleApp
+
+簡単な3Dモデルが配置されたシーンです。(`HikariEngine/SampleApp.csproj`)

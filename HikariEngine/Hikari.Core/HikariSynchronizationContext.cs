@@ -16,22 +16,16 @@ internal sealed class HikariSynchronizationContext : SynchronizationContext
 
     public SyncContextReceiver Receiver => _syncContextReceiver;
 
-    /// <summary>Get <see cref="Thread"/> related with this <see cref="CustomSynchronizationContext"/>.</summary>
     private Thread? DestinationThread
         => _destinationThread.TryGetTarget(out var thread) ? thread : null;
     private readonly WeakReference<Thread> _destinationThread;
 
-    /// <summary>Create synchronization context of current thread.</summary>
-    /// <param name="receiver">Synchronization context receiver</param>
     private HikariSynchronizationContext(SyncContextReceiver receiver)
     {
         _destinationThread = new WeakReference<Thread>(Thread.CurrentThread);
         _syncContextReceiver = receiver;
     }
 
-    /// <summary>Create synchronization context of specified thread.</summary>
-    /// <param name="destinationThread">Target thread of context</param>
-    /// <param name="receiver">Synchronization context receiver</param>
     private HikariSynchronizationContext(Thread? destinationThread, SyncContextReceiver receiver)
     {
         _destinationThread = new WeakReference<Thread>(destinationThread!);     // It is legal that `destinationThread` is null.
@@ -43,8 +37,6 @@ internal sealed class HikariSynchronizationContext : SynchronizationContext
         _syncContextReceiver.Add(d, state);
     }
 
-    /// <summary>Create a copy of <see cref="SynchronizationContext"/></summary>
-    /// <returns>copied instance of <see cref="SynchronizationContext"/></returns>
     public override SynchronizationContext CreateCopy()
     {
         return new HikariSynchronizationContext(DestinationThread, _syncContextReceiver);
