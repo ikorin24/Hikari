@@ -19,3 +19,9 @@
 > Copyright (c) 2023 Cysharp, Inc.
 >
 > MIT License (https://github.com/Cysharp/Utf8StringInterpolation/blob/main/LICENSE.md)
+
+- [NAudio](https://github.com/naudio/NAudio)
+
+> Copyright 2020 Mark Heath
+>
+> MIT License (https://github.com/naudio/NAudio/blob/v2.2.1/license.txt)

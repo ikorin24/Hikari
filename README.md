@@ -39,6 +39,8 @@ async/await による非同期処理やマルチスレッド環境での使用�
 音声再生に使用しているライブラリが Windows のみ対応しているため、Mac では音が出ません。
 ゲーム内の 3D モデルは自作、音声ファイルは権利フリーの物と[魔王魂](https://maou.audio/)の物を使用しています。
 
+![cannon-cape](./img/cannon_cape.gif)
+
 ### SampleApp
 
 簡単な3Dモデルが配置されたシーンです。(`HikariEngine/SampleApp.csproj`)
