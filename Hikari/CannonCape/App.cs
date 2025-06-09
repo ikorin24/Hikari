@@ -1,8 +1,10 @@
 ﻿using Cysharp.Threading.Tasks;
 using Hikari;
+using Hikari.Imaging;
 using Hikari.Mathematics;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace CannonCape;
@@ -98,7 +100,11 @@ public static class App
         var screen = App.Screen;
         var albedo = Texture2D.Create1x1Rgba8UnormSrgb(screen, TextureUsages.TextureBinding, new ColorByte(45, 55, 110, 255)).DisposeOn(screen.Closed);
         var metallicRoughness = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(0, 127, 0, 0)).DisposeOn(screen.Closed);
-        var normal = Texture2D.Create1x1Rgba8Unorm(screen, TextureUsages.TextureBinding, new ColorByte(127, 127, 255, 255)).DisposeOn(screen.Closed);
+        Texture2D normal;
+        using(var file = File.OpenRead(Resources.Path("sea-normal.png"))) {
+            using var image = Image.FromStream(file, ImageType.Png);
+            normal = Texture2D.CreateWithAutoMipmap(screen, image, TextureFormat.Rgba8Unorm, TextureUsages.TextureBinding).DisposeOn(screen.Closed);
+        }
         var material = PbrMaterial.Create(App.PbrShader, albedo, metallicRoughness, normal).DisposeOn(screen.Closed);
         var mesh = PrimitiveShapes.Plane(screen, true).DisposeOn(screen.Closed);
         return new FrameObject(mesh, material)
