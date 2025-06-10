@@ -34,8 +34,8 @@ public static class App
         var screenConfig = new ScreenConfig
         {
             Backend = backend,
-            Width = 1920,
-            Height = 1080,
+            Width = (int)(1920 * 0.85),
+            Height = (int)(1080 * 0.85),
             Style = WindowStyle.Default,
             PresentMode = SurfacePresentMode.VsyncOn,
         };
