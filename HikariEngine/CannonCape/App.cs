@@ -33,6 +33,7 @@ public static class App
             GraphicsBackend.Vulkan;
         var screenConfig = new ScreenConfig
         {
+            Title = "Cannon Cape",
             Backend = backend,
             Width = (int)(1920 * 0.85),
             Height = (int)(1080 * 0.85),
@@ -44,8 +45,8 @@ public static class App
 
     private static async UniTask OnInitialized(Screen screen)
     {
-        screen.Title = "Cannon Cape";
         _screen = screen;
+        screen.RequestMaximizeWindow(true);
         _input = new Input(screen);
         _pbrShader = PbrShader.Create(screen).DisposeOn(screen.Closed);
         screen.RenderScheduler.SetDefaultRenderPass();

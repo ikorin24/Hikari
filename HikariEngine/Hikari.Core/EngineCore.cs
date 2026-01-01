@@ -171,6 +171,30 @@ internal unsafe static partial class EngineCore
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool WindowIsMaximized(this Rust.Ref<CH.Screen> screen)
+    {
+        return hikari_window_is_maximized(screen).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void WindowSetMaximized(this Rust.Ref<CH.Screen> screen, bool maximized)
+    {
+        hikari_window_set_maximized(screen, maximized).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool WindowIsMinimized(this Rust.Ref<CH.Screen> screen)
+    {
+        return hikari_window_is_minimized(screen).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void WindowSetMinimized(this Rust.Ref<CH.Screen> screen, bool minimized)
+    {
+        hikari_window_set_minimized(screen, minimized).Validate();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void ScreenResizeSurface(this Rust.Ref<CH.Screen> screen, u32 width, u32 height)
     {
         hikari_screen_resize_surface(screen, width, height).Validate();
@@ -575,8 +599,7 @@ internal unsafe static partial class EngineCore
     public static bool TextureFormatIsSrgb(
         this CH.TextureFormat format)
     {
-        byte isSrgb = hikari_texture_format_is_srgb(format).Validate();
-        return isSrgb != 0;
+        return hikari_texture_format_is_srgb(format).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

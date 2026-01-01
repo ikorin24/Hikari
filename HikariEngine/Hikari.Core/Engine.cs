@@ -78,7 +78,13 @@ public static class Engine
     {
         ArgumentNullException.ThrowIfNull(onScreenInit);
         CheckPlatformBackend(screenConfig.Backend);
-        if(Interlocked.CompareExchange(ref _onScreenInit, onScreenInit, null) != null) {
+        var title = screenConfig.Title;
+        var init = new Action<Screen>(screen =>
+        {
+            screen.Title = title;
+            onScreenInit(screen);
+        });
+        if(Interlocked.CompareExchange(ref _onScreenInit, init, null) != null) {
             throw new InvalidOperationException("The engine is already running.");
         }
         if(screenConfig.UseSynchronizationContext) {

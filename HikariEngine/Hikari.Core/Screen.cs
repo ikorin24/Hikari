@@ -28,6 +28,7 @@ public sealed class Screen
     private readonly Timing _lateUpdate;
     private readonly Timing _prepareForRender;
     private readonly Timing _destroyObjectInternal;
+    private readonly Timing _handlingWindowInternal;
     private readonly SyncContextReceiver? _syncContextreceiver;
     private GraphicsBackend _backend;
     private bool _initialized;
@@ -154,6 +155,10 @@ public sealed class Screen
         }
     }
 
+    public bool IsWindowMinimized => _native.Unwrap().AsRef().WindowIsMinimized();
+
+    public bool IsWindowMaximized => _native.Unwrap().AsRef().WindowIsMaximized();
+
     public uint MonitorCount => _native.Unwrap().AsRef().MonitorCount().ToUInt32();
 
     public MonitorId? CurrentMonitor => _native.Unwrap().AsRef().CurrentMonitor();
@@ -179,6 +184,7 @@ public sealed class Screen
         _lateUpdate = new Timing(this);
         _prepareForRender = new Timing(this);
         _destroyObjectInternal = new Timing(this);
+        _handlingWindowInternal = new Timing(this);
         _mouse = new Mouse(this);
         _surface = new Surface(this);
         _keyboard = new Keyboard(this);
@@ -191,6 +197,22 @@ public sealed class Screen
         {
             Size = Vector2u.Zero,
         }, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
+    }
+
+    public void RequestMinimizeWindow(bool value)
+    {
+        _handlingWindowInternal.Post(() =>
+        {
+            _native.Unwrap().AsRef().WindowSetMinimized(value);
+        });
+    }
+
+    public void RequestMaximizeWindow(bool value)
+    {
+        _handlingWindowInternal.Post(() =>
+        {
+            _native.Unwrap().AsRef().WindowSetMaximized(value);
+        });
     }
 
     public void RequestClose()
@@ -363,6 +385,7 @@ public sealed class Screen
         // ----------------------------
         // object dead
         _destroyObjectInternal.DoQueuedEvents();
+        _handlingWindowInternal.DoQueuedEvents();
 
         _keyboard.PrepareNextFrame();
         _mouse.PrepareNextFrame();
@@ -479,6 +502,7 @@ public readonly record struct ScreenConfig
     public required u32 Height { get; init; }
     public required GraphicsBackend Backend { get; init; }
     public required SurfacePresentMode PresentMode { get; init; }
+    public required string Title { get; init; }
     public bool UseSynchronizationContext { get; init; } = true;
 
     public ScreenConfig()

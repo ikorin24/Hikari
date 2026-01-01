@@ -1,9 +1,9 @@
 ﻿#nullable enable
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using Hikari.NativeBind;
-using bool_u8 = byte;
 
 [assembly: DisableRuntimeMarshalling]
 
@@ -26,6 +26,25 @@ static unsafe partial class EngineCore
         Rust.Ref<CH.Screen> screen,
         u32 width,
         u32 height);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    private static partial ApiValueResult<bool> hikari_window_is_maximized(
+        Rust.Ref<CH.Screen> screen);
+
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    private static partial ApiResult hikari_window_set_maximized(
+        Rust.Ref<CH.Screen> screen,
+        bool_u8 maximized);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    private static partial ApiValueResult<bool> hikari_window_is_minimized(
+        Rust.Ref<CH.Screen> screen);
+
+    [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    private static partial ApiResult hikari_window_set_minimized(
+        Rust.Ref<CH.Screen> screen,
+        bool_u8 minimized);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial ApiResult hikari_screen_request_redraw(
@@ -369,3 +388,32 @@ static unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial void hikari_take_tls_last_error(ref u8 buf);
 }
+
+#pragma warning disable IDE1006 // naming rule
+internal readonly struct bool_u8 : IEquatable<bool_u8>
+{
+    private readonly byte _inner;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool_u8(bool value) => _inner = Unsafe.BitCast<bool, byte>(value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool ToBool() => Unsafe.BitCast<byte, bool>(_inner);
+
+    public override bool Equals(object? obj) => obj is bool_u8 u && Equals(u);
+
+    public bool Equals(bool_u8 other) => _inner == other._inner;
+
+    public override int GetHashCode() => HashCode.Combine(_inner);
+
+    public static bool operator ==(bool_u8 left, bool_u8 right) => left.Equals(right);
+
+    public static bool operator !=(bool_u8 left, bool_u8 right) => !(left == right);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator bool_u8(bool value) => new(value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator bool(bool_u8 value) => value.ToBool();
+}
+#pragma warning restore IDE1006 // namiing rule

@@ -475,3 +475,12 @@ impl<T: Default> ApiValueResult<T> {
         }
     }
 }
+
+impl<T: Default, E> From<Result<T, E>> for ApiValueResult<T>
+where
+    E: std::fmt::Display,
+{
+    fn from(result: Result<T, E>) -> Self {
+        Self::ok_or_set_error(result)
+    }
+}

@@ -49,6 +49,51 @@ extern "cdecl" fn hikari_screen_resize_surface(
 }
 
 /// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn hikari_window_is_maximized(screen: &Screen) -> ApiValueResult<bool> {
+    let is_maximized = screen.window.is_maximized();
+    ApiValueResult::ok(is_maximized)
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn hikari_window_set_maximized(screen: &Screen, maximized: bool) -> ApiResult {
+    screen.window.set_maximized(maximized);
+    ApiResult::ok()
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn hikari_window_is_minimized(screen: &Screen) -> ApiValueResult<bool> {
+    // [NOTE]
+    // Windows and macOS always return `Some(true)` or `Some(false)`
+    screen
+        .window
+        .is_minimized()
+        .ok_or("Failed to get minimized state")
+        .into()
+}
+
+/// # Thread Safety
+/// ## OK
+/// - called from any thread
+/// - called from multiple threads simultaneously with same args
+#[no_mangle]
+extern "cdecl" fn hikari_window_set_minimized(screen: &Screen, minimized: bool) -> ApiResult {
+    screen.window.set_minimized(minimized);
+    ApiResult::ok()
+}
+
+/// # Thread Safety
 /// Only from main thread. (iOS requires that.)
 /// ## NG
 /// - called from any thread
