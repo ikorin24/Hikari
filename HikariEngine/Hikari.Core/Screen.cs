@@ -221,11 +221,7 @@ public sealed class Screen
             Close(this);
         }
         else {
-            _update.Post(static x =>
-            {
-                var self = SafeCast.NotNullAs<Screen>(x);
-                Close(self);
-            }, this);
+            _update.Post(static self => Close(self), this);
         }
 
         static void Close(Screen self)

@@ -193,9 +193,8 @@ public sealed class FrameObject : ITreeModel<FrameObject>
 
     private void Init()
     {
-        _screen.CreateObjectInternal.Post(a =>
+        _screen.CreateObjectInternal.Post(self =>
         {
-            var self = SafeCast.NotNullAs<FrameObject>(a);
             self._screen.Store.Add(self);
             if(self._renderer is Renderer r) {
                 self._screen.RenderScheduler.Add(r);
@@ -312,11 +311,7 @@ public sealed class FrameObject : ITreeModel<FrameObject>
             Terminate(this);
         }
         else {
-            Screen.Update.Post(static x =>
-            {
-                var self = SafeCast.NotNullAs<FrameObject>(x);
-                Terminate(self);
-            }, this);
+            Screen.Update.Post(static self => Terminate(self), this);
         }
         return;
 
@@ -331,9 +326,8 @@ public sealed class FrameObject : ITreeModel<FrameObject>
                 self._state = LifeState.Terminating;
                 self.OnTerminated();
 
-                screen.DestroyObjectInternal.Post(static a =>
+                screen.DestroyObjectInternal.Post(static self =>
                 {
-                    var self = SafeCast.NotNullAs<FrameObject>(a);
                     var screen = self.Screen;
                     screen.Store.Remove(self);
                     var renderer = self.Renderer;
