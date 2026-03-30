@@ -7,167 +7,21 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using Hikari.NativeBind;
 using System.Text;
+using System.Collections.Generic;
 
 namespace Hikari;
 
 internal unsafe static partial class EngineCore
 {
-    private static EngineCoreConfig _config;
-    private static int _isStarted = 0;
-
-    public static bool IsStarted => _isStarted == 1;
-
-    public static void EngineStart(in EngineCoreConfig config, in ScreenConfig screenConfig)
+    public static void EngineStart(void* state, CH.EngineCoreConfig* engineConfig, CH.ScreenConfig* screenConfig)
     {
-        if(Interlocked.CompareExchange(ref _isStarted, 1, 0) == 1) {
-            throw new InvalidOperationException("The engine is already running.");
-        }
-        if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-            if(Thread.CurrentThread.GetApartmentState() != ApartmentState.STA) {
-                throw new InvalidOperationException("The thread should be STA. (for C#, mark main method as [STAThread] attribute.)");
-            }
-        }
-
-        _config = config;
-        var engineConfigNative = new CH.EngineCoreConfig
-        {
-            on_screen_init = new(&OnScreenInit),
-            on_unhandled_error = new(&OnUnhandledError),
-            event_cleared = new(&EventCleared),
-            event_redraw_requested = new(&EventRedrawRequested),
-            event_resized = new(&EventResized),
-            event_keyboard = new(&EventKeyboard),
-            event_char_received = new(&EventCharReceived),
-            event_mouse_button = new(&EventMouseButton),
-            event_ime = new(&EventIme),
-            event_wheel = new(&EventWheel),
-            event_cursor_moved = new(&EventCursorMoved),
-            event_cursor_entered_left = new(&EventCursorEnteredLeft),
-            event_closing = new(&EventClosing),
-            event_closed = new(&EventClosed),
-            debug_println = new(&DebugPrintln),
-        };
-
-        var screenConfigNative = screenConfig.ToCoreType();
-
-        hikari_engine_start(&engineConfigNative, &screenConfigNative).Validate();
-        return;
-
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static CH.ScreenId OnScreenInit(
-            void* screen_,  // Rust.Box<CH.Screen> screen
-            CH.ScreenInfo* info
-            )
-        {
-            // UnmanagedCallersOnly methods cannot have generic type args.
-            Rust.Box<CH.Screen> screen = *(Rust.Box<CH.Screen>*)(&screen_);
-
-            return _config.OnStart(screen, *info);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void OnUnhandledError(byte* message, nuint len)
-        {
-            try {
-                var str = Encoding.UTF8.GetString(message, (int)len);
-                Console.Error.WriteLine(str);
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine(str);
-                System.Diagnostics.Debugger.Break();
-                Environment.Exit(-1);
-#endif
-            }
-            catch {
-            }
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void EventCleared(CH.ScreenId id)
-        {
-            _config.OnCleared(id);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static bool EventRedrawRequested(CH.ScreenId id)
-        {
-            return _config.OnRedrawRequested(id);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void EventResized(CH.ScreenId id, u32 width, u32 height)
-        {
-            _config.OnResized(id, width, height);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void EventKeyboard(CH.ScreenId id, CH.KeyCode key, bool pressed)
-        {
-            _config.OnKeyboardInput(id, key, pressed);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void EventCharReceived(CH.ScreenId id, Rune input)
-        {
-            _config.OnCharReceived(id, input);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void EventMouseButton(CH.ScreenId id, CH.MouseButton button, bool pressed)
-        {
-            _config.OnMouseButton(id, button, pressed);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void EventIme(CH.ScreenId id, CH.ImeInputData* input)
-        {
-            _config.OnImeInput(id, in *input);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void EventWheel(CH.ScreenId id, f32 x_delta, f32 y_delta)
-        {
-            _config.OnWheel(id, x_delta, y_delta);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void EventCursorMoved(CH.ScreenId id, f32 x, f32 y)
-        {
-            _config.OnCursorMoved(id, x, y);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void EventCursorEnteredLeft(CH.ScreenId id, bool entered)
-        {
-            _config.OnCursorEnteredLeft(id, entered);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void EventClosing(CH.ScreenId id, bool* mut_cancel)
-        {
-            ref bool cancel = ref *mut_cancel;
-            _config.OnClosing(id, ref cancel);
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static NativePointer EventClosed(CH.ScreenId id)
-        {
-            return _config.OnClosed(id).AsPtr();
-        }
-
-        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-        static void DebugPrintln(u8* message, usize len)
-        {
-            var length = (int)usize.Min(len, int.MaxValue);
-            var str = Encoding.UTF8.GetString(message, length);
-            Debug.WriteLine(str);
-        }
+        hikari_engine_start(state, engineConfig, screenConfig).Validate();
     }
 
-    public static void CreateScreen(in ScreenConfig config)
+    public static void CreateScreen(this Rust.Ref<CH.EngineProxy> engineProxy, in ScreenConfig config)
     {
         var screenConfig = config.ToCoreType();
-        hikari_create_screen(&screenConfig).Validate();
+        hikari_create_screen(engineProxy, &screenConfig).Validate();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -828,7 +682,7 @@ internal unsafe static partial class EngineCore
 
 internal readonly struct EngineCoreConfig
 {
-    public required Func<Rust.Box<CH.Screen>, CH.ScreenInfo, CH.ScreenId> OnStart { get; init; }
+    public required Func<Rust.Box<CH.Screen>, CH.ScreenInfo, CH.ScreenId> OnScreenInit { get; init; }
     public required Func<CH.ScreenId, bool> OnRedrawRequested { get; init; }
     public required Action<CH.ScreenId> OnCleared { get; init; }
 

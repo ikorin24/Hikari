@@ -30,8 +30,7 @@ public sealed class Screen
     private readonly Timing _destroyObjectInternal;
     private readonly Timing _handlingWindowInternal;
     private readonly SyncContextReceiver? _syncContextreceiver;
-    private GraphicsBackend _backend;
-    private bool _initialized;
+    private readonly GraphicsBackend _backend;
     private string _title = "";
     private readonly Mouse _mouse;
     private Own<RenderTextureProvider> _depthStencil;
@@ -70,8 +69,6 @@ public sealed class Screen
     public Event<ScreenClosingState> Closing => _closing.Event;
     public Event<Screen> Closed => _closed.Event;
     public Event<(Screen Screen, Vector2u Size)> Resized => _resized.Event;
-
-    internal CH.ScreenId ScreenId => new CH.ScreenId(_native.Unwrap());
     public ThreadId MainThread => _mainThread;
 
     internal BufferSlice InfoBuffer => _info.AsValue().Slice();
@@ -97,14 +94,7 @@ public sealed class Screen
 
     public Surface Surface => _surface;
 
-    public GraphicsBackend Backend
-    {
-        get
-        {
-            ThrowIfNotInit();
-            return _backend;
-        }
-    }
+    public GraphicsBackend Backend => _backend;
 
     public Vector2u ClientSize
     {
@@ -135,8 +125,6 @@ public sealed class Screen
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            ThrowIfNotInit();
-
             if(value.Length != 0) {
                 var utf8 = Encoding.UTF8;
 
@@ -168,7 +156,7 @@ public sealed class Screen
 
     public UtilResource UtilResource => _utilResource;
 
-    internal Screen(Rust.Box<CH.Screen> screen, ThreadId mainThread, Action<Screen>? onPrepare, SyncContextReceiver? syncContextreceiver)
+    internal Screen(Rust.Box<CH.Screen> screen, ThreadId mainThread, Action<Screen>? onPrepare, SyncContextReceiver? syncContextreceiver, in CH.ScreenInfo info)
     {
         _native = screen;
         _mainThread = mainThread;
@@ -197,6 +185,16 @@ public sealed class Screen
         {
             Size = Vector2u.Zero,
         }, BufferUsages.Uniform | BufferUsages.Storage | BufferUsages.CopyDst);
+        _backend = info.backend.MapOrThrow();
+        var size = ClientSize;
+        _depthStencil = RenderTextureProvider.Create(this, new()
+        {
+            Size = size,
+            MipLevelCount = 1,
+            SampleCount = 1,
+            Format = TextureFormat.Depth32Float,
+            Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding | TextureUsages.CopySrc,
+        });
     }
 
     public void RequestMinimizeWindow(bool value)
@@ -262,22 +260,6 @@ public sealed class Screen
             monitors[i] = new MonitorId(buf[i]);
         }
         return monitors;
-    }
-
-    internal void OnInitialize(in CH.ScreenInfo info)
-    {
-        _backend = info.backend.MapOrThrow();
-
-        var size = ClientSize;
-        _depthStencil = RenderTextureProvider.Create(this, new()
-        {
-            Size = size,
-            MipLevelCount = 1,
-            SampleCount = 1,
-            Format = TextureFormat.Depth32Float,
-            Usage = TextureUsages.RenderAttachment | TextureUsages.TextureBinding | TextureUsages.CopySrc,
-        });
-        _initialized = true;
     }
 
     internal void OnCleared()
@@ -452,15 +434,6 @@ public sealed class Screen
     internal Rust.Ref<CH.Screen> AsRefChecked()
     {
         return _native.Unwrap().AsRef();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void ThrowIfNotInit()
-    {
-        if(_initialized == false) {
-            Throw();
-            static void Throw() => throw new InvalidOperationException("not initialized");
-        }
     }
 }
 

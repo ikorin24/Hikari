@@ -154,7 +154,7 @@ internal static class Rust
     /// <summary>`Box&lt;T&gt;` in Rust</summary>
     /// <typeparam name="T">native type in Box</typeparam>
     [DebuggerDisplay("{DebugDisplay,nq}")]
-    internal readonly struct Box<T> where T : INativeTypeNonReprC
+    internal readonly struct Box<T> : IEquatable<Box<T>> where T : INativeTypeNonReprC
     {
         private readonly NativePointer _p;
 
@@ -213,6 +213,12 @@ internal static class Rust
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [DebuggerHidden]
         public void ThrowIfInvalid() => AsRef().ThrowIfInvalid();
+
+        public override bool Equals(object? obj) => obj is Box<T> box && Equals(box);
+        public bool Equals(Box<T> other) => _p.Equals(other._p);
+        public override int GetHashCode() => HashCode.Combine(_p);
+        public static bool operator ==(Box<T> left, Box<T> right) => left.Equals(right);
+        public static bool operator !=(Box<T> left, Box<T> right) => !(left == right);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator MutRef<T>(Box<T> x) => x.AsMut();

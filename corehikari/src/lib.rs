@@ -3,6 +3,7 @@ mod ffi;
 mod screen;
 mod window_list;
 
+use crate::engine::{EngineId, EngineProxy};
 use crate::screen::{Screen, ScreenId};
 use corehikari_macros::tagged_ref_union;
 use smallvec::SmallVec;
@@ -16,6 +17,8 @@ use winit::window;
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct EngineCoreConfig {
+    pub on_engine_init: EngineInitFn,
+    pub on_engine_closed: EngineClosedFn,
     pub on_screen_init: ScreenInitFn,
     pub on_unhandled_error: EngineUnhandledErrorFn,
     pub event_cleared: ClearedEventFn,
@@ -2324,21 +2327,33 @@ static_assertions::const_assert_eq!(wgpu::PUSH_CONSTANT_ALIGNMENT, 4);
 static_assertions::const_assert_eq!(wgpu::QUERY_SET_MAX_QUERIES, 4096);
 static_assertions::const_assert_eq!(wgpu::QUERY_SIZE, 8);
 
+pub(crate) type EngineInitFn =
+    extern "C" fn(state: *const std::ffi::c_void, proxy: Box<EngineProxy>) -> EngineId;
+pub(crate) type EngineClosedFn = extern "C" fn(engine_id: EngineId) -> Option<Box<EngineProxy>>;
 pub(crate) type ScreenInitFn =
-    extern "C" fn(screen: Box<Screen>, screen_info: &ScreenInfo) -> ScreenId;
+    extern "C" fn(engine_id: EngineId, screen: Box<Screen>, screen_info: &ScreenInfo) -> ScreenId;
 pub(crate) type EngineUnhandledErrorFn = extern "C" fn(message: *const u8, len: usize);
-pub(crate) type ClearedEventFn = extern "C" fn(screen_id: ScreenId);
-pub(crate) type RedrawRequestedEventFn = extern "C" fn(screen_id: ScreenId) -> bool;
-pub(crate) type ResizedEventFn = extern "C" fn(screen_id: ScreenId, width: u32, height: u32);
-pub(crate) type KeyboardEventFn = extern "C" fn(screen_id: ScreenId, key: KeyCode, pressed: bool);
-
-pub(crate) type CharReceivedEventFn = extern "C" fn(screen_id: ScreenId, input: u32);
+pub(crate) type ClearedEventFn = extern "C" fn(engine_id: EngineId, screen_id: ScreenId);
+pub(crate) type RedrawRequestedEventFn =
+    extern "C" fn(engine_id: EngineId, screen_id: ScreenId) -> bool;
+pub(crate) type ResizedEventFn =
+    extern "C" fn(engine_id: EngineId, screen_id: ScreenId, width: u32, height: u32);
+pub(crate) type KeyboardEventFn =
+    extern "C" fn(engine_id: EngineId, screen_id: ScreenId, key: KeyCode, pressed: bool);
+pub(crate) type CharReceivedEventFn =
+    extern "C" fn(engine_id: EngineId, screen_id: ScreenId, input: u32);
 pub(crate) type MouseButtonEventFn =
-    extern "C" fn(screen_id: ScreenId, button: MouseButton, pressed: bool);
-pub(crate) type ImeInputEventFn = extern "C" fn(screen_id: ScreenId, input: &ImeInputData);
-pub(crate) type MouseWheelEventFn = extern "C" fn(screen_id: ScreenId, x_delta: f32, y_delta: f32);
-pub(crate) type CursorMovedEventFn = extern "C" fn(screen_id: ScreenId, x: f32, y: f32);
-pub(crate) type CursorEnteredLeftEventFn = extern "C" fn(screen_id: ScreenId, entered: bool);
-pub(crate) type ClosingEventFn = extern "C" fn(screen_id: ScreenId, cancel: &mut bool);
-pub(crate) type ClosedEventFn = extern "C" fn(screen_id: ScreenId) -> Option<Box<Screen>>;
-pub(crate) type DebugPrintlnFn = extern "C" fn(message: *const u8, len: usize);
+    extern "C" fn(engine_id: EngineId, screen_id: ScreenId, button: MouseButton, pressed: bool);
+pub(crate) type ImeInputEventFn =
+    extern "C" fn(engine_id: EngineId, screen_id: ScreenId, input: &ImeInputData);
+pub(crate) type MouseWheelEventFn =
+    extern "C" fn(engine_id: EngineId, screen_id: ScreenId, x_delta: f32, y_delta: f32);
+pub(crate) type CursorMovedEventFn =
+    extern "C" fn(engine_id: EngineId, screen_id: ScreenId, x: f32, y: f32);
+pub(crate) type CursorEnteredLeftEventFn =
+    extern "C" fn(engine_id: EngineId, screen_id: ScreenId, entered: bool);
+pub(crate) type ClosingEventFn =
+    extern "C" fn(engine_id: EngineId, screen_id: ScreenId, cancel: &mut bool);
+pub(crate) type ClosedEventFn =
+    extern "C" fn(engine_id: EngineId, screen_id: ScreenId) -> Option<Box<Screen>>;
+pub(crate) type DebugPrintlnFn = extern "C" fn(engine_id: EngineId, message: *const u8, len: usize);

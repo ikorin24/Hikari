@@ -1,8 +1,8 @@
 ﻿#nullable enable
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Hikari.NativeBind;
@@ -17,6 +17,10 @@ namespace Hikari.NativeBind;
 internal static class CH
 {
     internal sealed class Screen : INativeTypeNonReprC { private Screen() { } }
+
+    internal sealed class EngineProxy : INativeTypeNonReprC { private EngineProxy() { } }
+
+    internal readonly record struct EngineId(usize Value);
 
     [StructLayout(LayoutKind.Sequential)]
     internal readonly struct Opt<T> where T : unmanaged
@@ -314,6 +318,8 @@ internal static class CH
 
     internal unsafe struct EngineCoreConfig
     {
+        public required EngineInitFn on_engine_init;
+        public required EngineClosedFn on_engine_closed;
         public required ScreenInitFn on_screen_init;
         public required EngineUnhandledErrorFn on_unhandled_error;
         public required ClearedEventFn event_cleared;
@@ -363,14 +369,25 @@ internal static class CH
         public readonly bool is_named_buton;
     }
 
+    internal unsafe readonly struct EngineInitFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<void*, Rust.Box<EngineProxy>, EngineId> _func;
+
+        public EngineInitFn(delegate* unmanaged[Cdecl]<void*, Rust.Box<EngineProxy>, EngineId> f) => _func = f;
+    }
+
+    internal unsafe readonly struct EngineClosedFn
+    {
+        private readonly delegate* unmanaged[Cdecl]<EngineId, Rust.OptionBox<EngineProxy>> _func;
+
+        public EngineClosedFn(delegate* unmanaged[Cdecl]<EngineId, Rust.OptionBox<EngineProxy>> f) => _func = f;
+    }
+
     internal unsafe readonly struct ScreenInitFn
     {
-        private readonly delegate* unmanaged[Cdecl]<Rust.Box<Screen>, ScreenInfo*, ScreenId> _func;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, Rust.Box<Screen>, ScreenInfo*, ScreenId> _func;
 
-        public ScreenInitFn(delegate* unmanaged[Cdecl]<void*, ScreenInfo*, ScreenId> f)
-        {
-            _func = (delegate* unmanaged[Cdecl]<Rust.Box<Screen>, ScreenInfo*, ScreenId>)f;
-        }
+        public ScreenInitFn(delegate* unmanaged[Cdecl]<EngineId, Rust.Box<Screen>, ScreenInfo*, ScreenId> f) => _func = f;
     }
 
     internal unsafe readonly struct EngineUnhandledErrorFn
@@ -382,86 +399,83 @@ internal static class CH
 
     internal unsafe readonly struct ClearedEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, void> _func;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, void> _func;
 
-        public ClearedEventFn(delegate* unmanaged[Cdecl]<ScreenId, void> f) => _func = f;
+        public ClearedEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, void> f) => _func = f;
     }
 
     internal unsafe readonly struct RedrawRequestedEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, bool> _func;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, bool> _func;
 
-        public RedrawRequestedEventFn(delegate* unmanaged[Cdecl]<ScreenId, bool> f) => _func = f;
+        public RedrawRequestedEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, bool> f) => _func = f;
     }
 
     internal unsafe readonly struct ResizedEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, u32, u32, void> _func;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, u32, u32, void> _func;
 
-        public ResizedEventFn(delegate* unmanaged[Cdecl]<ScreenId, u32, u32, void> f) => _func = f;
+        public ResizedEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, u32, u32, void> f) => _func = f;
     }
 
     internal unsafe readonly struct KeyboardEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, CH.KeyCode, bool, void> _func;
-        public KeyboardEventFn(delegate* unmanaged[Cdecl]<ScreenId, CH.KeyCode, bool, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, CH.KeyCode, bool, void> _func;
+        public KeyboardEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, CH.KeyCode, bool, void> f) => _func = f;
     }
 
     internal unsafe readonly struct CharReceivedEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, Rune, void> _func;
-        public CharReceivedEventFn(delegate* unmanaged[Cdecl]<ScreenId, Rune, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, Rune, void> _func;
+        public CharReceivedEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, Rune, void> f) => _func = f;
     }
 
     internal unsafe readonly struct MouseButtonEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, MouseButton, bool, void> _func;
-        public MouseButtonEventFn(delegate* unmanaged[Cdecl]<ScreenId, MouseButton, bool, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, MouseButton, bool, void> _func;
+        public MouseButtonEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, MouseButton, bool, void> f) => _func = f;
     }
 
     internal unsafe readonly struct ImeInputEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, ImeInputData*, void> _func;
-        public ImeInputEventFn(delegate* unmanaged[Cdecl]<ScreenId, ImeInputData*, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, ImeInputData*, void> _func;
+        public ImeInputEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, ImeInputData*, void> f) => _func = f;
     }
 
     internal unsafe readonly struct MouseWheelEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, f32, f32, void> _func;
-        public MouseWheelEventFn(delegate* unmanaged[Cdecl]<ScreenId, f32, f32, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, f32, f32, void> _func;
+        public MouseWheelEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, f32, f32, void> f) => _func = f;
     }
 
     internal unsafe readonly struct CursorMovedEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, f32, f32, void> _func;
-        public CursorMovedEventFn(delegate* unmanaged[Cdecl]<ScreenId, f32, f32, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, f32, f32, void> _func;
+        public CursorMovedEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, f32, f32, void> f) => _func = f;
     }
 
     internal unsafe readonly struct CursorEnteredLeftEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, bool, void> _func;
-        public CursorEnteredLeftEventFn(delegate* unmanaged[Cdecl]<ScreenId, bool, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, bool, void> _func;
+        public CursorEnteredLeftEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, bool, void> f) => _func = f;
     }
 
     internal unsafe readonly struct ClosingEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, bool*, void> _func;
-        public ClosingEventFn(delegate* unmanaged[Cdecl]<ScreenId, bool*, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, bool*, void> _func;
+        public ClosingEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, bool*, void> f) => _func = f;
     }
 
     internal unsafe readonly struct ClosedEventFn
     {
-        private readonly delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionBox<Screen>> _func;
-        public ClosedEventFn(delegate* unmanaged[Cdecl]<ScreenId, NativePointer> f)
-        {
-            _func = (delegate* unmanaged[Cdecl]<ScreenId, Rust.OptionBox<Screen>>)f;
-        }
+        private readonly delegate* unmanaged[Cdecl]<EngineId, ScreenId, Rust.OptionBox<Screen>> _func;
+        public ClosedEventFn(delegate* unmanaged[Cdecl]<EngineId, ScreenId, Rust.OptionBox<Screen>> f) => _func = f;
     }
 
     internal unsafe readonly struct DebugPrintlnFn
     {
-        private readonly delegate* unmanaged[Cdecl]<u8*, usize, void> _func;
-        public DebugPrintlnFn(delegate* unmanaged[Cdecl]<u8*, usize, void> f) => _func = f;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, u8*, usize, void> _func;
+        public DebugPrintlnFn(delegate* unmanaged[Cdecl]<EngineId, u8*, usize, void> f) => _func = f;
     }
 
     internal readonly struct ScreenId : IEquatable<ScreenId>

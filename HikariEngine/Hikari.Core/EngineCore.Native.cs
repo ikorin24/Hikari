@@ -9,17 +9,18 @@ using Hikari.NativeBind;
 
 namespace Hikari;
 
-static unsafe partial class EngineCore
+unsafe partial class EngineCore
 {
     private const string CoreDll = "corehikari";
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial ApiResult hikari_engine_start(
+        void* state,
         CH.EngineCoreConfig* engine_config,
         CH.ScreenConfig* screen_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-    private static partial ApiResult hikari_create_screen(CH.ScreenConfig* config);
+    private static partial ApiResult hikari_create_screen(Rust.Ref<CH.EngineProxy> proxy, CH.ScreenConfig* config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial ApiResult hikari_screen_resize_surface(

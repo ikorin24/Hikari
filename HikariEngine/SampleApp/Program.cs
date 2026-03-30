@@ -25,6 +25,7 @@ internal class Program
             GraphicsBackend.Vulkan;
         var screenConfig = new ScreenConfig
         {
+            Title = "SampleApp",
             Backend = backend,
             Width = 1280,
             Height = 720,
