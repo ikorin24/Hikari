@@ -241,7 +241,7 @@ pub(crate) struct ImageCopyTexture<'a> {
 }
 
 impl<'a> ImageCopyTexture<'a> {
-    pub const fn to_wgpu_type(&self) -> wgpu::TexelCopyTextureInfo {
+    pub const fn to_wgpu_type(&self) -> wgpu::TexelCopyTextureInfo<'a> {
         wgpu::TexelCopyTextureInfo {
             texture: self.texture,
             mip_level: self.mip_level,
@@ -285,7 +285,7 @@ pub(crate) struct TextureViewDescriptor {
 }
 
 impl TextureViewDescriptor {
-    pub fn to_wgpu_type(&self) -> wgpu::TextureViewDescriptor {
+    pub fn to_wgpu_type(&self) -> wgpu::TextureViewDescriptor<'static> {
         wgpu::TextureViewDescriptor {
             label: None,
             usage: None,
@@ -335,7 +335,7 @@ pub(crate) struct SamplerDescriptor {
 }
 
 impl SamplerDescriptor {
-    pub fn to_wgpu_type(&self) -> wgpu::SamplerDescriptor {
+    pub fn to_wgpu_type(&self) -> wgpu::SamplerDescriptor<'static> {
         wgpu::SamplerDescriptor {
             label: None,
             address_mode_u: self.address_mode_u,
@@ -450,7 +450,7 @@ pub(crate) struct BufferBinding<'a> {
 }
 
 impl<'a> BufferBinding<'a> {
-    pub fn to_wgpu_type(&self) -> wgpu::BufferBinding {
+    pub fn to_wgpu_type(&self) -> wgpu::BufferBinding<'a> {
         wgpu::BufferBinding {
             buffer: self.buffer,
             offset: self.offset,
@@ -465,10 +465,10 @@ pub(crate) struct PipelineLayoutDescriptor<'a> {
 }
 
 impl<'a> PipelineLayoutDescriptor<'a> {
-    pub fn to_wgpu_type(&self) -> wgpu::PipelineLayoutDescriptor {
+    pub fn to_wgpu_type(&self) -> wgpu::PipelineLayoutDescriptor<'a> {
         wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &self.bind_group_layouts,
+            bind_group_layouts: self.bind_group_layouts.as_slice(),
             push_constant_ranges: &[],
         }
     }
@@ -1544,11 +1544,11 @@ pub(crate) struct VertexBufferLayout<'a> {
 }
 
 impl<'a> VertexBufferLayout<'a> {
-    pub fn to_wgpu_type(&self) -> wgpu::VertexBufferLayout {
+    pub fn to_wgpu_type(&self) -> wgpu::VertexBufferLayout<'a> {
         wgpu::VertexBufferLayout {
             array_stride: self.array_stride,
             step_mode: self.step_mode,
-            attributes: &self.attributes,
+            attributes: self.attributes.as_slice(),
         }
     }
 }
@@ -1720,7 +1720,7 @@ impl<'a, T> Slice<'a, T> {
     }
 
     #[inline]
-    pub fn iter(&self) -> std::slice::Iter<T> {
+    pub fn iter(&self) -> std::slice::Iter<'a, T> {
         self.as_slice().iter()
     }
 }
@@ -2325,22 +2325,20 @@ static_assertions::const_assert_eq!(wgpu::QUERY_SET_MAX_QUERIES, 4096);
 static_assertions::const_assert_eq!(wgpu::QUERY_SIZE, 8);
 
 pub(crate) type ScreenInitFn =
-    extern "cdecl" fn(screen: Box<Screen>, screen_info: &ScreenInfo) -> ScreenId;
-pub(crate) type EngineUnhandledErrorFn = extern "cdecl" fn(message: *const u8, len: usize);
-pub(crate) type ClearedEventFn = extern "cdecl" fn(screen_id: ScreenId);
-pub(crate) type RedrawRequestedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> bool;
-pub(crate) type ResizedEventFn = extern "cdecl" fn(screen_id: ScreenId, width: u32, height: u32);
-pub(crate) type KeyboardEventFn =
-    extern "cdecl" fn(screen_id: ScreenId, key: KeyCode, pressed: bool);
+    extern "C" fn(screen: Box<Screen>, screen_info: &ScreenInfo) -> ScreenId;
+pub(crate) type EngineUnhandledErrorFn = extern "C" fn(message: *const u8, len: usize);
+pub(crate) type ClearedEventFn = extern "C" fn(screen_id: ScreenId);
+pub(crate) type RedrawRequestedEventFn = extern "C" fn(screen_id: ScreenId) -> bool;
+pub(crate) type ResizedEventFn = extern "C" fn(screen_id: ScreenId, width: u32, height: u32);
+pub(crate) type KeyboardEventFn = extern "C" fn(screen_id: ScreenId, key: KeyCode, pressed: bool);
 
-pub(crate) type CharReceivedEventFn = extern "cdecl" fn(screen_id: ScreenId, input: u32);
+pub(crate) type CharReceivedEventFn = extern "C" fn(screen_id: ScreenId, input: u32);
 pub(crate) type MouseButtonEventFn =
-    extern "cdecl" fn(screen_id: ScreenId, button: MouseButton, pressed: bool);
-pub(crate) type ImeInputEventFn = extern "cdecl" fn(screen_id: ScreenId, input: &ImeInputData);
-pub(crate) type MouseWheelEventFn =
-    extern "cdecl" fn(screen_id: ScreenId, x_delta: f32, y_delta: f32);
-pub(crate) type CursorMovedEventFn = extern "cdecl" fn(screen_id: ScreenId, x: f32, y: f32);
-pub(crate) type CursorEnteredLeftEventFn = extern "cdecl" fn(screen_id: ScreenId, entered: bool);
-pub(crate) type ClosingEventFn = extern "cdecl" fn(screen_id: ScreenId, cancel: &mut bool);
-pub(crate) type ClosedEventFn = extern "cdecl" fn(screen_id: ScreenId) -> Option<Box<Screen>>;
-pub(crate) type DebugPrintlnFn = extern "cdecl" fn(message: *const u8, len: usize);
+    extern "C" fn(screen_id: ScreenId, button: MouseButton, pressed: bool);
+pub(crate) type ImeInputEventFn = extern "C" fn(screen_id: ScreenId, input: &ImeInputData);
+pub(crate) type MouseWheelEventFn = extern "C" fn(screen_id: ScreenId, x_delta: f32, y_delta: f32);
+pub(crate) type CursorMovedEventFn = extern "C" fn(screen_id: ScreenId, x: f32, y: f32);
+pub(crate) type CursorEnteredLeftEventFn = extern "C" fn(screen_id: ScreenId, entered: bool);
+pub(crate) type ClosingEventFn = extern "C" fn(screen_id: ScreenId, cancel: &mut bool);
+pub(crate) type ClosedEventFn = extern "C" fn(screen_id: ScreenId) -> Option<Box<Screen>>;
+pub(crate) type DebugPrintlnFn = extern "C" fn(message: *const u8, len: usize);
