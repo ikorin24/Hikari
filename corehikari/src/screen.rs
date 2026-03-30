@@ -155,7 +155,7 @@ impl Screen {
 }
 
 #[repr(transparent)]
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct ScreenId(usize);
 
 #[derive(Clone, Copy)]

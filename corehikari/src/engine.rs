@@ -1,4 +1,5 @@
 use crate::screen::*;
+use crate::window_list::*;
 use crate::*;
 use std::cell::Cell;
 use std::error::Error;
@@ -10,11 +11,11 @@ use winit::application::ApplicationHandler;
 use winit::event::{self, MouseScrollDelta, TouchPhase, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::platform::run_on_demand::EventLoopExtRunOnDemand;
-use winit::window::{self, WindowId};
+use winit::window::WindowId;
 
 pub(crate) struct Engine {
     config: EngineCoreConfig,
-    screens: Vec<ScreenIdData>,
+    window_list: WindowList,
 }
 
 thread_local! {
@@ -43,7 +44,7 @@ impl Engine {
     pub fn new(config: &EngineCoreConfig) -> Self {
         Engine {
             config: *config,
-            screens: vec![],
+            window_list: WindowList::new(),
         }
     }
 
@@ -132,14 +133,11 @@ impl Engine {
         f(screen_id)
     }
 
-    fn close_screen(&mut self, target: &ScreenIdData) -> bool {
-        if self.event_closing(target.1) {
-            let index = self.screens.iter().position(|x| x == target);
-            if let Some(index) = index {
-                self.screens.swap_remove(index);
-            }
-            let is_empty = self.screens.is_empty();
-            let closed_screen = self.event_closed(target.1);
+    fn close_screen(&mut self, screen_id: ScreenId) -> bool {
+        if self.event_closing(screen_id) {
+            self.window_list.remove_by_screen(&screen_id);
+            let is_empty = self.window_list.is_empty();
+            let closed_screen = self.event_closed(screen_id);
             drop(closed_screen);
             is_empty
         } else {
@@ -163,14 +161,18 @@ impl ApplicationHandler<ProxyMessage> for Engine {
                 let screen = Box::new(screen);
                 let window_id = screen.window.id();
                 let screen_id = self.on_screen_init(screen);
-                self.screens.push(ScreenIdData(window_id, screen_id));
+                self.window_list
+                    .insert(WindowWrap::ScreenWindow(ScreenWindow {
+                        window: window_id,
+                        screen: screen_id,
+                    }));
             }
         }
     }
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
-        self.screens.iter().for_each(|x| {
-            self.event_cleared(x.1);
+        self.window_list.iter_screens().for_each(|screen_window| {
+            self.event_cleared(screen_window.screen);
         });
     }
 
@@ -180,33 +182,36 @@ impl ApplicationHandler<ProxyMessage> for Engine {
         window_id: WindowId,
         event: WindowEvent,
     ) {
-        let target = match self.screens.iter().find(|x| x.0 == window_id).copied() {
-            Some(target) => target,
+        let screen = match self.window_list.get(&window_id) {
+            Some(WindowWrap::ScreenWindow(x)) => x.screen,
+            Some(WindowWrap::WindowOnly(_)) => {
+                return;
+            }
             None => {
                 return;
             }
         };
         match event {
             WindowEvent::CursorEntered { .. } => {
-                self.event_cursor_entered_left(target.1, true);
+                self.event_cursor_entered_left(screen, true);
             }
             WindowEvent::CursorLeft { .. } => {
-                self.event_cursor_entered_left(target.1, false);
+                self.event_cursor_entered_left(screen, false);
             }
             WindowEvent::CursorMoved { position, .. } => {
-                self.event_cursor_moved(target.1, position.x as f32, position.y as f32);
+                self.event_cursor_moved(screen, position.x as f32, position.y as f32);
             }
             WindowEvent::Ime(ime) => {
                 let data = ImeInputData::new(&ime);
-                self.event_ime(target.1, &data);
+                self.event_ime(screen, &data);
             }
             WindowEvent::MouseInput { state, button, .. } => {
-                self.event_mouse_button(target.1, &button, &state);
+                self.event_mouse_button(screen, &button, &state);
             }
             WindowEvent::MouseWheel { delta, phase, .. } if phase == TouchPhase::Moved => {
                 match delta {
                     MouseScrollDelta::LineDelta(x_delta, y_delta) => {
-                        self.event_wheel(target.1, x_delta, y_delta);
+                        self.event_wheel(screen, x_delta, y_delta);
                     }
                     MouseScrollDelta::PixelDelta(_pos) => {
                         // TODO: support touchpad devices
@@ -214,7 +219,7 @@ impl ApplicationHandler<ProxyMessage> for Engine {
                 }
             }
             WindowEvent::CloseRequested => {
-                if self.close_screen(&target) {
+                if self.close_screen(screen) {
                     event_loop.exit();
                 }
             }
@@ -226,7 +231,7 @@ impl ApplicationHandler<ProxyMessage> for Engine {
                             event::ElementState::Pressed => true,
                             event::ElementState::Released => false,
                         };
-                        self.event_keyboard(target.1, key, pressed);
+                        self.event_keyboard(screen, key, pressed);
                     }
                 }
 
@@ -234,16 +239,16 @@ impl ApplicationHandler<ProxyMessage> for Engine {
                     let text = text.as_ref();
                     if text.is_empty() == false {
                         text.chars().for_each(|c| {
-                            self.event_char_received(target.1, c);
+                            self.event_char_received(screen, c);
                         });
                     }
                 }
             }
             WindowEvent::Resized(physical_size) => {
-                self.event_resized(target.1, physical_size.width, physical_size.height);
+                self.event_resized(screen, physical_size.width, physical_size.height);
             }
             // WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-            //     Engine::event_resized(target.1, new_inner_size.width, new_inner_size.height);
+            //     Engine::event_resized(screen, new_inner_size.width, new_inner_size.height);
             // }
             WindowEvent::ScaleFactorChanged {
                 scale_factor,
@@ -252,12 +257,12 @@ impl ApplicationHandler<ProxyMessage> for Engine {
                 _ = scale_factor;
                 _ = inner_size_writer;
                 // TODO: 分からん
-                // Engine::event_resized(target.1, new_inner_size.width, new_inner_size.height);
+                // Engine::event_resized(screen, new_inner_size.width, new_inner_size.height);
             }
             WindowEvent::RedrawRequested => {
-                let continue_next = self.event_redraw_requested(target.1);
+                let continue_next = self.event_redraw_requested(screen);
                 if continue_next == false {
-                    if self.close_screen(&target) {
+                    if self.close_screen(screen) {
                         event_loop.exit();
                     }
                 }
@@ -278,9 +283,6 @@ pub(crate) fn get_loop_proxy() -> Result<EventLoopProxy<ProxyMessage>, EngineErr
     let proxy = LOOP_PROXY.lock().unwrap();
     proxy.clone().ok_or(EngineErr::NOT_RUNNING)
 }
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-struct ScreenIdData(window::WindowId, ScreenId);
 
 pub(crate) fn send_proxy_message(message: ProxyMessage) -> Result<(), Box<dyn Error>> {
     let proxy = get_loop_proxy()?;
@@ -327,9 +329,7 @@ pub(crate) fn engine_start(
     }
     env_logger::init();
 
-    get_loop_proxy()
-        .unwrap()
-        .send_event(ProxyMessage::CreateScreen(*screen_config))?;
+    send_proxy_message(ProxyMessage::CreateScreen(*screen_config))?;
     event_loop.run_app_on_demand(&mut engine)?;
     IS_ENGINE_RUNNING.store(false, Ordering::Relaxed);
 
