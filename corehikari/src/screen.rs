@@ -23,7 +23,7 @@ pub(crate) struct Screen {
 
 impl Screen {
     pub fn new(
-        config: &ScreenConfig,
+        config: &ScreenConfigPayload,
         event_loop: &ActiveEventLoop,
         on_unhandled_error: impl Fn(&str) + Send + Sync + 'static,
     ) -> Result<Screen, Box<dyn Error>> {
@@ -216,14 +216,14 @@ fn new_default_surface_config(
 }
 
 fn create_window(
-    config: &ScreenConfig,
+    config: &ScreenConfigPayload,
     event_loop: &ActiveEventLoop,
 ) -> Result<window::Window, winit::error::OsError> {
     use winit::window::{Fullscreen, WindowButtons};
 
     let window = event_loop.create_window(
         winit::window::Window::default_attributes()
-            .with_title("")
+            .with_title(&config.title)
             .with_inner_size(Size::Physical(PhysicalSize::new(
                 config.width,
                 config.height,

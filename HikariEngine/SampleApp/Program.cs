@@ -23,16 +23,19 @@ internal class Program
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? GraphicsBackend.Dx12 :
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? GraphicsBackend.Metal :
             GraphicsBackend.Vulkan;
-        var screenConfig = new ScreenConfig
+        Engine.Run(engine =>
         {
-            Title = "SampleApp",
-            Backend = backend,
-            Width = 1280,
-            Height = 720,
-            Style = WindowStyle.Default,
-            PresentMode = SurfacePresentMode.VsyncOn,
-        };
-        Engine.Run(screenConfig, OnInitialized);
+            var config = new ScreenConfig
+            {
+                Title = "SampleApp",
+                Backend = backend,
+                Width = 1280,
+                Height = 720,
+                Style = WindowStyle.Default,
+                PresentMode = SurfacePresentMode.VsyncOn,
+            };
+            engine.CreateScreen(config, OnInitialized);
+        });
     }
 
     private static string ResPath(string name) => Path.Combine(AppContext.BaseDirectory, "resources", name);

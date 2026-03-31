@@ -339,6 +339,8 @@ internal static class CH
 
     internal struct ScreenConfig
     {
+        public required u64 state;
+        public required Slice<u8> title;
         public required WindowStyle style;
         public required u32 width;
         public required u32 height;
@@ -371,9 +373,11 @@ internal static class CH
 
     internal unsafe readonly struct EngineInitFn
     {
-        private readonly delegate* unmanaged[Cdecl]<void*, Rust.Box<EngineProxy>, EngineId> _func;
+#pragma warning disable CS8500 // Use address to managed type
+        private readonly delegate* unmanaged[Cdecl]<Action<Engine>*, Rust.Box<EngineProxy>, EngineId> _func;
 
-        public EngineInitFn(delegate* unmanaged[Cdecl]<void*, Rust.Box<EngineProxy>, EngineId> f) => _func = f;
+        public EngineInitFn(delegate* unmanaged[Cdecl]<Action<Engine>*, Rust.Box<EngineProxy>, EngineId> f) => _func = f;
+#pragma warning restore CS8500 // Use address to managed type
     }
 
     internal unsafe readonly struct EngineClosedFn
@@ -385,9 +389,9 @@ internal static class CH
 
     internal unsafe readonly struct ScreenInitFn
     {
-        private readonly delegate* unmanaged[Cdecl]<EngineId, Rust.Box<Screen>, ScreenInfo*, ScreenId> _func;
+        private readonly delegate* unmanaged[Cdecl]<EngineId, u64, Rust.Box<Screen>, ScreenInfo*, ScreenId> _func;
 
-        public ScreenInitFn(delegate* unmanaged[Cdecl]<EngineId, Rust.Box<Screen>, ScreenInfo*, ScreenId> f) => _func = f;
+        public ScreenInitFn(delegate* unmanaged[Cdecl]<EngineId, u64, Rust.Box<Screen>, ScreenInfo*, ScreenId> f) => _func = f;
     }
 
     internal unsafe readonly struct EngineUnhandledErrorFn

@@ -14,9 +14,8 @@ use winit::dpi::PhysicalSize;
 extern "C" fn hikari_engine_start(
     state: *const std::ffi::c_void,
     engine_config: &EngineCoreConfig,
-    screen_config: &ScreenConfig,
 ) -> ApiResult {
-    let result = engine_start(state, engine_config, screen_config);
+    let result = engine_start(state, engine_config);
     ApiResult::ok_or_set_error(result)
 }
 
@@ -28,7 +27,7 @@ static_assertions::assert_impl_all!(ScreenConfig: Send, Sync);
 /// - called from multiple threads simultaneously with same args
 #[no_mangle]
 extern "C" fn hikari_create_screen(proxy: &EngineProxy, config: &ScreenConfig) -> ApiResult {
-    let result = proxy.send_message(ProxyMessage::CreateScreen(*config));
+    let result = proxy.send_message(ProxyMessage::CreateScreen(config.into()));
     ApiResult::ok_or_set_error(result)
 }
 

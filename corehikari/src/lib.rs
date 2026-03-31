@@ -37,13 +37,40 @@ pub(crate) struct EngineCoreConfig {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct ScreenConfig {
+#[derive(Debug, Clone)]
+pub(crate) struct ScreenConfig<'a> {
+    pub state: u64,
+    pub title: Slice<'a, u8>,
     pub style: WindowStyle,
     pub width: u32,
     pub height: u32,
     pub backend: wgpu::Backends,
     pub present_mode: PresentMode,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ScreenConfigPayload {
+    pub state: u64,
+    pub title: String,
+    pub style: WindowStyle,
+    pub width: u32,
+    pub height: u32,
+    pub backend: wgpu::Backends,
+    pub present_mode: PresentMode,
+}
+
+impl<'a> From<&ScreenConfig<'a>> for ScreenConfigPayload {
+    fn from(value: &ScreenConfig<'a>) -> Self {
+        Self {
+            state: value.state,
+            title: String::from_utf8_lossy(value.title.as_slice()).to_string(),
+            style: value.style,
+            width: value.width,
+            height: value.height,
+            backend: value.backend,
+            present_mode: value.present_mode,
+        }
+    }
 }
 
 #[repr(u32)]
@@ -2330,8 +2357,12 @@ static_assertions::const_assert_eq!(wgpu::QUERY_SIZE, 8);
 pub(crate) type EngineInitFn =
     extern "C" fn(state: *const std::ffi::c_void, proxy: Box<EngineProxy>) -> EngineId;
 pub(crate) type EngineClosedFn = extern "C" fn(engine_id: EngineId) -> Option<Box<EngineProxy>>;
-pub(crate) type ScreenInitFn =
-    extern "C" fn(engine_id: EngineId, screen: Box<Screen>, screen_info: &ScreenInfo) -> ScreenId;
+pub(crate) type ScreenInitFn = extern "C" fn(
+    engine_id: EngineId,
+    state: u64,
+    screen: Box<Screen>,
+    screen_info: &ScreenInfo,
+) -> ScreenId;
 pub(crate) type EngineUnhandledErrorFn = extern "C" fn(message: *const u8, len: usize);
 pub(crate) type ClearedEventFn = extern "C" fn(engine_id: EngineId, screen_id: ScreenId);
 pub(crate) type RedrawRequestedEventFn =

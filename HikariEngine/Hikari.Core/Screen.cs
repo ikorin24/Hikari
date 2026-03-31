@@ -466,22 +466,29 @@ public sealed class ScreenClosingState
 
 public readonly record struct ScreenConfig
 {
+    public required string Title { get; init; }
     public required WindowStyle Style { get; init; }
     public required u32 Width { get; init; }
     public required u32 Height { get; init; }
     public required GraphicsBackend Backend { get; init; }
     public required SurfacePresentMode PresentMode { get; init; }
-    public required string Title { get; init; }
-    public bool UseSynchronizationContext { get; init; } = true;
 
     public ScreenConfig()
     {
     }
 
-    internal CH.ScreenConfig ToCoreType()
+    public int GetTitleByteLength()
     {
+        return Encoding.UTF8.GetByteCount(Title);
+    }
+
+    internal unsafe CH.ScreenConfig ToCoreType(u8* titleBuf, int titleBufLength, u64 state)
+    {
+        var len = Encoding.UTF8.GetBytes(Title, new Span<u8>(titleBuf, titleBufLength));
         return new CH.ScreenConfig
         {
+            state = state,
+            title = new CH.Slice<u8>(titleBuf, len),
             style = Style.MapOrThrow(),
             width = Width,
             height = Height,

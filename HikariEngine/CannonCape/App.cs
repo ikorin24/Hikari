@@ -31,16 +31,19 @@ public static class App
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? GraphicsBackend.Dx12 :
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? GraphicsBackend.Metal :
             GraphicsBackend.Vulkan;
-        var screenConfig = new ScreenConfig
+        Engine.Run(engine =>
         {
-            Title = "Cannon Cape",
-            Backend = backend,
-            Width = (int)(1920 * 0.85),
-            Height = (int)(1080 * 0.85),
-            Style = WindowStyle.Default,
-            PresentMode = SurfacePresentMode.VsyncOn,
-        };
-        Engine.Run(screenConfig, OnInitialized);
+            var config = new ScreenConfig
+            {
+                Title = "Cannon Cape",
+                Backend = backend,
+                Width = (int)(1920 * 0.85),
+                Height = (int)(1080 * 0.85),
+                Style = WindowStyle.Default,
+                PresentMode = SurfacePresentMode.VsyncOn,
+            };
+            engine.CreateScreen(config, OnInitialized);
+        });
     }
 
     private static async UniTask OnInitialized(Screen screen)

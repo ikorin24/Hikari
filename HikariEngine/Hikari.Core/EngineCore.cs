@@ -4,23 +4,25 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading;
 using Hikari.NativeBind;
 using System.Text;
-using System.Collections.Generic;
 
 namespace Hikari;
 
 internal unsafe static partial class EngineCore
 {
-    public static void EngineStart(void* state, CH.EngineCoreConfig* engineConfig, CH.ScreenConfig* screenConfig)
+    public static void EngineStart(Action<Engine> state, CH.EngineCoreConfig* engineConfig)
     {
-        hikari_engine_start(state, engineConfig, screenConfig).Validate();
+#pragma warning disable CS8500 // Use address to managed type
+        hikari_engine_start(&state, engineConfig).Validate();
+#pragma warning restore CS8500 // Use address to managed type
     }
 
-    public static void CreateScreen(this Rust.Ref<CH.EngineProxy> engineProxy, in ScreenConfig config)
+    public static void CreateScreen(this Rust.Ref<CH.EngineProxy> engineProxy, u64 state, in ScreenConfig config)
     {
-        var screenConfig = config.ToCoreType();
+        var bufLen = config.GetTitleByteLength();
+        var buf = stackalloc u8[bufLen];
+        var screenConfig = config.ToCoreType(buf, bufLen, state);
         hikari_create_screen(engineProxy, &screenConfig).Validate();
     }
 
@@ -680,38 +682,38 @@ internal unsafe static partial class EngineCore
 #pragma warning restore 0649    // field never assigned
 }
 
-internal readonly struct EngineCoreConfig
-{
-    public required Func<Rust.Box<CH.Screen>, CH.ScreenInfo, CH.ScreenId> OnScreenInit { get; init; }
-    public required Func<CH.ScreenId, bool> OnRedrawRequested { get; init; }
-    public required Action<CH.ScreenId> OnCleared { get; init; }
+//internal readonly struct EngineCoreConfig
+//{
+//    public required Func<Rust.Box<CH.Screen>, CH.ScreenInfo, CH.ScreenId> OnScreenInit { get; init; }
+//    public required Func<CH.ScreenId, bool> OnRedrawRequested { get; init; }
+//    public required Action<CH.ScreenId> OnCleared { get; init; }
 
-    public required Action<CH.ScreenId, u32, u32> OnResized { get; init; }
+//    public required Action<CH.ScreenId, u32, u32> OnResized { get; init; }
 
-    public required Action<CH.ScreenId, CH.KeyCode, bool> OnKeyboardInput { get; init; }
-    public required Action<CH.ScreenId, Rune> OnCharReceived { get; init; }
-    public required Action<CH.ScreenId, CH.MouseButton, bool> OnMouseButton { get; init; }
-    public required EngineCoreImeInputAction OnImeInput { get; init; }
+//    public required Action<CH.ScreenId, CH.KeyCode, bool> OnKeyboardInput { get; init; }
+//    public required Action<CH.ScreenId, Rune> OnCharReceived { get; init; }
+//    public required Action<CH.ScreenId, CH.MouseButton, bool> OnMouseButton { get; init; }
+//    public required EngineCoreImeInputAction OnImeInput { get; init; }
 
-    public required Action<CH.ScreenId, f32, f32> OnWheel { get; init; }
-    public required Action<CH.ScreenId, f32, f32> OnCursorMoved { get; init; }
-    public required Action<CH.ScreenId, bool> OnCursorEnteredLeft { get; init; }
+//    public required Action<CH.ScreenId, f32, f32> OnWheel { get; init; }
+//    public required Action<CH.ScreenId, f32, f32> OnCursorMoved { get; init; }
+//    public required Action<CH.ScreenId, bool> OnCursorEnteredLeft { get; init; }
 
-    public required EngineCoreScreenClosingAction OnClosing { get; init; }
-    public required Func<CH.ScreenId, Rust.OptionBox<CH.Screen>> OnClosed { get; init; }
-}
+//    public required EngineCoreScreenClosingAction OnClosing { get; init; }
+//    public required Func<CH.ScreenId, Rust.OptionBox<CH.Screen>> OnClosed { get; init; }
+//}
 
-internal delegate void EngineCoreImeInputAction(CH.ScreenId id, in CH.ImeInputData input);
+//internal delegate void EngineCoreImeInputAction(CH.ScreenId id, in CH.ImeInputData input);
 
-internal delegate void EngineCoreScreenClosingAction(CH.ScreenId id, ref bool cancel);
+//internal delegate void EngineCoreScreenClosingAction(CH.ScreenId id, ref bool cancel);
 
 
-internal delegate void EngineCoreRenderAction(Rust.Ref<CH.Screen> screen, Rust.MutRef<Wgpu.RenderPass> renderPass);
-internal delegate void EngineCoreResizedAction(Rust.Ref<CH.Screen> screen, uint width, uint height);
-internal delegate Rust.Box<Wgpu.RenderPass> OnCommandBeginFunc(
-    Rust.Ref<CH.Screen> screen,
-    Rust.Ref<Wgpu.TextureView> surfaceTextureView,
-    Rust.MutRef<Wgpu.CommandEncoder> commandEncoder,
-    CreateRenderPassFunc createRenderPass);
+//internal delegate void EngineCoreRenderAction(Rust.Ref<CH.Screen> screen, Rust.MutRef<Wgpu.RenderPass> renderPass);
+//internal delegate void EngineCoreResizedAction(Rust.Ref<CH.Screen> screen, uint width, uint height);
+//internal delegate Rust.Box<Wgpu.RenderPass> OnCommandBeginFunc(
+//    Rust.Ref<CH.Screen> screen,
+//    Rust.Ref<Wgpu.TextureView> surfaceTextureView,
+//    Rust.MutRef<Wgpu.CommandEncoder> commandEncoder,
+//    CreateRenderPassFunc createRenderPass);
 
-internal delegate Rust.Box<Wgpu.RenderPass> CreateRenderPassFunc(Rust.MutRef<Wgpu.CommandEncoder> commandEncoder, in CH.RenderPassDescriptor desc);
+//internal delegate Rust.Box<Wgpu.RenderPass> CreateRenderPassFunc(Rust.MutRef<Wgpu.CommandEncoder> commandEncoder, in CH.RenderPassDescriptor desc);

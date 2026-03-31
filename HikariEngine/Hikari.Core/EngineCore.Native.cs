@@ -16,8 +16,7 @@ unsafe partial class EngineCore
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial ApiResult hikari_engine_start(
         void* state,
-        CH.EngineCoreConfig* engine_config,
-        CH.ScreenConfig* screen_config);
+        CH.EngineCoreConfig* engine_config);
 
     [LibraryImport(CoreDll), UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial ApiResult hikari_create_screen(Rust.Ref<CH.EngineProxy> proxy, CH.ScreenConfig* config);

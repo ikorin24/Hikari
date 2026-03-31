@@ -16,7 +16,6 @@ pub(crate) struct Engine {
     config: EngineCoreConfig,
     window_list: WindowList,
     engine_id: EngineId,
-    proxy: EngineProxy,
 }
 
 thread_local! {
@@ -56,12 +55,11 @@ impl Engine {
     ) -> Self {
         let proxy = EngineProxy::new(event_loop_proxy);
         let on_engine_init = config.on_engine_init;
-        let engine_id = on_engine_init(state, Box::new(proxy.clone()));
+        let engine_id = on_engine_init(state, Box::new(proxy));
         Engine {
             config: *config,
             window_list: WindowList::new(),
             engine_id,
-            proxy,
         }
     }
 
@@ -70,17 +68,10 @@ impl Engine {
         f(self.engine_id, message.as_ptr(), message.len());
     }
 
-    pub fn send_proxy_message(
-        &self,
-        message: ProxyMessage,
-    ) -> Result<(), EventLoopClosed<ProxyMessage>> {
-        self.proxy.send_message(message)
-    }
-
-    fn on_screen_init(&self, screen: Box<Screen>) -> ScreenId {
+    fn on_screen_init(&self, state: u64, screen: Box<Screen>) -> ScreenId {
         let f = self.config.on_screen_init;
         let screen_info = &screen.get_info();
-        f(self.engine_id, screen, screen_info)
+        f(self.engine_id, state, screen, screen_info)
     }
 
     fn on_unhandled_error(&self) -> impl Fn(&str) + Send + Sync + 'static {
@@ -189,7 +180,7 @@ impl ApplicationHandler<ProxyMessage> for Engine {
                 };
                 let screen = Box::new(screen);
                 let window_id = screen.window.id();
-                let screen_id = self.on_screen_init(screen);
+                let screen_id = self.on_screen_init(config.state, screen);
                 self.window_list
                     .insert(WindowWrap::ScreenWindow(ScreenWindow {
                         window: window_id,
@@ -301,9 +292,9 @@ impl ApplicationHandler<ProxyMessage> for Engine {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(crate) enum ProxyMessage {
-    CreateScreen(ScreenConfig),
+    CreateScreen(ScreenConfigPayload),
 }
 
 #[derive(Debug, Clone)]
@@ -328,15 +319,12 @@ pub(crate) struct EngineId(usize);
 pub(crate) fn engine_start(
     state: *const std::ffi::c_void,
     engine_config: &EngineCoreConfig,
-    screen_config: &ScreenConfig,
 ) -> Result<(), Box<dyn Error>> {
     env_logger::init();
     let mut event_loop = EventLoop::with_user_event().build()?;
     event_loop.set_control_flow(ControlFlow::Poll);
     let mut engine = Engine::new(state, engine_config, event_loop.create_proxy());
     engine.debug_println("[corehikari] engine start");
-
-    engine.send_proxy_message(ProxyMessage::CreateScreen(*screen_config))?;
     event_loop.run_app_on_demand(&mut engine)?;
     engine.debug_println("[corehikari] engine stop");
     Ok(())
