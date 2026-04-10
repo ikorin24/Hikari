@@ -4,6 +4,8 @@ use crate::*;
 use std::cell::Cell;
 use std::error::Error;
 use std::fmt::Debug;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use winit;
 use winit::application::ApplicationHandler;
 use winit::event::{self, MouseScrollDelta, TouchPhase, WindowEvent};
@@ -52,14 +54,21 @@ impl Engine {
         state: *const std::ffi::c_void,
         config: &EngineCoreConfig,
         event_loop_proxy: EventLoopProxy<ProxyMessage>,
-    ) -> Self {
+    ) -> Option<Self> {
         let proxy = EngineProxy::new(event_loop_proxy);
         let on_engine_init = config.on_engine_init;
-        let engine_id = on_engine_init(state, Box::new(proxy));
-        Engine {
+        let engine_id = on_engine_init(state, Box::new(proxy.clone()));
+        let engine = Engine {
             config: *config,
             window_list: WindowList::new(),
             engine_id,
+        };
+        if proxy.first_window_created() {
+            Some(engine)
+        } else {
+            // engine_id は解放しないといけないので Engine は必ず drop される必要がある
+            drop(engine);
+            None
         }
     }
 
@@ -300,15 +309,28 @@ pub(crate) enum ProxyMessage {
 #[derive(Debug, Clone)]
 pub struct EngineProxy {
     event_loop_proxy: EventLoopProxy<ProxyMessage>,
+    first_window_created: Arc<AtomicBool>,
 }
 
 impl EngineProxy {
     pub(crate) fn new(event_loop_proxy: EventLoopProxy<ProxyMessage>) -> Self {
-        Self { event_loop_proxy }
+        Self {
+            event_loop_proxy,
+            first_window_created: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    pub fn first_window_created(&self) -> bool {
+        self.first_window_created.load(Ordering::Relaxed)
     }
 
     pub fn send_message(&self, message: ProxyMessage) -> Result<(), EventLoopClosed<ProxyMessage>> {
-        self.event_loop_proxy.send_event(message)
+        let is_create_screen_message = matches!(message, ProxyMessage::CreateScreen(_));
+        self.event_loop_proxy.send_event(message).map(|_| {
+            if is_create_screen_message {
+                self.first_window_created.store(true, Ordering::Relaxed);
+            }
+        })
     }
 }
 
@@ -323,10 +345,11 @@ pub(crate) fn engine_start(
     env_logger::init();
     let mut event_loop = EventLoop::with_user_event().build()?;
     event_loop.set_control_flow(ControlFlow::Poll);
-    let mut engine = Engine::new(state, engine_config, event_loop.create_proxy());
-    engine.debug_println("[corehikari] engine start");
-    event_loop.run_app_on_demand(&mut engine)?;
-    engine.debug_println("[corehikari] engine stop");
+    if let Some(mut engine) = Engine::new(state, engine_config, event_loop.create_proxy()) {
+        engine.debug_println("[corehikari] engine start");
+        event_loop.run_app_on_demand(&mut engine)?;
+        engine.debug_println("[corehikari] engine stop");
+    }
     Ok(())
 }
 
