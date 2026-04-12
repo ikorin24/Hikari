@@ -48,7 +48,9 @@ public sealed class Engine
     public void CreateScreen(in ScreenConfig config, Action<Screen> onStart)
     {
         ArgumentNullException.ThrowIfNull(onStart);
-        CheckPlatformBackend(config.Backend);
+        if(config.Backend != null) {
+            CheckPlatformBackend(config.Backend.Value);
+        }
         var callbackId = Interlocked.Increment(ref _callbackIdGen);
         _callbacks[callbackId] = onStart;
         try {
@@ -77,8 +79,9 @@ public sealed class Engine
     {
         ArgumentNullException.ThrowIfNull(onStart);
         if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-            if(Thread.CurrentThread.GetApartmentState() != ApartmentState.STA) {
-                throw new InvalidOperationException("The thread should be STA. (for C#, mark main method as [STAThread] attribute.)");
+            var apartmentState = Thread.CurrentThread.GetApartmentState();
+            if(apartmentState != ApartmentState.STA) {
+                throw new InvalidOperationException($"Current thread aprtment is {apartmentState}. It should be STA. (for C#, mark main method as [STAThread] attribute.)");
             }
         }
         HikariSynchronizationContext.InstallIfNeeded(out _, out _);
@@ -270,7 +273,7 @@ public sealed class Engine
         var mainThread = ThreadId.CurrentThread();
         var syncContextReceiver = (AsyncOperationManager.SynchronizationContext as HikariSynchronizationContext)?.Receiver;
         var screenId = new CH.ScreenId(screenHandle);
-        var screen = new Screen(screenHandle, mainThread, onStart, syncContextReceiver, info);
+        var screen = new Screen(screenHandle, this, mainThread, onStart, syncContextReceiver, info);
         _screens.Add(screenId, screen);
         return screenId;
     }

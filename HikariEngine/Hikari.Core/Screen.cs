@@ -14,6 +14,7 @@ namespace Hikari;
 public sealed class Screen
 {
     private Rust.OptionBox<CH.Screen> _native;
+    private readonly Engine _engine;
     private readonly ThreadId _mainThread;
     private readonly SubscriptionBag _subscriptions;
     private readonly Camera _camera;
@@ -75,6 +76,7 @@ public sealed class Screen
     public SubscriptionRegister Subscriptions => _subscriptions.Register;
 
     internal ObjectStore Store => _objectStore;
+    public Engine Engine => _engine;
     public RenderPassScheduler RenderScheduler => _scheduler;
     public UITree UITree => _uiTree;
     public Mouse Mouse => _mouse;
@@ -156,9 +158,10 @@ public sealed class Screen
 
     public UtilResource UtilResource => _utilResource;
 
-    internal Screen(Rust.Box<CH.Screen> screen, ThreadId mainThread, Action<Screen>? onPrepare, SyncContextReceiver? syncContextreceiver, in CH.ScreenInfo info)
+    internal Screen(Rust.Box<CH.Screen> screen, Engine engine, ThreadId mainThread, Action<Screen>? onPrepare, SyncContextReceiver? syncContextreceiver, in CH.ScreenInfo info)
     {
         _native = screen;
+        _engine = engine;
         _mainThread = mainThread;
         _syncContextreceiver = syncContextreceiver;
         _onPrepare = onPrepare;
@@ -470,7 +473,7 @@ public readonly record struct ScreenConfig
     public required WindowStyle Style { get; init; }
     public required u32 Width { get; init; }
     public required u32 Height { get; init; }
-    public required GraphicsBackend Backend { get; init; }
+    public GraphicsBackend? Backend { get; init; }
     public required SurfacePresentMode PresentMode { get; init; }
 
     public ScreenConfig()
@@ -484,6 +487,13 @@ public readonly record struct ScreenConfig
 
     internal unsafe CH.ScreenConfig ToCoreType(u8* titleBuf, int titleBufLength, u64 state)
     {
+        var backend = Backend switch
+        {
+            null => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? GraphicsBackend.Dx12 :
+                    RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? GraphicsBackend.Metal :
+                    GraphicsBackend.Vulkan,
+            _ => Backend.Value,
+        };
         var len = Encoding.UTF8.GetBytes(Title, new Span<u8>(titleBuf, titleBufLength));
         return new CH.ScreenConfig
         {
@@ -492,7 +502,7 @@ public readonly record struct ScreenConfig
             style = Style.MapOrThrow(),
             width = Width,
             height = Height,
-            backend = Backend.MapOrThrow(),
+            backend = backend.MapOrThrow(),
             present_mode = PresentMode.MapOrThrow(),
         };
     }

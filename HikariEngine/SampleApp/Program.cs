@@ -15,29 +15,6 @@ namespace SampleApp;
 
 internal class Program
 {
-    [STAThread]
-    private static void Main(string[] args)
-    {
-        Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1");
-        var backend =
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? GraphicsBackend.Dx12 :
-            RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? GraphicsBackend.Metal :
-            GraphicsBackend.Vulkan;
-        Engine.Run(engine =>
-        {
-            var config = new ScreenConfig
-            {
-                Title = "SampleApp",
-                Backend = backend,
-                Width = 1280,
-                Height = 720,
-                Style = WindowStyle.Default,
-                PresentMode = SurfacePresentMode.VsyncOn,
-            };
-            engine.CreateScreen(config, OnInitialized);
-        });
-    }
-
     private static string ResPath(string name) => Path.Combine(AppContext.BaseDirectory, "resources", name);
 
     private static void SetLight(Screen screen, float angle)
@@ -47,7 +24,8 @@ internal class Program
         screen.Lights.DirectionalLight.SetLightData(vec.Normalized(), Color3.White);
     }
 
-    private static async UniTask OnInitialized(Screen screen)
+    [EntryPoint]
+    internal static async UniTask OnInitialized(Screen screen)
     {
         screen.Title = $"SampleApp ({screen.Backend})";
         screen.RenderScheduler.SetDefaultRenderPass();

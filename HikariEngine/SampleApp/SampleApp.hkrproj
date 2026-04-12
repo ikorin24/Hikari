@@ -1,0 +1,13 @@
+{
+    "version": "1.0",
+    "targetCsproj": "SampleApp.csproj",
+    "assemblyName": "SampleApp",
+    "binDir": "bin/Debug/net9",
+    "window": {
+        "title": "Sample App",
+        "style": "Default",
+        "width": 1280,
+        "height": 720,
+        "presentMode": "VsyncOn"
+    },
+}

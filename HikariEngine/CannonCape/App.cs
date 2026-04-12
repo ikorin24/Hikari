@@ -5,7 +5,6 @@ using Hikari.Mathematics;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 
 namespace CannonCape;
 
@@ -23,30 +22,8 @@ public static class App
 
     public static TimeSpan CurrentTime => _sw.Elapsed;
 
-    [STAThread]
-    private static void Main()
-    {
-        Environment.SetEnvironmentVariable("RUST_BACKTRACE", "1");
-        var backend =
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? GraphicsBackend.Dx12 :
-            RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? GraphicsBackend.Metal :
-            GraphicsBackend.Vulkan;
-        Engine.Run(engine =>
-        {
-            var config = new ScreenConfig
-            {
-                Title = "Cannon Cape",
-                Backend = backend,
-                Width = (int)(1920 * 0.85),
-                Height = (int)(1080 * 0.85),
-                Style = WindowStyle.Default,
-                PresentMode = SurfacePresentMode.VsyncOn,
-            };
-            engine.CreateScreen(config, OnInitialized);
-        });
-    }
-
-    private static async UniTask OnInitialized(Screen screen)
+    [EntryPoint]
+    internal static async UniTask OnInitialized(Screen screen)
     {
         _screen = screen;
         screen.RequestMaximizeWindow(true);

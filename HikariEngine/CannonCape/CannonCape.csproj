@@ -6,11 +6,18 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>CannonCape</RootNamespace>
 
-    <!--<PublishAot>true</PublishAot>-->
-    <!--<PublishTrimmed>true</PublishTrimmed>-->
+    <!--
+    <PublishAot>true</PublishAot>    
+    <PublishTrimmed>true</PublishTrimmed>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
+    -->
+
   </PropertyGroup>
+  
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildProjectName).hkrproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="NAudio" />

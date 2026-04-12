@@ -1,0 +1,13 @@
+{
+    "version": "1.0",
+    "targetCsproj": "CannonCape.csproj",
+    "assemblyName": "CannonCape",
+    "binDir": "bin/Debug/net9",
+    "window": {
+        "title": "Cannon Cape",
+        "style": "Default",
+        "width": 800,
+        "height": 600,
+        "presentMode": "VsyncOn",
+    },
+}
