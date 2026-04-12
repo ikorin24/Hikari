@@ -246,3 +246,57 @@ fn create_window(
     }
     Ok(window)
 }
+
+fn create_embedded_window(
+    config: &ScreenConfigPayload,
+    event_loop: &ActiveEventLoop,
+) -> Result<window::Window, winit::error::OsError> {
+    #[cfg(windows)]
+    {
+        use winit::platform::windows::WindowAttributesExtWindows;
+
+        let window = event_loop.create_window(
+            winit::window::Window::default_attributes()
+                .with_title(&config.title)
+                .with_inner_size(Size::Physical(PhysicalSize::new(
+                    config.width,
+                    config.height,
+                )))
+                .with_min_inner_size(Size::Physical(PhysicalSize::new(1, 1)))
+                .with_decorations(false)
+                .with_skip_taskbar(true),
+        )?;
+
+        // Set WS_EX_TOOLWINDOW to hide the window from Alt+Tab.
+        set_tool_window_style(&window);
+
+        Ok(window)
+    }
+
+    #[cfg(not(windows))]
+    {
+        _ = config;
+        _ = event_loop;
+        unimplemented!("create_embedded_window is only supported on Windows");
+    }
+}
+
+#[cfg(windows)]
+fn set_tool_window_style(window: &window::Window) {
+    use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+
+    let raw_handle = window
+        .window_handle()
+        .expect("failed to get window handle")
+        .as_raw();
+    let RawWindowHandle::Win32(win32_handle) = raw_handle else {
+        unreachable!();
+    };
+    let hwnd = win32_handle.hwnd.get() as windows_sys::Win32::Foundation::HWND;
+
+    unsafe {
+        use windows_sys::Win32::UI::WindowsAndMessaging::*;
+        let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style | WS_EX_TOOLWINDOW as isize);
+    }
+}
